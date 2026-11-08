@@ -315,6 +315,7 @@
   "adminChurches": "교회",
   "adminRename": "이름 변경",
   "adminMakeAdmin": "관리자로 지정",
+  "adminMakeAdminTitle": "{name} 님을 {church}의 관리자로 지정할까요?",
   "adminMadeAdmin": "{name} 님을 관리자로 지정했어요",
   "adminSuspend": "교회 사용 중지",
   "adminReopen": "교회 사용 재개",

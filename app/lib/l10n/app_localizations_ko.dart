@@ -994,6 +994,11 @@ class L10nKo extends L10n {
   String get adminMakeAdmin => '관리자로 지정';
 
   @override
+  String adminMakeAdminTitle(String name, String church) {
+    return '$name 님을 $church의 관리자로 지정할까요?';
+  }
+
+  @override
   String adminMadeAdmin(String name) {
     return '$name 님을 관리자로 지정했어요';
   }

@@ -1846,6 +1846,12 @@ abstract class L10n {
   /// **'設為管理員'**
   String get adminMakeAdmin;
 
+  /// No description provided for @adminMakeAdminTitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'把「{name}」設為〈{church}〉的管理員？'**
+  String adminMakeAdminTitle(String name, String church);
+
   /// No description provided for @adminMadeAdmin.
   ///
   /// In zh, this message translates to:

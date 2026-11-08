@@ -993,6 +993,11 @@ class L10nZh extends L10n {
   String get adminMakeAdmin => '設為管理員';
 
   @override
+  String adminMakeAdminTitle(String name, String church) {
+    return '把「$name」設為〈$church〉的管理員？';
+  }
+
+  @override
   String adminMadeAdmin(String name) {
     return '已把「$name」設為管理員';
   }
@@ -4403,6 +4408,11 @@ class L10nZhHans extends L10nZh {
 
   @override
   String get adminMakeAdmin => '设为管理员';
+
+  @override
+  String adminMakeAdminTitle(String name, String church) {
+    return '把“$name”设为“$church”的管理员？';
+  }
 
   @override
   String adminMadeAdmin(String name) {

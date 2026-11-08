@@ -102,7 +102,15 @@ class _AdminScreenState extends ConsumerState<AdminScreen> {
                 ? _SavedView(
                     value: ref.watch(_churchesProvider),
                     onRetry: () => ref.invalidate(_churchesProvider),
-                    builder: (saved) => _churches(l10n, saved.value, saved: saved),
+                    // Deleted ones only when searched for.
+                    builder: (saved) => _churches(
+                      l10n,
+                      [
+                        for (final c in saved.value)
+                          if (c.status != ChurchStatus.deleted) c,
+                      ],
+                      saved: saved,
+                    ),
                   )
                 : found == null
                 ? const SizedBox.shrink()
@@ -210,6 +218,9 @@ final _membersProvider = AsyncNotifierProvider.autoDispose.family<SavedRead<List
 class _AdminChurchScreenState extends ConsumerState<AdminChurchScreen> {
   late ChurchSummary _c = widget.summary;
 
+  /// Whom 設為管理員 is on its way for: their row shows a spinner.
+  String? _makingAdmin;
+
   CloudApi get _cloud => ref.read(backendProvider).cloud;
 
   Future<void> _refresh() async {
@@ -229,6 +240,20 @@ class _AdminChurchScreenState extends ConsumerState<AdminChurchScreen> {
     } catch (e) {
       if (mounted) showToast(context, errorText(l10n, e));
     }
+  }
+
+  Future<void> _makeAdmin(ChurchSummary c, Member m) async {
+    final l10n = L10n.of(context);
+    final ok = await confirmAction(
+      context,
+      title: l10n.adminMakeAdminTitle(m.name, c.name),
+      action: l10n.adminMakeAdmin,
+      cancel: l10n.cancel,
+    );
+    if (!ok || !mounted) return;
+    setState(() => _makingAdmin = m.uid);
+    await _run(() => _cloud.adminTransferAdmin(c.id, m.uid), l10n.adminMadeAdmin(m.name));
+    if (mounted) setState(() => _makingAdmin = null);
   }
 
   @override
@@ -276,13 +301,11 @@ class _AdminChurchScreenState extends ConsumerState<AdminChurchScreen> {
                     title: m.name,
                     subtitle: m.email,
                     value: m.isAdmin ? l10n.roleAdmin : null,
+                    trailing: _makingAdmin == m.uid ? const CircularProgressIndicator.adaptive() : null,
+                    // Tapping asks; it opens no page.
+                    chevron: false,
                     // Made admin only from the server's list, not a kept one.
-                    onTap: m.isAdmin || !saved.fresh
-                        ? null
-                        : () => _run(
-                            () => _cloud.adminTransferAdmin(c.id, m.uid),
-                            l10n.adminMadeAdmin(m.name),
-                          ),
+                    onTap: m.isAdmin || !saved.fresh || _makingAdmin != null ? null : () => _makeAdmin(c, m),
                   ),
               ],
             ),

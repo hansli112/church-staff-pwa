@@ -315,6 +315,7 @@
   "adminChurches": "教会",
   "adminRename": "改名",
   "adminMakeAdmin": "设为管理员",
+  "adminMakeAdminTitle": "把“{name}”设为“{church}”的管理员？",
   "adminMadeAdmin": "已把“{name}”设为管理员",
   "adminSuspend": "停用教会",
   "adminReopen": "重新启用教会",

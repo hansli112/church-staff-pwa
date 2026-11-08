@@ -315,6 +315,7 @@
   "adminChurches": "教会",
   "adminRename": "名前を変更",
   "adminMakeAdmin": "管理者にする",
+  "adminMakeAdminTitle": "{name}を「{church}」の管理者にしますか？",
   "adminMadeAdmin": "{name}を管理者にしました",
   "adminSuspend": "教会を停止",
   "adminReopen": "教会を再開",

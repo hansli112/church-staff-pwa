@@ -625,6 +625,13 @@
   "adminChurches": "教會",
   "adminRename": "改名",
   "adminMakeAdmin": "設為管理員",
+  "adminMakeAdminTitle": "把「{name}」設為〈{church}〉的管理員？",
+  "@adminMakeAdminTitle": {
+    "placeholders": {
+      "name": {"type": "String"},
+      "church": {"type": "String"}
+    }
+  },
   "adminMadeAdmin": "已把「{name}」設為管理員",
   "@adminMadeAdmin": {
     "placeholders": {

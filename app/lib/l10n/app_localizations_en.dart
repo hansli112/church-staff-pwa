@@ -1029,6 +1029,11 @@ class L10nEn extends L10n {
   String get adminMakeAdmin => 'Make admin';
 
   @override
+  String adminMakeAdminTitle(String name, String church) {
+    return 'Make $name an admin of $church?';
+  }
+
+  @override
   String adminMadeAdmin(String name) {
     return '$name is now an admin';
   }

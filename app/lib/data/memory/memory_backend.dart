@@ -210,6 +210,9 @@ class MemoryBackend implements Backend {
   /// to complete, as on a slow network.
   Completer<void>? backOfficeReadsHeld;
 
+  /// Holds the back office's 設為管理員 until completed.
+  Completer<void>? makeAdminHeld;
+
   /// Scripted: while set, an account's memberships deliver nothing until
   /// this completes, as on a slow network.
   Completer<void>? membershipsHeld;
@@ -2886,6 +2889,7 @@ class MemoryCloud implements CloudApi {
   @override
   Future<void> adminTransferAdmin(String churchId, String uid) async {
     _requireOperator();
+    await _b.makeAdminHeld?.future;
     final m = _b.memberOf(churchId, uid);
     if (m == null) throw const CloudException(CloudErrorCode.unknown);
     _b.members[churchId]![uid] = m.withIdentities([const AdminIdentity(), ...m.identities]);

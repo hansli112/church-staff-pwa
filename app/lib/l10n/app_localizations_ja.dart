@@ -993,6 +993,11 @@ class L10nJa extends L10n {
   String get adminMakeAdmin => '管理者にする';
 
   @override
+  String adminMakeAdminTitle(String name, String church) {
+    return '$nameを「$church」の管理者にしますか？';
+  }
+
+  @override
   String adminMadeAdmin(String name) {
     return '$nameを管理者にしました';
   }

@@ -315,6 +315,7 @@
   "adminChurches": "Churches",
   "adminRename": "Rename",
   "adminMakeAdmin": "Make admin",
+  "adminMakeAdminTitle": "Make {name} an admin of {church}?",
   "adminMadeAdmin": "{name} is now an admin",
   "adminSuspend": "Suspend church",
   "adminReopen": "Reopen church",

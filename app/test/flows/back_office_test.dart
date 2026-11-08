@@ -5,6 +5,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
 import 'package:martha/core/languages.dart';
 import 'package:martha/data/backend.dart';
+import 'package:martha/domain/models.dart';
 
 import '../support/harness.dart';
 import '../support/seed.dart';
@@ -120,5 +121,48 @@ void main() {
     await tester.tap(find.text('雲端'));
     await settle(tester);
     expect(find.text('費用項目'), findsOneWidget);
+  });
+
+  testWidgets('a member is made admin only once the operator says so, and the row shows it is on its way', (
+    tester,
+  ) async {
+    final b = seededChurch();
+    b.auth.operators.add('pastor');
+    await pumpApp(tester, b);
+    await go(tester, '/admin');
+    await tester.tap(find.text('恩典堂'));
+    await settle(tester);
+
+    await tester.tap(find.text('李美玉'));
+    await settle(tester);
+    await tester.tap(find.text('取消').last);
+    await settle(tester);
+    expect(b.memberOf('grace', 'mei')!.isAdmin, isFalse);
+
+    await tester.tap(find.text('李美玉'));
+    await settle(tester);
+    final held = b.makeAdminHeld = Completer();
+    await tester.tap(find.text('設為管理員').last);
+    await tester.pump();
+    expect(find.byType(CircularProgressIndicator), findsOneWidget);
+    held.complete();
+    b.makeAdminHeld = null;
+    await settle(tester);
+    expect(b.memberOf('grace', 'mei')!.isAdmin, isTrue);
+    expect(find.byType(CircularProgressIndicator), findsNothing);
+  });
+
+  testWidgets('deleted churches stay out of the list, and a search still finds them', (tester) async {
+    final b = seededChurch();
+    b.auth.operators.add('pastor');
+    b.addChurch('舊教會', status: ChurchStatus.deleted);
+    await pumpApp(tester, b);
+    await go(tester, '/admin');
+    expect(find.text('恩典堂'), findsOneWidget);
+    expect(find.text('舊教會'), findsNothing);
+
+    await tester.enterText(find.byType(TextField), '舊');
+    await settle(tester);
+    expect(find.text('舊教會'), findsOneWidget);
   });
 }
