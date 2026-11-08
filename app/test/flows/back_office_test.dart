@@ -3,8 +3,10 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
+import 'package:martha/core/design/components.dart';
 import 'package:martha/core/languages.dart';
 import 'package:martha/data/backend.dart';
+import 'package:martha/data/memory/memory_backend.dart';
 import 'package:martha/domain/models.dart';
 
 import '../support/harness.dart';
@@ -123,33 +125,84 @@ void main() {
     expect(find.text('費用項目'), findsOneWidget);
   });
 
-  testWidgets('a member is made admin only once the operator says so, and the row shows it is on its way', (
-    tester,
-  ) async {
-    final b = seededChurch();
+  Future<void> openGrace(WidgetTester tester, MemoryBackend b) async {
     b.auth.operators.add('pastor');
     await pumpApp(tester, b);
     await go(tester, '/admin');
     await tester.tap(find.text('恩典堂'));
     await settle(tester);
+  }
 
-    await tester.tap(find.text('李美玉'));
-    await settle(tester);
-    await tester.tap(find.text('取消').last);
-    await settle(tester);
-    expect(b.memberOf('grace', 'mei')!.isAdmin, isFalse);
+  /// The row of [name]: its button says what a tap on it does.
+  Finder button(String name, String label) =>
+      find.descendant(of: find.widgetWithText(ListRow, name), matching: find.widgetWithText(TextButton, label));
 
-    await tester.tap(find.text('李美玉'));
-    await settle(tester);
-    final held = b.makeAdminHeld = Completer();
-    await tester.tap(find.text('設為管理員').last);
+  testWidgets('設為管理員 shows at once and goes through in the background; 復原 takes it back', (tester) async {
+    final b = seededChurch();
+    await openGrace(tester, b);
+    expect(button('李美玉', '設為管理員'), findsOneWidget);
+
+    final held = b.adminChangeHeld = Completer();
+    await tester.tap(button('李美玉', '設為管理員'));
     await tester.pump();
-    expect(find.byType(CircularProgressIndicator), findsOneWidget);
+    expect(button('李美玉', '取消管理員'), findsOneWidget, reason: 'shown before the backend answers');
+    expect(find.text('已把「李美玉」設為管理員'), findsOneWidget);
+    expect(b.memberOf('grace', 'mei')!.isAdmin, isFalse);
     held.complete();
-    b.makeAdminHeld = null;
+    b.adminChangeHeld = null;
     await settle(tester);
     expect(b.memberOf('grace', 'mei')!.isAdmin, isTrue);
-    expect(find.byType(CircularProgressIndicator), findsNothing);
+    expect(button('李美玉', '取消管理員'), findsOneWidget);
+
+    await tester.tap(find.text('復原'));
+    await settle(tester);
+    expect(b.memberOf('grace', 'mei')!.isAdmin, isFalse);
+    expect(button('李美玉', '設為管理員'), findsOneWidget);
+  });
+
+  testWidgets('取消管理員 takes an admin off; the only admin has no such button', (tester) async {
+    final b = seededChurch();
+    await openGrace(tester, b);
+    expect(button('王牧師', '取消管理員'), findsNothing, reason: 'a church keeps one admin');
+
+    await tester.tap(button('李美玉', '設為管理員'));
+    await settle(tester);
+    await tester.tap(button('王牧師', '取消管理員'));
+    await settle(tester);
+    expect(b.memberOf('grace', 'pastor')!.isAdmin, isFalse);
+    expect(find.text('已取消「王牧師」的管理員'), findsOneWidget);
+    expect(button('李美玉', '取消管理員'), findsNothing);
+  });
+
+  testWidgets('復原 of 取消管理員, even before it is through, gives back a whole church\'s 牧者', (tester) async {
+    final b = seededChurch(
+      extra: const [
+        Member(uid: 'lin', name: '林牧師', role: Role.admin, identities: [PastorIdentity(null)]),
+      ],
+    );
+    await openGrace(tester, b);
+
+    final held = b.adminChangeHeld = Completer();
+    await tester.tap(button('林牧師', '取消管理員'));
+    await settle(tester);
+    await tester.tap(find.text('復原'));
+    await settle(tester);
+    expect(button('林牧師', '取消管理員'), findsOneWidget);
+    held.complete();
+    b.adminChangeHeld = null;
+    await settle(tester);
+    expect(b.memberOf('grace', 'lin')!.identities, [const PastorIdentity(null)]);
+  });
+
+  testWidgets('a change the backend refuses goes back, saying why', (tester) async {
+    final b = seededChurch();
+    await openGrace(tester, b);
+    b.setOnline(false);
+    await tester.tap(button('李美玉', '設為管理員'));
+    await settle(tester);
+    expect(b.memberOf('grace', 'mei')!.isAdmin, isFalse);
+    expect(button('李美玉', '設為管理員'), findsOneWidget);
+    expect(find.text('離線中，連線後才能儲存'), findsOneWidget);
   });
 
   testWidgets('deleted churches stay out of the list, and a search still finds them', (tester) async {

@@ -210,8 +210,9 @@ class MemoryBackend implements Backend {
   /// to complete, as on a slow network.
   Completer<void>? backOfficeReadsHeld;
 
-  /// Holds the back office's 設為管理員 until completed.
-  Completer<void>? makeAdminHeld;
+  /// Scripted: while set, the back office's 設為管理員 and 取消管理員 wait
+  /// for this to complete, as on a slow network or a cold start.
+  Completer<void>? adminChangeHeld;
 
   /// Scripted: while set, an account's memberships deliver nothing until
   /// this completes, as on a slow network.
@@ -2887,13 +2888,38 @@ class MemoryCloud implements CloudApi {
   }
 
   @override
-  Future<void> adminTransferAdmin(String churchId, String uid) async {
+  Future<void> adminTransferAdmin(
+    String churchId,
+    String uid, {
+    List<Identity> identities = const [AdminIdentity()],
+  }) async {
     _requireOperator();
-    await _b.makeAdminHeld?.future;
+    await _b.adminChangeHeld?.future;
     final m = _b.memberOf(churchId, uid);
     if (m == null) throw const CloudException(CloudErrorCode.unknown);
-    _b.members[churchId]![uid] = m.withIdentities([const AdminIdentity(), ...m.identities]);
+    if (identities.isEmpty || identities.any((i) => !i.makesAdmin)) throw const CloudException(CloudErrorCode.unknown);
+    _b.members[churchId]![uid] = m.withIdentities([...identities, ...m.identities]);
     _b.notify();
+  }
+
+  @override
+  Future<List<Identity>> adminRevokeAdmin(String churchId, String uid) async {
+    _requireOperator();
+    await _b.adminChangeHeld?.future;
+    final m = _b.memberOf(churchId, uid);
+    if (m == null) throw const CloudException(CloudErrorCode.unknown);
+    if (m.isAdmin && !_b.members[churchId]!.values.any((o) => o.uid != uid && o.isAdmin)) {
+      throw const CloudException(CloudErrorCode.lastAdmin);
+    }
+    _b.members[churchId]![uid] = m.withIdentities([
+      for (final i in m.identities)
+        if (!i.makesAdmin) i,
+    ]);
+    _b.notify();
+    return [
+      for (final i in m.identities)
+        if (i.makesAdmin) i,
+    ];
   }
 
   @override

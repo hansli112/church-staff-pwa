@@ -382,6 +382,12 @@ abstract class L10n {
   /// **'嘗試太多次，請稍後再試'**
   String get errTooMany;
 
+  /// No description provided for @errLastAdmin.
+  ///
+  /// In zh, this message translates to:
+  /// **'教會至少要有一位管理員'**
+  String get errLastAdmin;
+
   /// No description provided for @errNetwork.
   ///
   /// In zh, this message translates to:
@@ -1846,11 +1852,17 @@ abstract class L10n {
   /// **'設為管理員'**
   String get adminMakeAdmin;
 
-  /// No description provided for @adminMakeAdminTitle.
+  /// No description provided for @adminRevokeAdmin.
   ///
   /// In zh, this message translates to:
-  /// **'把「{name}」設為〈{church}〉的管理員？'**
-  String adminMakeAdminTitle(String name, String church);
+  /// **'取消管理員'**
+  String get adminRevokeAdmin;
+
+  /// No description provided for @adminRevokedAdmin.
+  ///
+  /// In zh, this message translates to:
+  /// **'已取消「{name}」的管理員'**
+  String adminRevokedAdmin(String name);
 
   /// No description provided for @adminMadeAdmin.
   ///

@@ -5,6 +5,7 @@ import { logClientError } from '../src/logging.js';
 import {
   adminChurchMembers,
   adminRenameChurch,
+  adminRevokeAdmin,
   adminSearchChurches,
   adminSetStatus,
   adminStats,
@@ -27,6 +28,7 @@ describe('operator back office', () => {
     await rejectsWith(adminSearchChurches(deps, admin, { query: '' }), 'permissionDenied');
     await rejectsWith(adminRenameChurch(deps, admin, { churchId: 'C1', name: 'x' }), 'permissionDenied');
     await rejectsWith(adminTransferAdmin(deps, admin, { churchId: 'C1', uid: 'alice' }), 'permissionDenied');
+    await rejectsWith(adminRevokeAdmin(deps, admin, { churchId: 'C1', uid: 'alice' }), 'permissionDenied');
     await rejectsWith(adminSetStatus(deps, admin, { churchId: 'C1', status: 'suspended' }), 'permissionDenied');
     await rejectsWith(adminStats(deps, admin, {}), 'permissionDenied');
     await rejectsWith(adminStats(deps, null, {}), 'permissionDenied');
@@ -65,6 +67,36 @@ describe('operator back office', () => {
     assert.equal(bob.get('role'), 'admin');
     assert.deepEqual(bob.get('identities'), [{ kind: 'admin' }, { kind: 'lead', service: 'sunday' }]);
     assert.deepEqual(bob.get('leadTypes'), ['sunday']);
+  });
+
+  test('revoke takes away what makes them admin, keeping their other 身分; never the last admin', async () => {
+    await seedChurch('C1', { alice: 'admin', bob: 'staff' });
+    await db.doc('churches/C1/members/bob').update({ identities: [{ kind: 'lead', service: 'sunday' }], leadTypes: ['sunday'] });
+    await adminTransferAdmin(deps, op, { churchId: 'C1', uid: 'bob' });
+    await adminRevokeAdmin(deps, op, { churchId: 'C1', uid: 'bob' });
+    const bob = await db.doc('churches/C1/members/bob').get();
+    assert.equal(bob.get('role'), 'staff');
+    assert.deepEqual(bob.get('identities'), [{ kind: 'lead', service: 'sunday' }]);
+    assert.deepEqual(bob.get('leadTypes'), ['sunday']);
+
+    await db.doc('churches/C1/members/bob').update({ role: 'admin', identities: [{ kind: 'pastor' }, { kind: 'office' }], leadTypes: [] });
+    const { removed } = await adminRevokeAdmin(deps, op, { churchId: 'C1', uid: 'bob' });
+    assert.equal((await db.doc('churches/C1/members/bob').get()).get('role'), 'staff', 'a whole church\'s 牧者 is an admin too');
+    assert.deepEqual(removed, [{ kind: 'pastor' }]);
+    // 復原 gives back what was taken, not 管理員 in its place.
+    await adminTransferAdmin(deps, op, { churchId: 'C1', uid: 'bob', identities: removed });
+    const back = await db.doc('churches/C1/members/bob').get();
+    assert.equal(back.get('role'), 'admin');
+    assert.deepEqual(back.get('identities'), [{ kind: 'pastor' }, { kind: 'office' }]);
+    await rejectsWith(
+      adminTransferAdmin(deps, op, { churchId: 'C1', uid: 'bob', identities: [{ kind: 'office' }] }),
+      'unknown',
+    );
+
+    await adminRevokeAdmin(deps, op, { churchId: 'C1', uid: 'bob' });
+    await rejectsWith(adminRevokeAdmin(deps, op, { churchId: 'C1', uid: 'alice' }), 'lastAdmin');
+    assert.equal((await db.doc('churches/C1/members/alice').get()).get('role'), 'admin');
+    await rejectsWith(adminRevokeAdmin(deps, op, { churchId: 'C1', uid: 'nobody' }), 'unknown');
   });
 
   test('transfer makes a member admin; suspend and reopen', async () => {

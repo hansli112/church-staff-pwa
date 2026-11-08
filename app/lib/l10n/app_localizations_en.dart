@@ -158,6 +158,9 @@ class L10nEn extends L10n {
   String get errTooMany => 'Too many attempts. Try again later.';
 
   @override
+  String get errLastAdmin => 'A church needs at least one admin';
+
+  @override
   String get errNetwork => 'Can’t connect. Check your connection and try again.';
 
   @override
@@ -1029,8 +1032,11 @@ class L10nEn extends L10n {
   String get adminMakeAdmin => 'Make admin';
 
   @override
-  String adminMakeAdminTitle(String name, String church) {
-    return 'Make $name an admin of $church?';
+  String get adminRevokeAdmin => 'Remove admin';
+
+  @override
+  String adminRevokedAdmin(String name) {
+    return '$name is no longer an admin';
   }
 
   @override

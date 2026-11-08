@@ -961,7 +961,14 @@ abstract interface class CloudApi {
   Future<List<ChurchSummary>> adminSearchChurches(String query);
   Future<void> adminRenameChurch(String churchId, String name);
   Future<List<Member>> adminChurchMembers(String churchId);
-  Future<void> adminTransferAdmin(String churchId, String uid);
+
+  /// Makes [uid] an admin of [churchId]: with 管理員, or with [identities],
+  /// what [adminRevokeAdmin] took (its 復原).
+  Future<void> adminTransferAdmin(String churchId, String uid, {List<Identity> identities});
+
+  /// Takes away what makes [uid] an admin of [churchId] (管理員, a whole
+  /// church's 牧者), never its last, and returns what it took.
+  Future<List<Identity>> adminRevokeAdmin(String churchId, String uid);
   Future<void> adminSetStatus(String churchId, ChurchStatus status);
   Future<List<DailyStats>> adminStats({int days = 30});
   Future<FundingOverview> adminFunding();

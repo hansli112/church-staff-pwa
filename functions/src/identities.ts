@@ -17,7 +17,7 @@ export type Identity =
   | { kind: 'lead'; smallGroup: string };
 
 /** One stored 身分; null for a kind not known. */
-function parse(v: unknown): Identity | null {
+export function parse(v: unknown): Identity | null {
   const i = (v ?? {}) as Record<string, unknown>;
   if (i.kind === 'admin' || i.kind === 'office') return { kind: i.kind };
   if (i.kind === 'pastor') return Array.isArray(i.services) ? { kind: 'pastor', services: strings(i.services) } : { kind: 'pastor' };
@@ -32,7 +32,8 @@ const key = (i: Identity) => JSON.stringify(i);
 
 export const sameIdentity = (a: Identity, b: Identity) => key(a) === key(b);
 
-const isAdminIdentity = (i: Identity) => i.kind === 'admin' || (i.kind === 'pastor' && i.services === undefined);
+/** Whether [i] makes its holder an admin: 管理員, or a whole church's 牧者. */
+export const makesAdmin = (i: Identity) => i.kind === 'admin' || (i.kind === 'pastor' && i.services === undefined);
 
 /**
  * The 身分 member doc [m] holds, as the app reads it (Member.identities):
@@ -47,7 +48,7 @@ export function identitiesOf(m: Record<string, unknown>): Identity[] {
   const leadsService = (id: string) =>
     stored.some((i) => ('service' in i && i.service === id) || (i.kind === 'pastor' && (i.services ?? []).includes(id)));
   return [
-    ...(admin && !stored.some(isAdminIdentity) ? [{ kind: 'admin' } as const] : []),
+    ...(admin && !stored.some(makesAdmin) ? [{ kind: 'admin' } as const] : []),
     ...(!admin && strings(m.groups).length > 0 && !stored.some((i) => i.kind === 'office') ? [{ kind: 'office' } as const] : []),
     ...stored,
     ...strings(m.leadTypes)
@@ -69,7 +70,7 @@ export function identitiesOf(m: Record<string, unknown>): Identity[] {
  */
 export function withIdentities(m: Record<string, unknown>, next: Identity[]) {
   const identities = [...new Map(next.map((i) => [key(i), i])).values()];
-  const admin = identities.some(isAdminIdentity);
+  const admin = identities.some(makesAdmin);
   const role = admin ? 'admin' : m.role === 'admin' || typeof m.role !== 'string' ? 'staff' : m.role;
   const each = (f: (i: Identity) => string[]) => [...new Set(identities.flatMap(f))];
   return {

@@ -157,6 +157,9 @@ class L10nKo extends L10n {
   String get errTooMany => '시도 횟수가 너무 많아요. 잠시 후 다시 시도해 주세요.';
 
   @override
+  String get errLastAdmin => '교회에는 관리자가 한 명 이상 있어야 해요';
+
+  @override
   String get errNetwork => '인터넷에 연결할 수 없어요. 확인 후 다시 시도해 주세요.';
 
   @override
@@ -994,8 +997,11 @@ class L10nKo extends L10n {
   String get adminMakeAdmin => '관리자로 지정';
 
   @override
-  String adminMakeAdminTitle(String name, String church) {
-    return '$name 님을 $church의 관리자로 지정할까요?';
+  String get adminRevokeAdmin => '관리자 해제';
+
+  @override
+  String adminRevokedAdmin(String name) {
+    return '$name 님을 관리자에서 해제했어요';
   }
 
   @override

@@ -156,6 +156,9 @@ class L10nZh extends L10n {
   String get errTooMany => '嘗試太多次，請稍後再試';
 
   @override
+  String get errLastAdmin => '教會至少要有一位管理員';
+
+  @override
   String get errNetwork => '連不上網路，請檢查後再試一次';
 
   @override
@@ -993,8 +996,11 @@ class L10nZh extends L10n {
   String get adminMakeAdmin => '設為管理員';
 
   @override
-  String adminMakeAdminTitle(String name, String church) {
-    return '把「$name」設為〈$church〉的管理員？';
+  String get adminRevokeAdmin => '取消管理員';
+
+  @override
+  String adminRevokedAdmin(String name) {
+    return '已取消「$name」的管理員';
   }
 
   @override
@@ -3573,6 +3579,9 @@ class L10nZhHans extends L10nZh {
   String get errTooMany => '尝试太多次，请稍后再试';
 
   @override
+  String get errLastAdmin => '教会至少要有一位管理员';
+
+  @override
   String get errNetwork => '连不上网络，请检查后再试一次';
 
   @override
@@ -4410,8 +4419,11 @@ class L10nZhHans extends L10nZh {
   String get adminMakeAdmin => '设为管理员';
 
   @override
-  String adminMakeAdminTitle(String name, String church) {
-    return '把“$name”设为“$church”的管理员？';
+  String get adminRevokeAdmin => '取消管理员';
+
+  @override
+  String adminRevokedAdmin(String name) {
+    return '已取消“$name”的管理员';
   }
 
   @override

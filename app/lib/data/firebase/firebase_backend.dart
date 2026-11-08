@@ -2011,8 +2011,18 @@ class FirebaseCloudApi implements CloudApi {
       churchMembersFromJson(_asMap(await _call('adminChurchMembers', {'churchId': churchId})));
 
   @override
-  Future<void> adminTransferAdmin(String churchId, String uid) =>
-      _call('adminTransferAdmin', {'churchId': churchId, 'uid': uid});
+  Future<void> adminTransferAdmin(String churchId, String uid, {List<Identity> identities = const [AdminIdentity()]}) =>
+      _call('adminTransferAdmin', {
+        'churchId': churchId,
+        'uid': uid,
+        'identities': [for (final i in identities) i.toJson()],
+      });
+
+  @override
+  Future<List<Identity>> adminRevokeAdmin(String churchId, String uid) async {
+    final d = _asMap(await _call('adminRevokeAdmin', {'churchId': churchId, 'uid': uid}));
+    return [for (final j in d['removed'] as List<Object?>? ?? const []) ?Identity.fromJson(j)];
+  }
 
   @override
   Future<void> adminSetStatus(String churchId, ChurchStatus status) =>

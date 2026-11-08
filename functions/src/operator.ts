@@ -1,6 +1,6 @@
 import { churchClosed, churchId } from './access.js';
 import { fail, id, requireOperator, serverTime, text, type Caller, type Deps } from './common.js';
-import { identitiesOf, withIdentities } from './identities.js';
+import { identitiesOf, makesAdmin, parse, withIdentities, type Identity } from './identities.js';
 import { TEXT_LIMITS } from './limits.js';
 import { matchesSearch, nameKey } from './text.js';
 
@@ -63,21 +63,52 @@ export async function adminRenameChurch(deps: Deps, caller: Caller | null, data:
   return {};
 }
 
-/** Makes a member of the church its admin (other admins stay admins). */
+/**
+ * Makes a member of the church its admin (other admins stay admins): with
+ * 管理員, or with `identities`, what [adminRevokeAdmin] took (its 復原).
+ */
 export async function adminTransferAdmin(deps: Deps, caller: Caller | null, data: unknown) {
   requireOperator(caller);
-  const input = data as { churchId?: unknown; uid?: unknown };
+  const input = data as { churchId?: unknown; uid?: unknown; identities?: unknown };
   const cid = churchId(input?.churchId);
   const uid = id(input?.uid);
+  let given: Identity[] = [{ kind: 'admin' }];
+  if (input?.identities !== undefined) {
+    const raw = Array.isArray(input.identities) ? input.identities.slice(0, 10) : [];
+    given = raw.map(parse).filter((i): i is Identity => i !== null && makesAdmin(i));
+    if (given.length === 0 || given.length !== raw.length) fail('invalid-argument', 'unknown');
+  }
   const ref = deps.db.doc(`churches/${cid}/members/${uid}`);
   await deps.db.runTransaction(async (tx) => {
     const member = await tx.get(ref);
     if (!member.exists) fail('not-found', 'unknown');
     // 管理員 as a 身分, beside those they hold: not role admin alone, which
     // the app's next change of their 身分 would take away.
-    tx.update(ref, withIdentities(member.data()!, [{ kind: 'admin' }, ...identitiesOf(member.data()!)]));
+    tx.update(ref, withIdentities(member.data()!, [...given, ...identitiesOf(member.data()!)]));
   });
   return {};
+}
+
+/**
+ * Takes away what makes a member admin: 管理員, and a whole church's 牧者.
+ * Their other 身分 stay. Never the church's last admin. Returns what it
+ * took, for [adminTransferAdmin] to give back.
+ */
+export async function adminRevokeAdmin(deps: Deps, caller: Caller | null, data: unknown) {
+  requireOperator(caller);
+  const input = data as { churchId?: unknown; uid?: unknown };
+  const cid = churchId(input?.churchId);
+  const uid = id(input?.uid);
+  const members = deps.db.collection(`churches/${cid}/members`);
+  const removed = await deps.db.runTransaction(async (tx) => {
+    const [member, admins] = await Promise.all([tx.get(members.doc(uid)), tx.get(members.where('role', '==', 'admin'))]);
+    if (!member.exists) fail('not-found', 'unknown');
+    if (member.get('role') === 'admin' && !admins.docs.some((a) => a.id !== uid)) fail('failed-precondition', 'lastAdmin');
+    const held = identitiesOf(member.data()!);
+    tx.update(member.ref, withIdentities(member.data()!, held.filter((i) => !makesAdmin(i))));
+    return held.filter(makesAdmin);
+  });
+  return { removed };
 }
 
 export async function adminSetStatus(deps: Deps, caller: Caller | null, data: unknown) {

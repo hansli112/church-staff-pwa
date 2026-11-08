@@ -234,6 +234,7 @@ export const deleteAccount = callable(account.deleteAccount, () => ({ ...deps(),
 export const adminSearchChurches = callable(operator.adminSearchChurches);
 export const adminRenameChurch = callable(operator.adminRenameChurch);
 export const adminTransferAdmin = callable(operator.adminTransferAdmin);
+export const adminRevokeAdmin = callable(operator.adminRevokeAdmin);
 export const adminSetStatus = callable(operator.adminSetStatus);
 export const adminStats = callable(operator.adminStats);
 export const adminChurchMembers = callable(operator.adminChurchMembers);

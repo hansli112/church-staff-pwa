@@ -218,8 +218,15 @@ final _membersProvider = AsyncNotifierProvider.autoDispose.family<SavedRead<List
 class _AdminChurchScreenState extends ConsumerState<AdminChurchScreen> {
   late ChurchSummary _c = widget.summary;
 
-  /// Whom 設為管理員 is on its way for: their row shows a spinner.
-  String? _makingAdmin;
+  /// 設為管理員 and 取消管理員 shown before the backend has them, by uid.
+  final _wantAdmin = <String, bool>{};
+
+  /// The changes, one after another: a church keeps one admin, so one
+  /// member's may depend on another's, and 復原 follows what it takes back.
+  Future<void> _changes = Future.value();
+
+  /// Each member's last change: until it is read back, the row shows it.
+  final _lastChange = <String, Future<void>>{};
 
   CloudApi get _cloud => ref.read(backendProvider).cloud;
 
@@ -242,19 +249,71 @@ class _AdminChurchScreenState extends ConsumerState<AdminChurchScreen> {
     }
   }
 
-  Future<void> _makeAdmin(ChurchSummary c, Member m) async {
+  /// Shows [m] as admin or not at once; the backend catches up behind,
+  /// and a refusal puts the row back. 復原 of 取消管理員 gives back what
+  /// it took ([restore]), a whole church's 牧者 too.
+  void _setAdmin(Member m, {required bool admin, Future<List<Identity>>? restore}) {
     final l10n = L10n.of(context);
-    final ok = await confirmAction(
+    final cid = _c.id;
+    setState(() => _wantAdmin[m.uid] = admin);
+    Future<List<Identity>> run() async {
+      if (!admin) return _cloud.adminRevokeAdmin(cid, m.uid);
+      var given = const <Identity>[AdminIdentity()];
+      if (restore != null) {
+        try {
+          given = await restore;
+        } catch (_) {
+          return const []; // Never taken away: nothing to give back.
+        }
+      }
+      await _cloud.adminTransferAdmin(cid, m.uid, identities: given);
+      return const [];
+    }
+
+    final change = _changes.then((_) => run());
+    _changes = change.then((_) {}, onError: (Object _) {});
+    _lastChange[m.uid] = change;
+    showToast(
       context,
-      title: l10n.adminMakeAdminTitle(m.name, c.name),
-      action: l10n.adminMakeAdmin,
-      cancel: l10n.cancel,
+      admin ? l10n.adminMadeAdmin(m.name) : l10n.adminRevokedAdmin(m.name),
+      onUndo: () {
+        if (mounted) _setAdmin(m, admin: !admin, restore: admin ? null : change);
+      },
     );
-    if (!ok || !mounted) return;
-    setState(() => _makingAdmin = m.uid);
-    await _run(() => _cloud.adminTransferAdmin(c.id, m.uid), l10n.adminMadeAdmin(m.name));
-    if (mounted) setState(() => _makingAdmin = null);
+    void shownAsRead() {
+      if (mounted && identical(_lastChange[m.uid], change)) setState(() => _wantAdmin.remove(m.uid));
+    }
+
+    change.then(
+      (_) async {
+        try {
+          await ref.read(_membersProvider(cid).notifier).reload();
+        } catch (_) {
+          // Not read back: the row keeps the change, the list says it is
+          // the last one read, with 重試.
+          return;
+        }
+        shownAsRead();
+      },
+      onError: (Object e) {
+        shownAsRead();
+        if (mounted) showToast(context, errorText(l10n, e));
+      },
+    );
   }
+
+  bool _isAdmin(Member m) => _wantAdmin[m.uid] ?? m.isAdmin;
+
+  /// [m] with the button that makes them admin or not: changed only from
+  /// the server's list, not a kept one.
+  Widget _adminRow(L10n l10n, Member m, {required bool fresh}) => ListRow(
+    title: m.name,
+    subtitle: m.email,
+    trailing: RowButton(
+      label: _isAdmin(m) ? l10n.adminRevokeAdmin : l10n.adminMakeAdmin,
+      onPressed: fresh ? () => _setAdmin(m, admin: !_isAdmin(m)) : null,
+    ),
+  );
 
   @override
   Widget build(BuildContext context) {
@@ -297,16 +356,11 @@ class _AdminChurchScreenState extends ConsumerState<AdminChurchScreen> {
               header: l10n.members,
               children: [
                 for (final m in saved.value)
-                  ListRow(
-                    title: m.name,
-                    subtitle: m.email,
-                    value: m.isAdmin ? l10n.roleAdmin : null,
-                    trailing: _makingAdmin == m.uid ? const CircularProgressIndicator.adaptive() : null,
-                    // Tapping asks; it opens no page.
-                    chevron: false,
-                    // Made admin only from the server's list, not a kept one.
-                    onTap: m.isAdmin || !saved.fresh || _makingAdmin != null ? null : () => _makeAdmin(c, m),
-                  ),
+                  // A church keeps one admin: theirs is not taken away here.
+                  if (_isAdmin(m) && saved.value.where(_isAdmin).length == 1)
+                    ListRow(title: m.name, subtitle: m.email, value: l10n.roleAdmin)
+                  else
+                    _adminRow(l10n, m, fresh: saved.fresh),
               ],
             ),
           ],

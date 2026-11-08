@@ -33,7 +33,7 @@ String errorText(L10n l10n, Object error) {
         error.reason == CloudReason.offlineReadOnly ? l10n.errOfflineReadOnly : l10n.errNetwork,
       CloudErrorCode.lastAdmin =>
         error.churches.isEmpty
-            ? l10n.errUnknown
+            ? l10n.errLastAdmin
             : l10n.deleteAccountLastAdmin(error.churches.join(l10n.churchListSeparator)),
       CloudErrorCode.notFound => l10n.churchNotFound,
       CloudErrorCode.moveInvalid => l10n.errMoveInvalid,

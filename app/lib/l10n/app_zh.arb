@@ -71,6 +71,7 @@
   "errInvalidEmail": "email 格式不對",
   "errNeedsLink": "這個 email 已經有帳號。請用原本的方式登入，登入後會自動連在一起。",
   "errTooMany": "嘗試太多次，請稍後再試",
+  "errLastAdmin": "教會至少要有一位管理員",
   "errNetwork": "連不上網路，請檢查後再試一次",
   "errUnknown": "沒有成功，請再試一次",
   "nameRequired": "請輸入名字",
@@ -625,11 +626,13 @@
   "adminChurches": "教會",
   "adminRename": "改名",
   "adminMakeAdmin": "設為管理員",
-  "adminMakeAdminTitle": "把「{name}」設為〈{church}〉的管理員？",
-  "@adminMakeAdminTitle": {
+  "adminRevokeAdmin": "取消管理員",
+  "adminRevokedAdmin": "已取消「{name}」的管理員",
+  "@adminRevokedAdmin": {
     "placeholders": {
-      "name": {"type": "String"},
-      "church": {"type": "String"}
+      "name": {
+        "type": "String"
+      }
     }
   },
   "adminMadeAdmin": "已把「{name}」設為管理員",
