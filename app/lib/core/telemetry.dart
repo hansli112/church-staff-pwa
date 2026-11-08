@@ -33,6 +33,25 @@ abstract interface class Telemetry {
   void testCrash();
 }
 
+/// Which web errors are reported: at most 20 per page load, and each kind
+/// once, so a render loop cannot flood the log or the inbox.
+///
+/// Errors that name a render object differ only in its name and hash
+/// (`RenderBox was not laid out: minified:Class746#20b19`); one failed
+/// layout leaves a dozen of them, so they count as one kind.
+class WebErrorFilter {
+  static const _cap = 20;
+  static final _renderObject = RegExp(r'(minified:Class\d+|\b\w+)#[0-9a-f]{5}\b');
+  final _sent = <String>{};
+
+  /// The message to report for [error], or null when it is not reported.
+  String? admit(Object error) {
+    final message = error.toString().replaceAll(_renderObject, 'a render object');
+    if (_sent.length >= _cap || !_sent.add(message)) return null;
+    return message;
+  }
+}
+
 class NoTelemetry implements Telemetry {
   const NoTelemetry();
 
@@ -70,16 +89,13 @@ class FirebaseTelemetry implements Telemetry {
   final FirebaseAnalytics? _analytics;
   String? _churchId;
 
-  /// Web: at most this many reports per page load, and each distinct
-  /// message once, so a render loop cannot flood the log.
-  static const _webCap = 20;
-  final _sent = <String>{};
+  final _webErrors = WebErrorFilter();
 
   @override
   void recordError(Object error, StackTrace stack, {bool fatal = false}) {
     if (kIsWeb) {
-      final message = error.toString();
-      if (_sent.length >= _webCap || !_sent.add(message)) return;
+      final message = _webErrors.admit(error);
+      if (message == null) return;
       _cloud.logError(
         message: message.length > 1000 ? message.substring(0, 1000) : message,
         stack: _trim(stack.toString(), 8000),
