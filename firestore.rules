@@ -371,7 +371,7 @@ service cloud.firestore {
             || (p is map
               && changed.hasOnly(['muted', 'reminderTiming'])
               && (!changed.hasAny(['muted']) || !('muted' in p)
-                  || (p.muted is list && p.muted.hasOnly(['reminder', 'rosterChange', 'memberLeft', 'attendance', 'joinRequest', 'identity', 'swap'])))
+                  || (p.muted is list && p.muted.hasOnly(['reminder', 'rosterChange', 'memberLeft', 'attendance', 'joinRequest', 'identity', 'swap', 'memberJoined'])))
               && (!changed.hasAny(['reminderTiming']) || !('reminderTiming' in p)
                   || p.reminderTiming in ['weekly', 'dayBefore', 'both']));
         }
@@ -585,8 +585,9 @@ service cloud.firestore {
     // churchNames/{nameKey} (name reservations), linkSources/{cid} (the
     // church link fetch schedule), webhookSecrets/{cid}, webhookOutbox/{cid}
     // (roster changes waiting to go out), heldPushes (roster pushes held over
-    // quiet hours), pendingIndex/{email hash} (who has
-    // a pending member where) and everything else: no client access.
+    // quiet hours), joinedPushes/{cid} (who joined, waiting to be told),
+    // pendingIndex/{email hash} (who has a pending member where) and
+    // everything else: no client access.
     match /{document=**} {
       allow read, write: if false;
     }

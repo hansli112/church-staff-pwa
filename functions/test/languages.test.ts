@@ -85,6 +85,18 @@ describe('a member who left', () => {
   });
 });
 
+describe('members who joined', () => {
+  test('one by name; more, the first and how many', () => {
+    assert.equal(words('zh-Hant').memberJoined('王小明', 1), '「王小明」加入了教會');
+    assert.equal(words('zh-Hant').memberJoined('王小明', 3), '「王小明」等 3 人加入了教會');
+    assert.equal(words('en').memberJoined('Ann', 2), 'Ann and 1 other joined the church');
+    assert.equal(words('en').memberJoined('Ann', 3), 'Ann and 2 others joined the church');
+    assert.equal(words('ja').memberJoined('田中', 3), '田中ほか2人が教会に参加しました');
+    assert.equal(words('ko').memberJoined('김민수', 3), '김민수 님 외 2명이 교회에 들어왔어요');
+    assert.equal(words('ko').memberJoined(null, 1), '멤버 한 명이 교회에 들어왔어요');
+  });
+});
+
 describe('dates in pushes', () => {
   test('10/18（週日）, 10/18（周日）; English names the month: Oct 18 (Sun); Japanese and Korean as CLDR has them', () => {
     const zh = words('zh-Hant');

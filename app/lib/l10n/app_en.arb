@@ -346,6 +346,8 @@
   "notifReminderTimeFooter": "All at 7 p.m.",
   "notifRosterChange": "Schedule changes",
   "notifRosterChangeSub": "When you’re added to or removed from serving. Changes after 10 p.m. wait until 7 a.m.",
+  "notifMemberJoined": "Team member joined",
+  "notifMemberJoinedSub": "When someone joins with an invite (admins only)",
   "notifMemberLeft": "Team member left",
   "notifMemberLeftSub": "When someone leaves the church (admins only)",
   "notifThisChurch": "Notifications for this church",

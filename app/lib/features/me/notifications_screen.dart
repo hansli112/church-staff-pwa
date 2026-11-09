@@ -52,6 +52,12 @@ class NotificationsScreen extends ConsumerWidget {
       (NotificationKind.swap, l10n.notifSwap, l10n.notifSwapSub),
       if (me.isAdmin)
         (
+          NotificationKind.memberJoined,
+          l10n.notifMemberJoined,
+          l10n.notifMemberJoinedSub,
+        ),
+      if (me.isAdmin)
+        (
           NotificationKind.memberLeft,
           l10n.notifMemberLeft,
           l10n.notifMemberLeftSub,

@@ -1092,6 +1092,12 @@ class L10nZh extends L10n {
   String get notifRosterChangeSub => '你被排進或移出服事時。晚上 10 點後的異動，早上 7 點才通知。';
 
   @override
+  String get notifMemberJoined => '同工加入';
+
+  @override
+  String get notifMemberJoinedSub => '有人用邀請加入教會時（只通知管理員）';
+
+  @override
   String get notifMemberLeft => '同工退出';
 
   @override
@@ -4513,6 +4519,12 @@ class L10nZhHans extends L10nZh {
 
   @override
   String get notifRosterChangeSub => '你被排入或移出事奉时。晚上 10 点后的变动，早上 7 点才通知。';
+
+  @override
+  String get notifMemberJoined => '同工加入';
+
+  @override
+  String get notifMemberJoinedSub => '有人用邀请加入教会时（只通知管理员）';
 
   @override
   String get notifMemberLeft => '同工退出';

@@ -1,9 +1,14 @@
 import type { Timestamp } from 'firebase-admin/firestore';
 import type { FunctionsErrorCode } from 'firebase-functions/v2/https';
 
+import { logger } from 'firebase-functions/v2';
+
 import { isChurchOpen } from './access.js';
 import { fail, requireCaller, serverTime, type Caller, type Deps } from './common.js';
+import { tellJoined } from './joinedPushes.js';
 import { personName } from './limits.js';
+import type { PushDeps } from './push.js';
+import { loggable } from './redact.js';
 
 /**
  * Invites live at invites/{code}. Admins create and revoke them from the app
@@ -69,24 +74,31 @@ export async function previewInvite(deps: Deps, caller: Caller | null, data: unk
 }
 
 /**
- * Joins the caller to the invite's church, in the 牧區 the invite names.
- * Joining twice is a no-op.
+ * Joins the caller to the invite's church, in the 牧區 the invite names,
+ * and tells its admins (joinedPushes.ts). Joining twice is a no-op.
  */
-export async function redeemInvite(deps: Deps, caller: Caller | null, data: unknown) {
+export async function redeemInvite(deps: Deps & PushDeps, caller: Caller | null, data: unknown) {
   const c = requireCaller(caller);
   const invite = await usableInvite(deps, data);
   const { db } = deps;
   const memberRef = db.doc(`churches/${invite.cid}/members/${c.uid}`);
   const profile = await db.doc(`users/${c.uid}`).get();
   const zoneTypes = await inviteZoneTypes(deps, invite.cid, invite.zoneTypes);
-  await db.runTransaction(async (tx) => {
+  const name = personName(profile.get('name')) || personName(c.name);
+  const joined = await db.runTransaction(async (tx) => {
     const existing = await tx.get(memberRef);
-    if (existing.exists) return;
-    tx.create(memberRef, {
-      ...newStaff(c.uid, personName(profile.get('name')) || personName(c.name), c.email ?? '', zoneTypes),
-      invitedWith: invite.code,
-    });
+    if (existing.exists) return false;
+    tx.create(memberRef, { ...newStaff(c.uid, name, c.email ?? '', zoneTypes), invitedWith: invite.code });
+    return true;
   });
+  if (joined) {
+    try {
+      await tellJoined(deps, await db.doc(`churches/${invite.cid}`).get(), name);
+    } catch (e) {
+      // They are in; the admins not hearing of it must not say otherwise.
+      logger.error('Joined push failed', { cid: invite.cid, error: loggable(e).message });
+    }
+  }
   return { churchId: invite.cid };
 }
 

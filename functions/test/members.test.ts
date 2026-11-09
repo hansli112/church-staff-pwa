@@ -24,6 +24,8 @@ import {
 import { auth, caller, clearFirestore, db, deps, fakePush, rejectsWith, seedChurch, setNow } from './support.js';
 
 const appUrl = 'https://app.example';
+/** Joining tells the admins: pushed nowhere here. */
+const joinDeps = { ...deps, messaging: fakePush().messaging, appUrl };
 
 beforeEach(async () => {
   await clearFirestore();
@@ -52,7 +54,7 @@ describe('invites', () => {
 
     const preview = await previewInvite(deps, caller('newbie'), { code: 'joinme2026' });
     assert.equal(preview.churchName, 'C1');
-    const { churchId } = await redeemInvite(deps, caller('newbie'), { code: 'JOINME2026' });
+    const { churchId } = await redeemInvite(joinDeps, caller('newbie'), { code: 'JOINME2026' });
 
     assert.equal(churchId, 'C1');
     const member = await db.doc('churches/C1/members/newbie').get();
@@ -82,7 +84,7 @@ describe('invites', () => {
     // Another church's service, a removed one, a repeat and junk are dropped.
     await invite('JOINME2026', 'C1', { zoneTypes: ['youth', 'gone', 'c2only', 'sunday', 'youth', 7] });
 
-    await redeemInvite(deps, caller('newbie'), { code: 'JOINME2026' });
+    await redeemInvite(joinDeps, caller('newbie'), { code: 'JOINME2026' });
 
     const member = await db.doc('churches/C1/members/newbie').get();
     assert.deepEqual(member.get('zones'), [
@@ -95,7 +97,7 @@ describe('invites', () => {
   test('redeeming twice keeps one member doc and does not reset the role', async () => {
     await seedChurch('C1', { alice: 'admin', bob: 'leader' });
     await invite('JOINME2026', 'C1');
-    await redeemInvite(deps, caller('bob'), { code: 'JOINME2026' });
+    await redeemInvite(joinDeps, caller('bob'), { code: 'JOINME2026' });
     assert.equal((await db.doc('churches/C1/members/bob').get()).get('role'), 'leader');
     assert.equal((await db.collection('churches/C1/members').get()).size, 2);
   });
@@ -104,21 +106,21 @@ describe('invites', () => {
     await seedChurch('C1', { alice: 'admin' });
     await invite('EXPIRED00', 'C1', { expiresAt: new Date('2026-09-30T00:00:00Z') });
     await invite('REVOKED00', 'C1', { revoked: true });
-    await rejectsWith(redeemInvite(deps, caller('x'), { code: 'EXPIRED00' }), 'inviteExpired');
-    await rejectsWith(redeemInvite(deps, caller('x'), { code: 'REVOKED00' }), 'inviteInvalid');
-    await rejectsWith(redeemInvite(deps, caller('x'), { code: 'NOSUCH000' }), 'inviteInvalid');
-    await rejectsWith(redeemInvite(deps, caller('x'), { code: '../../x' }), 'inviteInvalid');
+    await rejectsWith(redeemInvite(joinDeps, caller('x'), { code: 'EXPIRED00' }), 'inviteExpired');
+    await rejectsWith(redeemInvite(joinDeps, caller('x'), { code: 'REVOKED00' }), 'inviteInvalid');
+    await rejectsWith(redeemInvite(joinDeps, caller('x'), { code: 'NOSUCH000' }), 'inviteInvalid');
+    await rejectsWith(redeemInvite(joinDeps, caller('x'), { code: '../../x' }), 'inviteInvalid');
     assert.equal((await db.doc('churches/C1/members/x').get()).exists, false);
   });
 
   test('an invite to a suspended church does not work', async () => {
     await seedChurch('C1', { alice: 'admin' }, { status: 'suspended' });
     await invite('JOINME2026', 'C1');
-    await rejectsWith(redeemInvite(deps, caller('x'), { code: 'JOINME2026' }), 'inviteInvalid');
+    await rejectsWith(redeemInvite(joinDeps, caller('x'), { code: 'JOINME2026' }), 'inviteInvalid');
   });
 
   test('requires sign-in', async () => {
-    await rejectsWith(redeemInvite(deps, null, { code: 'JOINME2026' }), 'permissionDenied');
+    await rejectsWith(redeemInvite(joinDeps, null, { code: 'JOINME2026' }), 'permissionDenied');
   });
 });
 

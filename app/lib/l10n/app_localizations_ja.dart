@@ -1092,6 +1092,12 @@ class L10nJa extends L10n {
   String get notifRosterChangeSub => '奉仕に入ったり外れたりしたとき。夜10時以降の変更は朝7時に届きます。';
 
   @override
+  String get notifMemberJoined => 'メンバーの参加';
+
+  @override
+  String get notifMemberJoinedSub => '誰かが招待で教会に参加したとき（管理者のみ）';
+
+  @override
   String get notifMemberLeft => 'メンバーの退出';
 
   @override

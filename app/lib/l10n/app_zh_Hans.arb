@@ -346,6 +346,8 @@
   "notifReminderTimeFooter": "都在晚上 7 点",
   "notifRosterChange": "事奉表变动",
   "notifRosterChangeSub": "你被排入或移出事奉时。晚上 10 点后的变动，早上 7 点才通知。",
+  "notifMemberJoined": "同工加入",
+  "notifMemberJoinedSub": "有人用邀请加入教会时（只通知管理员）",
   "notifMemberLeft": "同工退出",
   "notifMemberLeftSub": "有人退出教会时（只通知管理员）",
   "notifThisChurch": "这间教会的通知",

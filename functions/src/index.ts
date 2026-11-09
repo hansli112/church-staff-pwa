@@ -42,6 +42,7 @@ import * as fundingEcpay from './fundingEcpay.js';
 import * as fundingPlay from './fundingPlay.js';
 import * as invites from './invites.js';
 import * as joinRequests from './joinRequests.js';
+import * as joinedPushes from './joinedPushes.js';
 import * as ledDuties from './ledDuties.js';
 import { memoryGoogle } from './memoryGoogle.js';
 import * as move from './move.js';
@@ -178,6 +179,15 @@ export const fetchChurchLinks = onSchedule(
   },
 );
 
+// Who joined by invite since the admins were last told: often, so an
+// hour after the last push is not much more.
+export const sendJoinedPushes = onSchedule(
+  { region: REGION, schedule: 'every 15 minutes', timeZone: 'Asia/Taipei' },
+  async () => {
+    await joinedPushes.sendJoinedPushes(pushDeps());
+  },
+);
+
 // 外部通知 (webhooks)
 export const webhookSave = callable(webhook.webhookSave, hookDeps);
 export const webhookRotateSecret = callable(webhook.webhookRotateSecret, hookDeps);
@@ -222,7 +232,7 @@ export const editSmallGroup = callable(smallGroups.editSmallGroup);
 
 // Invites, and requests to join without one (#88)
 export const previewInvite = callable(invites.previewInvite);
-export const redeemInvite = callable(invites.redeemInvite);
+export const redeemInvite = callable(invites.redeemInvite, pushDeps);
 export const requestToJoin = callable(joinRequests.requestToJoin, pushDeps);
 export const withdrawJoinRequest = callable(joinRequests.withdrawJoinRequest);
 export const answerJoinRequest = callable(joinRequests.answerJoinRequest, pushDeps);

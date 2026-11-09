@@ -1129,6 +1129,12 @@ class L10nEn extends L10n {
       'When you’re added to or removed from serving. Changes after 10 p.m. wait until 7 a.m.';
 
   @override
+  String get notifMemberJoined => 'Team member joined';
+
+  @override
+  String get notifMemberJoinedSub => 'When someone joins with an invite (admins only)';
+
+  @override
   String get notifMemberLeft => 'Team member left';
 
   @override

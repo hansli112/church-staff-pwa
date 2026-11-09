@@ -7,6 +7,7 @@ import { forgetLinkSource, moveLinkFetch } from './churchLink.js';
 import { followTimeZone } from './eventSync.js';
 import { DAY_MS, fail, requireCaller, runEach, serverTime, text, type Caller, type Deps } from './common.js';
 import { forgetInvites } from './invites.js';
+import { forgetJoinedPushes } from './joinedPushes.js';
 import { requestState, takesJoinRequests } from './joinRequests.js';
 import { languageOf, words } from './languages.js';
 import { personName, TEXT_LIMITS } from './limits.js';
@@ -187,6 +188,7 @@ export function forgetChurch(deps: PurgeDeps, cid: string) {
     webhook: () => forgetWebhook(deps, cid),
     churchLink: () => forgetLinkSource(deps, cid),
     invites: () => forgetInvites(deps, cid),
+    joinedPushes: () => forgetJoinedPushes(deps, cid),
     // Reads the pending members, so before the tree goes.
     pendingClaims: () => forgetPending(deps, cid),
     // The logo and the icons made from it.

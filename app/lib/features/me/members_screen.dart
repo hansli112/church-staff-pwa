@@ -91,8 +91,15 @@ class _MembersScreenState extends ConsumerState<MembersScreen> {
                 for (final m in all)
                   if (!hidden.contains(m.uid) && matchesSearch(m.name, _query)) m,
               ]..sort((a, b) {
-                // Admins, then whoever holds a 身分, then everyone else.
-                int rank(Member m) => m.isAdmin ? 0 : (m.identities.isNotEmpty ? 1 : 2);
+                // Who is in no 聚會 yet first (just joined, mostly: the
+                // admins' push opens here), then admins, whoever holds a
+                // 身分, everyone else.
+                int rank(Member m) => switch (m) {
+                  _ when !m.isAdmin && m.identities.isEmpty && m.waitsForZone(enabled) => 0,
+                  _ when m.isAdmin => 1,
+                  _ when m.identities.isNotEmpty => 2,
+                  _ => 3,
+                };
                 final ra = rank(a).compareTo(rank(b));
                 return ra != 0 ? ra : a.name.compareTo(b.name);
               });

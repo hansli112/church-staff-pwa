@@ -33,6 +33,7 @@
 | `webhookSecrets/{cid}` | 只有後端讀寫：外部通知的密鑰，用行事曆 token 的金鑰以 AES-256-GCM 加密 |
 | `webhookOutbox/{cid}/rosterChanges/{eventId}` | 只有後端讀寫：還沒送出的服事表異動，每 5 分鐘合併成一則外部通知後刪除 |
 | `plannedPushes/{cid}_{rosterId}_{uid}` | 安排服事（#90）等著「完成」通知的服事表異動，只有後端寫：在那頁排（`via: 'plan'`）時，每個被排進或移出的人（排的人自己除外）一筆。`cid`、`rosterId`、`uid`、`roles`（第一筆之前這個人在那天的服事項目；之後照常通知過的、他自己改的、匯入的異動會併進來）、`dateKey`、`serviceId`、`serviceName`、`sendAt`（還沒按是 `null`；夜裡按的是 7:00）。按「完成」（或離開時答「通知」；`notifyPlanned`，能排這個聚會的人）時，那個聚會 `sendAt == null` 的每人合成一則：比對當下的服事表，只說淨變了什麼，過去的日子不說，送完刪除。這個人又變回原本的樣子（排進又移出，或照常通知過）就刪掉；每小時也刪掉日子在各地都已過去的。讀名單的人（admin、行政、負責人）查得到自己教會的，用來決定離開時要不要問 |
+| `joinedPushes/{cid}` | 只有後端讀寫：用邀請加入的人還沒推播給管理員的。`cid`、`lastAt`（上次推播）、`first`（之後第一個加入的名字）、`count`（之後加入幾人）、`sendAt`（什麼時候合成一則送，沒有等著的是 `null`）。一小時最多推播一次，22:00–7:00 等到 7:00；每 15 分鐘的排程送出，教會刪除時一起刪 |
 | `heldPushes/{cid}_{rosterId}_{uid}` | 只有後端讀寫：教會當地 22:00–7:00 的服事表異動推播，等 7:00 再送。`cid`、`rosterId`、`uid`、`roles`（第一筆延後的異動之前，這個人在那天的服事項目；他自己改的、匯入的異動會併進來，不算消息）、`dateKey`（那時的日期，活動改期看得出來）、`serviceId`、`serviceName`、`event`、`sendAt`。送出時比對當下的服事表，只說這段時間淨變了什麼，送完刪除。7:00 後、排程送出前又有異動時，兩者合成一則一起送 |
 | `platform/funding` | 雲端費用進度，誰都讀得到（網站的支持頁不用登入）、只有後端寫：`month`（`YYYY-MM`）、`target`、`received`、`carried`、`monthsLeft`（金額都是新台幣整數）、`costs`（每一項費用公開給大家看：`name`、`names`（有填才有）、`perMonth` 每月新台幣、`per`；`target` 是 `perMonth` 加總；沒有匯率時沿用上一次的）、`updatedAt` |
 | `platform/app` | 商店 App 最低能用的 build number，誰都讀得到（沒登入也要擋）、App 不能寫，營運者在 Console 或 REST 改：`minBuild`（`android`、`ios`；沒有或 0 就不擋）。比它舊的 App 整個畫面要求更新（`docs/firebase-setup.md`〈要求更新手機 App〉） |
@@ -122,7 +123,7 @@ App 與 Functions 各寫一次的教會資料規則也一樣：新教會的預�
 | 讀 member | 本人、admin、行政、負責人（`leadTypes`、`leadMinistries` 或 `leadSmallGroups` 不是空的） |
 | 讀待認領同工 | admin、行政、負責人；只有 admin 能刪，其他寫入都是後端 |
 | 加入教會（建立 member） | 只有 Cloud Functions（邀請、管理員允許申請加入） |
-| 改 member | admin（不能改 `uid`、不能把自己降級）；本人只能改 `notificationPrefs`。改到 `notificationPrefs` 時，`muted` 只能是 `reminder`、`rosterChange`、`memberLeft`、`attendance`、`joinRequest`、`identity`、`swap`，`reminderTiming` 只能是 `weekly`、`dayBefore`、`both`。只檢查這次改到的欄位，因為從 self-host 搬來的可能有舊的種類，App 也是一次寫一個欄位 |
+| 改 member | admin（不能改 `uid`、不能把自己降級）；本人只能改 `notificationPrefs`。改到 `notificationPrefs` 時，`muted` 只能是 `reminder`、`rosterChange`、`memberLeft`、`attendance`、`joinRequest`、`identity`、`swap`、`memberJoined`，`reminderTiming` 只能是 `weekly`、`dayBefore`、`both`。只檢查這次改到的欄位，因為從 self-host 搬來的可能有舊的種類，App 也是一次寫一個欄位 |
 | 刪 member | admin 刪別人；非 admin 可以自己退出。admin 要先被別的 admin 降級才能走 |
 | 讀服事表、排序、設定 | 同工 |
 | 寫服事表、排序 | admin、行政（任何已設定的聚會別）；聚會負責人和牧者（只限 `leadTypes` 裡的聚會別，移動時新舊聚會別都要有）。事工負責人不能直接寫，經 `editLedDuties` 只改他事工連到的服事項目：其他服事項目、特別活動不能動，不能刪整天；還沒存過的那天可以照範本建立，但要有他的服事項目、其他服事項目要沒有人（`testdata/church_rules.json` 的 `ledDuties`） |

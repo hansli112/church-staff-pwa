@@ -1093,6 +1093,12 @@ class L10nKo extends L10n {
   String get notifRosterChangeSub => '내가 봉사에 배정되거나 빠졌을 때. 밤 10시 이후의 변경은 아침 7시에 알려요.';
 
   @override
+  String get notifMemberJoined => '멤버 들어옴';
+
+  @override
+  String get notifMemberJoinedSub => '누군가 초대로 교회에 들어왔을 때(관리자만)';
+
+  @override
   String get notifMemberLeft => '멤버 나감';
 
   @override

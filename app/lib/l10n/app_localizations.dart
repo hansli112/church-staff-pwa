@@ -2032,6 +2032,18 @@ abstract class L10n {
   /// **'你被排進或移出服事時。晚上 10 點後的異動，早上 7 點才通知。'**
   String get notifRosterChangeSub;
 
+  /// Notification switch: someone joined by invite
+  ///
+  /// In zh, this message translates to:
+  /// **'同工加入'**
+  String get notifMemberJoined;
+
+  /// No description provided for @notifMemberJoinedSub.
+  ///
+  /// In zh, this message translates to:
+  /// **'有人用邀請加入教會時（只通知管理員）'**
+  String get notifMemberJoinedSub;
+
   /// No description provided for @notifMemberLeft.
   ///
   /// In zh, this message translates to:

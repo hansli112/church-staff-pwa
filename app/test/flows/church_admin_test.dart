@@ -96,6 +96,11 @@ void main() {
       await pumpApp(tester, b);
       await tapText(tester, '1 位同工還沒加入任何聚會');
       expect(find.textContaining('還沒加入任何聚會'), findsOneWidget, reason: 'John Chen, in the member list');
+      expect(
+        tester.getTopLeft(find.text('John Chen')).dy,
+        lessThan(tester.getTopLeft(find.textContaining('王牧師')).dy),
+        reason: 'above the admins: the next thing to do is putting him in one',
+      );
       await tapText(tester, 'John Chen');
       await tester.tap(find.text('主日崇拜的同工'));
       await settle(tester);

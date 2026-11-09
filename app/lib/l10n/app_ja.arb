@@ -346,6 +346,8 @@
   "notifReminderTimeFooter": "どちらも夜7時です",
   "notifRosterChange": "奉仕表の変更",
   "notifRosterChangeSub": "奉仕に入ったり外れたりしたとき。夜10時以降の変更は朝7時に届きます。",
+  "notifMemberJoined": "メンバーの参加",
+  "notifMemberJoinedSub": "誰かが招待で教会に参加したとき（管理者のみ）",
   "notifMemberLeft": "メンバーの退出",
   "notifMemberLeftSub": "誰かが教会を退出したとき（管理者のみ）",
   "notifThisChurch": "この教会の通知",

@@ -171,6 +171,7 @@ class _NotificationListScreenState extends ConsumerState<NotificationListScreen>
 const _icons = {
   NotificationKind.reminder: Symbols.event_upcoming_rounded,
   NotificationKind.rosterChange: Symbols.edit_calendar_rounded,
+  NotificationKind.memberJoined: Symbols.person_add_rounded,
   NotificationKind.memberLeft: Symbols.person_remove_rounded,
   NotificationKind.attendance: Symbols.groups_rounded,
   NotificationKind.joinRequest: Symbols.person_add_rounded,
