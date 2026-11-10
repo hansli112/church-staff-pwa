@@ -226,6 +226,7 @@ void main() {
     await go(tester, '/me/groups/small/joy/attendance');
     expect(find.text('沒聚會'), findsOneWidget, reason: '10/9');
     expect(find.text('未填'), findsOneWidget, reason: '10/2');
+    expect(titleColor(tester, '沒聚會'), isNot(titleColor(tester, '未填')), reason: 'greyed: it did not meet');
     // 補填.
     await tapText(tester, '未填');
     await tester.enterText(find.widgetWithText(TextField, '人數'), '8');
@@ -406,6 +407,7 @@ void main() {
       expect(inRow('平安小組', '和喜樂小組一起'), findsOneWidget);
       expect(inRow('青年崇拜', '沒聚會'), findsOneWidget);
       expect(y(tester, '青年崇拜'), greaterThan(y(tester, '主日崇拜')), reason: '沒聚會, after those that met');
+      expect(titleColor(tester, '沒聚會'), isNot(titleColor(tester, '120 人')), reason: 'greyed');
     });
 
     testWidgets('a break marked ahead opens no week; this week lists only who still meets in it', (tester) async {
@@ -532,4 +534,10 @@ void main() {
       expect(b.attendance['grace']!['small:joy']!.days[Day(2026, 10, 9)], const AttendanceDay.count(11));
     });
   });
+}
+
+/// The title's color in the row that shows [value].
+Color? titleColor(WidgetTester tester, String value) {
+  final row = find.ancestor(of: find.text(value), matching: find.byType(ListRow));
+  return tester.widget<Text>(find.descendant(of: row, matching: find.byType(Text)).first).style?.color;
 }

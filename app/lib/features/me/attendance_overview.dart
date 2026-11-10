@@ -82,6 +82,7 @@ class _AttendanceOverviewScreenState extends ConsumerState<AttendanceOverviewScr
                       for (final r in week.rows)
                         ListRow(
                           title: r.group.name,
+                          dimmed: r.value?.none ?? false,
                           subtitle: switch (r.day) {
                             final day? => [
                               dayLabel(l10n, day, today),

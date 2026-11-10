@@ -116,6 +116,7 @@ class GroupAttendanceScreen extends ConsumerWidget {
                 for (final day in days)
                   ListRow(
                     title: dayLabel(l10n, day, today),
+                    dimmed: record.days[day]?.none ?? false,
                     value: attendanceValue(l10n, record.days[day], nameOf),
                     subtitle: attendanceDetail(l10n, record.days[day], nameOf),
                     onTap: writes ? () => fillAttendance(context, ref, group, day, record.days[day]) : null,

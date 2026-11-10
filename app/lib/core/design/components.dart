@@ -358,6 +358,7 @@ class ListRow extends StatelessWidget {
     this.onTap,
     this.chevron,
     this.destructive = false,
+    this.dimmed = false,
     this.selected,
   });
 
@@ -374,6 +375,10 @@ class ListRow extends StatelessWidget {
   /// there is no [trailing] widget.
   final bool? chevron;
   final bool destructive;
+
+  /// Greys the title, for a row that counts for less than those around it,
+  /// such as a meeting that did not happen.
+  final bool dimmed;
 
   /// Non-null makes this a choice row: a check mark when true, and never a
   /// disclosure chevron, since choosing does not open another page.
@@ -440,7 +445,11 @@ class ListRow extends StatelessWidget {
                           title,
                           textAlign: TextAlign.start,
                           style: AppText.body.copyWith(
-                            color: destructive ? c.destructive : c.label,
+                            color: destructive
+                                ? c.destructive
+                                : dimmed
+                                ? c.secondaryLabel
+                                : c.label,
                           ),
                         ),
                         if (stacked)
