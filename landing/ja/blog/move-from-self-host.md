@@ -20,7 +20,9 @@ description: 自前で立てる church-staff-pwa は更新を終えました。�
 
 ## 1. 移行ファイルを作る
 
-サイトを立てたときの Google アカウントで [Cloud Shell を開きます](https://shell.cloud.google.com/cloudshell/editor?cloudshell_git_repo=https%3A%2F%2Fgithub.com%2Fhansli112%2Fchurch-staff-pwa&cloudshell_git_branch=main&cloudshell_workspace=.&cloudshell_tutorial=docs%2Fmove-to-martha.md&show=terminal)。右側に移行の手順（繁体字中国語）が開くので、手順1のコマンドの右上にあるターミナルのアイコンをクリックし、下のターミナルで Enter を一度押します。
+サイトを立てたときの Google アカウントで [Cloud Shell を開きます](https://shell.cloud.google.com/cloudshell/editor?cloudshell_git_repo=https%3A%2F%2Fgithub.com%2Fhansli112%2Fchurch-staff-pwa&cloudshell_git_branch=main&cloudshell_workspace=.&cloudshell_tutorial=docs%2Fmove-to-martha.md&show=terminal)。リポジトリを信頼するかどうか聞かれたら、信頼するにチェックを入れて確認します。続けて Cloud Shell の承認を求める画面が出たら、承認をクリックします。Google の公式の画面で、Cloud Shell があなたのアカウントで古いサイトのデータを読めるようにするものです。同じ画面がまた出たときも、承認をクリックしてください。
+
+右側に移行の手順（繁体字中国語）が開くので、手順1のコマンドの右上にあるターミナルのアイコンをクリックし、下のターミナルで Enter を一度押します。
 
 終わると、メンバーが何人、奉仕表が何件あったかが表示されます。数を確かめてください。
 
@@ -42,8 +44,11 @@ cloudshell download "$HOME/move.json"
 1. <span data-from-app="hide">[Web版](/home)を開いて</span>ログインします。Google でもメールアドレスでもかまいません。メールアドレスで登録した場合は、先に確認メールのリンクを開いてください。
 2. 「教会に参加する」で「新しい教会を作成」を選び、いちばん下の「旧バージョンから移行」をタップします。
 3. 「移行ファイルを選択」をタップし、ダウンロードした `move.json` を選びます。
-4. メンバーと奉仕表の数を確かめます。「これは自分です（任意）」で自分を選ぶと、古いサイトでの奉仕と権限を引き継げます。
-5. 「教会を作成して移行」をタップします。アップロードした人が新しい教会の管理者になります。
+4. メンバーと奉仕表の数を確かめて、「教会名」を入れます。
+5. 「これは自分です（任意）」で自分を選ぶと、古いサイトでの奉仕と権限を引き継げます。ログインしたメールアドレスと同じ人は、はじめから選ばれています。
+6. 「教会を作成して移行」をタップします。アップロードした人が新しい教会の管理者になります。
+
+![移行ファイルを選び、内容を確かめて教会名を入れ、教会を作成して移行をタップ](media:move)
 
 ## 4. メンバーに参加してもらう
 

@@ -20,7 +20,19 @@ description: 自架的同工助手（church-staff-pwa）不再更新了。把同
 
 ## 1. 生成迁移文件
 
-用当初创建网站的 Google 账号[打开 Cloud Shell](https://shell.cloud.google.com/cloudshell/editor?cloudshell_git_repo=https%3A%2F%2Fgithub.com%2Fhansli112%2Fchurch-staff-pwa&cloudshell_git_branch=main&cloudshell_workspace=.&cloudshell_tutorial=docs%2Fmove-to-martha.md&show=terminal)。右边会出现迁移教程（繁体中文），点第 1 步指令卡右上角的终端图标，再到下方的终端按一次 Enter。
+用当初创建网站的 Google 账号[打开 Cloud Shell](https://shell.cloud.google.com/cloudshell/editor?cloudshell_git_repo=https%3A%2F%2Fgithub.com%2Fhansli112%2Fchurch-staff-pwa&cloudshell_git_branch=main&cloudshell_workspace=.&cloudshell_tutorial=docs%2Fmove-to-martha.md&show=terminal)。
+
+弹出询问要不要信任这个代码库的窗口时，先勾选信任，再点确认。
+
+![勾选信任代码库，再点确认（繁体中文界面）](/media/zh-Hans/move-cloudshell-trust.png)
+
+接着弹出授权 Cloud Shell 的窗口，点授权。这是 Google 官方的窗口，让 Cloud Shell 用你的账号读取旧网站的数据。之后再看到同样的窗口，也一样点授权。
+
+![授权 Cloud Shell 的窗口，点授权（繁体中文界面）](/media/zh-Hans/move-cloudshell-authorize.png)
+
+右边会出现迁移教程（繁体中文）。点第 1 步指令卡右上角的终端图标，再到下方的终端按一次 Enter。
+
+![迁移教程的第 1 步，指令卡右上角的终端图标](/media/zh-Hans/move-cloudshell-run.png)
 
 运行完会显示同工几位、事奉表几份，核对一下数字。
 
@@ -42,8 +54,11 @@ cloudshell download "$HOME/move.json"
 1. <span data-from-app="hide">打开[网页版](/home)</span>登录，用 Google 或邮箱都可以。用邮箱注册的，要先点开验证邮件里的链接。
 2. 在「加入你的教会」选「创建新教会」，点最下面的「从旧版迁移过来」。
 3. 点「选择迁移文件」，选刚才下载的 `move.json`。
-4. 看一下同工和事奉表的数量。在「这位是我（选填）」选你自己，就会接手你在旧版的事奉和权限。
-5. 点「创建教会并迁移过来」。上传的人就是新教会的管理员。
+4. 看一下同工和事奉表的数量，填上「教会名称」。
+5. 在「这位是我（选填）」选你自己，就会接手你在旧版的事奉和权限。和你登录的邮箱一样的那位已经先勾好了。
+6. 点「创建教会并迁移过来」。上传的人就是新教会的管理员。
+
+![选择迁移文件，看过内容、填好教会名称，点创建教会并迁移过来](media:move)
 
 ## 4. 请同工加入
 

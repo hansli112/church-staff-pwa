@@ -20,7 +20,9 @@ Passwords, push notifications, LINE notifications, the daily devotional, and the
 
 ## 1. Make the move file
 
-Sign in with the Google account that set up your site and [open Cloud Shell](https://shell.cloud.google.com/cloudshell/editor?cloudshell_git_repo=https%3A%2F%2Fgithub.com%2Fhansli112%2Fchurch-staff-pwa&cloudshell_git_branch=main&cloudshell_workspace=.&cloudshell_tutorial=docs%2Fmove-to-martha.md&show=terminal). A guide (in Traditional Chinese) opens on the right. Click the terminal icon at the top right of step 1’s command, then press Enter in the terminal below.
+Sign in with the Google account that set up your site and [open Cloud Shell](https://shell.cloud.google.com/cloudshell/editor?cloudshell_git_repo=https%3A%2F%2Fgithub.com%2Fhansli112%2Fchurch-staff-pwa&cloudshell_git_branch=main&cloudshell_workspace=.&cloudshell_tutorial=docs%2Fmove-to-martha.md&show=terminal). When **Open in Cloud Shell** asks, check **Trust repo** and click **Confirm**. When **Authorize Cloud Shell** comes up, click **Authorize**: it’s Google’s own window, letting Cloud Shell read your old site’s data with your account. Click **Authorize** again whenever it comes back.
+
+A guide (in Traditional Chinese) opens on the right. Click the terminal icon at the top right of step 1’s command, then press Enter in the terminal below.
 
 When it finishes, it says how many team members and schedules it found. Check the numbers.
 
@@ -42,8 +44,11 @@ Your browser downloads `move.json`. It has your team members’ names and emails
 1. <span data-from-app="hide">Open the [web app](/home) and </span>Sign in with Google or email. If you sign up with email, open the link in the verification email first.
 2. On **Join your church**, choose **Create a church**, then tap **Move from old version** at the bottom.
 3. Tap **Choose move file** and pick the `move.json` you downloaded.
-4. Check the number of team members and schedules. Under **This is me**, pick yourself to take over your serving and permissions from the old site.
-5. Tap **Create church and move**. Whoever uploads the file is the new church’s admin.
+4. Check the number of team members and schedules, and fill in **Church name**.
+5. Under **This is me**, pick yourself to take over your serving and permissions from the old site. Whoever has the email you signed in with is already picked.
+6. Tap **Create church and move**. Whoever uploads the file is the new church’s admin.
+
+![Choose the move file, check what’s in it, fill in the church name, and tap Create church and move](media:move)
 
 ## 4. Have your team join
 

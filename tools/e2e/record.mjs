@@ -82,6 +82,7 @@ function session(page, words, stillPath) {
     if (stillPath) await page.screenshot({ path: stillPath, type: 'jpeg', quality: 85 });
   };
   return {
+    page,
     t,
     wait,
     still,
@@ -270,6 +271,27 @@ const CLIPS = {
       await s.still();
     },
   },
+  // 管理員: the church moved from self-host. Any file reads as the demo's
+  // preview (app/lib/data/memory/demo_data.dart); the uploader is picked
+  // already, by their email.
+  move: {
+    route: '/welcome/move',
+    async play(s, { otherChurch }) {
+      await s.wait(1200);
+      s.page.once('filechooser', (chooser) =>
+        chooser.setFiles({ name: 'move.json', mimeType: 'application/json', buffer: Buffer.from('{"format":"church-staff-pwa-move"}') }),
+      );
+      await s.tap(s.node(s.t('movePickFile')));
+      await s.wait(2000);
+      await s.still();
+      await s.tap(s.node(s.t('churchName'), 'textbox'));
+      await s.wait(400);
+      await s.type(otherChurch);
+      await s.wait(600);
+      await s.tap(s.node(s.t('moveCreate')));
+      await s.wait(2500);
+    },
+  },
   // 通知: what to be told, from 設定.
   notifications: {
     route: '/me',
@@ -289,6 +311,9 @@ const languages = flag('lang') ?? Object.keys(LANGUAGES);
 // Headless Chromium sends its screencast at CSS pixels unless the scale is forced too.
 const browser = await chromium.launch({ args: ['--enable-unsafe-swiftshader', '--use-angle=swiftshader', '--force-device-scale-factor=2'] });
 const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'martha-record-'));
+
+/** The church a move makes, in each language: demo_data.dart's otherChurch, which the showcase does not have. */
+const OTHER_CHURCH = { 'zh-Hant': '活水教會', 'zh-Hans': '活水教会', en: 'Living Water Church', ja: '生ける水教会', ko: '생수교회' };
 
 /** The demo church's duties in each language (app/lib/data/memory/demo_data.dart), for finding cells. */
 const DUTIES = {
@@ -326,7 +351,7 @@ for (const language of languages) {
     // before the recording starts. The demo starts afresh on the reload.
     await page.goto(`${base}${clip.route}`);
     await page.waitForTimeout(4000);
-    await clip.play(session(page, words), { duties: DUTIES[language] }).catch(() => {});
+    await clip.play(session(page, words), { duties: DUTIES[language], otherChurch: OTHER_CHURCH[language] }).catch(() => {});
     await page.goto(`${base}${clip.route}`);
     await page.waitForTimeout(4000);
     const dir = path.join(outdir, language);
@@ -334,7 +359,7 @@ for (const language of languages) {
     const frames = stillsOnly ? null : await screencast(page, path.join(tmp, `${language}-${name}`));
     recording = true;
     try {
-      await clip.play(session(page, words, path.join(dir, `${name}-still.jpg`)), { duties: DUTIES[language] });
+      await clip.play(session(page, words, path.join(dir, `${name}-still.jpg`)), { duties: DUTIES[language], otherChurch: OTHER_CHURCH[language] });
       if (lateFonts.length) throw new Error(`fonts fetched while recording: ${lateFonts.join(', ')}`);
     } catch (e) {
       failed = true;

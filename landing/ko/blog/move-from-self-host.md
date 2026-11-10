@@ -20,7 +20,9 @@ description: 직접 설치하는 church-staff-pwa는 더 이상 업데이트되�
 
 ## 1. 이전용 파일 만들기
 
-사이트를 설치한 Google 계정으로 [Cloud Shell을 여세요](https://shell.cloud.google.com/cloudshell/editor?cloudshell_git_repo=https%3A%2F%2Fgithub.com%2Fhansli112%2Fchurch-staff-pwa&cloudshell_git_branch=main&cloudshell_workspace=.&cloudshell_tutorial=docs%2Fmove-to-martha.md&show=terminal). 오른쪽에 옮기는 방법(번체 중국어)이 열리면, 1단계 명령어 오른쪽 위의 터미널 아이콘을 누르고 아래 터미널에서 Enter를 한 번 누르세요.
+사이트를 설치한 Google 계정으로 [Cloud Shell을 여세요](https://shell.cloud.google.com/cloudshell/editor?cloudshell_git_repo=https%3A%2F%2Fgithub.com%2Fhansli112%2Fchurch-staff-pwa&cloudshell_git_branch=main&cloudshell_workspace=.&cloudshell_tutorial=docs%2Fmove-to-martha.md&show=terminal). 저장소를 신뢰할지 묻는 창이 나오면 신뢰에 체크하고 확인을 누르세요. 이어서 Cloud Shell 승인을 묻는 창이 나오면 승인을 누르세요. Google의 공식 창으로, Cloud Shell이 내 계정으로 예전 사이트의 데이터를 읽을 수 있게 해 줘요. 같은 창이 또 나와도 승인을 누르면 돼요.
+
+오른쪽에 옮기는 방법(번체 중국어)이 열리면, 1단계 명령어 오른쪽 위의 터미널 아이콘을 누르고 아래 터미널에서 Enter를 한 번 누르세요.
 
 다 되면 멤버가 몇 명, 봉사표가 몇 개인지 나와요. 숫자를 확인하세요.
 
@@ -42,8 +44,11 @@ cloudshell download "$HOME/move.json"
 1. <span data-from-app="hide">[웹 버전](/home)을 열고 </span>로그인하세요. Google이든 이메일이든 괜찮아요. 이메일로 가입했다면 먼저 인증 메일의 링크를 여세요.
 2. ‘교회에 가입하기’에서 ‘새 교회 만들기’를 고르고, 맨 아래의 ‘구버전에서 옮겨 오기’를 누르세요.
 3. ‘이전용 파일 선택’을 누르고, 내려받은 `move.json`을 고르세요.
-4. 멤버와 봉사표 수를 확인하세요. ‘이 사람이 나예요(선택)’에서 자신을 고르면 예전 사이트의 봉사와 권한을 이어받아요.
-5. ‘교회 만들고 옮겨 오기’를 누르세요. 파일을 올린 사람이 새 교회의 관리자가 돼요.
+4. 멤버와 봉사표 수를 확인하고 ‘교회 이름’을 넣으세요.
+5. ‘이 사람이 나예요(선택)’에서 자신을 고르면 예전 사이트의 봉사와 권한을 이어받아요. 로그인한 이메일과 같은 사람은 처음부터 골라져 있어요.
+6. ‘교회 만들고 옮겨 오기’를 누르세요. 파일을 올린 사람이 새 교회의 관리자가 돼요.
+
+![이전용 파일을 고르고, 내용을 확인한 뒤 교회 이름을 넣고 교회 만들고 옮겨 오기를 누르기](media:move)
 
 ## 4. 멤버 가입시키기
 
