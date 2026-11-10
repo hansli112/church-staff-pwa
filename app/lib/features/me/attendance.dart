@@ -100,11 +100,16 @@ class GroupAttendanceScreen extends ConsumerWidget {
               children: [
                 ListRow(
                   title: switch (next) {
-                    final next? => attendanceNotYet(l10n, next, today),
+                    _? => l10n.attendanceNextMeeting,
                     null when meetsUnset(group, today) => attendanceNotYet(l10n, null, today),
                     null => l10n.attendanceNoDays,
                   },
-                  subtitle: skipped > 0 ? l10n.attendanceSkipping(skipped) : null,
+                  value: next == null ? null : dayLabel(l10n, next, today),
+                  subtitle: switch (skipped) {
+                    > 0 => l10n.attendanceSkipping(skipped),
+                    _ when writes && upcoming.isNotEmpty => l10n.attendanceSkipHint,
+                    _ => null,
+                  },
                   chevron: writes && upcoming.isNotEmpty,
                   onTap: writes && upcoming.isNotEmpty ? () => _skip(context, ref, group, record, upcoming) : null,
                 ),
@@ -155,7 +160,7 @@ class GroupAttendanceScreen extends ConsumerWidget {
     }
   }
 
-  /// 另外一天有聚會: a day picked, back to a year ago, then 填寫人數 for it.
+  /// 新增一次聚會: a day picked, back to a year ago, then 填寫人數 for it.
   Future<void> _otherDay(
     BuildContext context,
     WidgetRef ref,
@@ -337,7 +342,7 @@ Future<void> fillAttendance(
       await attendance.save(group.group.key, day, value);
     }
     telemetry.logEvent('attendance_report');
-    if (context.mounted) showToast(context, l10n.attendanceSaved);
+    if (context.mounted) showToast(context, l10n.saved);
   } catch (e) {
     if (context.mounted) showToast(context, saveErrorText(l10n, e));
   }

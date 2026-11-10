@@ -3069,13 +3069,16 @@ class L10nEn extends L10n {
   }
 
   @override
+  String get attendanceNextMeeting => 'Next meeting';
+
+  @override
+  String get attendanceSkipHint => 'Mark the ones that are off';
+
+  @override
   String get attendanceNoMeets => 'No meeting time set yet';
 
   @override
-  String get attendanceOtherDay => 'Met on another day';
-
-  @override
-  String get attendanceSaved => 'Saved';
+  String get attendanceOtherDay => 'Add a meeting';
 
   @override
   String get attendanceOff => 'Off';

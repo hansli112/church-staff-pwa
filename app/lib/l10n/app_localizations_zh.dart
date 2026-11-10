@@ -2867,7 +2867,7 @@ class L10nZh extends L10n {
   String get attendanceSub => '聚會和小組當天 21:00 提醒負責人填這次來了幾個人';
 
   @override
-  String get attendanceHeader => '人數';
+  String get attendanceHeader => '聚會人數';
 
   @override
   String attendanceCount(int count) {
@@ -2912,13 +2912,16 @@ class L10nZh extends L10n {
   }
 
   @override
+  String get attendanceNextMeeting => '下次聚會';
+
+  @override
+  String get attendanceSkipHint => '標記哪幾次不聚會';
+
+  @override
   String get attendanceNoMeets => '還沒設聚會時間';
 
   @override
-  String get attendanceOtherDay => '另外一天有聚會';
-
-  @override
-  String get attendanceSaved => '已填寫';
+  String get attendanceOtherDay => '新增一次聚會';
 
   @override
   String get attendanceOff => '未開啟';
@@ -2956,7 +2959,7 @@ class L10nZh extends L10n {
 
   @override
   String attendanceOf(String name) {
-    return '$name的人數';
+    return '$name的聚會人數';
   }
 
   @override
@@ -6317,7 +6320,7 @@ class L10nZhHans extends L10nZh {
   String get attendanceSub => '聚会和小组当天 21:00 提醒负责人填这次来了几个人';
 
   @override
-  String get attendanceHeader => '人数';
+  String get attendanceHeader => '聚会人数';
 
   @override
   String attendanceCount(int count) {
@@ -6362,13 +6365,16 @@ class L10nZhHans extends L10nZh {
   }
 
   @override
+  String get attendanceNextMeeting => '下次聚会';
+
+  @override
+  String get attendanceSkipHint => '标记哪几次不聚会';
+
+  @override
   String get attendanceNoMeets => '还没设聚会时间';
 
   @override
-  String get attendanceOtherDay => '另外一天有聚会';
-
-  @override
-  String get attendanceSaved => '已填写';
+  String get attendanceOtherDay => '新增一次聚会';
 
   @override
   String get attendanceOff => '未开启';
@@ -6406,7 +6412,7 @@ class L10nZhHans extends L10nZh {
 
   @override
   String attendanceOf(String name) {
-    return '$name的人数';
+    return '$name的聚会人数';
   }
 
   @override

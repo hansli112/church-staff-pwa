@@ -2872,7 +2872,7 @@ class L10nKo extends L10n {
   String get attendanceSub => '모임 당일 오후 9시에 리더에게 몇 명이 왔는지 기록하라고 알려요';
 
   @override
-  String get attendanceHeader => '인원';
+  String get attendanceHeader => '출석 인원';
 
   @override
   String attendanceCount(int count) {
@@ -2917,13 +2917,16 @@ class L10nKo extends L10n {
   }
 
   @override
+  String get attendanceNextMeeting => '다음 모임';
+
+  @override
+  String get attendanceSkipHint => '모이지 않는 날 표시';
+
+  @override
   String get attendanceNoMeets => '모임 시간이 아직 없어요';
 
   @override
-  String get attendanceOtherDay => '다른 날에 모였어요';
-
-  @override
-  String get attendanceSaved => '기록함';
+  String get attendanceOtherDay => '모임 추가';
 
   @override
   String get attendanceOff => '꺼짐';
@@ -2961,7 +2964,7 @@ class L10nKo extends L10n {
 
   @override
   String attendanceOf(String name) {
-    return '$name 인원';
+    return '$name 출석 인원';
   }
 
   @override

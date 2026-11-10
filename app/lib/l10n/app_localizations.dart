@@ -5137,7 +5137,7 @@ abstract class L10n {
   /// Section on a service's or 小組's page: how many came to each meeting
   ///
   /// In zh, this message translates to:
-  /// **'人數'**
+  /// **'聚會人數'**
   String get attendanceHeader;
 
   /// How many came to one meeting
@@ -5212,6 +5212,18 @@ abstract class L10n {
   /// **'下次聚會 {day}'**
   String attendanceNext(String day);
 
+  /// The 人數 page's first row: its title, beside the day its group next meets; tapping it marks the coming ones off (#95)
+  ///
+  /// In zh, this message translates to:
+  /// **'下次聚會'**
+  String get attendanceNextMeeting;
+
+  /// Under 下次聚會 on the 人數 page while none is marked off: what tapping the row does (#95)
+  ///
+  /// In zh, this message translates to:
+  /// **'標記哪幾次不聚會'**
+  String get attendanceSkipHint;
+
   /// A 小組 with nothing to fill in because its 聚會時間 is not set
   ///
   /// In zh, this message translates to:
@@ -5221,14 +5233,8 @@ abstract class L10n {
   /// Row under a group's 人數: pick any past day to fill in its 人數
   ///
   /// In zh, this message translates to:
-  /// **'另外一天有聚會'**
+  /// **'新增一次聚會'**
   String get attendanceOtherDay;
-
-  /// Toast after filling in a meeting's 人數
-  ///
-  /// In zh, this message translates to:
-  /// **'已填寫'**
-  String get attendanceSaved;
 
   /// Value of the 回報人數 row in 設定 while it is off
   ///
@@ -5293,7 +5299,7 @@ abstract class L10n {
   /// A group's own 人數 page (#95), and the row in 填寫人數 opening it
   ///
   /// In zh, this message translates to:
-  /// **'{name}的人數'**
+  /// **'{name}的聚會人數'**
   String attendanceOf(String name);
 
   /// 人數總覽 (#95): the services of the week added up, 小組 apart, whose people come to them too

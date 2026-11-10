@@ -47,6 +47,12 @@ Finder inRow(String title, String text) => find.descendant(
   matching: find.text(text),
 );
 
+/// The day on the 人數 page's 下次聚會 row.
+Finder nextMeeting(String day) => find.descendant(
+  of: find.ancestor(of: find.text('下次聚會'), matching: find.byType(ListRow)),
+  matching: find.textContaining(day),
+);
+
 /// Scrolls the page until [finder] shows, and on past the tab bar that
 /// covers the bottom: a service's page is long (#94).
 Future<void> scrollToShow(WidgetTester tester, Finder finder) async {
@@ -78,13 +84,13 @@ void main() {
     expect(find.text('填寫人數'), findsNothing, reason: 'filled in');
 
     await go(tester, '/me/groups/service/sunday');
-    await scrollToShow(tester, inRow('人數', '120 人'));
-    expect(inRow('人數', '120 人'), findsOneWidget, reason: 'its page says the latest in one row (#95)');
-    await tester.tap(inRow('人數', '120 人'));
+    await scrollToShow(tester, inRow('聚會人數', '120 人'));
+    expect(inRow('聚會人數', '120 人'), findsOneWidget, reason: 'its page says the latest in one row (#95)');
+    await tester.tap(inRow('聚會人數', '120 人'));
     await settle(tester);
-    expect(find.text('主日崇拜的人數'), findsOneWidget);
+    expect(find.text('主日崇拜的聚會人數'), findsOneWidget);
     expect(find.text('120 人'), findsOneWidget);
-    expect(find.text('另外一天有聚會'), findsOneWidget);
+    expect(find.text('新增一次聚會'), findsOneWidget);
   });
 
   testWidgets('with 回報人數 off a 小組 is only a name: no meeting time, 人數 or 填寫人數', (tester) async {
@@ -95,7 +101,7 @@ void main() {
     await go(tester, '/me/groups/small/joy');
     expect(find.text('喜樂小組'), findsWidgets);
     expect(find.text('聚會時間'), findsNothing);
-    expect(find.text('人數'), findsNothing);
+    expect(find.text('聚會人數'), findsNothing);
   });
 
   testWidgets('an admin turns 回報人數 on on its page from 設定, from today, and its list shows there', (tester) async {
@@ -124,7 +130,7 @@ void main() {
     expect(inRow('喜樂小組', '還沒設聚會時間'), findsOneWidget, reason: 'a new 小組 is found here too');
     expect(inRow('喜樂小組', '提醒'), findsNothing);
     await tapText(tester, '喜樂小組');
-    expect(find.text('喜樂小組的人數'), findsOneWidget, reason: 'nothing to fill in: its 人數 page');
+    expect(find.text('喜樂小組的聚會人數'), findsOneWidget, reason: 'nothing to fill in: its 人數 page');
     expect(find.text('還沒設聚會時間'), findsOneWidget);
   });
 
@@ -144,15 +150,15 @@ void main() {
     );
     await go(tester, '/me/groups/small/joy');
     await tester.scrollUntilVisible(next, 200, scrollable: find.byType(Scrollable).last);
-    expect(inRow('人數', '人數'), findsOneWidget);
+    expect(find.text('聚會人數'), findsOneWidget);
     expect(next, findsOneWidget);
   });
 
-  testWidgets('另外一天有聚會: a day it met off its 聚會時間, picked, then filled in', (tester) async {
+  testWidgets('新增一次聚會: a day it met off its 聚會時間, picked, then filled in', (tester) async {
     final b = withJoy(withAttendance(seededChurch(as: staffHao, clock: eveningOf(Day(2026, 10, 4)))));
     await pumpApp(tester, b);
     await go(tester, '/me/groups/small/joy/attendance');
-    await tapText(tester, '另外一天有聚會');
+    await tapText(tester, '新增一次聚會');
     await tester.tap(find.descendant(of: find.byType(CalendarDatePicker), matching: find.text('3')));
     await settle(tester);
     await tester.enterText(find.widgetWithText(TextField, '人數'), '12');
@@ -264,7 +270,7 @@ void main() {
     expect(find.text('填寫人數'), findsNothing);
     await go(tester, '/me/groups/small/joy/attendance');
     expect(find.text('未填'), findsNothing);
-    expect(find.textContaining(RegExp(r'^下次聚會 11月6日')), findsOneWidget, reason: 'the first Friday after it');
+    expect(nextMeeting('11月6日'), findsOneWidget, reason: 'the first Friday after it');
   });
 
   testWidgets('its 小組長 marks the coming meetings it will not meet, 這次沒聚會 ahead, and takes one back', (
@@ -274,7 +280,8 @@ void main() {
     await pumpApp(tester, b);
     await go(tester, '/me/groups/small/joy/attendance');
     expect(find.text('暫停聚會一段時間'), findsNothing, reason: 'each meeting instead, one by one');
-    await tester.tap(find.textContaining(RegExp(r'^下次聚會 10月16日')));
+    expect(inRow('下次聚會', '標記哪幾次不聚會'), findsOneWidget, reason: 'what the row is for');
+    await tester.tap(nextMeeting('10月16日'));
     await settle(tester);
     expect(find.text('哪幾次不聚會？'), findsOneWidget);
     await tester.tap(find.textContaining('10月16日').last);
@@ -284,10 +291,17 @@ void main() {
     final days = b.attendance['grace']!['small:joy']!.days;
     expect(days[Day(2026, 10, 16)], const AttendanceDay.none());
     expect(days[Day(2026, 10, 23)], const AttendanceDay.none());
-    expect(find.textContaining(RegExp(r'^下次聚會 10月30日')), findsOneWidget, reason: 'the next it meets');
-    expect(find.text('接下來有 2 次不聚會'), findsOneWidget);
+    expect(nextMeeting('10月30日'), findsOneWidget, reason: 'the next it meets');
+    expect(
+      find.descendant(
+        of: find.ancestor(of: find.text('下次聚會'), matching: find.byType(ListRow)),
+        matching: findShown('接下來有 2 次不聚會'),
+      ),
+      findsOneWidget,
+    );
+    expect(find.text('標記哪幾次不聚會'), findsNothing);
 
-    await tester.tap(find.textContaining(RegExp(r'^下次聚會 10月30日')));
+    await tester.tap(nextMeeting('10月30日'));
     await settle(tester);
     await tester.tap(find.textContaining('10月23日').last);
     await settle(tester);
@@ -299,7 +313,7 @@ void main() {
     final b = withJoy(withAttendance(seededChurch(as: staffHao, clock: eveningOf(Day(2026, 10, 9)))));
     await pumpApp(tester, b);
     await go(tester, '/me/groups/small/joy/attendance');
-    await tapText(tester, '另外一天有聚會');
+    await tapText(tester, '新增一次聚會');
     await tapText(tester, '2026年10月');
     await tapText(tester, '2025年');
     expect(find.byType(CalendarDatePicker), findsOneWidget, reason: 'still open');
@@ -457,8 +471,8 @@ void main() {
       expect(findShown('聚會 120 人 · 小組 9 人 · 都填好了'), findsOneWidget);
 
       await tapText(tester, '喜樂小組');
-      await tapText(tester, '喜樂小組的人數');
-      expect(find.text('另外一天有聚會'), findsOneWidget);
+      await tapText(tester, '喜樂小組的聚會人數');
+      expect(find.text('新增一次聚會'), findsOneWidget);
       expect(find.text('9 人'), findsOneWidget);
     });
 

@@ -2871,7 +2871,7 @@ class L10nJa extends L10n {
   String get attendanceSub => '集まりの日の21時に、リーダーに何人来たかの記録をお知らせします';
 
   @override
-  String get attendanceHeader => '人数';
+  String get attendanceHeader => '出席人数';
 
   @override
   String attendanceCount(int count) {
@@ -2916,13 +2916,16 @@ class L10nJa extends L10n {
   }
 
   @override
+  String get attendanceNextMeeting => '次の集まり';
+
+  @override
+  String get attendanceSkipHint => '集まらない回を選ぶ';
+
+  @override
   String get attendanceNoMeets => '集まりの日時がまだ未設定';
 
   @override
-  String get attendanceOtherDay => '別の日に集まった';
-
-  @override
-  String get attendanceSaved => '記録しました';
+  String get attendanceOtherDay => '集まりを追加';
 
   @override
   String get attendanceOff => 'オフ';
@@ -2960,7 +2963,7 @@ class L10nJa extends L10n {
 
   @override
   String attendanceOf(String name) {
-    return '$nameの人数';
+    return '$nameの出席人数';
   }
 
   @override
