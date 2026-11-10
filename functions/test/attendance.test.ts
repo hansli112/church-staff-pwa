@@ -266,14 +266,27 @@ describe('人數總覽: asked again, 提醒, 每週都填人數 (#93)', () => {
     assert.deepEqual(await remind('2026-10-21T09:00:00+08:00'), { people: 1 });
   });
 
-  test('not once filled in, nor a day it did not meet, nor by a 負責人', async () => {
+  test("a service's 負責人 reminds its 小組長; nobody the 負責人 of a service not theirs (#95)", async () => {
+    await church();
+    const id = await joy();
+    const { sent, messaging } = fakePush();
+    const remind = (who: string, key: string, day: string) =>
+      remindAttendance({ ...deps, now: at('2026-10-20T09:00:00+08:00'), messaging, appUrl }, caller(who), { churchId: 'C1', key, day });
+    assert.deepEqual(await remind('sundayLead', `small:${id}`, '2026-10-16'), { people: 1 });
+    assert.deepEqual(sent.map((s) => s.tokens), [['tok-joyLead']]);
+    await roster('2026-10-18');
+    await rejectsWith(remind('youthLead', 'service:sunday', '2026-10-18'), 'permissionDenied');
+    await rejectsWith(remind('youthLead', `small:${id}`, '2026-10-16'), 'permissionDenied');
+    await rejectsWith(remind('mei', 'service:sunday', '2026-10-18'), 'permissionDenied');
+  });
+
+  test('not once filled in, nor a day it did not meet', async () => {
     await church();
     await office();
     await roster('2026-10-18');
     const { messaging } = fakePush();
     const remind = (who: string, day = '2026-10-18') =>
       remindAttendance({ ...deps, now: at('2026-10-20T09:00:00+08:00'), messaging, appUrl }, caller(who), { churchId: 'C1', key: 'service:sunday', day });
-    await rejectsWith(remind('sundayLead'), 'permissionDenied');
     await rejectsWith(remind('mei', '2026-10-11'), 'conflict');
     await db.doc('churches/C1/attendance/service:sunday/days/2026-10-18').set({ count: 120 });
     await rejectsWith(remind('mei'), 'conflict');

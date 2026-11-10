@@ -553,9 +553,10 @@ abstract interface class AttendanceData {
   /// not (每週都填人數, #93).
   Future<void> saveEveryWeek(String key, bool everyWeek);
 
-  /// 提醒 on 人數總覽 (#93), by admins and 行政: asks whoever is reminded of
-  /// group [key]'s 人數 (Member.remindedAttendance) for [day]'s, still
-  /// without them; once a day each group (CloudReason.remindedToday).
+  /// 提醒 on 人數總覽 (#93), by who fills in group [key]'s 人數
+  /// (Member.writesAttendance): asks whoever is reminded of them
+  /// (Member.remindedAttendance) for [day]'s, still without them; once a
+  /// day each group (CloudReason.remindedToday).
   /// Returns how many people.
   Future<int> remind(String key, Day day);
 

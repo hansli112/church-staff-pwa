@@ -3112,6 +3112,27 @@ class L10nEn extends L10n {
   }
 
   @override
+  String attendanceOf(String name) {
+    return '$name attendance';
+  }
+
+  @override
+  String attendanceServicesTotal(int count) {
+    return 'Services $count';
+  }
+
+  @override
+  String attendanceSmallGroupsTotal(int count) {
+    return 'Small groups $count';
+  }
+
+  @override
+  String get attendancePrevWeek => 'Previous week';
+
+  @override
+  String get attendanceNextWeek => 'Next week';
+
+  @override
   String get errRemindedToday => 'Already reminded today';
 
   @override

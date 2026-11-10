@@ -2960,6 +2960,27 @@ class L10nKo extends L10n {
   }
 
   @override
+  String attendanceOf(String name) {
+    return '$name 인원';
+  }
+
+  @override
+  String attendanceServicesTotal(int count) {
+    return '예배 $count명';
+  }
+
+  @override
+  String attendanceSmallGroupsTotal(int count) {
+    return '소그룹 $count명';
+  }
+
+  @override
+  String get attendancePrevWeek => '이전 주';
+
+  @override
+  String get attendanceNextWeek => '다음 주';
+
+  @override
   String get errRemindedToday => '오늘 이미 알렸어요';
 
   @override

@@ -3,7 +3,7 @@ import { FieldValue, type DocumentSnapshot } from 'firebase-admin/firestore';
 import { churchAccess, isChurchOpen } from './access.js';
 import { fail, record, type Caller, type Deps } from './common.js';
 import { LIMITS, TEXT_LIMITS, withinTextLimit } from './limits.js';
-import { groupOf, powersOf } from './powers.js';
+import { groupOf, powersOf, type ChurchGroup } from './powers.js';
 import { notifyMembers, type PushDeps } from './push.js';
 import { dateKeyIn, timeZoneOf, timeZonesAt } from './timeZones.js';
 
@@ -195,13 +195,21 @@ export function meetsOf(g: DocumentSnapshot): Meets {
 }
 
 const KEY = /^(service|small):[A-Za-z0-9_-]{1,64}$/;
+
+/** The 小組 smallGroups/{id} [doc] has, with its service, for who may fill in its 人數. */
+const smallGroupIn = (doc: DocumentSnapshot): Extract<ChurchGroup, { kind: 'small' }> => {
+  const service = doc.get('service');
+  return { kind: 'small', id: doc.id, service: typeof service === 'string' ? service : null };
+};
 const SMALL = /^small:[A-Za-z0-9_-]{1,64}$/;
 const DAY = /^\d{4}-(0[1-9]|1[0-2])-(0[1-9]|[12]\d|3[01])$/;
 
 /**
- * 提醒 on 人數總覽 (#93), by an admin or 行政: one push to whoever is
- * reminded of group `data.key`'s 人數 of `data.day`, still without them; at
- * most once a day each group (remindedToday). Returns how many people.
+ * 提醒 on 人數總覽 (#93), by who fills in group `data.key`'s 人數
+ * (powers.ts writesAttendance; a service's 負責人 and 牧者 too, #95): one
+ * push to whoever is reminded of its 人數 of `data.day`, still without
+ * them; at most once a day each group (remindedToday). Returns how many
+ * people.
  */
 export async function remindAttendance(deps: Deps & PushDeps, caller: Caller | null, data: unknown) {
   const input = record(data);
@@ -209,7 +217,13 @@ export async function remindAttendance(deps: Deps & PushDeps, caller: Caller | n
   if (typeof key !== 'string' || !KEY.test(key) || typeof day !== 'string' || !DAY.test(day)
       || Object.keys(input).some((k) => !['churchId', 'key', 'day'].includes(k))) fail('invalid-argument', 'unknown');
   const { cid, church, powers, member } = await churchAccess(deps, caller, data, 'member');
-  if (!powers.overseesAttendance) fail('permission-denied', 'permissionDenied');
+  if (!powers.overseesAttendance) {
+    // A 小組's, by its service's 負責人 and 牧者 too.
+    const group = SMALL.test(key)
+      ? smallGroupIn(await deps.db.doc(`churches/${cid}/smallGroups/${key.slice('small:'.length)}`).get())
+      : groupOf(key)!;
+    if (!powers.writesAttendance(group)) fail('permission-denied', 'permissionDenied');
+  }
   const since = church.get('attendanceSince');
   const today = dateKeyIn(timeZoneOf(church), deps.now());
   if (typeof since !== 'string' || day > today) fail('failed-precondition', 'unknown');
@@ -261,8 +275,8 @@ export async function fillAttendanceTogether(deps: Deps, caller: Caller | null, 
   const dayOf = (k: string) => deps.db.doc(`churches/${cid}/attendance/${k}/days/${day}`);
   await deps.db.runTransaction(async (tx) => {
     const host = await tx.get(smallGroup(key));
-    const service = host.get('service');
-    if (!host.exists || !powers.writesAttendance({ kind: 'small', id: host.id, service: typeof service === 'string' ? service : null })) {
+    const { service } = smallGroupIn(host);
+    if (!host.exists || !powers.writesAttendance(smallGroupIn(host))) {
       fail('permission-denied', 'permissionDenied');
     }
     const was = await tx.get(dayOf(key));

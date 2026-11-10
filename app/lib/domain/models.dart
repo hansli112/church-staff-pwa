@@ -370,6 +370,10 @@ class Member {
   /// service's 負責人 and 牧者 its own and its 小組'; a 小組長 their 小組's.
   bool writesAttendance(ChurchGroup group) => group is! MinistryGroup && (overseesAttendance || managesGroup(group));
 
+  /// Whether 人數總覽 lists anything for them (#95): every group for
+  /// admins and 行政; a service's and its 小組' for its 負責人 and 牧者.
+  bool get seesAttendanceOverview => overseesAttendance || leadTypes.isNotEmpty;
+
   /// Whether this member sees the 人數 of [group]: who fills them in.
   bool readsAttendance(ChurchGroup group) => writesAttendance(group);
 

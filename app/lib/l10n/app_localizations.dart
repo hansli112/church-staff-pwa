@@ -5290,6 +5290,36 @@ abstract class L10n {
   /// **'和{name}一起'**
   String attendanceWith(String name);
 
+  /// A group's own 人數 page (#95), and the row in 填寫人數 opening it
+  ///
+  /// In zh, this message translates to:
+  /// **'{name}的人數'**
+  String attendanceOf(String name);
+
+  /// 人數總覽 (#95): the services of the week added up, 小組 apart, whose people come to them too
+  ///
+  /// In zh, this message translates to:
+  /// **'聚會 {count} 人'**
+  String attendanceServicesTotal(int count);
+
+  /// 人數總覽 (#95): the 小組 of the week added up; met together, counted once
+  ///
+  /// In zh, this message translates to:
+  /// **'小組 {count} 人'**
+  String attendanceSmallGroupsTotal(int count);
+
+  /// Button on 人數總覽 (#95): the week before
+  ///
+  /// In zh, this message translates to:
+  /// **'上一週'**
+  String get attendancePrevWeek;
+
+  /// Button on 人數總覽 (#95): the week after
+  ///
+  /// In zh, this message translates to:
+  /// **'下一週'**
+  String get attendanceNextWeek;
+
   /// 提醒 on 人數總覽 again the same day
   ///
   /// In zh, this message translates to:

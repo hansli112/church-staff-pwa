@@ -228,12 +228,18 @@ class _LedGroups extends ConsumerWidget {
             title: g.name,
             onTap: () => context.push(groupPage(g.group)),
           ),
+        // A service's 負責人 and 牧者 put its 人數 and its 小組' together (#95).
+        if (!me.overseesAttendance &&
+            me.seesAttendanceOverview &&
+            ref.watch(churchProvider.select((c) => c.value?.attendanceSince != null)))
+          const _AttendanceRow(on: true),
       ],
     );
   }
 }
 
-/// 回報人數, for admins and 行政: [on] or 未開啟, opening its page.
+/// 回報人數, for admins and 行政, and a service's 負責人 and 牧者: [on] or
+/// 未開啟, opening its page.
 class _AttendanceRow extends StatelessWidget {
   const _AttendanceRow({required this.on});
 

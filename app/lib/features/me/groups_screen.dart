@@ -27,6 +27,9 @@ import 'service_settings.dart';
 /// `small/<id>`.
 String groupPage(ChurchGroup group) => '/me/groups/${group.key.replaceFirst(':', '/')}';
 
+/// A service's or 小組's 人數 page (#95).
+String attendancePage(ChurchGroup group) => '${groupPage(group)}/attendance';
+
 /// Where [group]'s 同工 are added: for a service, the page of its 同工;
 /// otherwise the group's own page.
 String groupStaffPage(ChurchGroup group) => switch (group) {
@@ -539,7 +542,7 @@ class GroupScreen extends ConsumerWidget {
                 attendanceOn: attendanceOn,
               ),
             ),
-          if (attendance != null) box(AttendanceSection(group: attendance)),
+          if (attendance != null) box(GroupAttendanceRow(group: attendance)),
           // A service's 同工 may be a hundred: counted here, listed on
           // their own page, with who served it without being one.
           if (group is ServiceGroup)

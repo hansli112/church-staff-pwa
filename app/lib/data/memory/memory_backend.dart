@@ -2383,7 +2383,8 @@ class _MemoryAttendance implements AttendanceData {
   Future<int> remind(String key, Day day) async {
     final b = _c._b;
     final cid = _c.churchId;
-    if (!b.requireMember(cid).overseesAttendance) throw const CloudException(CloudErrorCode.permissionDenied);
+    // Who fills in its 人數: a service's 負責人 and 牧者 too (#95).
+    _c._requireAttendanceWriter(key);
     final church = b.churches[cid]!;
     final today = church.timeZone.today(b.clock());
     final since = church.attendanceSince;

@@ -95,7 +95,7 @@ void main() {
     expect(find.text('放棄變更？'), findsNothing);
     expect(find.text('隔週'), findsNothing, reason: 'closed');
 
-    await tester.scrollUntilVisible(find.text('未填').first, 200, scrollable: find.byType(Scrollable).last);
+    await go(tester, '/me/groups/small/joy/attendance');
     await tapText(tester, '未填');
     await back(tester);
     expect(find.text('放棄變更？'), findsNothing);
@@ -120,7 +120,7 @@ void main() {
     await tapText(tester, '放棄變更');
     expect(b.smallGroups['grace']!['joy']!.every, 1);
 
-    await tester.scrollUntilVisible(find.text('未填').first, 200, scrollable: find.byType(Scrollable).last);
+    await go(tester, '/me/groups/small/joy/attendance');
     await tapText(tester, '未填');
     await tester.enterText(find.widgetWithText(TextField, '人數'), '8');
     await back(tester);

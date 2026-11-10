@@ -28,11 +28,11 @@ Tap **Meets**, choose **Every week** or **Every other week**, pick the day, and 
 
 ![Tap Meets, choose every Thursday, then tap Save](media:meets)
 
-Once that’s set, the **Attendance** section lists each meeting day. Days that haven’t come yet don’t show.
+Once that’s set, tap **Attendance** on the small group’s page to see each meeting day. Days that haven’t come yet don’t show.
 
 ## Fill in attendance
 
-On or after the meeting day, tap the meeting marked **Not filled in**, enter how many came, add a note if you like, and tap **Save**.
+On or after the meeting day, tap **Attendance** on the small group’s page, then the meeting marked **Not filled in**, enter how many came, add a note if you like, and tap **Save**.
 
 ![Tap a meeting that isn’t filled in, enter 9 people, and save](media:attendance)
 
@@ -40,4 +40,4 @@ On or after the meeting day, tap the meeting marked **Not filled in**, enter how
 - **Still not filled in by 9 p.m. on the meeting day:** The small group leader gets a reminder. To stop these, go to **Settings** → **Notifications** and turn off **Attendance reminders**.
 - **Taking time off:** Tap the **Next meeting** row, check the meetings that are off, and tap **Done**. There are no reminders for those, and nothing is left **Not filled in**.
 
-Admins and office staff can see the attendance you fill in, and it’s kept even after the small group is closed.
+Admins, office staff and the service’s leads can see the attendance you fill in, and it’s kept even after the small group is closed.

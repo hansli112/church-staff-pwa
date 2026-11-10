@@ -238,9 +238,9 @@ const CLIPS = {
       await s.wait(1800);
     },
   },
-  // 小組長: the last meeting's 人數.
+  // 小組長: the last meeting's 人數, on the 小組's 人數 page (#95).
   attendance: {
-    route: '/me/groups/small/sg1',
+    route: '/me/groups/small/sg1/attendance',
     async play(s) {
       await s.wait(1200);
       await s.tap(s.nodes('').filter({ hasText: s.t('attendanceMissing') }).first());

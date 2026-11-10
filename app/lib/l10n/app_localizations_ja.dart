@@ -2959,6 +2959,27 @@ class L10nJa extends L10n {
   }
 
   @override
+  String attendanceOf(String name) {
+    return '$nameの人数';
+  }
+
+  @override
+  String attendanceServicesTotal(int count) {
+    return '集会 $count人';
+  }
+
+  @override
+  String attendanceSmallGroupsTotal(int count) {
+    return '小グループ $count人';
+  }
+
+  @override
+  String get attendancePrevWeek => '前の週';
+
+  @override
+  String get attendanceNextWeek => '次の週';
+
+  @override
   String get errRemindedToday => '今日はすでに知らせました';
 
   @override

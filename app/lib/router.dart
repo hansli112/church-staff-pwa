@@ -22,6 +22,7 @@ import 'features/home/home_screen.dart';
 import 'features/home/notification_list_screen.dart';
 import 'features/me/about_screen.dart';
 import 'features/me/account_screen.dart';
+import 'features/me/attendance.dart' show GroupAttendanceScreen;
 import 'features/me/attendance_overview.dart';
 import 'features/me/church_link_screen.dart';
 import 'features/me/groups_screen.dart';
@@ -259,6 +260,10 @@ final routerProvider = Provider<GoRouter>((ref) {
                         ),
                         routes: [
                           page(
+                            'attendance',
+                            (s) => GroupAttendanceScreen(group: ServiceGroup(s.pathParameters['id']!)),
+                          ),
+                          page(
                             'staff',
                             (s) => WarmUpOnOpen(
                               WarmUp.groupStaff,
@@ -286,6 +291,9 @@ final routerProvider = Provider<GoRouter>((ref) {
                           WarmUp.smallGroupEdit,
                           child: GroupScreen(group: SmallGroup(s.pathParameters['id']!)),
                         ),
+                        routes: [
+                          page('attendance', (s) => GroupAttendanceScreen(group: SmallGroup(s.pathParameters['id']!))),
+                        ],
                       ),
                     ],
                   ),

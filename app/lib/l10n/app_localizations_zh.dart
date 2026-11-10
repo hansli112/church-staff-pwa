@@ -2955,6 +2955,27 @@ class L10nZh extends L10n {
   }
 
   @override
+  String attendanceOf(String name) {
+    return '$name的人數';
+  }
+
+  @override
+  String attendanceServicesTotal(int count) {
+    return '聚會 $count 人';
+  }
+
+  @override
+  String attendanceSmallGroupsTotal(int count) {
+    return '小組 $count 人';
+  }
+
+  @override
+  String get attendancePrevWeek => '上一週';
+
+  @override
+  String get attendanceNextWeek => '下一週';
+
+  @override
   String get errRemindedToday => '今天已經提醒過了';
 
   @override
@@ -6382,6 +6403,27 @@ class L10nZhHans extends L10nZh {
   String attendanceWith(String name) {
     return '和$name一起';
   }
+
+  @override
+  String attendanceOf(String name) {
+    return '$name的人数';
+  }
+
+  @override
+  String attendanceServicesTotal(int count) {
+    return '聚会 $count 人';
+  }
+
+  @override
+  String attendanceSmallGroupsTotal(int count) {
+    return '小组 $count 人';
+  }
+
+  @override
+  String get attendancePrevWeek => '上一周';
+
+  @override
+  String get attendanceNextWeek => '下一周';
 
   @override
   String get errRemindedToday => '今天已经提醒过了';
