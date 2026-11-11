@@ -143,8 +143,18 @@ p { margin: 0 0 16px; }
 /* 首頁：首頁的一句話，再來四件事各一張小圖，細節在功能頁 */
 .tour { padding: 64px 0 72px; }
 .tour .sub { max-width: 30em; color: var(--text2); font-size: 1.1875rem; }
-.tour-grid { list-style: none; margin: 40px 0 0; padding: 0; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 32px 16px; }
-@media (min-width: 880px) { .tour-grid { grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 32px 24px; } }
+/* 窄的螢幕上四格排成一列，左右滑；右邊露出下一張，看得出還有 */
+.tour-grid {
+  list-style: none; display: grid; grid-auto-flow: column; grid-auto-columns: min(68%, 280px); gap: 16px;
+  margin: 32px -16px 0; padding: 8px 16px 24px; overflow-x: auto; scroll-snap-type: x mandatory; scroll-padding: 0 16px;
+  scrollbar-width: none;
+}
+.tour-grid::-webkit-scrollbar { display: none; }
+.tour-grid li { scroll-snap-align: start; }
+@media (min-width: 640px) { .tour-grid { margin: 32px -24px 0; padding: 8px 24px 24px; scroll-padding: 0 24px; } }
+@media (min-width: 880px) {
+  .tour-grid { grid-auto-flow: row; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 32px 24px; margin: 40px 0 0; padding: 0; overflow: visible; }
+}
 .tour-grid img {
   display: block; width: 100%; height: auto; aspect-ratio: 3 / 4; object-fit: cover; object-position: top;
   border-radius: 20px; box-shadow: var(--shadow); background: var(--app-bg); margin-bottom: 16px;
