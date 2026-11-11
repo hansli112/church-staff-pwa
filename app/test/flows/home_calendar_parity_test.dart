@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
+import 'package:martha/core/design/components.dart';
 import 'package:martha/data/backend.dart';
 import 'package:martha/data/memory/memory_backend.dart';
 import 'package:martha/domain/models.dart';
@@ -87,5 +88,34 @@ void main() {
       ['2026-10', '2026-11', '2026-09'],
       reason: 'the calendar tab reuses the months home read, and reads only the month before ahead',
     );
+  });
+
+  testWidgets('an upcoming activity says when it starts; an all-day one, and one already under way, only the day', (
+    tester,
+  ) async {
+    // 09:00 in Taipei.
+    final b = CountingCalendarBackend(clock: () => DateTime.utc(2026, 10, 31, 1));
+    b.addChurch('恩典堂', id: 'grace');
+    b.setServices('grace', const [sundayService]);
+    b.addMember('grace', staffMei);
+    b.auth.signInAs('mei@example.com', uid: staffMei.uid);
+    b.users[staffMei.uid] = const UserProfile(uid: 'mei', name: '李美玉');
+    b.connectCalendar('grace', calendarName: '教會行事曆');
+    b.calendarEvents['grace'] = [
+      CalendarEvent(id: 'vigil', title: '通宵禱告', start: DateTime(2026, 10, 30, 22), end: DateTime(2026, 10, 31, 10)),
+      CalendarEvent(
+        id: 'retreat',
+        title: '同工退修會',
+        start: DateTime(2026, 10, 31),
+        end: DateTime(2026, 11, 2),
+        allDay: true,
+      ),
+      CalendarEvent(id: 'meeting', title: '同工會', start: DateTime(2026, 11, 1, 19, 30), end: DateTime(2026, 11, 1, 21)),
+    ];
+    await pumpApp(tester, b);
+    String subtitleOf(String title) => tester.widget<ListRow>(find.widgetWithText(ListRow, title)).subtitle!;
+    expect(subtitleOf('同工會'), '明天 · 週日 · 19:30');
+    expect(subtitleOf('同工退修會'), '今天 · 週六');
+    expect(subtitleOf('通宵禱告'), '今天 · 週六', reason: 'it began last night: 22:00 would read as tonight');
   });
 }

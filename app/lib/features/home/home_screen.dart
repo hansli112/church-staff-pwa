@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:intl/intl.dart';
 import 'package:material_symbols_icons/symbols.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -187,7 +188,12 @@ class HomeScreen extends ConsumerWidget {
                         // One already under way is on today.
                         leading: dayBlock(event.day.isBefore(today) ? today : event.day, today),
                         title: event.title,
-                        subtitle: dayBesideBlock(l10n, event.day.isBefore(today) ? today : event.day, today),
+                        subtitle: [
+                          dayBesideBlock(l10n, event.day.isBefore(today) ? today : event.day, today),
+                          // When it starts, unless it started on an earlier day:
+                          // that time would read as today's.
+                          if (!event.allDay && !event.day.isBefore(today)) DateFormat.Hm().format(event.start),
+                        ].join(' · '),
                         // A new one opens once saved, with its roster.
                         onTap: event.id == null ? null : () => showEventDetail(context, event),
                       ),
