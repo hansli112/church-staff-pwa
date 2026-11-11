@@ -14,7 +14,9 @@ final churchPreviewProvider = FutureProvider.autoDispose.family<ChurchPreview, S
 
 /// The church name, with its logo in front when it has one. Used in the
 /// home tab's title only; elsewhere the logo shows large, on the pages
-/// that welcome someone to the church ([ChurchLogo]).
+/// that welcome someone to the church ([ChurchLogo]). Its room is kept
+/// from the start, while the logo is looked up and loaded, so the name
+/// does not move when it comes; it fades in.
 class ChurchTitle extends StatelessWidget {
   const ChurchTitle({super.key, required this.church});
 
@@ -23,20 +25,35 @@ class ChurchTitle extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final logo = church.logoUrl;
+    final room = ColoredBox(color: AppColors.of(context).fill, child: const SizedBox.square(dimension: 32));
     return Row(
       mainAxisSize: MainAxisSize.min,
       children: [
-        if (logo != null && logo.startsWith('http')) ...[
+        if (church.hasLogo) ...[
           ClipRRect(
             borderRadius: BorderRadius.circular(Radii.s),
-            child: Image.network(
-              logo,
-              width: 32,
-              height: 32,
-              fit: BoxFit.cover,
-              semanticLabel: church.name,
-              errorBuilder: (_, _, _) => const SizedBox.shrink(),
-            ),
+            child: logo == null || !logo.startsWith('http')
+                ? room
+                : Image.network(
+                    logo,
+                    width: 32,
+                    height: 32,
+                    fit: BoxFit.cover,
+                    semanticLabel: church.name,
+                    frameBuilder: (_, image, frame, loadedAtOnce) => loadedAtOnce
+                        ? image
+                        : Stack(
+                            children: [
+                              room,
+                              AnimatedOpacity(
+                                opacity: frame == null ? 0 : 1,
+                                duration: const Duration(milliseconds: 200),
+                                child: image,
+                              ),
+                            ],
+                          ),
+                    errorBuilder: (_, _, _) => room,
+                  ),
           ),
           const SizedBox(width: Space.s),
         ],

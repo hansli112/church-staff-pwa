@@ -9,6 +9,7 @@ import 'package:firebase_crashlytics/firebase_crashlytics.dart';
 import 'package:firebase_storage/firebase_storage.dart';
 import 'package:flutter/foundation.dart';
 import 'package:google_sign_in/google_sign_in.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 import '../../core/languages.dart';
 import '../../domain/day.dart';
@@ -675,7 +676,7 @@ class FirestoreChurchData implements ChurchData {
                 _logoLookup = null;
               }
               if (_logoUrl == null) {
-                final lookup = _logoLookup ??= Future<String>.sync(() => _storage.ref(_logoPath).getDownloadURL());
+                final lookup = _logoLookup ??= _logoUrlOf(version);
                 if (pending != lookup) {
                   pending = lookup;
                   final epoch = readEpoch;
@@ -724,6 +725,23 @@ class FirestoreChurchData implements ChurchData {
   }
 
   String get _logoPath => 'churches/$churchId/logo.png';
+
+  /// The logo's download URL for [version]: kept on this device from the
+  /// last time, so opening the app does not wait on Storage for it again.
+  Future<String> _logoUrlOf(String version) async {
+    final key = 'church_logo_url_$churchId';
+    SharedPreferences? prefs;
+    try {
+      prefs = await SharedPreferences.getInstance();
+      final kept = jsonDecode(prefs.getString(key) ?? 'null');
+      if (kept is Map && kept['version'] == version && kept['url'] is String) return kept['url'] as String;
+    } catch (_) {
+      // Nothing kept, or unreadable: look it up.
+    }
+    final url = await _storage.ref(_logoPath).getDownloadURL();
+    unawaited(prefs?.setString(key, jsonEncode({'version': version, 'url': url})));
+    return url;
+  }
 
   @override
   Stream<Member?> member(String uid) =>
