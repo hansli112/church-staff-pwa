@@ -1254,7 +1254,7 @@ class L10nEn extends L10n {
   String get photoImport => 'Import from photo';
 
   @override
-  String get photoImportAction => 'Import photo';
+  String get photoImportAction => 'Import schedule from photo';
 
   @override
   String photoRemaining(int count) {
@@ -3506,6 +3506,9 @@ class L10nEn extends L10n {
   String planAskedLast(String date) {
     return 'Last asked $date';
   }
+
+  @override
+  String get planAskNobody => 'No one to ask yet';
 
   @override
   String get planAskUntil => 'Through which month?';

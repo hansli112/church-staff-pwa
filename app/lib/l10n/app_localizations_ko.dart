@@ -1199,7 +1199,7 @@ class L10nKo extends L10n {
   String get photoImport => '사진으로 가져오기';
 
   @override
-  String get photoImportAction => '사진 가져오기';
+  String get photoImportAction => '사진으로 봉사표 가져오기';
 
   @override
   String photoRemaining(int count) {
@@ -3316,6 +3316,9 @@ class L10nKo extends L10n {
   String planAskedLast(String date) {
     return '마지막 요청 $date';
   }
+
+  @override
+  String get planAskNobody => '아직 요청할 멤버가 없어요';
 
   @override
   String get planAskUntil => '몇 월까지인가요?';

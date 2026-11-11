@@ -817,7 +817,7 @@ void main() {
     await settle(tester);
     await tester.tap(find.byIcon(Symbols.more_horiz_rounded));
     await settle(tester);
-    await tester.tap(find.text('照片匯入'));
+    await tester.tap(find.text('從照片匯入服事表'));
     await settle(tester);
     expect(
       GoRouter.of(tester.element(find.byType(Scaffold).last)).state.matchedLocation,

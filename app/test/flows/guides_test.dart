@@ -32,33 +32,33 @@ void main() {
     expect(launches.opened.single, endsWith('/blog/?lang=zh-Hant&from=app'));
   });
 
-  testWidgets('安排服事 has 怎麼用？ in its menu, its own guide', (tester) async {
+  testWidgets('安排服事 has 使用說明 in its menu, its own guide', (tester) async {
     final launches = captureLaunches();
     await pumpApp(tester, seededChurch());
     await go(tester, '/rosters/plan/sunday');
     await tester.tap(find.byIcon(Symbols.more_horiz_rounded));
     await settle(tester);
-    await tester.tap(find.text('怎麼用？'));
+    await tester.tap(find.text('使用說明'));
     await settle(tester);
     expect(launches.opened.single, contains('/blog/plan-weeks/?'));
   });
 
-  testWidgets("a 小組's page has 怎麼用？, a service's not", (tester) async {
+  testWidgets("a 小組's page has 使用說明, a service's not", (tester) async {
     final launches = captureLaunches();
     await pumpApp(tester, withJoy(seededChurch()));
     await go(tester, '/me/groups/service/sunday');
-    expect(find.byTooltip('怎麼用？'), findsNothing);
+    expect(find.byTooltip('使用說明'), findsNothing);
     await go(tester, '/me/groups/small/joy');
-    await tester.tap(find.byTooltip('怎麼用？'));
+    await tester.tap(find.byTooltip('使用說明'));
     await settle(tester);
     expect(launches.opened.single, contains('/blog/small-groups/?'));
   });
 
-  testWidgets('通知 has 怎麼用？, for when they do not come', (tester) async {
+  testWidgets('通知 has 使用說明, for when they do not come', (tester) async {
     final launches = captureLaunches();
     await pumpApp(tester, seededChurch(as: staffMei));
     await go(tester, '/me/notifications');
-    await tester.tap(find.byTooltip('怎麼用？'));
+    await tester.tap(find.byTooltip('使用說明'));
     await settle(tester);
     expect(launches.opened.single, contains('/blog/notifications/?'));
   });

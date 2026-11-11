@@ -132,7 +132,7 @@ void main() {
     expect(find.textContaining('這天不行'), findsOneWidget);
   });
 
-  testWidgets('請同工填 asks those on the lists, through the month picked, once confirmed', (tester) async {
+  testWidgets('通知同工填 asks those on the lists, through the month picked, once confirmed', (tester) async {
     final b = seededChurch(as: editor);
     final telemetry = RecordingTelemetry();
     await pumpApp(tester, b, overrides: [telemetryProvider.overrideWithValue(telemetry)]);
@@ -140,7 +140,7 @@ void main() {
 
     await tester.tap(find.byIcon(Symbols.more_horiz_rounded));
     await settle(tester);
-    await tester.tap(find.text('請同工填不能服事的日子'));
+    await tester.tap(find.text('通知同工填不能服事的日子'));
     await settle(tester);
     await tester.tap(find.text('2026年12月').last);
     await settle(tester);
@@ -151,7 +151,7 @@ void main() {
 
     await tester.tap(find.byIcon(Symbols.more_horiz_rounded));
     await settle(tester);
-    await tester.tap(find.text('請同工填不能服事的日子'));
+    await tester.tap(find.text('通知同工填不能服事的日子'));
     await settle(tester);
     await tester.tap(find.text('2026年12月').last);
     await settle(tester);
@@ -167,6 +167,22 @@ void main() {
 
     await tester.tap(find.byIcon(Symbols.more_horiz_rounded));
     await settle(tester);
-    expect(find.text('上次 10月1日 請過'), findsOneWidget);
+    expect(find.text('上次 10月1日 通知過'), findsOneWidget);
+  });
+  testWidgets('with nobody on the lists to ask, 通知 is greyed and says why', (tester) async {
+    final b = seededChurch(as: editor);
+    final people = b.members['grace']!;
+    for (final uid in [...people.keys]) {
+      if (uid != editor.uid) people[uid] = people[uid]!.copyWith(zones: const []);
+    }
+    await pumpApp(tester, b);
+    await go(tester, '/rosters/plan/sunday');
+
+    await tester.tap(find.byIcon(Symbols.more_horiz_rounded));
+    await settle(tester);
+    expect(find.text('還沒有同工可以通知'), findsOneWidget);
+    await tester.tap(find.text('通知同工填不能服事的日子'));
+    await settle(tester);
+    expect(find.text('要填到哪個月？'), findsNothing, reason: 'greyed: nothing opens');
   });
 }

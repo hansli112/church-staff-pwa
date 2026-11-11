@@ -1198,7 +1198,7 @@ class L10nJa extends L10n {
   String get photoImport => '写真から読み込み';
 
   @override
-  String get photoImportAction => '写真読込';
+  String get photoImportAction => '写真から奉仕表を読み込む';
 
   @override
   String photoRemaining(int count) {
@@ -3314,6 +3314,9 @@ class L10nJa extends L10n {
   String planAskedLast(String date) {
     return '前回の依頼 $date';
   }
+
+  @override
+  String get planAskNobody => '依頼できるメンバーがまだいません';
 
   @override
   String get planAskUntil => '何月までの分ですか？';

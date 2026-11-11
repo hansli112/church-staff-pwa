@@ -265,13 +265,19 @@ class _PlanWeeksScreenState extends ConsumerState<PlanWeeksScreen> with SingleTi
     });
   }
 
-  /// The menu: 請同工填 (#91), and when it last asked for this service,
-  /// greyed with nobody on a list to ask, from [from], the first month
-  /// being arranged; and 照片匯入, for a roster already on paper.
+  /// The menu: 通知同工填 (#91) from [from], the first month being
+  /// arranged, under it when it last asked for this service, or, greyed,
+  /// that nobody on a list is there to ask; 從照片匯入服事表, for a roster
+  /// already on paper; and apart, 使用說明.
   Widget _menu(L10n l10n, AppColors c, Day from) {
     final type = _type;
     final asked = ref.watch(lastUnavailableAskProvider(type)).value;
     final people = _askedToFill(type);
+    final note = switch ((people.isEmpty, asked)) {
+      (true, _) => l10n.planAskNobody,
+      (_, final at?) => l10n.planAskedLast(DateFormat.MMMd().format(at)),
+      _ => null,
+    };
     return PopupMenuButton<String>(
       tooltip: MaterialLocalizations.of(context).moreButtonTooltip,
       icon: const Icon(Symbols.more_horiz_rounded),
@@ -290,15 +296,12 @@ class _PlanWeeksScreenState extends ConsumerState<PlanWeeksScreen> with SingleTi
             mainAxisSize: MainAxisSize.min,
             children: [
               Text(l10n.planAskUnavailable),
-              if (asked != null)
-                Text(
-                  l10n.planAskedLast(DateFormat.MMMd().format(asked)),
-                  style: AppText.footnote.copyWith(color: c.secondaryLabel),
-                ),
+              if (note != null) Text(note, style: AppText.footnote.copyWith(color: c.secondaryLabel)),
             ],
           ),
         ),
         PopupMenuItem(value: 'photo', child: Text(l10n.photoImportAction)),
+        const PopupMenuDivider(),
         PopupMenuItem(value: 'guide', child: Text(l10n.howToUse)),
       ],
     );

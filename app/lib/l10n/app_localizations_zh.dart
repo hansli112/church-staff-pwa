@@ -1198,7 +1198,7 @@ class L10nZh extends L10n {
   String get photoImport => '照片匯入';
 
   @override
-  String get photoImportAction => '照片匯入';
+  String get photoImportAction => '從照片匯入服事表';
 
   @override
   String photoRemaining(int count) {
@@ -3211,7 +3211,7 @@ class L10nZh extends L10n {
   String get guides => '使用教學';
 
   @override
-  String get howToUse => '怎麼用？';
+  String get howToUse => '使用說明';
 
   @override
   String get discardChangesTitle => '放棄變更？';
@@ -3305,12 +3305,15 @@ class L10nZh extends L10n {
   }
 
   @override
-  String get planAskUnavailable => '請同工填不能服事的日子';
+  String get planAskUnavailable => '通知同工填不能服事的日子';
 
   @override
   String planAskedLast(String date) {
-    return '上次 $date 請過';
+    return '上次 $date 通知過';
   }
+
+  @override
+  String get planAskNobody => '還沒有同工可以通知';
 
   @override
   String get planAskUntil => '要填到哪個月？';
@@ -4646,7 +4649,7 @@ class L10nZhHans extends L10nZh {
   String get photoImport => '照片导入';
 
   @override
-  String get photoImportAction => '照片导入';
+  String get photoImportAction => '从照片导入事奉表';
 
   @override
   String photoRemaining(int count) {
@@ -6659,7 +6662,7 @@ class L10nZhHans extends L10nZh {
   String get guides => '使用教学';
 
   @override
-  String get howToUse => '怎么用？';
+  String get howToUse => '使用说明';
 
   @override
   String get discardChangesTitle => '放弃更改？';
@@ -6753,12 +6756,15 @@ class L10nZhHans extends L10nZh {
   }
 
   @override
-  String get planAskUnavailable => '请同工填不能事奉的日子';
+  String get planAskUnavailable => '通知同工填不能事奉的日子';
 
   @override
   String planAskedLast(String date) {
-    return '上次 $date 请过';
+    return '上次 $date 通知过';
   }
+
+  @override
+  String get planAskNobody => '还没有同工可以通知';
 
   @override
   String get planAskUntil => '要填到哪个月？';

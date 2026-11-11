@@ -2224,10 +2224,10 @@ abstract class L10n {
   /// **'照片匯入'**
   String get photoImport;
 
-  /// Button in words at the top of 服事表 that opens photo import. Short: it sits beside the title, at large text too
+  /// Item in 安排服事's menu (⋯) that opens photo import: says what it makes, a roster from a photo
   ///
   /// In zh, this message translates to:
-  /// **'照片匯入'**
+  /// **'從照片匯入服事表'**
   String get photoImportAction;
 
   /// No description provided for @photoRemaining.
@@ -5713,7 +5713,7 @@ abstract class L10n {
   /// Help button or menu item on a page that has its own guide on the website (安排服事, a 小組, 通知)
   ///
   /// In zh, this message translates to:
-  /// **'怎麼用？'**
+  /// **'使用說明'**
   String get howToUse;
 
   /// Asked when a sheet with unsaved changes is closed without 完成
@@ -5866,17 +5866,23 @@ abstract class L10n {
   /// **'已更新{duty}・{names}這天不行'**
   String dutyUpdatedUnavailable(String duty, String names);
 
-  /// Menu on 安排服事 (#91): pushes the people on the lists to mark the days they can't serve
+  /// Menu on 安排服事 (#91): pushes the people on the lists to mark the days they can't serve. Starts with 通知 so it reads as telling people
   ///
   /// In zh, this message translates to:
-  /// **'請同工填不能服事的日子'**
+  /// **'通知同工填不能服事的日子'**
   String get planAskUnavailable;
 
   /// No description provided for @planAskedLast.
   ///
   /// In zh, this message translates to:
-  /// **'上次 {date} 請過'**
+  /// **'上次 {date} 通知過'**
   String planAskedLast(String date);
+
+  /// Second line under the greyed 通知同工填不能服事的日子 on 安排服事's menu: nobody on this service's lists for it to tell
+  ///
+  /// In zh, this message translates to:
+  /// **'還沒有同工可以通知'**
+  String get planAskNobody;
 
   /// No description provided for @planAskUntil.
   ///
