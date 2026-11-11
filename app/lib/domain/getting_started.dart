@@ -87,8 +87,9 @@ class GettingStarted {
 
 /// What [me] still has to start, a list for each 身分 with something left:
 /// for an admin only the admin's, which covers the rest. [members] is
-/// everyone, [pending] how many moved from self-host have not signed in
-/// yet (they can be put in a service, but are still to be invited),
+/// everyone, [pending] those moved from self-host who have not signed in
+/// yet: already in their services, duties and 小組 (by name, as moved), so
+/// whoever leads one has nothing to add, but still to be invited,
 /// [invited] whether an invite still works, [servicesSeen] whether they
 /// opened the services from 開始使用 on this device, [hasLogo] whether the
 /// church has one, [rosters] saved ones: from today on, and those of the
@@ -96,7 +97,7 @@ class GettingStarted {
 List<GettingStarted> gettingStarted({
   required Member me,
   required List<Member> members,
-  required int pending,
+  required List<PendingMember> pending,
   required ServiceSettings services,
   required MinistrySettings ministries,
   required List<SmallGroupDetails> smallGroups,
@@ -106,13 +107,30 @@ List<GettingStarted> gettingStarted({
   bool servicesSeen = false,
   bool hasLogo = false,
 }) {
-  bool someoneElseIn(ChurchGroup group) =>
-      members.any((m) => m.uid != me.uid && m.isIn(group, ministries: ministries.ministries));
+  // Someone moved is in the 小組 named in their zones.
+  String? smallGroupNamed(String service, String name) =>
+      smallGroups.where((g) => g.service == service && g.name.trim() == name.trim()).firstOrNull?.id;
+  final moved = [
+    for (final p in pending)
+      Member(
+        uid: p.id,
+        name: p.name,
+        zones: p.zones,
+        smallGroups: {
+          for (final z in p.zones)
+            for (final name in z.smallGroups) ?smallGroupNamed(z.serviceType, name),
+        },
+      ),
+  ];
+  bool someoneElseIn(ChurchGroup group) => [
+    ...members,
+    ...moved,
+  ].any((m) => m.uid != me.uid && m.isIn(group, ministries: ministries.ministries));
   bool arranged(bool Function(Roster day, Duty duty) counts) =>
       rosters.any((r) => r.duties.any((d) => d.people.isNotEmpty && counts(r, d)));
   final anyArranged = arranged((_, _) => true);
   final joined = members.any((m) => m.uid != me.uid);
-  final someoneToPutIn = joined || pending > 0;
+  final someoneToPutIn = joined || pending.isNotEmpty;
   bool open(String service) => services.byId(service)?.enabled ?? false;
   StartState doneIf(bool done) => done ? StartState.done : StartState.todo;
   GettingStartedStep step(StartStep step, bool done, [ChurchGroup? group]) =>

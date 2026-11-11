@@ -11,6 +11,17 @@ const worship = Ministry(id: 'worship', name: '敬拜團', duties: [MinistryDuty
 const care = Ministry(id: 'care', name: '關懷事工');
 const joy = SmallGroupDetails(id: 'joy', name: '喜樂小組', service: 'sunday');
 
+/// Moved from self-host, not signed in yet: in 主日崇拜, on its 司琴 list,
+/// and in 喜樂小組 by name.
+const movedMei = PendingMember(
+  id: 'old-mei',
+  name: '李美玉',
+  email: 'mei@example.com',
+  zones: [
+    Zone(serviceType: 'sunday', duties: ['司琴'], smallGroups: ['喜樂小組']),
+  ],
+);
+
 Roster day(String type, Map<String, List<String>> people) => Roster(
   type: type,
   day: Day(2026, 11, 1),
@@ -20,7 +31,7 @@ Roster day(String type, Map<String, List<String>> people) => Roster(
 List<GettingStarted> of(
   Member me, {
   List<Member> others = const [],
-  int pending = 0,
+  List<PendingMember> pending = const [],
   List<Roster> rosters = const [],
   bool attendanceOn = false,
   List<SmallGroupDetails> smallGroups = const [joy],
@@ -87,12 +98,21 @@ void main() {
     final joined = of(admin, others: [staff], servicesSeen: true);
     expect(states(joined)[2], (StartStep.invite, done));
     expect(joined.single.next, (step: StartStep.addStaff, group: const ServiceGroup('sunday'), state: todo));
-    final moved = of(admin, pending: 1, servicesSeen: true);
+    final moved = of(admin, pending: [movedMei], servicesSeen: true);
     expect(moved.single.next?.step, StartStep.invite, reason: 'moved from self-host, nobody has signed in yet');
     expect(
       moved.single.steps.firstWhere((s) => s.step == StartStep.addStaff).state,
+      done,
+      reason: 'who moved is in their services already',
+    );
+    expect(
+      of(
+        admin,
+        pending: [const PendingMember(id: 'old-hao', name: '陳志豪')],
+        servicesSeen: true,
+      ).single.steps.firstWhere((s) => s.step == StartStep.addStaff).state,
       todo,
-      reason: 'who moved can be put in a service before they sign in',
+      reason: 'one moved in no service can be put in one before they sign in',
     );
 
     const inSunday = Member(
@@ -154,19 +174,19 @@ void main() {
         '司會': ['old-pastor'],
       }),
     ];
-    final moved = of(admin, pending: 52, rosters: arranged, hasLogo: false);
+    final moved = of(admin, pending: [movedMei], rosters: arranged, hasLogo: false);
     expect(left(moved), [
       (step: StartStep.logo, group: null),
       (step: StartStep.invite, group: null),
     ]);
     expect(moved.single.next?.step, StartStep.invite);
     expect(
-      states(of(admin, pending: 52, rosters: arranged, invited: true))[2],
+      states(of(admin, pending: [movedMei], rosters: arranged, invited: true))[2],
       (StartStep.invite, StartState.waiting),
       reason: 'until one of them signs in',
     );
     expect(
-      of(admin, others: [staff], pending: 51, rosters: arranged),
+      of(admin, others: [staff], pending: [movedMei], rosters: arranged),
       isEmpty,
       reason: 'one has signed in',
     );
@@ -307,6 +327,36 @@ void main() {
       [(step: StartStep.addStaff, group: const SmallGroup('joy'))],
     );
     expect(of(leader, smallGroups: const []), isEmpty, reason: 'a 小組 closed');
+  });
+
+  test('a lead who signs in after a move finds their 同工 already there, only not signed in yet', () {
+    final leader = staff.withIdentities(const [SmallGroupLead('joy')]);
+    expect(of(leader, pending: [movedMei]), isEmpty, reason: 'someone moved is in 喜樂小組, by its name');
+    expect(
+      left(of(leader, pending: [movedMei], attendanceOn: true)),
+      [(step: StartStep.meets, group: const SmallGroup('joy'))],
+      reason: 'self-host had no meeting times',
+    );
+    final lead = staff.withIdentities(const [ServiceLead('sunday')]);
+    final arranged = [
+      day('sunday', {
+        '司琴': ['李美玉'],
+      }),
+    ];
+    expect(of(lead, pending: [movedMei], rosters: arranged), isEmpty);
+    expect(left(of(lead, rosters: arranged)), [(step: StartStep.addStaff, group: const ServiceGroup('sunday'))]);
+    const elsewhere = PendingMember(
+      id: 'old-hao',
+      name: '陳志豪',
+      zones: [
+        Zone(serviceType: 'youth', smallGroups: ['喜樂小組']),
+      ],
+    );
+    expect(
+      left(of(leader, pending: [elsewhere])),
+      [(step: StartStep.addStaff, group: const SmallGroup('joy'))],
+      reason: 'a 小組 of that name in another service is not this one',
+    );
   });
 
   test('行政 arranges; a plain 同工 has nothing to start', () {

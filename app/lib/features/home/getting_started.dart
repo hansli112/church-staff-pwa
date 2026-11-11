@@ -101,7 +101,7 @@ List<GettingStarted>? _starts(Ref ref) {
   List<GettingStarted> left(Iterable<Roster> rosters) => gettingStarted(
     me: me,
     members: members,
-    pending: pending.length,
+    pending: pending,
     services: services,
     ministries: ministries,
     smallGroups: smallGroups,
