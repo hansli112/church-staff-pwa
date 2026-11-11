@@ -20,7 +20,7 @@ description: 自架的同工助手（church-staff-pwa）不再更新了。把同
 
 ## 1. 生成迁移文件
 
-用当初创建网站的 Google 账号[打开 Cloud Shell](https://shell.cloud.google.com/cloudshell/editor?cloudshell_git_repo=https%3A%2F%2Fgithub.com%2Fhansli112%2Fchurch-staff-pwa&cloudshell_git_branch=main&cloudshell_workspace=.&cloudshell_tutorial=docs%2Fmove-to-martha.md&show=terminal)。
+用当初创建网站的 Google 账号[打开 Cloud Shell](https://shell.cloud.google.com/cloudshell/editor?cloudshell_git_repo=https%3A%2F%2Fgithub.com%2Fhansli112%2Fchurch-staff-pwa&cloudshell_git_branch=main&cloudshell_workspace=.&cloudshell_tutorial=docs%2Fmove-to-martha.md&show=terminal)。浏览器登录的是别的账号也没关系，先打开，运行完再照下面的说明换账号。
 
 弹出询问要不要信任这个代码库的窗口时，先勾选信任，再点确认。
 
@@ -37,7 +37,12 @@ description: 自架的同工助手（church-staff-pwa）不再更新了。把同
 运行完会显示同工几位、事奉表几份，核对一下数字。
 
 - 显示 `找到好幾個同工助手的專案`：在指令最后的 `--out move.json` 前面加上 `--project 项目ID` 再运行一次，项目 ID 填它列出来的其中一个。
-- 显示 `找不到同工助手的專案` 或 `讀不到`：多半是登录的 Google 账号不对，换成创建网站的那个账号再试。
+- 显示 `找不到同工助手的專案` 或 `讀不到`：Cloud Shell 用的不是创建网站的 Google 账号。照下面换成那个账号：
+  1. 在终端输入 `gcloud auth login`，按 Enter。
+  2. 问要不要继续（`Y/n`）时，输入 `Y`，按 Enter。
+  3. 点终端里出现的网址，登录创建网站的账号（不在列表里就选 **使用其他账号**），再点 **允许**。
+  4. 复制页面上的验证码，粘贴回终端，按 Enter。
+  5. 再点一次教程第 1 步的终端图标，在终端按 Enter。
 
 ## 2. 下载迁移文件
 

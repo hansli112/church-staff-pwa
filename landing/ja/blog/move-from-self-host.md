@@ -20,14 +20,19 @@ description: 自前で立てる church-staff-pwa は更新を終えました。�
 
 ## 1. 移行ファイルを作る
 
-サイトを立てたときの Google アカウントで [Cloud Shell を開きます](https://shell.cloud.google.com/cloudshell/editor?cloudshell_git_repo=https%3A%2F%2Fgithub.com%2Fhansli112%2Fchurch-staff-pwa&cloudshell_git_branch=main&cloudshell_workspace=.&cloudshell_tutorial=docs%2Fmove-to-martha.md&show=terminal)。リポジトリを信頼するかどうか聞かれたら、信頼するにチェックを入れて確認します。続けて Cloud Shell の承認を求める画面が出たら、承認をクリックします。Google の公式の画面で、Cloud Shell があなたのアカウントで古いサイトのデータを読めるようにするものです。同じ画面がまた出たときも、承認をクリックしてください。
+サイトを立てたときの Google アカウントで [Cloud Shell を開きます](https://shell.cloud.google.com/cloudshell/editor?cloudshell_git_repo=https%3A%2F%2Fgithub.com%2Fhansli112%2Fchurch-staff-pwa&cloudshell_git_branch=main&cloudshell_workspace=.&cloudshell_tutorial=docs%2Fmove-to-martha.md&show=terminal)。ブラウザで別のアカウントにログインしていても、そのまま開いてかまいません。実行したあと、下の手順で切り替えます。リポジトリを信頼するかどうか聞かれたら、信頼するにチェックを入れて確認します。続けて Cloud Shell の承認を求める画面が出たら、承認をクリックします。Google の公式の画面で、Cloud Shell があなたのアカウントで古いサイトのデータを読めるようにするものです。同じ画面がまた出たときも、承認をクリックしてください。
 
 右側に移行の手順（繁体字中国語）が開くので、手順1のコマンドの右上にあるターミナルのアイコンをクリックし、下のターミナルで Enter を一度押します。
 
 終わると、メンバーが何人、奉仕表が何件あったかが表示されます。数を確かめてください。
 
 - `找到好幾個同工助手的專案`（プロジェクトが複数見つかった）と出たら、コマンドの最後の `--out move.json` の前に `--project プロジェクトID` を足してもう一度実行します。プロジェクト ID は一覧に出たもののどれかです。
-- `找不到同工助手的專案`（見つからない）や `讀不到`（読めない）と出たら、たいていはログインしている Google アカウントが違います。サイトを立てたアカウントに切り替えて、もう一度試してください。
+- `找不到同工助手的專案`（見つからない）や `讀不到`（読めない）と出たら、Cloud Shell がサイトを立てた Google アカウントを使っていません。次の手順で切り替えます。
+  1. ターミナルに `gcloud auth login` と入力して Enter を押します。
+  2. 続けるかどうか（`Y/n`）聞かれたら、`Y` と入力して Enter を押します。
+  3. ターミナルに出たリンクをクリックし、サイトを立てたアカウントでログインして（一覧になければ **別のアカウントを使用**）、**許可** をクリックします。
+  4. ページに出たコードをコピーし、ターミナルに貼り付けて Enter を押します。
+  5. 手順1のターミナルのアイコンをもう一度クリックし、ターミナルで Enter を押します。
 
 ## 2. 移行ファイルをダウンロードする
 

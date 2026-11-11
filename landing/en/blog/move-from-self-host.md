@@ -20,14 +20,19 @@ Passwords, push notifications, LINE notifications, the daily devotional, and the
 
 ## 1. Make the move file
 
-Sign in with the Google account that set up your site and [open Cloud Shell](https://shell.cloud.google.com/cloudshell/editor?cloudshell_git_repo=https%3A%2F%2Fgithub.com%2Fhansli112%2Fchurch-staff-pwa&cloudshell_git_branch=main&cloudshell_workspace=.&cloudshell_tutorial=docs%2Fmove-to-martha.md&show=terminal). When **Open in Cloud Shell** asks, check **Trust repo** and click **Confirm**. When **Authorize Cloud Shell** comes up, click **Authorize**: it’s Google’s own window, letting Cloud Shell read your old site’s data with your account. Click **Authorize** again whenever it comes back.
+Sign in with the Google account that set up your site and [open Cloud Shell](https://shell.cloud.google.com/cloudshell/editor?cloudshell_git_repo=https%3A%2F%2Fgithub.com%2Fhansli112%2Fchurch-staff-pwa&cloudshell_git_branch=main&cloudshell_workspace=.&cloudshell_tutorial=docs%2Fmove-to-martha.md&show=terminal). If your browser is signed in with a different account, open it anyway; you can switch after it runs, as below. When **Open in Cloud Shell** asks, check **Trust repo** and click **Confirm**. When **Authorize Cloud Shell** comes up, click **Authorize**: it’s Google’s own window, letting Cloud Shell read your old site’s data with your account. Click **Authorize** again whenever it comes back.
 
 A guide (in Traditional Chinese) opens on the right. Click the terminal icon at the top right of step 1’s command, then press Enter in the terminal below.
 
 When it finishes, it says how many team members and schedules it found. Check the numbers.
 
 - If it says it found several projects (找到好幾個同工助手的專案), add `--project PROJECT_ID` before `--out move.json` at the end of the command and run it again, with one of the project IDs it lists.
-- If it says it can’t find a project (找不到同工助手的專案) or can’t read one (讀不到), you’re probably signed in with a different Google account. Switch to the one that set up your site and try again.
+- If it says it can’t find a project (找不到同工助手的專案) or can’t read one (讀不到), Cloud Shell isn’t using the Google account that set up your site. Switch to it:
+  1. Type `gcloud auth login` in the terminal and press Enter.
+  2. When it asks whether to continue (`Y/n`), type `Y` and press Enter.
+  3. Click the link in the terminal, sign in with the account that set up your site (choose **Use another account** if it isn’t listed), then click **Allow**.
+  4. Copy the code on the page, paste it into the terminal, and press Enter.
+  5. Click the terminal icon on step 1 of the guide again, and press Enter in the terminal.
 
 ## 2. Download the move file
 

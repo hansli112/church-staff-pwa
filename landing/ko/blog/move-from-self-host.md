@@ -20,14 +20,19 @@ description: 직접 설치하는 church-staff-pwa는 더 이상 업데이트되�
 
 ## 1. 이전용 파일 만들기
 
-사이트를 설치한 Google 계정으로 [Cloud Shell을 여세요](https://shell.cloud.google.com/cloudshell/editor?cloudshell_git_repo=https%3A%2F%2Fgithub.com%2Fhansli112%2Fchurch-staff-pwa&cloudshell_git_branch=main&cloudshell_workspace=.&cloudshell_tutorial=docs%2Fmove-to-martha.md&show=terminal). 저장소를 신뢰할지 묻는 창이 나오면 신뢰에 체크하고 확인을 누르세요. 이어서 Cloud Shell 승인을 묻는 창이 나오면 승인을 누르세요. Google의 공식 창으로, Cloud Shell이 내 계정으로 예전 사이트의 데이터를 읽을 수 있게 해 줘요. 같은 창이 또 나와도 승인을 누르면 돼요.
+사이트를 설치한 Google 계정으로 [Cloud Shell을 여세요](https://shell.cloud.google.com/cloudshell/editor?cloudshell_git_repo=https%3A%2F%2Fgithub.com%2Fhansli112%2Fchurch-staff-pwa&cloudshell_git_branch=main&cloudshell_workspace=.&cloudshell_tutorial=docs%2Fmove-to-martha.md&show=terminal). 브라우저에 다른 계정으로 로그인돼 있어도 그냥 여세요. 실행한 뒤 아래 방법으로 바꾸면 돼요. 저장소를 신뢰할지 묻는 창이 나오면 신뢰에 체크하고 확인을 누르세요. 이어서 Cloud Shell 승인을 묻는 창이 나오면 승인을 누르세요. Google의 공식 창으로, Cloud Shell이 내 계정으로 예전 사이트의 데이터를 읽을 수 있게 해 줘요. 같은 창이 또 나와도 승인을 누르면 돼요.
 
 오른쪽에 옮기는 방법(번체 중국어)이 열리면, 1단계 명령어 오른쪽 위의 터미널 아이콘을 누르고 아래 터미널에서 Enter를 한 번 누르세요.
 
 다 되면 멤버가 몇 명, 봉사표가 몇 개인지 나와요. 숫자를 확인하세요.
 
 - `找到好幾個同工助手的專案`(프로젝트가 여러 개)라고 나오면, 명령어 끝의 `--out move.json` 앞에 `--project 프로젝트ID`를 붙여 다시 실행하세요. 프로젝트 ID는 목록에 나온 것 중 하나예요.
-- `找不到同工助手的專案`(찾을 수 없음)이나 `讀不到`(읽을 수 없음)라고 나오면, 대개 로그인한 Google 계정이 달라서예요. 사이트를 설치한 계정으로 바꿔서 다시 해 보세요.
+- `找不到同工助手的專案`(찾을 수 없음)이나 `讀不到`(읽을 수 없음)라고 나오면, Cloud Shell이 사이트를 설치한 Google 계정을 쓰고 있지 않은 거예요. 아래처럼 바꾸세요.
+  1. 터미널에 `gcloud auth login`을 입력하고 Enter를 누르세요.
+  2. 계속할지 물으면(`Y/n`) `Y`를 입력하고 Enter를 누르세요.
+  3. 터미널에 나온 링크를 눌러 사이트를 설치한 계정으로 로그인하고(목록에 없으면 **다른 계정 사용**), **허용**을 누르세요.
+  4. 페이지에 나온 코드를 복사해 터미널에 붙여 넣고 Enter를 누르세요.
+  5. 1단계의 터미널 아이콘을 다시 누르고 터미널에서 Enter를 누르세요.
 
 ## 2. 이전용 파일 내려받기
 

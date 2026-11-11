@@ -20,7 +20,7 @@ description: 自架的同工助手（church-staff-pwa）不再更新了。把同
 
 ## 1. 產生搬家檔
 
-用當初建立網站的 Google 帳號[打開 Cloud Shell](https://shell.cloud.google.com/cloudshell/editor?cloudshell_git_repo=https%3A%2F%2Fgithub.com%2Fhansli112%2Fchurch-staff-pwa&cloudshell_git_branch=main&cloudshell_workspace=.&cloudshell_tutorial=docs%2Fmove-to-martha.md&show=terminal)。
+用當初建立網站的 Google 帳號[打開 Cloud Shell](https://shell.cloud.google.com/cloudshell/editor?cloudshell_git_repo=https%3A%2F%2Fgithub.com%2Fhansli112%2Fchurch-staff-pwa&cloudshell_git_branch=main&cloudshell_workspace=.&cloudshell_tutorial=docs%2Fmove-to-martha.md&show=terminal)。瀏覽器登入的是別的帳號也沒關係，先打開，跑完再照下面的說明換帳號。
 
 跳出 **在 Cloud Shell 中開啟** 時，先勾 **信任存放區**，再按 **確認**。
 
@@ -37,7 +37,12 @@ description: 自架的同工助手（church-staff-pwa）不再更新了。把同
 跑完會寫出同工幾位、服事表幾份，對一下數字。
 
 - 寫 `找到好幾個同工助手的專案`：在指令最後的 `--out move.json` 前面加上 `--project 專案ID` 再跑一次，專案 ID 填它列出來的其中一個。
-- 寫 `找不到同工助手的專案` 或 `讀不到`：多半是登入的 Google 帳號不對，換成建立網站的那個帳號再試。
+- 寫 `找不到同工助手的專案` 或 `讀不到`：Cloud Shell 用的不是建立網站的 Google 帳號。照下面換成那個帳號：
+  1. 在終端機輸入 `gcloud auth login`，按 Enter。
+  2. 問要不要繼續（`Y/n`）時，輸入 `Y`，按 Enter。
+  3. 點終端機裡出現的網址，登入建立網站的帳號（不在清單上就選 **使用其他帳戶**），再按 **允許**。
+  4. 複製頁面上的驗證碼，貼回終端機，按 Enter。
+  5. 再按一次教學第 1 步的終端機圖示，在終端機按 Enter。
 
 ## 2. 下載搬家檔
 
