@@ -460,7 +460,6 @@
   "appIconGreen": "초록",
   "appIconPurple": "보라",
   "appIconNight": "밤",
-  "churchIconChanged": "홈 화면 아이콘을 ‘{church}’(으)로 바꿨어요",
   "goHome": "홈으로",
   "churchNotFound": "교회를 찾을 수 없어요",
   "churchEntryNotMember": "관리자에게 초대 링크를 받아 주세요",

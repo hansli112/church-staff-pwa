@@ -460,7 +460,6 @@
   "appIconGreen": "緑",
   "appIconPurple": "紫",
   "appIconNight": "夜",
-  "churchIconChanged": "ホーム画面のアイコンを「{church}」に変えました",
   "goHome": "ホームに戻る",
   "churchNotFound": "この教会が見つかりません",
   "churchEntryNotMember": "管理者に招待リンクをもらってください",

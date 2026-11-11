@@ -82,10 +82,9 @@ final sessionEffectsProvider = Provider<void>((ref) {
   );
 
   // The home-screen icon, as nextAppIcon has it: a lapsed subscription's
-  // goes, and a church's own comes on, at the same go, so one never waits
-  // out the other. A moment after the church's page is up, or the church
-  // joined, so the system's note on the change comes over the page, not
-  // over the splash. Refused, it is tried again next time.
+  // goes, and a church's own once I am no longer in it. A moment after the
+  // church's page is up, so the system's note on the change comes over the
+  // page, not over the splash. Refused, it is tried again next time.
   Timer? soon;
   ref.onDispose(() => soon?.cancel());
   void settleIcon() {
@@ -99,14 +98,9 @@ final sessionEffectsProvider = Provider<void>((ref) {
           supporter: ref.read(supporterProvider),
           churchKnown: !ref.read(isWebProvider) && stage != AppStage.loading && stage != AppStage.signedOut,
           church: church,
-          placedBefore: church != null && ref.read(churchIconPlacedProvider(church.iconId)),
         );
         if (change == null) return;
         await ref.read(currentAppIconProvider.notifier).set(change.to);
-        if (change.placed case final placed?) {
-          ref.read(churchIconPlacedProvider(placed.iconId).notifier).mark();
-          ref.read(churchIconChangedProvider.notifier).tell(placed);
-        }
       } catch (_) {
         return;
       }

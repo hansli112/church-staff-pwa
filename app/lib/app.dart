@@ -4,7 +4,6 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import 'core/design/components.dart';
 import 'core/design/theme.dart';
 import 'core/fonts.dart';
 import 'core/builtin_localizations.dart';
@@ -20,7 +19,6 @@ import 'state/providers.dart';
 import 'state/push.dart';
 import 'state/saved_read.dart';
 import 'state/session.dart';
-import 'state/support.dart';
 import 'state/web_page.dart';
 
 /// Lets app-wide events (a notification arriving) show a toast without a
@@ -118,21 +116,6 @@ class _MarthaAppState extends ConsumerState<MarthaApp> {
           ),
         );
     });
-    // A church's own icon, put on the home screen on its own: say so, with
-    // the way back. Once the app is in front again: iOS covers it with its
-    // own note on the change, and this would fade under it.
-    ref.listen(churchIconChangedProvider, (_, icon) async {
-      if (icon == null) return;
-      await _inFront();
-      final context = router.routerDelegate.navigatorKey.currentContext;
-      if (context == null || !context.mounted) return;
-      showToast(
-        context,
-        L10n.of(context).churchIconChanged(icon.name),
-        duration: const Duration(seconds: 8),
-        onUndo: () => ref.read(currentAppIconProvider.notifier).set(null),
-      );
-    });
     final locale = ref.watch(profileProvider.select((p) => p.value?.locale));
     return MaterialApp.router(
       onGenerateTitle: (context) => L10n.of(context).appName,
@@ -191,15 +174,6 @@ class _Column extends StatelessWidget {
 /// Keeps users/{uid}.appLocale on the language shown, chosen or the
 /// device's, for the server's pushes; written only when it changes. Kept on
 /// this device too ([shownLanguagePref]).
-/// When the app is in front: now, or once whatever covers it is closed.
-Future<void> _inFront() async {
-  if (WidgetsBinding.instance.lifecycleState case null || AppLifecycleState.resumed) return;
-  final back = Completer<void>();
-  final listener = AppLifecycleListener(onResume: back.complete);
-  await back.future;
-  listener.dispose();
-}
-
 class _LanguageShown extends ConsumerStatefulWidget {
   const _LanguageShown({required this.child});
 

@@ -89,24 +89,16 @@ class FakeStore implements SupportStore {
 class FakeIcons implements AppIconSwitcher {
   String? icon;
 
-  /// How many changes still fail, as the phone may refuse one.
-  int failures = 0;
-
-  /// Puts up the system's own note on the change, as iOS does: the app is
-  /// covered (inactive) until it is closed.
-  bool notes = false;
+  /// How many times it was changed: each is a note from iOS.
+  int sets = 0;
 
   @override
   Future<String?> current() async => icon;
 
   @override
   Future<void> set(String? name) async {
-    if (failures > 0) {
-      failures--;
-      throw StateError('refused');
-    }
+    sets++;
     icon = name;
-    if (notes) WidgetsBinding.instance.handleAppLifecycleStateChanged(AppLifecycleState.inactive);
   }
 }
 
@@ -546,7 +538,6 @@ void main() {
 
   group("a church's own icon", () {
     final zhuwei = churchIcons.keys.single;
-    const changed = '主畫面的圖示換成〈竹圍靈糧福音中心〉了';
 
     /// The app closed and opened again on this phone, a member of 竹圍.
     Future<void> reopen(WidgetTester tester, FakeIcons icons) async {
@@ -561,7 +552,9 @@ void main() {
       );
     }
 
-    testWidgets('its members get it on the home screen once, told so, with a way back', (tester) async {
+    testWidgets("its members keep the app's icon until they pick it: iOS would cover the app with a note", (
+      tester,
+    ) async {
       final icons = FakeIcons();
       await pumpWithStore(
         tester,
@@ -569,38 +562,14 @@ void main() {
         icons,
         backend: seededChurch(as: staffMei, id: zhuwei),
       );
-      expect(icons.icon, 'Zhuwei');
-      expect(findShownContaining(changed), findsOneWidget);
-
-      await tester.tap(find.text('復原'));
-      await settle(tester);
+      await tester.pump(const Duration(seconds: 2));
       expect(icons.icon, isNull);
-
+      expect(icons.sets, 0, reason: 'nothing changed, so the phone says nothing');
       await reopen(tester, icons);
-      expect(icons.icon, isNull, reason: 'once: put back, it stays back');
-      expect(findShownContaining(changed), findsNothing);
+      expect(icons.icon, isNull);
     });
 
-    testWidgets("on iOS the note waits for the system's own to be closed, not to fade under it", (tester) async {
-      final icons = FakeIcons()..notes = true;
-      await pumpWithStore(
-        tester,
-        FakeStore(),
-        icons,
-        backend: seededChurch(as: staffMei, id: zhuwei),
-      );
-      await tester.pump(const Duration(seconds: 10));
-      expect(icons.icon, 'Zhuwei');
-      expect(findShownContaining(changed), findsNothing);
-
-      tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.resumed);
-      await tester.pump();
-      await tester.pump(const Duration(milliseconds: 300));
-      expect(findShownContaining(changed), findsOneWidget);
-      await settle(tester);
-    });
-
-    testWidgets('教會資訊 › App 圖示 puts it back or away, no subscription needed', (tester) async {
+    testWidgets('教會資訊 › App 圖示 puts it on or away, no subscription needed', (tester) async {
       final icons = FakeIcons();
       await pumpWithStore(
         tester,
@@ -617,20 +586,21 @@ void main() {
         of: find.ancestor(of: findShown(name), matching: find.byType(InkWell)),
         matching: find.byIcon(Symbols.check_rounded),
       );
-      await tester.tap(find.text('預設'));
-      await settle(tester);
-      expect(icons.icon, isNull);
       expect(checked('預設'), findsOneWidget, reason: 'a check, which a border on a blue icon is not');
-      expect(checked('竹圍靈糧福音中心'), findsNothing);
       await tester.tap(findShown('竹圍靈糧福音中心'));
       await settle(tester);
       expect(icons.icon, 'Zhuwei');
       expect(checked('竹圍靈糧福音中心'), findsOneWidget);
       expect(checked('預設'), findsNothing);
+      await tester.tap(find.text('預設'));
+      await settle(tester);
+      expect(icons.icon, isNull);
+      expect(checked('預設'), findsOneWidget);
+      expect(checked('竹圍靈糧福音中心'), findsNothing);
     });
 
-    testWidgets("kept, it stays: only a lapsed subscription's icon goes back", (tester) async {
-      final icons = FakeIcons();
+    testWidgets('picked, it stays', (tester) async {
+      final icons = FakeIcons()..icon = 'Zhuwei';
       await pumpWithStore(
         tester,
         FakeStore(),
@@ -641,7 +611,7 @@ void main() {
       expect(icons.icon, 'Zhuwei');
     });
 
-    testWidgets("a supporter's icon, once the subscription lapses, gives way to it", (tester) async {
+    testWidgets("a supporter's icon, once the subscription lapses, gives way to the app's", (tester) async {
       final icons = FakeIcons()..icon = 'Purple';
       await pumpWithStore(
         tester,
@@ -649,52 +619,15 @@ void main() {
         icons,
         backend: seededChurch(as: staffMei, id: zhuwei),
         savedPrefs: {
-          'supporter_until': testNow.add(const Duration(days: 1)).toIso8601String(),
+          'supporter_until': testNow.subtract(const Duration(days: 1)).toIso8601String(),
           'supporter_plan': 'supporter_monthly',
         },
       );
-      expect(icons.icon, 'Purple');
-
-      final saved = await phonePrefs();
-      await tester.pumpWidget(const SizedBox());
-      await pumpWithStore(
-        tester,
-        FakeStore(),
-        icons,
-        backend: seededChurch(as: staffMei, id: zhuwei),
-        savedPrefs: {...saved, 'supporter_until': testNow.subtract(const Duration(days: 1)).toIso8601String()},
-      );
-      expect(icons.icon, 'Zhuwei');
-      expect(findShownContaining(changed), findsOneWidget);
-    });
-
-    testWidgets('refused by the phone, it is tried again next time', (tester) async {
-      final icons = FakeIcons()..failures = 1;
-      await pumpWithStore(
-        tester,
-        FakeStore(),
-        icons,
-        backend: seededChurch(as: staffMei, id: zhuwei),
-      );
       expect(icons.icon, isNull);
-      expect(findShownContaining(changed), findsNothing);
-      await reopen(tester, icons);
-      expect(icons.icon, 'Zhuwei');
-    });
-
-    testWidgets('joining the church with the app open puts it there', (tester) async {
-      final icons = FakeIcons();
-      final b = seededChurch(as: staffMei);
-      await pumpWithStore(tester, FakeStore(), icons, backend: b);
-      b
-        ..addChurch('竹圍靈糧福音中心', id: zhuwei)
-        ..addMember(zhuwei, staffMei);
-      await settle(tester);
-      expect(icons.icon, 'Zhuwei');
     });
 
     testWidgets('leaving the church takes it back', (tester) async {
-      final icons = FakeIcons();
+      final icons = FakeIcons()..icon = 'Zhuwei';
       final b = seededChurch(as: staffMei, id: zhuwei);
       await pumpWithStore(tester, FakeStore(), icons, backend: b);
       expect(icons.icon, 'Zhuwei');
@@ -717,14 +650,12 @@ void main() {
         },
       );
       expect(icons.icon, 'Purple');
-      expect(findShownContaining(changed), findsNothing);
     });
 
     testWidgets("another church's members never get it, nor does the web app", (tester) async {
       final icons = FakeIcons();
       await pumpWithStore(tester, FakeStore(), icons);
       expect(icons.icon, isNull);
-      expect(findShownContaining(changed), findsNothing);
       GoRouter.of(tester.element(find.byType(Scaffold).first)).go('/me/church');
       await settle(tester);
       expect(find.text('App 圖示'), findsNothing);
@@ -735,7 +666,10 @@ void main() {
         seededChurch(as: staffMei, id: zhuwei),
         overrides: [isWebProvider.overrideWithValue(true)],
       );
-      expect(findShownContaining(changed), findsNothing);
+      await settle(tester);
+      GoRouter.of(tester.element(find.byType(Scaffold).first)).go('/me/church');
+      await settle(tester);
+      expect(find.text('App 圖示'), findsNothing, reason: 'the web app has no home-screen icon');
     });
   });
 

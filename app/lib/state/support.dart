@@ -8,7 +8,6 @@ import 'package:in_app_purchase_android/billing_client_wrappers.dart';
 import 'package:in_app_purchase_android/in_app_purchase_android.dart';
 
 import '../data/backend.dart';
-import 'device_flag.dart';
 import 'providers.dart';
 
 /// 支持平台: one-off tips and two monthly plans, through the App Store and
@@ -303,8 +302,10 @@ final fundingProvider = StreamProvider.autoDispose<Funding?>((ref) => ref.watch(
 const appIcons = <String?>[null, 'Green', 'Purple', 'Night'];
 
 /// A church's own app icon, bundled like the others, by church id: its
-/// members get it on their own, not only supporters. [iconId] is the icon's,
-/// as in [appIcons]; Android shows [name] under it too, iOS keeps the app's.
+/// members may pick it (教會資訊 › App 圖示), not only supporters. It is
+/// never put on by itself: iOS covers the app with a note on the change, and
+/// the icon people look for would be gone. [iconId] is the icon's, as in
+/// [appIcons]; Android shows [name] under it too, iOS keeps the app's.
 typedef ChurchIcon = ({String iconId, String name});
 
 const churchIcons = <String, ChurchIcon>{
@@ -312,44 +313,23 @@ const churchIcons = <String, ChurchIcon>{
   'sJhQdCRzakGMSGHnSrik': (iconId: 'Zhuwei', name: '竹圍靈糧福音中心'),
 };
 
-/// A church's icon, just put on the home screen on its own (sessionEffects),
-/// for the app to say so.
-class ChurchIconChanged extends Notifier<ChurchIcon?> {
-  @override
-  ChurchIcon? build() => null;
-
-  void tell(ChurchIcon icon) => state = icon;
-}
-
-final churchIconChangedProvider = NotifierProvider<ChurchIconChanged, ChurchIcon?>(ChurchIconChanged.new);
-
-/// Whether the church icon [iconId] was put on this phone's home screen
-/// once already: put back, it stays back.
-final churchIconPlacedProvider = NotifierProvider.family<DeviceFlag, bool, String>(
-  (iconId) => DeviceFlag('church_icon_$iconId'),
-);
-
-/// The home-screen icon to put on, [to], in place of [current], and the
-/// church's icon that is, when one is ([placed]: to mark it and say so).
-typedef IconChange = ({String? to, ChurchIcon? placed});
+/// The home-screen icon to put on, [to], in place of the one on now.
+typedef IconChange = ({String? to});
 
 /// What happens to the home-screen icon, [current], if anything: a
-/// lapsed subscription ([supporter] false) takes its icon back. Then, once
-/// my churches are known ([churchKnown]), a church with its own ([church])
-/// puts it on, once per phone ([placedBefore]) and never over an icon
-/// picked; with none, a church's icon comes off. Null: it stays.
+/// lapsed subscription ([supporter] false) takes its icon back, and once my
+/// churches are known ([churchKnown]), a church's own icon comes off when I
+/// am no longer in it ([church] null). Null: it stays.
 IconChange? nextAppIcon({
   required String? current,
   required bool supporter,
   required bool churchKnown,
   required ChurchIcon? church,
-  required bool placedBefore,
 }) {
   var now = current;
   if (!supporter && now != null && appIcons.contains(now)) now = null;
   if (churchKnown && church == null && churchIcons.values.any((c) => c.iconId == now)) now = null;
-  if (churchKnown && church != null && now == null && !placedBefore) return (to: church.iconId, placed: church);
-  return now == current ? null : (to: now, placed: null);
+  return now == current ? null : (to: now);
 }
 
 /// The icon of the one of my churches that has its own, if any.

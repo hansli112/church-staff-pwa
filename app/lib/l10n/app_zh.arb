@@ -904,14 +904,6 @@
   "appIconGreen": "綠",
   "appIconPurple": "紫",
   "appIconNight": "夜",
-  "churchIconChanged": "主畫面的圖示換成〈{church}〉了",
-  "@churchIconChanged": {
-    "placeholders": {
-      "church": {
-        "type": "String"
-      }
-    }
-  },
   "goHome": "回首頁",
   "churchNotFound": "找不到這間教會",
   "churchEntryNotMember": "請向管理員要邀請連結",

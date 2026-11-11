@@ -1469,11 +1469,6 @@ class L10nJa extends L10n {
   String get appIconNight => '夜';
 
   @override
-  String churchIconChanged(String church) {
-    return 'ホーム画面のアイコンを「$church」に変えました';
-  }
-
-  @override
   String get goHome => 'ホームに戻る';
 
   @override

@@ -1555,11 +1555,6 @@ class L10nEn extends L10n {
   String get appIconNight => 'Night';
 
   @override
-  String churchIconChanged(String church) {
-    return 'Your home screen icon is now $church’s';
-  }
-
-  @override
   String get goHome => 'Go home';
 
   @override
