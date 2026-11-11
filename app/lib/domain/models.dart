@@ -26,19 +26,25 @@ class Church {
     required this.name,
     this.status = ChurchStatus.active,
     this.logoUrl,
+    bool? hasLogo,
     this.homeName,
     this.deletedAt,
     this.timeZone = ChurchTimeZone.fallback,
     this.attendanceSince,
     this.takesJoinRequests = true,
-  });
+  }) : hasLogo = hasLogo ?? logoUrl != null;
 
   final String id;
   final String name;
   final ChurchStatus status;
 
-  /// Download URL of the 512px logo, or null when the church has none.
+  /// Download URL of the 512px logo, or null when the church has none or
+  /// it is still being looked up.
   final String? logoUrl;
+
+  /// Whether the church has a logo, known before its [logoUrl] is: room is
+  /// kept for it, and 開始使用 does not ask for one.
+  final bool hasLogo;
 
   /// 主畫面名稱: the shorter name under the home-screen icon, or null to use
   /// [name].
@@ -74,6 +80,7 @@ class Church {
     String? name,
     ChurchStatus? status,
     String? logoUrl,
+    bool? hasLogo,
     String? Function()? homeName,
     ChurchTimeZone? timeZone,
     Day? Function()? attendanceSince,
@@ -83,6 +90,7 @@ class Church {
     name: name ?? this.name,
     status: status ?? this.status,
     logoUrl: logoUrl ?? this.logoUrl,
+    hasLogo: hasLogo ?? (logoUrl != null || this.hasLogo),
     homeName: homeName == null ? this.homeName : homeName(),
     deletedAt: deletedAt,
     timeZone: timeZone ?? this.timeZone,

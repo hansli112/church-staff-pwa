@@ -120,6 +120,29 @@ void main() {
     expect(findShown('開始使用'), findsNothing);
   });
 
+  testWidgets('a church just moved from self-host: its admin is shown to invite the 同工 and may add a logo', (
+    tester,
+  ) async {
+    final b = newChurch();
+    b.addPending('living', const PendingMember(id: 'old-mei', name: '李美玉', email: 'mei@example.com'));
+    b.rosters['living']![Roster.idFor('sunday', Day(2026, 10, 4))] = Roster(
+      type: 'sunday',
+      day: Day(2026, 10, 4),
+      duties: const [
+        Duty(role: '司會', people: ['李美玉'], uids: {'李美玉': 'old-mei'}),
+      ],
+    );
+    await pumpApp(tester, b);
+    expect(find.text('開始使用'), findsOneWidget);
+    expect(find.text('建立邀請連結，傳給同工'), findsOneWidget, reason: 'nobody moved has signed in yet');
+    expect(find.text('選用 · 邀請頁和首頁會顯示'), findsOneWidget);
+    await tapText(tester, '上傳 logo');
+    expect(find.text('教會資訊'), findsWidgets);
+    await back(tester);
+    await tapText(tester, '邀請同工');
+    expect(find.text('邀請'), findsWidgets);
+  });
+
   testWidgets("a new church's admin is shown where to start, all under 開始使用", (tester) async {
     await pumpApp(tester, newChurch());
 

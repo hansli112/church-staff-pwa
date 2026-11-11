@@ -2284,6 +2284,8 @@
   "@gettingStartedSmallGroups": {"description": "開始使用 step for an admin, optional: opens the service page with its 小組"},
   "gettingStartedSmallGroupsBody": "選用 · 小組長加入自己的同工、回報人數",
   "@gettingStartedSmallGroupsBody": {"description": "Under gettingStartedSmallGroups; says it may be skipped"},
+  "gettingStartedLogoBody": "選用 · 邀請頁和首頁會顯示",
+  "@gettingStartedLogoBody": {"description": "Under 上傳 logo in 開始使用 (admin, optional): where the logo shows"},
   "gettingStartedInviteWaiting": "已發出邀請，等同工加入",
   "@gettingStartedInviteWaiting": {"description": "Under 邀請同工 once an invite works and nobody has joined yet"},
   "gettingStartedAfterJoin": "同工加入後就能做",

@@ -1838,6 +1838,7 @@ class MemoryChurchData implements ChurchData {
       id: c.id,
       name: c.name,
       logoUrl: c.logoUrl,
+      hasLogo: c.hasLogo,
       homeName: c.homeName,
       timeZone: c.timeZone,
     );

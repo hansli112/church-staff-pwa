@@ -3385,6 +3385,9 @@ class L10nEn extends L10n {
   String get gettingStartedSmallGroupsBody => 'Optional · leaders add their own members and report attendance';
 
   @override
+  String get gettingStartedLogoBody => 'Optional · shown on the invite page and home';
+
+  @override
   String get gettingStartedInviteWaiting => 'Invite sent, waiting for your team to join';
 
   @override

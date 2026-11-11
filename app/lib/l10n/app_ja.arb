@@ -958,6 +958,7 @@
   "gettingStartedAddStaffAny": "集会にメンバーを加える",
   "gettingStartedSmallGroups": "小グループを作る",
   "gettingStartedSmallGroupsBody": "任意 · リーダーが自分のメンバーを加え、人数を報告します",
+  "gettingStartedLogoBody": "任意 · 招待ページとホームに表示",
   "gettingStartedInviteWaiting": "招待済み、メンバーの参加待ち",
   "gettingStartedAfterJoin": "メンバーが参加してからできます",
   "gettingStartedDone": "完了",

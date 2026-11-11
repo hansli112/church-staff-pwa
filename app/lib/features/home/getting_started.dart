@@ -109,6 +109,7 @@ List<GettingStarted>? _starts(Ref ref) {
     attendanceOn: settings.attendanceSince != null,
     invited: invited,
     servicesSeen: servicesSeen,
+    hasLogo: settings.hasLogo,
   );
   var starts = left(rosters);
   if (starts.isNotEmpty) {
@@ -170,6 +171,7 @@ final countStartsProvider = Provider.autoDispose<void>((ref) {
 String? _pageOf(GettingStartedStep s) => switch ((s.step, s.group)) {
   (StartStep.services, _) || (StartStep.addStaff || StartStep.smallGroups || StartStep.meets, null) => '/me/groups',
   (StartStep.invite, _) => '/me/invites',
+  (StartStep.logo, _) => '/me/church',
   (StartStep.addStaff, final group?) => groupStaffPage(group),
   (StartStep.smallGroups || StartStep.meets, final group?) => groupPage(group),
   (StartStep.arrange, _) => null,
@@ -204,6 +206,7 @@ String Function(ChurchGroup?) _groupNames(WidgetRef ref) {
 
 String _title(L10n l10n, GettingStartedStep s, String Function(ChurchGroup?) name) => switch (s.step) {
   StartStep.services => l10n.gettingStartedServices,
+  StartStep.logo => l10n.uploadLogo,
   StartStep.invite => l10n.inviteMembers,
   StartStep.addStaff when s.group == null => l10n.gettingStartedAddStaffAny,
   StartStep.addStaff => l10n.gettingStartedAddStaff(name(s.group)),
@@ -220,6 +223,7 @@ String? _subtitle(L10n l10n, GettingStartedStep s) => switch ((s.step, s.state))
   (StartStep.invite, StartState.waiting) => l10n.gettingStartedInviteWaiting,
   (StartStep.invite, _) => l10n.gettingStartedInviteBody,
   (StartStep.smallGroups, _) => l10n.gettingStartedSmallGroupsBody,
+  (StartStep.logo, _) => l10n.gettingStartedLogoBody,
   (StartStep.arrange || StartStep.planWeeks, _) => l10n.gettingStartedArrangeBody,
   _ => null,
 };

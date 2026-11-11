@@ -958,6 +958,7 @@
   "gettingStartedAddStaffAny": "Add team members to a service",
   "gettingStartedSmallGroups": "Create small groups",
   "gettingStartedSmallGroupsBody": "Optional · leaders add their own members and report attendance",
+  "gettingStartedLogoBody": "Optional · shown on the invite page and home",
   "gettingStartedInviteWaiting": "Invite sent, waiting for your team to join",
   "gettingStartedAfterJoin": "Once your team has joined",
   "gettingStartedDone": "Done",

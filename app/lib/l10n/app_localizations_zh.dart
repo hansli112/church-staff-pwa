@@ -3191,6 +3191,9 @@ class L10nZh extends L10n {
   String get gettingStartedSmallGroupsBody => '選用 · 小組長加入自己的同工、回報人數';
 
   @override
+  String get gettingStartedLogoBody => '選用 · 邀請頁和首頁會顯示';
+
+  @override
   String get gettingStartedInviteWaiting => '已發出邀請，等同工加入';
 
   @override
@@ -6637,6 +6640,9 @@ class L10nZhHans extends L10nZh {
 
   @override
   String get gettingStartedSmallGroupsBody => '可选 · 小组长加入自己的同工、回报人数';
+
+  @override
+  String get gettingStartedLogoBody => '选用 · 邀请页和首页会显示';
 
   @override
   String get gettingStartedInviteWaiting => '已发出邀请，等同工加入';

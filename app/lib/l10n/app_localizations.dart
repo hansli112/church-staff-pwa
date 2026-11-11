@@ -5674,6 +5674,12 @@ abstract class L10n {
   /// **'選用 · 小組長加入自己的同工、回報人數'**
   String get gettingStartedSmallGroupsBody;
 
+  /// Under 上傳 logo in 開始使用 (admin, optional): where the logo shows
+  ///
+  /// In zh, this message translates to:
+  /// **'選用 · 邀請頁和首頁會顯示'**
+  String get gettingStartedLogoBody;
+
   /// Under 邀請同工 once an invite works and nobody has joined yet
   ///
   /// In zh, this message translates to:

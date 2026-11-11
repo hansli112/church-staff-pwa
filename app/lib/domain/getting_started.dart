@@ -9,6 +9,10 @@ enum StartStep {
   /// 服事設定: which days, which duties.
   services,
 
+  /// The church's logo (an admin's, optional): on the invite page, the
+  /// home page's title, and the link and icon the web app shares.
+  logo,
+
   /// 邀請同工.
   invite,
 
@@ -30,7 +34,7 @@ enum StartStep {
 
   /// Left for the church to choose: never the next step, and no reason to
   /// keep 開始使用 up.
-  bool get optional => this == smallGroups;
+  bool get optional => this == smallGroups || this == logo;
 }
 
 /// Where a step is.
@@ -84,10 +88,11 @@ class GettingStarted {
 /// What [me] still has to start, a list for each 身分 with something left:
 /// for an admin only the admin's, which covers the rest. [members] is
 /// everyone, [pending] how many moved from self-host have not signed in
-/// yet, [invited] whether an invite still works, [servicesSeen] whether
-/// they opened the services from 開始使用 on this device, [rosters] saved
-/// ones: from today on, and those of the past weeks (a church between
-/// seasons is not new again).
+/// yet (they can be put in a service, but are still to be invited),
+/// [invited] whether an invite still works, [servicesSeen] whether they
+/// opened the services from 開始使用 on this device, [hasLogo] whether the
+/// church has one, [rosters] saved ones: from today on, and those of the
+/// past weeks (a church between seasons is not new again).
 List<GettingStarted> gettingStarted({
   required Member me,
   required List<Member> members,
@@ -99,13 +104,15 @@ List<GettingStarted> gettingStarted({
   required bool attendanceOn,
   bool invited = false,
   bool servicesSeen = false,
+  bool hasLogo = false,
 }) {
   bool someoneElseIn(ChurchGroup group) =>
       members.any((m) => m.uid != me.uid && m.isIn(group, ministries: ministries.ministries));
   bool arranged(bool Function(Roster day, Duty duty) counts) =>
       rosters.any((r) => r.duties.any((d) => d.people.isNotEmpty && counts(r, d)));
   final anyArranged = arranged((_, _) => true);
-  final joined = pending > 0 || members.any((m) => m.uid != me.uid);
+  final joined = members.any((m) => m.uid != me.uid);
+  final someoneToPutIn = joined || pending > 0;
   bool open(String service) => services.byId(service)?.enabled ?? false;
   StartState doneIf(bool done) => done ? StartState.done : StartState.todo;
   GettingStartedStep step(StartStep step, bool done, [ChurchGroup? group]) =>
@@ -121,6 +128,7 @@ List<GettingStarted> gettingStarted({
     final staffed = anyArranged || opened.any(someoneElseIn);
     return [
       step(StartStep.services, servicesSeen || anyArranged),
+      step(StartStep.logo, hasLogo),
       (
         step: StartStep.invite,
         group: null,
@@ -135,7 +143,7 @@ List<GettingStarted> gettingStarted({
         group: opened.where((g) => !someoneElseIn(g)).firstOrNull ?? opened.firstOrNull,
         state: staffed
             ? StartState.done
-            : joined
+            : someoneToPutIn
             ? StartState.todo
             : StartState.locked,
       ),

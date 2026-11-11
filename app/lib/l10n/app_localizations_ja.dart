@@ -3194,6 +3194,9 @@ class L10nJa extends L10n {
   String get gettingStartedSmallGroupsBody => '任意 · リーダーが自分のメンバーを加え、人数を報告します';
 
   @override
+  String get gettingStartedLogoBody => '任意 · 招待ページとホームに表示';
+
+  @override
   String get gettingStartedInviteWaiting => '招待済み、メンバーの参加待ち';
 
   @override

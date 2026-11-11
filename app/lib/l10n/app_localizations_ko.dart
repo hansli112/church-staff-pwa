@@ -3195,6 +3195,9 @@ class L10nKo extends L10n {
   String get gettingStartedSmallGroupsBody => '선택 · 리더가 직접 멤버를 추가하고 인원을 보고해요';
 
   @override
+  String get gettingStartedLogoBody => '선택 · 초대 페이지와 홈에 보여요';
+
+  @override
   String get gettingStartedInviteWaiting => '초대를 보냈어요. 멤버가 들어오기를 기다리는 중';
 
   @override

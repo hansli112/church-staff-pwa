@@ -41,6 +41,7 @@ Church churchFromJson(String id, Json data, {String? logoUrl}) => Church(
     ChurchStatus.suspended,
   ),
   logoUrl: logoUrl,
+  hasLogo: data['logoVersion'] is String && (data['logoVersion'] as String).isNotEmpty,
   homeName: data['homeName'] is String ? data['homeName'] as String : null,
   deletedAt: readTime(data['deletedAt']),
   timeZone: ChurchTimeZone.of(data['timeZone'] as String?),
