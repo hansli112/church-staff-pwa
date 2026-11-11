@@ -57,6 +57,14 @@ const _autoScrollSpeed = 50.0;
 /// How much of the next duty's column shows when they do not all fit.
 const _peek = 0.4;
 
+/// The narrowest a duty's column gets: room for the ＋ of a place to fill
+/// (_EmptySlot) and the cell's padding.
+const _narrowest = Space.xxl + Space.s + Space.s * 2;
+
+/// The widest a duty's column gets for a long name; past it, names are cut
+/// short.
+const _widest = 120.0;
+
 /// How long the cells a drop traded stay lit.
 const _flashFor = Duration(milliseconds: 700);
 
@@ -417,7 +425,13 @@ class _PlanWeeksScreenState extends ConsumerState<PlanWeeksScreen> with SingleTi
       _room = math.max(0, _monthsAhead - _months);
       _joined = false;
       duties = planDuties(service, months.expand((m) => m.days), arranges);
-      body = _table(context, months, duties);
+      // Every day saved ahead, not only the months joined on so far: the
+      // columns keep their width as more months join while scrolling.
+      final ahead = [
+        for (final r in saved)
+          if (!r.isEvent && r.type == _type && !r.day.isBefore(today)) r,
+      ];
+      body = _table(context, months, duties, ahead);
     }
 
     return PopScope(
@@ -488,55 +502,69 @@ class _PlanWeeksScreenState extends ConsumerState<PlanWeeksScreen> with SingleTi
     };
   }
 
-  /// Widths measured, by text and size: the names barely change between
+  /// Widths measured, by text and look: the names barely change between
   /// builds, and a build may come with every move of a held cell.
-  final _measured = <(String, double), double>{};
+  final _measured = <(String, TextStyle, double, int), double>{};
 
   /// How wide each duty's column is at least, the same for all: the widest
-  /// of their names, on two lines, and of the people on [days], a line
-  /// each with how many more after the second. Measured in the language
-  /// shown, so short names (李美玉) fit more columns than long ones
-  /// (Christopher Lee); the widest is still cut short past a point.
+  /// of their names, on two lines as the head draws them, and of the people
+  /// on [days], a line each with how many more after the second, as
+  /// [_People] draws them. Measured in the language shown, so short names
+  /// (李美玉) fit more columns than long ones (Christopher Lee); past
+  /// [_widest] they are cut short.
   double _columnWidth(BuildContext context, List<String> duties, Iterable<Roster> days) {
     final base = DefaultTextStyle.of(context).style;
     final scaler = MediaQuery.textScalerOf(context);
     final dutyStyle = base.merge(AppText.footnote.copyWith(fontWeight: FontWeight.w600));
     final nameStyle = base.merge(AppText.subheadline);
-    final painter = TextPainter(textDirection: Directionality.of(context), textScaler: scaler, maxLines: 1);
-    double widthOf(String text, TextStyle style) =>
-        _measured.putIfAbsent((text, scaler.scale(style.fontSize ?? 14)), () {
-          painter
-            ..text = TextSpan(text: text, style: style)
-            ..layout();
-          return painter.width;
-        });
+    final painter = TextPainter(textDirection: Directionality.of(context), textScaler: scaler);
+    double measure(String text, TextStyle style, int lines) {
+      final key = (text, style, scaler.scale(14), lines);
+      if (_measured[key] case final known?) return known;
+      // Each word's own first: a word is never broken.
+      final words = text.split(' ');
+      final longestWord = lines == 2 && words.length > 1
+          ? words.map((w) => measure(w, style, 1)).reduce(math.max)
+          : 0.0;
+      painter
+        ..text = TextSpan(text: text, style: style)
+        ..maxLines = 1
+        ..layout();
+      var width = painter.width;
+      if (lines == 2) {
+        // The narrowest it still fits two lines at: lines break greedily,
+        // so half its width may need a third.
+        painter.maxLines = 2;
+        var low = math.max(longestWord, width / 2);
+        for (var i = 0; i < 12 && width - low > 0.5; i++) {
+          final mid = (low + width) / 2;
+          painter.layout(maxWidth: mid);
+          painter.didExceedMaxLines ? low = mid : width = mid;
+        }
+        width = width.ceilToDouble();
+      }
+      return _measured[key] = width;
+    }
+
     var widest = 0.0;
     for (final duty in duties) {
-      // Words keep whole; Chinese and Japanese break anywhere.
-      final words = duty.split(' ');
-      final onTwo = words.length > 1
-          ? math.max(widthOf(duty, dutyStyle) / 2, words.map((w) => widthOf(w, dutyStyle)).reduce(math.max))
-          : widthOf(duty, dutyStyle) / 2;
-      widest = math.max(widest, onTwo);
+      widest = math.max(widest, measure(duty, dutyStyle, 2));
     }
     final wanted = duties.toSet();
     for (final day in days) {
       for (final d in day.duties) {
         if (!wanted.contains(d.role)) continue;
         for (final (i, name) in d.people.take(2).indexed) {
-          final more = i == 1 && d.people.length > 2 ? widthOf(' +${d.people.length - 2}', nameStyle) : 0.0;
-          widest = math.max(widest, widthOf(name, nameStyle) + more);
+          final more = i == 1 && d.people.length > 2 ? measure(' +${d.people.length - 2}', nameStyle, 1) : 0.0;
+          widest = math.max(widest, measure(name, nameStyle, 1) + more);
         }
       }
     }
     painter.dispose();
     if (_measured.length > 2000) _measured.clear();
-    // Room around, as the cells pad, and for the ＋ of a place to fill.
-    return (widest + Space.s * 2 + 2).clamp(_narrowest, _widest);
+    // As the cells pad, with a pixel to spare.
+    return (widest + Space.s * 2 + 1).clamp(_narrowest, _widest);
   }
-
-  static const _narrowest = 64.0;
-  static const _widest = 120.0;
 
   /// The table: the duties' names stay at the top and the dates at the
   /// start, the rest scrolls both ways; each month starts under its name.
@@ -545,6 +573,7 @@ class _PlanWeeksScreenState extends ConsumerState<PlanWeeksScreen> with SingleTi
     BuildContext context,
     List<({Day month, List<Roster> days})> months,
     List<String> duties,
+    List<Roster> everyArranged,
   ) {
     final c = AppColors.of(context);
     final scale = MediaQuery.textScalerOf(context);
@@ -566,7 +595,7 @@ class _PlanWeeksScreenState extends ConsumerState<PlanWeeksScreen> with SingleTi
     final head = named ? 1 : 0;
     _namesHeight = named ? scale.scale(13) * 1.3 * 2 + Space.s * 2 : 0;
     final dateWidth = _datesWidth = _DateCell.widthFor(context, _shown);
-    final namesWidth = _columnWidth(context, duties, _shown);
+    final columnWidth = _columnWidth(context, duties, everyArranged);
 
     Widget cellAt(TableVicinity at) {
       final role = at.column == 0 ? null : duties[at.column - 1];
@@ -657,8 +686,8 @@ class _PlanWeeksScreenState extends ConsumerState<PlanWeeksScreen> with SingleTi
         // All the duties when they fit; when not, the last one shown is
         // cut short of half, so the table says it goes on sideways.
         final room = box.maxWidth - dateWidth;
-        final fits = duties.isNotEmpty && room / duties.length >= namesWidth;
-        final whole = (room / namesWidth - _peek).floor().clamp(1, math.max(1, duties.length));
+        final fits = duties.isNotEmpty && room / duties.length >= columnWidth;
+        final whole = (room / columnWidth - _peek).floor().clamp(1, math.max(1, duties.length));
         final cellWidth = duties.isEmpty ? 0.0 : (fits ? room / duties.length : room / (whole + _peek));
         final table = NotificationListener<Notification>(
           onNotification: _nearEnd,
@@ -719,7 +748,8 @@ class _PlanWeeksScreenState extends ConsumerState<PlanWeeksScreen> with SingleTi
                       [final ScrollPosition at] when at.hasContentDimensions => at.extentAfter > 1 ? 1 : 0,
                       _ => 1,
                     },
-                    duration: const Duration(milliseconds: 150),
+                    // Gone at once on a table that fits, not fading out over it.
+                    duration: cut ? const Duration(milliseconds: 150) : Duration.zero,
                     child: DecoratedBox(
                       decoration: BoxDecoration(
                         gradient: LinearGradient(
@@ -755,8 +785,6 @@ class _PlanWeeksScreenState extends ConsumerState<PlanWeeksScreen> with SingleTi
     return false;
   }
 }
-
-/// How many months [to] is after [from].
 
 /// A day at the start of its row, as a calendar has it under its month:
 /// the day's number, then its weekday or its first 特別活動. Tapping it

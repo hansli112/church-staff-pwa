@@ -3,7 +3,7 @@ import 'dart:async';
 import 'package:flutter/gestures.dart' show kLongPressTimeout;
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter/rendering.dart' show RenderParagraph;
+import 'package:flutter/rendering.dart' show RenderAnimatedOpacity, RenderParagraph;
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
 import 'package:material_symbols_icons/symbols.dart';
@@ -346,8 +346,46 @@ void main() {
       await tester.tap(find.descendant(of: find.byType(SegmentedButton<String>), matching: find.text(name)));
       await tester.pump();
       expect(tester.takeException(), isNull, reason: 'to $name: one table, never two at once');
+      final edge = find.byWidgetPredicate((w) => w is AnimatedOpacity && w.child is DecoratedBox);
+      double fade() => tester.renderObject<RenderAnimatedOpacity>(edge).opacity.value;
+      if (name == '青年崇拜') expect(fade(), 0, reason: 'its one duty fits: no fade, not even fading out');
       await settle(tester);
+      if (name == '主日崇拜') expect(fade(), 1, reason: 'its duties go on past the edge');
     }
+  });
+
+  testWidgets('a long name months ahead widens the columns from the start, not once scrolled to', (tester) async {
+    final b = seededChurch();
+    b.setServices('grace', [
+      sundayService.copyWith(duties: ['司會', '司琴', '招待', '音控', '投影']),
+    ]);
+    await pumpApp(tester, b);
+    await go(tester, '/rosters/plan/sunday');
+    final narrow = tester.getRect(cell('司會', 11)).width;
+    await go(tester, '/rosters');
+
+    final later = Day(2027, 3, 7);
+    b.rosters['grace']![Roster.idFor('sunday', later)] = Roster(
+      type: 'sunday',
+      day: later,
+      duties: const [
+        Duty(role: '司琴', people: ['Christopher Lee']),
+      ],
+    );
+    b.notify();
+    await go(tester, '/rosters/plan/sunday');
+    expect(tester.getRect(cell('司會', 11)).width, greaterThan(narrow));
+  });
+
+  testWidgets('a long duty name takes two whole lines, not cut short', (tester) async {
+    final b = seededChurch();
+    b.setServices('grace', [
+      sundayService.copyWith(duties: ['司會', '兒童主日學老師', '招待']),
+    ]);
+    await pumpApp(tester, b);
+    await go(tester, '/rosters/plan/sunday');
+    final head = tester.renderObject<RenderParagraph>(find.text('兒童主日學老師'));
+    expect(head.didExceedMaxLines, isFalse);
   });
 
   testWidgets('opens at this month even when it is all arranged; the months after follow below', (tester) async {
