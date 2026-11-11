@@ -3125,9 +3125,6 @@ class L10nJa extends L10n {
   }
 
   @override
-  String get planWeeksHint => '「完了」を押すと通知されます';
-
-  @override
   String get planNotYetTold => 'ここで担当に入った人・外れた人にはまだ通知していません';
 
   @override
@@ -3142,9 +3139,6 @@ class L10nJa extends L10n {
   String planNotifiedLater(int count) {
     return '朝7時に$count人に通知します';
   }
-
-  @override
-  String get planShowEarlier => '前の月を表示';
 
   @override
   String planOpenDay(String day) {

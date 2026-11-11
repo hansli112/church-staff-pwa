@@ -3126,9 +3126,6 @@ class L10nKo extends L10n {
   }
 
   @override
-  String get planWeeksHint => '「완료」를 누르면 알림이 가요';
-
-  @override
   String get planNotYetTold => '여기서 배정되거나 빠진 사람에게 아직 알리지 않았어요';
 
   @override
@@ -3143,9 +3140,6 @@ class L10nKo extends L10n {
   String planNotifiedLater(int count) {
     return '오전 7시에 $count명에게 알려요';
   }
-
-  @override
-  String get planShowEarlier => '이전 달 보기';
 
   @override
   String planOpenDay(String day) {

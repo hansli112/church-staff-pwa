@@ -15,6 +15,7 @@ import 'package:martha/state/session.dart';
 
 import 'package:martha/features/rosters/people_picker.dart';
 import 'package:martha/features/rosters/plan_weeks_screen.dart';
+import 'package:two_dimensional_scrollables/two_dimensional_scrollables.dart';
 
 import '../support/harness.dart';
 import '../support/seed.dart';
@@ -296,9 +297,15 @@ void main() {
     expect(slot.width, greaterThan(tester.getRect(cell('司琴', 11)).width * 0.8), reason: 'a row-wide place to fill');
   });
 
-  testWidgets('opens at the first month with a gap; the months before are a tap away, over the table', (
-    tester,
-  ) async {
+  testWidgets('switching services shows the other table at once, not a blank page first', (tester) async {
+    await pumpApp(tester, seededChurch());
+    await go(tester, '/rosters/plan/sunday');
+    await tester.tap(find.descendant(of: find.byType(SegmentedButton<String>), matching: find.text('青年崇拜')));
+    await tester.pump();
+    expect(find.byType(TableView), findsOneWidget, reason: 'its days were read while the page was open');
+  });
+
+  testWidgets('opens at this month even when it is all arranged; the months after follow below', (tester) async {
     final b = seededChurch();
     for (final date in [11, 18, 25]) {
       b.rosters['grace']![Roster.idFor('sunday', Day(2026, 10, date))] = savedDay(
@@ -308,19 +315,12 @@ void main() {
     }
     await pumpApp(tester, b);
     await go(tester, '/rosters/plan/sunday');
-    expect(find.text('2026年10月'), findsNothing);
+    expect(find.text('2026年10月'), findsOneWidget, reason: 'what is arranged now is where they look first');
+    for (var i = 0; i < 10 && find.text('2026年11月').evaluate().isEmpty; i++) {
+      await tester.drag(rows, const Offset(0, -200));
+      await settle(tester);
+    }
     expect(find.text('2026年11月'), findsOneWidget);
-    expect(
-      tester.getRect(find.text('顯示前面的月份')).bottom,
-      lessThanOrEqualTo(tester.getRect(find.text('司會')).top),
-      reason: 'over the duties’ names, not scrolled away with the table',
-    );
-    await tester.drag(rows, const Offset(0, -1500));
-    await settle(tester);
-    await tester.tap(find.text('顯示前面的月份'));
-    await settle(tester);
-    expect(find.text('2026年10月'), findsOneWidget, reason: 'shown where they start, however far down it was');
-    expect(find.text('顯示前面的月份'), findsNothing);
   });
 
   testWidgets('the picker says how often someone serves that month, and what else that day', (tester) async {

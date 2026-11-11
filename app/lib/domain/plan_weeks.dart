@@ -15,15 +15,6 @@ List<String> planDuties(Service service, Iterable<Roster> days, Arranges arrange
       if (arranges.has(d.role)) d.role,
 }.toList();
 
-/// The month of the first of [days] where a duty of [duties] has nobody
-/// yet, as its first day; null when every one has someone.
-Day? firstGap(Iterable<Roster> days, List<String> duties) {
-  for (final day in days) {
-    if (day.duties.any((d) => duties.contains(d.role) && d.people.isEmpty)) return Day(day.day.year, day.day.month, 1);
-  }
-  return null;
-}
-
 /// The first day of the month [months] after [month]'s.
 Day addMonths(Day month, int months) => Day(month.year, month.month + months, 1);
 

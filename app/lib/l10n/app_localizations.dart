@@ -5572,12 +5572,6 @@ abstract class L10n {
   /// **'安排{duty}'**
   String planWeeksTitleOne(String duty);
 
-  /// No description provided for @planWeeksHint.
-  ///
-  /// In zh, this message translates to:
-  /// **'按「完成」才會通知'**
-  String get planWeeksHint;
-
   /// Toast on the page behind 安排服事, left without 完成 while people put on or taken off there are not told yet; its action is planNotifyNow
   ///
   /// In zh, this message translates to:
@@ -5601,12 +5595,6 @@ abstract class L10n {
   /// In zh, this message translates to:
   /// **'早上 7 點會通知 {count} 位同工'**
   String planNotifiedLater(int count);
-
-  /// No description provided for @planShowEarlier.
-  ///
-  /// In zh, this message translates to:
-  /// **'顯示前面的月份'**
-  String get planShowEarlier;
 
   /// No description provided for @planOpenDay.
   ///

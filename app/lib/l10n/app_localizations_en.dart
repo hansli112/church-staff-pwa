@@ -3298,9 +3298,6 @@ class L10nEn extends L10n {
   }
 
   @override
-  String get planWeeksHint => 'People are notified when you tap Done';
-
-  @override
   String get planNotYetTold => 'People put on or taken off here haven\'t been notified';
 
   @override
@@ -3327,9 +3324,6 @@ class L10nEn extends L10n {
     );
     return '$_temp0';
   }
-
-  @override
-  String get planShowEarlier => 'Show earlier months';
 
   @override
   String planOpenDay(String day) {

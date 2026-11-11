@@ -32,8 +32,8 @@ import 'format.dart';
 /// them, onto a day with nobody); the picker's 和別週交換 does the same
 /// without dragging. Nobody is told until 通知同工, which tells each
 /// person once, for all their days.
-/// Opens at the first month with a duty nobody is on yet; the months
-/// before it are a button away, later ones join on as it scrolls.
+/// Opens at this month, arranged or not, as the 服事表 tab does; later
+/// months join on as it scrolls.
 class PlanWeeksScreen extends ConsumerStatefulWidget {
   const PlanWeeksScreen({super.key, required this.serviceType});
 
@@ -50,9 +50,6 @@ const _monthsAtATime = 3;
 /// How far the months go on: through the same month next year.
 const _monthsAhead = 13;
 
-/// How far ahead the page looks for the first month with a gap.
-const _gapSearchMonths = 12;
-
 /// How fast the table scrolls while a lifted cell is held at its edge, per
 /// point past it (as ReorderableList).
 const _autoScrollSpeed = 50.0;
@@ -68,8 +65,6 @@ const _flashFor = Duration(milliseconds: 700);
 class _PlanWeeksScreenState extends ConsumerState<PlanWeeksScreen> with SingleTickerProviderStateMixin {
   late String _type = widget.serviceType;
 
-  /// The first month shown (its first day); null until the days are in.
-  Day? _from;
   int _months = _monthsAtATime;
 
   /// Leaving by 完成: nobody left to tell.
@@ -402,6 +397,11 @@ class _PlanWeeksScreenState extends ConsumerState<PlanWeeksScreen> with SingleTi
     final service = settings?.byId(_type);
     final arranges = ref.watch(arrangesProvider(_type));
     final ready = ref.watch(rosterEditingProvider(_type));
+    // The others it switches to, read while it is open: switching shows
+    // their table at once, not a blank page first.
+    for (final s in mine) {
+      ref.watch(rosterEditingProvider(s.id));
+    }
     final saved = ref.watch(savedRostersProvider).value;
     // Every service the page switches between, watched so 完成 knows.
     _waiting = {
@@ -415,21 +415,11 @@ class _PlanWeeksScreenState extends ConsumerState<PlanWeeksScreen> with SingleTi
     if (service == null || saved == null || !ready || !arranges.any) {
       body = const SizedBox.shrink();
     } else {
-      final from = _from ??= () {
-        final ahead = planMonths(
-          service: service,
-          saved: saved,
-          today: today,
-          month: thisMonth,
-          months: _gapSearchMonths,
-        ).expand((m) => m.days);
-        return firstGap(ahead, planDuties(service, ahead, arranges)) ?? thisMonth;
-      }();
-      final months = planMonths(service: service, saved: saved, today: today, month: from, months: _months);
-      _room = math.max(0, _monthsAhead - _monthsBetween(thisMonth, from) - _months);
+      final months = planMonths(service: service, saved: saved, today: today, month: thisMonth, months: _months);
+      _room = math.max(0, _monthsAhead - _months);
       _joined = false;
       duties = planDuties(service, months.expand((m) => m.days), arranges);
-      body = _table(context, months, duties, earlier: from.isAfter(thisMonth) ? thisMonth : null);
+      body = _table(context, months, duties);
     }
 
     return PopScope(
@@ -444,7 +434,7 @@ class _PlanWeeksScreenState extends ConsumerState<PlanWeeksScreen> with SingleTi
           // One duty: named here, in place of a column's name.
           title: Text(duties.length == 1 ? l10n.planWeeksTitleOne(duties.single) : l10n.planWeeksTitle),
           actions: savingActions([
-            if (service != null && arranges.any) _menu(l10n, c, _from ?? thisMonth),
+            if (service != null && arranges.any) _menu(l10n, c, thisMonth),
             MediaQuery.withClampedTextScaling(
               maxScaleFactor: 1.5,
               child: TextButton(
@@ -468,16 +458,11 @@ class _PlanWeeksScreenState extends ConsumerState<PlanWeeksScreen> with SingleTi
                     Haptics.selection();
                     setState(() {
                       _type = v.first;
-                      _from = null;
                       _months = _monthsAtATime;
                     });
                   },
                 ),
               ),
-            Padding(
-              padding: const EdgeInsets.fromLTRB(Space.m, 0, Space.m, Space.s),
-              child: Text(l10n.planWeeksHint, style: AppText.footnote.copyWith(color: c.secondaryLabel)),
-            ),
             Expanded(
               child: Listener(
                 onPointerDown: _onPointer,
@@ -511,10 +496,8 @@ class _PlanWeeksScreenState extends ConsumerState<PlanWeeksScreen> with SingleTi
   Widget _table(
     BuildContext context,
     List<({Day month, List<Roster> days})> months,
-    List<String> duties, {
-    Day? earlier,
-  }) {
-    final l10n = L10n.of(context);
+    List<String> duties,
+  ) {
     final c = AppColors.of(context);
     final scale = MediaQuery.textScalerOf(context);
     final platform = Theme.of(context).platform;
@@ -700,32 +683,7 @@ class _PlanWeeksScreenState extends ConsumerState<PlanWeeksScreen> with SingleTi
         );
       },
     );
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        // Over the table, where it stays while there are months before.
-        if (earlier != null)
-          Padding(
-            padding: const EdgeInsetsDirectional.fromSTEB(Space.xs, 0, Space.m, Space.xs),
-            child: Align(
-              alignment: AlignmentDirectional.centerStart,
-              child: TextButton.icon(
-                onPressed: () {
-                  setState(() {
-                    _months += _monthsBetween(earlier, _from!);
-                    _from = earlier;
-                  });
-                  // Where they now start, wherever the table was.
-                  if (_rows.hasClients) _rows.jumpTo(0);
-                },
-                icon: const Icon(Symbols.keyboard_arrow_up_rounded),
-                label: Text(l10n.planShowEarlier),
-              ),
-            ),
-          ),
-        Expanded(child: table),
-      ],
-    );
+    return table;
   }
 
   /// Near the table's end, the next months join on, through the same month
@@ -745,7 +703,6 @@ class _PlanWeeksScreenState extends ConsumerState<PlanWeeksScreen> with SingleTi
 }
 
 /// How many months [to] is after [from].
-int _monthsBetween(Day from, Day to) => (to.year - from.year) * 12 + to.month - from.month;
 
 /// A day at the start of its row, as a calendar has it under its month:
 /// the day's number, then its weekday or its first 特別活動. Tapping it

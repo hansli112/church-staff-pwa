@@ -19,19 +19,6 @@ void main() {
       expect(planDuties(sunday, days, const Arranges.only({'司琴', '敬拜'})), ['司琴', '敬拜']);
     });
 
-    test('opens at the month of the first day with a duty nobody is on', () {
-      final days = [
-        day(10, 25, const [
-          Duty(role: '司琴', people: ['美玉']),
-          Duty(role: '招待'),
-        ]),
-        day(11, 1, const [Duty(role: '司琴')]),
-      ];
-      expect(firstGap(days, ['司琴']), Day(2026, 11, 1), reason: '招待 is not mine');
-      expect(firstGap(days, ['招待']), Day(2026, 10, 1));
-      expect(firstGap(days.take(1), ['司琴']), isNull);
-    });
-
     test('the days by month: every one on the weekday, and others saved, from today on', () {
       final months = planMonths(
         service: sunday,
@@ -68,7 +55,6 @@ void main() {
         day(10, 11, const [Duty(role: '敬拜')]),
       ];
       expect(planDuties(sunday, days, const Arranges.only({'敬拜', '鼓'})), ['敬拜']);
-      expect(firstGap(days, ['敬拜']), Day(2026, 10, 1));
     });
   });
 

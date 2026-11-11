@@ -3122,9 +3122,6 @@ class L10nZh extends L10n {
   }
 
   @override
-  String get planWeeksHint => '按「完成」才會通知';
-
-  @override
   String get planNotYetTold => '在這裡排進或移出的人還沒收到通知';
 
   @override
@@ -3139,9 +3136,6 @@ class L10nZh extends L10n {
   String planNotifiedLater(int count) {
     return '早上 7 點會通知 $count 位同工';
   }
-
-  @override
-  String get planShowEarlier => '顯示前面的月份';
 
   @override
   String planOpenDay(String day) {
@@ -6576,9 +6570,6 @@ class L10nZhHans extends L10nZh {
   }
 
   @override
-  String get planWeeksHint => '按“完成”才会通知';
-
-  @override
   String get planNotYetTold => '在这里排入或移出的人还没收到通知';
 
   @override
@@ -6593,9 +6584,6 @@ class L10nZhHans extends L10nZh {
   String planNotifiedLater(int count) {
     return '早上 7 点会通知 $count 位同工';
   }
-
-  @override
-  String get planShowEarlier => '显示前面的月份';
 
   @override
   String planOpenDay(String day) {
