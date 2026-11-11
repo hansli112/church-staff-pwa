@@ -68,6 +68,9 @@ void main() {
     expect(telemetry.named('tutorial_step'), [
       {'step': 'addStaff'},
     ]);
+    await tapText(tester, '加入青年崇拜的同工');
+    expect(find.text('青年崇拜的同工'), findsOneWidget, reason: 'done, and still opens its page to change');
+    await back(tester);
 
     b.rosters['grace']![Roster.idFor('youth', Day(2026, 10, 3))] = Roster(
       type: 'youth',

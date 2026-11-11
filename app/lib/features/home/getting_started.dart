@@ -261,10 +261,9 @@ class GettingStartedSection extends ConsumerWidget {
             title: _title(l10n, s, name),
             subtitle: _subtitle(l10n, s),
             leading: _StepMark(i + 1, s.state, isNext: s == next),
-            // Done, or nothing to do there yet.
-            onTap: s.state == StartState.done || s.state == StartState.locked
-                ? null
-                : () => openStartStep(context, ref, s),
+            // A step done still opens its page, to change what was set;
+            // one locked has nothing there yet.
+            onTap: s.state == StartState.locked ? null : () => openStartStep(context, ref, s),
           ),
         ListRow(
           title: l10n.gettingStartedHide,
