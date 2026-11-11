@@ -90,7 +90,7 @@ class CalendarSettingsScreen extends ConsumerWidget {
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
                   BalancedText(
-                    l10n.calUnverifiedNote,
+                    l10n.calConnectNote,
                     textAlign: TextAlign.start,
                     style: AppText.subheadline.copyWith(color: c.secondaryLabel),
                   ),
@@ -114,27 +114,7 @@ class CalendarSettingsScreen extends ConsumerWidget {
                   ),
                   error: (e, _) =>
                       ErrorRetry(message: l10n.loadFailed, onRetry: () => ref.invalidate(_calendarListProvider)),
-                  data: (calendars) => ListSection(
-                    header: l10n.calPickCalendar,
-                    footer: _timeZoneDiffers(
-                      l10n,
-                      calendars.where((cal) => cal.id == settings.calendarId).firstOrNull?.timeZone,
-                      ref.watch(churchTimeZoneProvider),
-                    ),
-                    children: [
-                      for (final cal in calendars)
-                        ListRow(
-                          title: cal.name,
-                          selected: settings.calendarName == cal.name,
-                          onTap: () async {
-                            final first = settings.calendarId == null;
-                            final telemetry = ref.read(telemetryProvider);
-                            await church!.calendar.select(cal.id, cal.name);
-                            if (first) telemetry.logEvent('calendar_connect');
-                          },
-                        ),
-                    ],
-                  ),
+                  data: (calendars) => _CalendarPicker(calendars: calendars, settings: settings),
                 );
               },
             ),
@@ -158,6 +138,60 @@ class CalendarSettingsScreen extends ConsumerWidget {
           ],
         ],
       ),
+    );
+  }
+}
+
+/// The church's calendars, the one in use marked. A tap marks it at once:
+/// saving can wait on the backend waking up.
+class _CalendarPicker extends ConsumerStatefulWidget {
+  const _CalendarPicker({required this.calendars, required this.settings});
+
+  final List<CalendarChoice> calendars;
+  final CalendarSettings settings;
+
+  @override
+  ConsumerState<_CalendarPicker> createState() => _CalendarPickerState();
+}
+
+class _CalendarPickerState extends ConsumerState<_CalendarPicker> {
+  /// The one tapped, until the backend has it.
+  CalendarChoice? _picking;
+
+  Future<void> _pick(CalendarChoice cal) async {
+    final l10n = L10n.of(context);
+    final first = widget.settings.calendarId == null;
+    final telemetry = ref.read(telemetryProvider);
+    setState(() => _picking = cal);
+    try {
+      await ref.churchData.calendar.select(cal.id, cal.name);
+      if (first) telemetry.logEvent('calendar_connect');
+    } catch (e) {
+      if (mounted) showToast(context, errorText(l10n, e));
+    } finally {
+      if (mounted && _picking == cal) setState(() => _picking = null);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = L10n.of(context);
+    final picked = _picking?.id ?? widget.settings.calendarId;
+    return ListSection(
+      header: l10n.calPickCalendar,
+      footer: _timeZoneDiffers(
+        l10n,
+        widget.calendars.where((cal) => cal.id == picked).firstOrNull?.timeZone,
+        ref.watch(churchTimeZoneProvider),
+      ),
+      children: [
+        for (final cal in widget.calendars)
+          ListRow(
+            title: cal.name,
+            selected: _picking == null ? widget.settings.calendarName == cal.name : _picking == cal,
+            onTap: () => _pick(cal),
+          ),
+      ],
     );
   }
 }

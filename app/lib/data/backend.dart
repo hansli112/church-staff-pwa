@@ -1048,6 +1048,9 @@ abstract interface class Backend {
 /// What a page that just opened is likely to ask the backend for.
 enum WarmUp {
   calendarWrite,
+
+  /// 行事曆設定: connecting, then the list of calendars and picking one.
+  calendarSettings,
   serviceEdit,
 
   /// A 小組's page: renaming it, when it meets, its 小組長.

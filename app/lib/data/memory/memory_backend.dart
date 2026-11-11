@@ -198,6 +198,10 @@ class MemoryBackend implements Backend {
   /// on a slow network.
   Completer<void>? calendarSaveHeld;
 
+  /// Scripted: while set, picking a calendar waits for this to complete, as
+  /// on a cold start.
+  Completer<void>? calendarSelectHeld;
+
   /// Scripted: while set, previewing an invite waits for this to complete,
   /// as on a slow network.
   Completer<void>? invitePreviewHeld;
@@ -1993,6 +1997,7 @@ class MemoryCalendarData implements CalendarData {
   @override
   Future<void> select(String calendarId, String calendarName) async {
     _c._functionAdmin();
+    await _c._b.calendarSelectHeld?.future;
     _c._b.calendars[_c.churchId] = CalendarSettings(
       connected: true,
       calendarName: calendarName,

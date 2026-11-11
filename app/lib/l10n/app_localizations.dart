@@ -2422,11 +2422,11 @@ abstract class L10n {
   /// **'同工會看不到行事曆，Google 日曆本身不受影響'**
   String get calDisconnectBody;
 
-  /// No description provided for @calUnverifiedNote.
+  /// No description provided for @calConnectNote.
   ///
   /// In zh, this message translates to:
-  /// **'接下來 Google 會顯示「這個應用程式未經驗證」，點「進階」→「前往」繼續。只會讀寫你選的那個日曆。'**
-  String get calUnverifiedNote;
+  /// **'只會讀寫你選的那個日曆。'**
+  String get calConnectNote;
 
   /// No description provided for @calConnectedOk.
   ///

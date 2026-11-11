@@ -411,7 +411,7 @@
   "calDisconnect": "연결 해제",
   "calDisconnectTitle": "캘린더 연결을 해제할까요?",
   "calDisconnectBody": "멤버들이 캘린더를 볼 수 없게 돼요. Google 캘린더 자체는 바뀌지 않아요.",
-  "calUnverifiedNote": "다음 화면에서 Google이 ‘Google에서 확인하지 않은 앱’이라고 알려 줘요. ‘고급’ → ‘…(으)로 이동’을 눌러 계속해 주세요. 선택한 캘린더만 읽고 써요.",
+  "calConnectNote": "선택한 캘린더만 읽고 써요.",
   "calConnectedOk": "Google 캘린더를 연결했어요",
   "calConnectFailed": "연결하지 못했어요. 다시 시도해 주세요.",
   "calConnectScopes": "연결하지 못했어요. Google 화면에서 모든 권한을 선택해 주세요.",

@@ -7,6 +7,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
 import 'package:martha/core/design/components.dart';
+import 'package:martha/data/backend.dart' show WarmUp;
 import 'package:martha/domain/day.dart';
 import 'package:martha/domain/event_roster.dart';
 import 'package:martha/domain/models.dart';
@@ -45,11 +46,12 @@ void main() {
     expect(find.text('連接 Google 日曆'), findsNothing);
   });
 
-  testWidgets('the admin is warned about the unverified screen before connecting', (tester) async {
+  testWidgets('before connecting, the admin is told only the calendar picked is read and written', (tester) async {
     await pumpApp(tester, seededChurch());
     await go(tester, '/calendar');
     await tapText(tester, '連接 Google 日曆');
-    expect(findShownContaining('這個應用程式未經驗證'), findsOneWidget);
+    expect(findShownContaining('只會讀寫你選的那個日曆'), findsOneWidget);
+    expect(findShownContaining('未經驗證'), findsNothing, reason: 'Google verified the app (2026-11-11)');
   });
 
   // Android's Custom Tab cannot be closed by the app; its page says to close it.
@@ -95,6 +97,27 @@ void main() {
     await go(tester, '/calendar');
     expect(inAgenda('同工會'), findsOneWidget);
     expect(find.text('19:30'), findsOneWidget);
+  });
+
+  testWidgets('the calendar picked shows as picked at once, while the backend wakes up', (tester) async {
+    final b = seededChurch();
+    b.connectCalendar('grace');
+    await pumpApp(tester, b);
+    await go(tester, '/me/calendar');
+    expect(
+      b.warmedUp,
+      contains(WarmUp.calendarSettings),
+      reason: 'connecting, the list and picking are each a cold start',
+    );
+    final held = b.calendarSelectHeld = Completer<void>();
+    await tester.tap(findShown('教會行事曆').last);
+    await tester.pump();
+    bool picked() => tester.widget<ListRow>(find.widgetWithText(ListRow, '教會行事曆')).selected == true;
+    expect(picked(), isTrue, reason: 'before the backend answers');
+    held.complete();
+    await settle(tester);
+    expect(picked(), isTrue);
+    expect(b.calendars['grace']!.calendarName, '教會行事曆');
   });
 
   testWidgets('staff have no edit entry; calendar editors add and delete with undo', (tester) async {

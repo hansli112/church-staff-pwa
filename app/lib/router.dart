@@ -240,7 +240,13 @@ final routerProvider = Provider<GoRouter>((ref) {
                   page('timezone', (_) => const WarmUpOnOpen(WarmUp.timeZone, child: TimeZoneScreen())),
                   page('link', (_) => const ChurchLinkScreen()),
                   page('webhook', (_) => const WebhookScreen()),
-                  page('calendar', (s) => DeferredPage.calendarSettings(result: s.uri.queryParameters['result'])),
+                  page(
+                    'calendar',
+                    (s) => WarmUpOnOpen(
+                      WarmUp.calendarSettings,
+                      child: DeferredPage.calendarSettings(result: s.uri.queryParameters['result']),
+                    ),
+                  ),
                   page('notifications', (_) => const NotificationsScreen()),
                   page('unavailable', (_) => const UnavailableScreen()),
                   page(

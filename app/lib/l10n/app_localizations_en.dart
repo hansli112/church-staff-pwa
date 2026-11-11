@@ -1387,8 +1387,7 @@ class L10nEn extends L10n {
   String get calDisconnectBody => 'Team members won’t see the calendar. Your Google Calendar itself won’t change.';
 
   @override
-  String get calUnverifiedNote =>
-      'Next, Google will say “Google hasn’t verified this app.” Tap “Advanced,” then “Go to…” to continue. It only reads and writes the calendar you choose.';
+  String get calConnectNote => 'It only reads and writes the calendar you choose.';
 
   @override
   String get calConnectedOk => 'Google Calendar connected';
