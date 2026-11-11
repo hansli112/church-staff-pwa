@@ -172,6 +172,10 @@ if [ -n "$billing" ]; then
     gcloud projects add-iam-policy-binding "$project" \
       --member="serviceAccount:service-$number@gcp-sa-firebasestorage.iam.gserviceaccount.com" \
       --role=roles/firebaserules.firestoreServiceAgent --condition=None >/dev/null
+    # A 搬家檔 that was previewed but never moved (the page closed, or a
+    # second file picked) holds names and emails; it goes after a day.
+    api PATCH "https://storage.googleapis.com/storage/v1/b/$project.firebasestorage.app?fields=lifecycle" \
+      "{\"lifecycle\":$(cat "$root/storage-lifecycle.json")}" >/dev/null
   fi
 fi
 

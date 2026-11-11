@@ -182,4 +182,4 @@ App 看不到這個差別：在一間教會裡做的事，不管是 Firestore、
 |---|---|
 | `churches/{cid}/logo.png` | 同工讀；管理員寫，1MB 以內的圖片 |
 | `churches/{cid}/logo-{版本}-*.png` | 只有後端（主畫面 icon，經教會頁 Function 提供） |
-| `moves/{uid}/*` | 只有上傳者本人讀寫，20MB 以內（搬家檔，用完即刪） |
+| `moves/{uid}/*` | 只有上傳者本人讀寫，20MB 以內（搬家檔，用完即刪；沒搬的一天後由 bucket 的生命週期規則刪掉，`storage-lifecycle.json`） |
