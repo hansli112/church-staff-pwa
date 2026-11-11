@@ -103,15 +103,12 @@ p { margin: 0 0 16px; }
 .btn-primary:hover { filter: brightness(1.08); }
 
 /* 首頁、功能頁共用 */
-.cta { display: flex; flex-wrap: wrap; gap: 12px; }
-.cta .btn-primary { flex: 1 1 100%; }
-@media (min-width: 480px) { .cta .btn-primary { flex: none; } }
 .note { margin: 16px 0 0; font-size: 0.9375rem; color: var(--text2); }
 .verse { margin: 0; padding: 0 0 0 24px; border-left: 4px solid var(--line); font-size: 1.125rem; }
 .verse p { margin-bottom: 8px; }
 .verse cite { font-style: normal; font-size: 0.9375rem; color: var(--text2); }
 
-/* 首頁：圖示、名字、一句話，下面是 App 的真實畫面；再來一段一件事，配一張截圖 */
+/* 首頁：圖示、名字、一句話、商店徽章，下面是 App 的真實畫面 */
 .home :is(h1, h2, .lead) { text-wrap: balance; }
 .home h2 { font-size: clamp(1.625rem, 4.5vw, 2.25rem); font-weight: 700; line-height: 1.3; margin-bottom: 12px; }
 .intro { background: linear-gradient(to bottom, var(--paper), var(--bg)); text-align: center; overflow: hidden; }
@@ -122,9 +119,6 @@ p { margin: 0 0 16px; }
 .intro .lead { max-width: 24em; margin: 0 auto 28px; font-size: clamp(1.1875rem, 3.2vw, 1.375rem); color: var(--text2); }
 /* 一個詞組一個 span，換行只在詞組之間 */
 .intro .lead span { display: inline-block; }
-.intro .cta { justify-content: center; }
-.intro .cta .btn-primary { flex: none; min-width: 200px; }
-.intro .note { margin-top: 12px; }
 .phones { position: relative; display: flex; justify-content: center; gap: 24px; margin: 48px auto 0; height: clamp(300px, 70vw, 560px); }
 .phones img {
   width: auto; height: 100%; aspect-ratio: 660 / 1434; border-radius: clamp(20px, 4vw, 40px);
@@ -138,6 +132,26 @@ p { margin: 0 0 16px; }
   .phones { height: 440px; }
   .phones img:first-child { display: none; }
 }
+
+/* 商店徽章：官方圖，App Store 在前，高度一樣 */
+.stores { display: flex; flex-wrap: wrap; justify-content: center; gap: 12px; }
+.stores a { display: block; border-radius: 9px; }
+.stores img { display: block; width: auto; height: 48px; }
+.intro .note { margin-top: 16px; }
+.closing .stores { margin-top: 8px; }
+
+/* 首頁：首頁的一句話，再來四件事各一張小圖，細節在功能頁 */
+.tour { padding: 64px 0 72px; }
+.tour .sub { max-width: 30em; color: var(--text2); font-size: 1.1875rem; }
+.tour-grid { list-style: none; margin: 40px 0 0; padding: 0; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 32px 16px; }
+@media (min-width: 880px) { .tour-grid { grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 32px 24px; } }
+.tour-grid img {
+  display: block; width: 100%; height: auto; aspect-ratio: 3 / 4; object-fit: cover; object-position: top;
+  border-radius: 20px; box-shadow: var(--shadow); background: var(--app-bg); margin-bottom: 16px;
+}
+.tour-grid h3 { font-size: 1.125rem; font-weight: 700; margin-bottom: 4px; }
+.tour-grid p { margin: 0; color: var(--text2); }
+.tour .more { margin: 40px 0 0; font-size: 1.0625rem; font-weight: 600; }
 
 .moment { padding: 56px 0; }
 .moment .wrap { display: grid; gap: 24px; align-items: center; }
@@ -167,8 +181,6 @@ p { margin: 0 0 16px; }
 .closing { padding: 88px 0 72px; background: linear-gradient(to bottom, var(--bg), var(--paper)); text-align: center; }
 .closing .verse { max-width: 24em; margin: 0 auto 40px; padding: 0; border: 0; font-size: clamp(1.25rem, 3.6vw, 1.625rem); line-height: 1.7; color: var(--ink); }
 .closing .verse p { margin-bottom: 12px; }
-.closing .cta { justify-content: center; }
-.closing .cta .btn-primary { flex: none; min-width: 200px; }
 
 /* 一般頁面：支持、教學文章 */
 .page .wrap { padding-top: 40px; padding-bottom: 64px; }

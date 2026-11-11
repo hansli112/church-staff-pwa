@@ -31,46 +31,45 @@ if (matchMedia('(display-mode: standalone)').matches || navigator.standalone) lo
       <img class="app-icon" src="/icons/Icon-512.png" alt="" width="120" height="120">
       <h1>마르다의 쉼표</h1>
       <p class="lead"><span>교회 봉사자를 위한 봉사표.</span></p>
-      <div class="cta">
-        <a class="btn btn-primary" href="/home">웹 버전 열기</a>
+      <div class="stores">
+        <a href="https://apps.apple.com/app/id6823826952"><img src="/media/ko/app-store.svg" alt="App Store에서 다운로드" width="156" height="48"></a>
+        <a href="https://play.google.com/store/apps/details?id=app.marthasit&amp;hl=ko"><img src="/media/ko/google-play.png" alt="Google Play에서 다운로드" width="124" height="48"></a>
       </div>
-      <!-- TODO(M7): 上架後在這裡放 Apple、Google 官方商店徽章（App Store 在前、用黑色版本），連到商店頁 -->
-      <p class="note">무료예요. iPhone·Android 앱은 곧 출시돼요.</p>
+      <p class="note">무료예요. 컴퓨터에서는 <a href="/home">웹 버전</a>을 바로 쓸 수 있어요.</p>
       <div class="phones">
-        <img src="/media/ko/service.jpg" alt="10월 25일 주일예배 봉사표: 사회, 찬양 인도, 반주를 맡은 사람" width="660" height="1434">
-        <img src="/media/ko/schedule.jpg" alt="봉사표 탭. 한 주에 카드 하나씩, 봉사마다 맡은 사람이 나온 모습" width="660" height="1434">
+        <img src="/media/ko/phone-service.jpg" alt="주일예배 봉사표: 사회, 찬양 인도, 반주를 맡은 사람" width="660" height="1434">
+        <img src="/media/ko/phone-home.jpg" alt="홈에 앞으로 맡은 봉사와 다가오는 행사가 나온 모습" width="660" height="1434">
       </div>
     </div>
   </section>
 
-  <section class="moment">
+  <section class="tour">
     <div class="wrap">
-      <div class="words">
-        <h2>열자마자 언제 봉사하는지 보여요</h2>
-        <p>홈에 앞으로 맡은 봉사가 나와요. 봉사에 배정되면 알림이 와요.</p>
-      </div>
-      <img class="shot" src="/media/ko/home-still.jpg" alt="홈에 앞으로 맡은 봉사와 다가오는 행사가 나온 모습" width="786" height="1704" loading="lazy">
-    </div>
-  </section>
-
-  <section class="moment">
-    <div class="wrap">
-      <div class="words">
-        <h2>교회 행사는 캘린더에서</h2>
-        <p>교회 Google 캘린더를 연결하면 행사를 앱에서 볼 수 있어요. 성탄 행사나 수련회처럼 한 번뿐인 행사에도 봉사를 배정할 수 있어요.</p>
-      </div>
-      <img class="shot" src="/media/ko/calendar-still.jpg" alt="캘린더 탭에 이번 달 봉사자 모임, 청년 수련회, 추수감사 애찬이 나온 모습" width="786" height="1704" loading="lazy">
-    </div>
-  </section>
-
-  <section class="moment">
-    <div class="wrap">
-      <div class="words">
-        <h2>여러 주를 한 번에</h2>
-        <p>‘봉사 배정’은 여러 주를 표 하나에 모아 보여 줘요. 어느 주에 못 오는 사람이 있으면 그 칸을 다른 주로 끌어 놓으세요. 두 주의 사람이 서로 바뀌어요.</p>
-        <p class="more"><a href="/ko/features">모든 기능 보기</a></p>
-      </div>
-      <img class="shot" src="/media/ko/plan-still.jpg" alt="봉사 배정 표. 한 줄이 한 주이고, 몇 주의 사회가 채워진 모습" width="786" height="1704" loading="lazy">
+      <h2>열자마자 언제 봉사하는지 보여요</h2>
+      <p class="sub">홈에 앞으로 맡은 봉사가 나와요. 봉사에 배정되면 알림이 와요.</p>
+      <ul class="tour-grid">
+        <li>
+          <img src="/media/ko/calendar-still.jpg" alt="캘린더 탭에 이번 달 봉사자 모임, 청년 수련회, 추수감사 애찬이 나온 모습" width="786" height="1704" loading="lazy">
+          <h3>캘린더</h3>
+          <p>교회 Google 캘린더를 앱에서 볼 수 있어요.</p>
+        </li>
+        <li>
+          <img src="/media/ko/plan-still.jpg" alt="봉사 배정 표. 한 줄이 한 주이고, 몇 주의 사회가 채워진 모습" width="786" height="1704" loading="lazy">
+          <h3>봉사 배정</h3>
+          <p>여러 주를 표 하나로. 칸을 끌어 놓으면 다른 주와 바뀌어요.</p>
+        </li>
+        <li>
+          <img src="/media/ko/attendance-still.jpg" alt="소그룹 화면에 모임마다 온 인원이 나온 모습" width="786" height="1704" loading="lazy">
+          <h3>인원 기록</h3>
+          <p>소그룹 리더가 모임 인원을 기록해요. 잊으면 알림이 와요.</p>
+        </li>
+        <li>
+          <img src="/media/ko/invite-still.jpg" alt="초대 화면에서 초대 링크를 만든 모습" width="786" height="1704" loading="lazy">
+          <h3>초대</h3>
+          <p>링크를 단톡방에 보내면 열기만 해도 가입해요.</p>
+        </li>
+      </ul>
+      <p class="more"><a href="/ko/features">모든 기능 보기</a></p>
     </div>
   </section>
 
@@ -80,8 +79,9 @@ if (matchMedia('(display-mode: standalone)').matches || navigator.standalone) lo
         <p>마르다야 마르다야 네가 많은 일로 염려하고 근심하나 몇 가지만 하든지 혹은 한 가지만이라도 족하니라 마리아는 이 좋은 편을 택하였으니 빼앗기지 아니하리라</p>
         <cite>누가복음 10:41–42 (개역개정)</cite>
       </blockquote>
-      <div class="cta">
-        <a class="btn btn-primary" href="/home">웹 버전 열기</a>
+      <div class="stores">
+        <a href="https://apps.apple.com/app/id6823826952"><img src="/media/ko/app-store.svg" alt="App Store에서 다운로드" width="156" height="48"></a>
+        <a href="https://play.google.com/store/apps/details?id=app.marthasit&amp;hl=ko"><img src="/media/ko/google-play.png" alt="Google Play에서 다운로드" width="124" height="48"></a>
       </div>
       <p class="note">무료이고, 유료 기능은 없어요. <span data-from-app="hide">서버 비용을 함께 나누고 싶다면 <a href="/ko/support">마르다의 쉼표 후원하기</a>를 확인해 주세요.</span></p>
     </div>
