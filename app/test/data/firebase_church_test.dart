@@ -363,18 +363,25 @@ void main() {
       time.flushMicrotasks();
 
       expect(errors, isEmpty);
-      expect(churches, hasLength(1));
-      expect(churches.single?.name, '恩典教會');
-      expect(churches.single?.logoUrl, isNull);
+      expect(
+        churches.map((c) => (c?.name, c?.logoUrl, c?.hasLogo)),
+        [
+          ('恩典教會', null, true),
+          ('恩典教會', null, false),
+        ],
+        reason: 'room kept while it is looked up, none once it cannot be had',
+      );
       doc.emit({'name': '改名的恩典教會', 'status': 'active', 'logoVersion': '1234'});
       time.flushMicrotasks();
       expect(churches.last?.name, '改名的恩典教會');
       expect(churches.last?.logoUrl, isNull);
+      expect(churches.last?.hasLogo, isFalse);
       expect(fixture.storage.downloads, 1);
 
       doc.emit({'name': '改名的恩典教會', 'status': 'active', 'logoVersion': '5678'});
       time.flushMicrotasks();
       expect(churches.last?.logoUrl, isNull);
+      expect(churches.last?.hasLogo, isTrue, reason: 'a new logo');
       const url = 'https://storage.example.test/grace-recovered.png';
       fixture.storage.pending('grace', 1).complete(url);
       time.flushMicrotasks();
@@ -400,13 +407,15 @@ void main() {
       doc.emit({'name': '恩典教會', 'status': 'active', 'logoVersion': '1234'});
       time.flushMicrotasks();
 
-      expect(churches, hasLength(1));
-      expect(churches.single?.name, '恩典教會');
-      expect(churches.single?.logoUrl, isNull);
+      expect(churches.map((c) => (c?.name, c?.logoUrl, c?.hasLogo)), [
+        ('恩典教會', null, true),
+        ('恩典教會', null, false),
+      ]);
       expect(errors, isEmpty);
       doc.emit({'name': '改名的恩典教會', 'status': 'active', 'logoVersion': '1234'});
       time.flushMicrotasks();
       expect(churches.last?.name, '改名的恩典教會');
+      expect(churches.last?.hasLogo, isFalse);
       expect(errors, isEmpty);
 
       unawaited(sub.cancel());

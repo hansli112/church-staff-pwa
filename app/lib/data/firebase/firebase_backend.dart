@@ -644,6 +644,9 @@ class FirestoreChurchData implements ChurchData {
 
   String? _logoVersion;
   String? _logoUrl;
+
+  /// The logo version that could not be looked up: no room is kept for it.
+  String? _logoMissing;
   Future<String>? _logoLookup;
 
   @override
@@ -697,12 +700,14 @@ class FirestoreChurchData implements ChurchData {
                         // The logo is optional; metadata is already available,
                         // and no room is kept for a logo that cannot be had.
                         if (error is! FirebaseException) return out.addError(error, stack);
+                        _logoMissing = version;
                         if (latest case final church?) out.add(church.copyWith(hasLogo: false));
                       },
                     ),
                   );
                 }
               }
+              if (_logoUrl == null && _logoMissing == version) return church.copyWith(hasLogo: false);
               return church.copyWith(logoUrl: _logoUrl);
             })
             .listen(
