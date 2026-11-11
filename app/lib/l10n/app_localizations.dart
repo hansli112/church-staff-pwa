@@ -3529,13 +3529,13 @@ abstract class L10n {
   /// No description provided for @moveWhoAmI.
   ///
   /// In zh, this message translates to:
-  /// **'這位是我（選填）'**
+  /// **'你在舊版是哪一位？'**
   String get moveWhoAmI;
 
   /// No description provided for @moveWhoAmIFooter.
   ///
   /// In zh, this message translates to:
-  /// **'選了就接手那位的服事'**
+  /// **'選你自己，舊版的服事和小組就會接到這個帳號。沒選的話，舊版的你會變成另一位還沒登入的同工。'**
   String get moveWhoAmIFooter;
 
   /// No description provided for @moveCreate.

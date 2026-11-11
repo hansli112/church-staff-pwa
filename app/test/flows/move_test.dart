@@ -95,6 +95,21 @@ void main() {
     expect(findShown('還沒登入'), findsOneWidget, reason: '陳志豪 has no email');
   });
 
+  testWidgets('the church name sits right above the button it unlocks, after who I am', (tester) async {
+    await start(tester, preview);
+    await tapText(tester, '選擇搬家檔');
+    double top(Finder f) => tester.getTopLeft(f).dy;
+    final name = find.widgetWithText(TextField, '教會名稱');
+    final create = find.text('建立教會並搬過來');
+    expect(find.text('你在舊版是哪一位？'), findsOneWidget);
+    expect(top(name), greaterThan(top(find.text('陳志豪'))), reason: 'below the last person in the file');
+    expect(top(name), lessThan(top(create)));
+    expect(tester.widget<PrimaryButton>(find.widgetWithText(PrimaryButton, '建立教會並搬過來')).onPressed, isNull);
+    await tester.enterText(name, '恩典堂');
+    await tester.pump();
+    expect(tester.widget<PrimaryButton>(find.widgetWithText(PrimaryButton, '建立教會並搬過來')).onPressed, isNotNull);
+  });
+
   testWidgets('I can be nobody in the file, with any account', (tester) async {
     final b = await start(tester, preview, email: 'brand.new@gmail.com');
     await tapText(tester, '選擇搬家檔');

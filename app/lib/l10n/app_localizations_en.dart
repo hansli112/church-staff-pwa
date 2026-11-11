@@ -2019,10 +2019,11 @@ class L10nEn extends L10n {
   String get moveServices => 'Services';
 
   @override
-  String get moveWhoAmI => 'This is me (optional)';
+  String get moveWhoAmI => 'Which one is you?';
 
   @override
-  String get moveWhoAmIFooter => 'You take over this person’s schedules';
+  String get moveWhoAmIFooter =>
+      'Pick yourself to bring your schedules and small groups from the old version to this account. Otherwise the old you becomes another person who hasn’t signed in yet.';
 
   @override
   String get moveCreate => 'Create church and move';

@@ -41,10 +41,10 @@ import { fileURLToPath } from 'node:url';
 const root = join(dirname(fileURLToPath(import.meta.url)), '..');
 const landing = join(root, 'landing');
 const { marked } = createRequire(join(landing, 'package.json'))('marked');
-// A guide's link off the site (Cloud Shell, GitHub) opens a new tab, so the
-// guide stays open to follow beside it.
+// A guide's link off the site (Cloud Shell, GitHub) or to the web app opens a
+// new tab, so the guide stays open to follow beside it.
 marked.use({
-  hooks: { postprocess: (html) => html.replace(/<a href="(https?:\/\/[^"]*)"/g, '<a href="$1" target="_blank" rel="noopener"') },
+  hooks: { postprocess: (html) => html.replace(/<a href="(https?:\/\/[^"]*|\/home)"/g, '<a href="$1" target="_blank" rel="noopener"') },
 });
 
 /** The picture links to the site show (the app's icon, app/web/icons/Icon-maskable-512.png), at the site's root. */

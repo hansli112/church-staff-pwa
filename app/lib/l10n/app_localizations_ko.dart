@@ -1911,10 +1911,10 @@ class L10nKo extends L10n {
   String get moveServices => '예배';
 
   @override
-  String get moveWhoAmI => '이 사람이 나예요(선택)';
+  String get moveWhoAmI => '예전 버전에서 나는 누구인가요?';
 
   @override
-  String get moveWhoAmIFooter => '선택하면 그 사람의 봉사를 이어받아요';
+  String get moveWhoAmIFooter => '자신을 고르면 예전 버전의 봉사와 소그룹이 이 계정으로 이어져요. 고르지 않으면 예전의 나는 아직 로그인하지 않은 다른 멤버로 남아요.';
 
   @override
   String get moveCreate => '교회 만들고 옮겨 오기';

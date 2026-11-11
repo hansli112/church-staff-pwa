@@ -49,9 +49,9 @@ Your browser downloads `move.json`. It has your team members’ names and emails
 1. <span data-from-app="hide">Open the [web app](/home) and </span>Sign in with Google or email. If you sign up with email, open the link in the verification email first.
 2. On **Join your church**, choose **Create a church**, then tap **Move from old version** at the bottom.
 3. Tap **Choose move file** and pick the `move.json` you downloaded.
-4. Check the number of team members and schedules, and fill in **Church name**.
-5. Under **This is me**, pick yourself to take over your serving and permissions from the old site. Whoever has the email you signed in with is already picked.
-6. Tap **Create church and move**. Whoever uploads the file is the new church’s admin.
+4. Check the number of team members and schedules.
+5. Under **Which one is you?**, pick yourself to bring your schedules and small groups from the old site to your account. Whoever has the email you signed in with is already picked.
+6. Fill in **Church name** at the bottom and tap **Create church and move**. Whoever uploads the file is the new church’s admin.
 
 ![Choose the move file, check what’s in it, fill in the church name, and tap Create church and move](media:move)
 

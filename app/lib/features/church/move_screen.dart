@@ -184,16 +184,6 @@ class _MoveScreenState extends ConsumerState<MoveScreen> {
                 ListRow(title: l10n.moveServices, subtitle: preview.services.join(l10n.listSeparator)),
               ],
             ),
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: Space.m),
-              child: TextField(
-                controller: _name,
-                maxLength: TextLimits.churchName,
-                textInputAction: TextInputAction.done,
-                decoration: InputDecoration(labelText: l10n.churchName, counterText: ''),
-                onChanged: (_) => setState(() {}),
-              ),
-            ),
             if (searchable) ...[
               Padding(
                 padding: const EdgeInsets.symmetric(horizontal: Space.m),
@@ -225,6 +215,18 @@ class _MoveScreenState extends ConsumerState<MoveScreen> {
                     onTap: () => setState(() => _me = _me == p.id ? null : p.id),
                   ),
               ],
+            ),
+            // Right above the button it unlocks, so an empty one shows why
+            // the button can't be pressed yet.
+            Padding(
+              padding: const EdgeInsets.fromLTRB(Space.m, Space.m, Space.m, 0),
+              child: TextField(
+                controller: _name,
+                maxLength: TextLimits.churchName,
+                textInputAction: TextInputAction.done,
+                decoration: InputDecoration(labelText: l10n.churchName, counterText: ''),
+                onChanged: (_) => setState(() {}),
+              ),
             ),
             ?error,
             Padding(

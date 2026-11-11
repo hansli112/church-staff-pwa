@@ -1911,10 +1911,10 @@ class L10nJa extends L10n {
   String get moveServices => '集会';
 
   @override
-  String get moveWhoAmI => 'これは自分です（任意）';
+  String get moveWhoAmI => '旧バージョンでのあなたはどの人ですか？';
 
   @override
-  String get moveWhoAmIFooter => '選ぶと、その人の奉仕を引き継ぎます';
+  String get moveWhoAmIFooter => '自分を選ぶと、旧バージョンでの奉仕と小グループがこのアカウントに引き継がれます。選ばないと、旧バージョンのあなたは未ログインのメンバーとして別に残ります。';
 
   @override
   String get moveCreate => '教会を作成して移行';

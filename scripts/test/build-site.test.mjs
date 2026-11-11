@@ -234,7 +234,7 @@ describe('opened from the iOS and Android apps (from=app), a page hides its ways
       }
       if (!path.includes('/blog/')) continue;
       for (const [line] of built(path).matchAll(/^<(?:li|p)\b.*href="\/home".*$/gm)) {
-        assert.match(line, /<span data-from-app="hide">[^<]*(?:<[^a/][^>]*>[^<]*<\/[^>]+>[^<]*)*<a href="\/home">/, `${path}: ${line.trim()}`);
+        assert.match(line, /<span data-from-app="hide">[^<]*(?:<[^a/][^>]*>[^<]*<\/[^>]+>[^<]*)*<a href="\/home"[ >]/, `${path}: ${line.trim()}`);
       }
     }
   });
@@ -359,15 +359,17 @@ test("every guide the app opens (Guide, app/lib/features/common/site_pages.dart)
   }
 });
 
-test("a guide's link off the site (Cloud Shell, GitHub) opens a new tab, so the guide stays open beside it", () => {
+test("a guide's link off the site (Cloud Shell, GitHub) or to the web app opens a new tab, so the guide stays open beside it", () => {
   const posts = listed.filter((path) => path.includes('/blog/') && !path.endsWith('/blog/'));
   const cloudShell = posts.filter((path) => built(path).includes('https://shell.cloud.google.com/'));
   assert.equal(cloudShell.length, TAGS.length, 'the move guide, in every language');
+  assert.ok(posts.some((path) => built(path).includes('<a href="/home"')), 'a guide links to the web app');
   for (const path of posts) {
     const body = built(path).split('<article')[1]?.split('</article>')[0] ?? '';
-    for (const [a] of body.matchAll(/<a href="https?:\/\/[^>]*>/g)) {
+    for (const [a] of body.matchAll(/<a href="(?:https?:\/\/|\/home")[^>]*>/g)) {
       assert.match(a, / target="_blank" rel="noopener"/, `${path}: ${a}`);
     }
-    for (const [a] of body.matchAll(/<a href="\/[^>]*>/g)) assert.doesNotMatch(a, /_blank/, `${path}: ${a}`);
+    // Another guide opens in its place.
+    for (const [a] of body.matchAll(/<a href="\/(?!home")[^>]*>/g)) assert.doesNotMatch(a, /_blank/, `${path}: ${a}`);
   }
 });

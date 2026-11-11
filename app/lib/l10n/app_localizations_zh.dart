@@ -1907,10 +1907,10 @@ class L10nZh extends L10n {
   String get moveServices => '聚會';
 
   @override
-  String get moveWhoAmI => '這位是我（選填）';
+  String get moveWhoAmI => '你在舊版是哪一位？';
 
   @override
-  String get moveWhoAmIFooter => '選了就接手那位的服事';
+  String get moveWhoAmIFooter => '選你自己，舊版的服事和小組就會接到這個帳號。沒選的話，舊版的你會變成另一位還沒登入的同工。';
 
   @override
   String get moveCreate => '建立教會並搬過來';
@@ -5360,10 +5360,10 @@ class L10nZhHans extends L10nZh {
   String get moveServices => '聚会';
 
   @override
-  String get moveWhoAmI => '这位是我（选填）';
+  String get moveWhoAmI => '你在旧版是哪一位？';
 
   @override
-  String get moveWhoAmIFooter => '选了就接手那位的事奉';
+  String get moveWhoAmIFooter => '选你自己，旧版的事奉和小组就会接到这个账号。没选的话，旧版的你会变成另一位还没登录的同工。';
 
   @override
   String get moveCreate => '创建教会并迁移过来';
