@@ -870,10 +870,10 @@ class L10nZh extends L10n {
   String get inviteShare => '分享';
 
   @override
-  String get inviteRevoke => '撤回';
+  String get inviteRevoke => '停用';
 
   @override
-  String get inviteRevoked => '已撤回';
+  String get inviteRevoked => '已停用，這個連結不能再用來加入';
 
   @override
   String inviteExpiresOn(String date) {
@@ -4324,10 +4324,10 @@ class L10nZhHans extends L10nZh {
   String get inviteShare => '分享';
 
   @override
-  String get inviteRevoke => '撤回';
+  String get inviteRevoke => '停用';
 
   @override
-  String get inviteRevoked => '已撤回';
+  String get inviteRevoked => '已停用，这个链接不能再用来加入';
 
   @override
   String inviteExpiresOn(String date) {

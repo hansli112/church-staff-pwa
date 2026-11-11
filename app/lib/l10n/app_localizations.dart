@@ -1633,13 +1633,13 @@ abstract class L10n {
   /// No description provided for @inviteRevoke.
   ///
   /// In zh, this message translates to:
-  /// **'撤回'**
+  /// **'停用'**
   String get inviteRevoke;
 
   /// No description provided for @inviteRevoked.
   ///
   /// In zh, this message translates to:
-  /// **'已撤回'**
+  /// **'已停用，這個連結不能再用來加入'**
   String get inviteRevoked;
 
   /// No description provided for @inviteExpiresOn.

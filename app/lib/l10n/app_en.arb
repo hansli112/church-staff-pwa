@@ -280,7 +280,7 @@
   "copyByHand": "Couldn’t copy automatically. Select the text below and copy it yourself.",
   "inviteShare": "Share",
   "inviteRevoke": "Revoke",
-  "inviteRevoked": "Revoked",
+  "inviteRevoked": "Revoked. This link no longer works",
   "inviteExpiresOn": "Expires {date}",
   "inviteNone": "No invite links yet",
   "inviteMessage": "You’re invited to join the {church} serving schedule: {link}",

@@ -282,8 +282,10 @@ void main() {
       await go(tester, '/me');
       await go(tester, '/me/invites');
       await tapText(tester, code);
-      await tapText(tester, '撤回');
+      await tapText(tester, '停用');
       expect(b.invites[code]!.revoked, isTrue);
+      expect(find.text('已停用，這個連結不能再用來加入'), findsOneWidget);
+      expect(find.text(code), findsNothing);
     });
 
     testWidgets('the invite button says what it does; how long it lasts is a choice beside it', (tester) async {

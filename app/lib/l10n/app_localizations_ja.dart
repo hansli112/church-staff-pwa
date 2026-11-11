@@ -870,10 +870,10 @@ class L10nJa extends L10n {
   String get inviteShare => '共有';
 
   @override
-  String get inviteRevoke => '取り消す';
+  String get inviteRevoke => '無効にする';
 
   @override
-  String get inviteRevoked => '取り消しました';
+  String get inviteRevoked => '無効にしました。このリンクではもう参加できません';
 
   @override
   String inviteExpiresOn(String date) {

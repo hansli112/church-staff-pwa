@@ -871,10 +871,10 @@ class L10nKo extends L10n {
   String get inviteShare => '공유';
 
   @override
-  String get inviteRevoke => '철회';
+  String get inviteRevoke => '사용 중지';
 
   @override
-  String get inviteRevoked => '철회했어요';
+  String get inviteRevoked => '사용 중지했어요. 이 링크로는 더 이상 가입할 수 없어요';
 
   @override
   String inviteExpiresOn(String date) {

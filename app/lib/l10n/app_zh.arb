@@ -552,8 +552,8 @@
   "inviteCopied": "已複製邀請連結",
   "copyByHand": "沒辦法自動複製，請選取下面的文字自己複製",
   "inviteShare": "分享",
-  "inviteRevoke": "撤回",
-  "inviteRevoked": "已撤回",
+  "inviteRevoke": "停用",
+  "inviteRevoked": "已停用，這個連結不能再用來加入",
   "inviteExpiresOn": "{date} 到期",
   "@inviteExpiresOn": {
     "placeholders": {

@@ -901,7 +901,7 @@ class L10nEn extends L10n {
   String get inviteRevoke => 'Revoke';
 
   @override
-  String get inviteRevoked => 'Revoked';
+  String get inviteRevoked => 'Revoked. This link no longer works';
 
   @override
   String inviteExpiresOn(String date) {

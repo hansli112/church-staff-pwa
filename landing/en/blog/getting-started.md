@@ -35,7 +35,7 @@ Tap **Create invite link** to open the share menu, so you can send it straight t
 
 ![Tap Create invite link, and the link is copied](media:invite)
 
-Invites you’ve created are listed below. Tap an invite code to **Share** it again, **Copy link**, or **Revoke** it. To invite more people later, go to **Settings** → **Invites**.
+Invites you’ve created are listed below. Tap an invite code to **Share** it again, **Copy link**, or **Revoke** it so the link no longer works. To invite more people later, go to **Settings** → **Invites**.
 
 ## 5. Your team joins
 
