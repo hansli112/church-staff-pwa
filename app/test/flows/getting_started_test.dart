@@ -143,6 +143,31 @@ void main() {
     expect(find.text('邀請'), findsWidgets);
   });
 
+  testWidgets('a 小組長 signing in after a move is shown nothing to start: their 小組 is there, not signed in yet', (
+    tester,
+  ) async {
+    final b = seededChurch(as: staffHao);
+    b.smallGroups['grace'] = {'joy': const SmallGroupDetails(id: 'joy', name: '喜樂小組', service: 'sunday')};
+    b.members['grace']!['hao'] = staffHao.withIdentities(const [SmallGroupLead('joy')]);
+    b.addPending(
+      'grace',
+      const PendingMember(
+        id: 'old-ming',
+        name: '王小明',
+        zones: [
+          Zone(serviceType: 'sunday', smallGroups: ['喜樂小組']),
+        ],
+      ),
+    );
+    await pumpApp(tester, b);
+    expect(findShown('開始使用 · 喜樂小組 小組長'), findsNothing);
+
+    b.pendingMembers['grace']!.clear();
+    b.notify();
+    await settle(tester);
+    expect(findShown('開始使用 · 喜樂小組 小組長'), findsOneWidget, reason: 'nobody in it at all: add them');
+  });
+
   testWidgets("a new church's admin is shown where to start, all under 開始使用", (tester) async {
     await pumpApp(tester, newChurch());
 

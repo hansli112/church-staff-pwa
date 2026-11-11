@@ -19,6 +19,7 @@ import '../../domain/swap.dart';
 import '../../env.dart';
 import '../admin_codec.dart';
 import '../backend.dart';
+import '../cache/kept_logo_url.dart';
 import '../connectivity.dart';
 import 'codec.dart';
 import '../native_or_browser.dart';
@@ -726,22 +727,13 @@ class FirestoreChurchData implements ChurchData {
 
   String get _logoPath => 'churches/$churchId/logo.png';
 
-  /// The logo's download URL for [version]: kept on this device from the
-  /// last time, so opening the app does not wait on Storage for it again.
-  Future<String> _logoUrlOf(String version) async {
-    final key = 'church_logo_url_$churchId';
-    SharedPreferences? prefs;
-    try {
-      prefs = await SharedPreferences.getInstance();
-      final kept = jsonDecode(prefs.getString(key) ?? 'null');
-      if (kept is Map && kept['version'] == version && kept['url'] is String) return kept['url'] as String;
-    } catch (_) {
-      // Nothing kept, or unreadable: look it up.
-    }
-    final url = await _storage.ref(_logoPath).getDownloadURL();
-    unawaited(prefs?.setString(key, jsonEncode({'version': version, 'url': url})));
-    return url;
-  }
+  /// The logo's download URL for [version], kept on this device.
+  Future<String> _logoUrlOf(String version) => keptLogoUrl(
+    SharedPreferences.getInstance(),
+    churchId: churchId,
+    version: version,
+    lookUp: () => _storage.ref(_logoPath).getDownloadURL(),
+  );
 
   @override
   Stream<Member?> member(String uid) =>
