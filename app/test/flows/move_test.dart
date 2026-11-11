@@ -108,6 +108,34 @@ void main() {
     expect(b.pendingMembers[cid]!.length, 3);
   });
 
+  testWidgets('the first send lost on the way: tried again, and the church is made with one press', (tester) async {
+    final b = await start(tester, preview);
+    await tapText(tester, '選擇搬家檔');
+    await tester.enterText(find.widgetWithText(TextField, '教會名稱'), '恩典堂');
+    await tester.pump();
+    // What a request that never reaches the function comes back as.
+    b.failNextWrite = const CloudException(CloudErrorCode.unknown);
+    await tester.ensureVisible(find.text('建立教會並搬過來'));
+    await tapText(tester, '建立教會並搬過來');
+    await tester.pump(const Duration(seconds: 1));
+    await settle(tester);
+    expect(find.text('沒有成功，請再試一次'), findsNothing);
+    expect(b.churches.values.single.name, '恩典堂');
+    expect(find.byType(NavigationBar), findsOneWidget);
+  });
+
+  testWidgets('an answer from the function is shown, not tried again', (tester) async {
+    final b = await start(tester, preview);
+    await tapText(tester, '選擇搬家檔');
+    await tester.enterText(find.widgetWithText(TextField, '教會名稱'), '恩典堂');
+    await tester.pump();
+    b.failNextWrite = const CloudException(CloudErrorCode.moveInvalid);
+    await tester.ensureVisible(find.text('建立教會並搬過來'));
+    await tapText(tester, '建立教會並搬過來');
+    expect(find.text('這不是搬家檔，請確認選對了檔案'), findsOneWidget, reason: 'an answer from the function is not tried again');
+    expect(b.churches, isEmpty);
+  });
+
   testWidgets('a few people: no search box', (tester) async {
     await start(tester, preview);
     await tapText(tester, '選擇搬家檔');

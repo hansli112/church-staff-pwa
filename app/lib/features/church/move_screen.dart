@@ -6,6 +6,7 @@ import 'package:go_router/go_router.dart';
 import '../../core/design/components.dart';
 import '../../core/design/tokens.dart';
 import '../../core/languages.dart';
+import '../../data/backend.dart' show CloudErrorCode, CloudException;
 import '../../domain/limits.dart';
 import '../../domain/models.dart';
 import '../../domain/text.dart';
@@ -92,10 +93,10 @@ class _MoveScreenState extends ConsumerState<MoveScreen> {
     try {
       final language = AppLanguage.shownIn(context);
       final timeZone = await ref.read(deviceTimeZoneProvider)();
-      final cid = await ref
-          .read(backendProvider)
-          .cloud
-          .moveCommit(_path!, churchName: name, me: _me, timeZone: timeZone, language: language);
+      final cloud = ref.read(backendProvider).cloud;
+      final cid = await _sent(
+        () => cloud.moveCommit(_path!, churchName: name, me: _me, timeZone: timeZone, language: language),
+      );
       ref.read(telemetryProvider).logEvent('church_create', {'method': 'move'});
       ref.read(selectedChurchProvider.notifier).select(cid);
       Haptics.success();
@@ -107,6 +108,24 @@ class _MoveScreenState extends ConsumerState<MoveScreen> {
     } finally {
       if (mounted) setState(() => _busy = false);
     }
+  }
+
+  /// [send], tried again when it may not have got there: a request that
+  /// fails on the way comes back as [CloudErrorCode.unknown] with no
+  /// reason. Sending the same file again answers with the church the first
+  /// one made, so a lost answer does no harm either.
+  static Future<T> _sent<T>(Future<T> Function() send) async {
+    const waits = [Duration(seconds: 1), Duration(seconds: 3)];
+    for (final wait in waits) {
+      try {
+        return await send();
+      } on CloudException catch (e) {
+        final lost = e.code == CloudErrorCode.unknown && e.reason == null;
+        if (!lost && e.code != CloudErrorCode.unavailable) rethrow;
+      }
+      await Future<void>.delayed(wait);
+    }
+    return send();
   }
 
   @override

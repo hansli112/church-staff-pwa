@@ -2673,6 +2673,12 @@ class MemoryCloud implements CloudApi {
     ChurchTimeZone timeZone = ChurchTimeZone.fallback,
     AppLanguage? language,
   }) async {
+    // [MemoryBackend.failNextWrite]: the request fails before anything is made.
+    final failure = _b.failNextWrite;
+    if (failure != null) {
+      _b.failNextWrite = null;
+      throw failure;
+    }
     final preview = _readMove(path);
     final people = _movePeople(path, preview);
     final cid = await createChurch(churchName, timeZone: timeZone);

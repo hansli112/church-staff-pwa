@@ -1,3 +1,5 @@
+import { createHash } from 'node:crypto';
+
 import { Timestamp } from 'firebase-admin/firestore';
 import type { Storage } from 'firebase-admin/storage';
 
@@ -18,7 +20,9 @@ import { loggable } from './redact.js';
  * - The file goes to Storage at moves/{uid}/… first; only the uploader can
  *   read or write it (storage.rules), up to 20MB.
  * - movePreview reads it and says what would be moved; moveCommit creates
- *   the church with the uploader as admin and writes everything.
+ *   the church with the uploader as admin and writes everything. The
+ *   church's ID comes from the file's path, so the app can send the same
+ *   upload again when an answer is lost and gets the same church back.
  * - The uploader may say which old member they are ("這位是我") and takes
  *   over that member's zones and groups. Everyone else becomes a pending
  *   member (churches/{cid}/pendingMembers/{old uid}) that its owner claims
@@ -116,11 +120,47 @@ export async function movePreview(deps: MoveDeps, caller: Caller | null, data: u
   };
 }
 
-/** Creates the church from the move file, with the caller as its admin. */
+/**
+ * The ID of the church a move file makes: the same each time the same upload
+ * is sent, so a second send (the first answer lost on the way, or the
+ * button pressed twice) finds the church instead of making another.
+ */
+function movedChurchId(path: string) {
+  return createHash('sha256').update(path).digest('base64url').replace(/[^A-Za-z0-9]/g, '').slice(0, 20);
+}
+
+/**
+ * Creates the church from the move file, with the caller as its admin.
+ * Sending the same upload again answers with the church it made.
+ */
 export async function moveCommit(deps: MoveDeps, caller: Caller | null, data: unknown) {
   const c = requireCaller(caller);
   if (!c.emailVerified) fail('failed-precondition', 'unverifiedEmail');
   const path = pathOf(c, data);
+  const cid = movedChurchId(path);
+  const made = async () => {
+    const church = await deps.db.doc(`churches/${cid}`).get();
+    return church.exists && church.get('movedBy') === c.uid;
+  };
+  if (await made()) return { churchId: cid };
+  try {
+    await makeChurch(deps, c, path, cid, data, made);
+  } catch (e) {
+    // The other send made it (and may have deleted the file by now).
+    if (await made()) return { churchId: cid };
+    throw e;
+  }
+  return { churchId: cid };
+}
+
+async function makeChurch(
+  deps: MoveDeps,
+  c: Caller,
+  path: string,
+  cid: string,
+  data: unknown,
+  made: () => Promise<boolean>,
+) {
   const input = data as { churchName?: unknown; me?: unknown; timeZone?: unknown; language?: unknown };
   const churchName = text(input.churchName, TEXT_LIMITS.churchName);
   const timeZone = newChurchTimeZone(input.timeZone);
@@ -138,8 +178,7 @@ export async function moveCommit(deps: MoveDeps, caller: Caller | null, data: un
   // The name is checked again in openChurch's transaction; this only spares
   // writing everything for a name that is already taken.
   if ((await db.doc(`churchNames/${nameKey(churchName)}`).get()).exists) fail('already-exists', 'duplicateName');
-  const root = db.collection('churches').doc();
-  const cid = root.id;
+  const root = db.doc(`churches/${cid}`);
   // Which roster days name each person, so claiming rewrites only those.
   const rosterIds = new Map<string, string[]>();
   for (const r of built.rosters) {
@@ -202,13 +241,15 @@ export async function moveCommit(deps: MoveDeps, caller: Caller | null, data: un
       timeZone,
     });
   } catch (e) {
-    // Taken in the meantime: drop what was written under the unused ID.
-    await forgetPending(deps, cid);
-    await db.recursiveDelete(root);
+    // Taken in the meantime: drop what was written under the unused ID,
+    // unless it was taken by the same move sent twice.
+    if (!(await made())) {
+      await forgetPending(deps, cid);
+      await db.recursiveDelete(root);
+    }
     throw e;
   }
   const mine = me ? claimedSmallGroups(me.zones, me.role, byName) : null;
   if (mine && mine.smallGroups.length) await root.collection('members').doc(c.uid).update({ smallGroups: mine.smallGroups });
   await deps.bucket.file(path).delete({ ignoreNotFound: true });
-  return { churchId: cid };
 }
