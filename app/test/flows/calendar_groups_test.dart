@@ -146,6 +146,39 @@ void main() {
     expect(find.text('青年退修會'), findsWidgets, reason: "青年崇拜's, but he played 司琴");
   });
 
+  testWidgets("篩選 offers the services and 事工, not each 小組; a 小組's events are under 全部 and its people's", (
+    tester,
+  ) async {
+    final b = church();
+    b.smallGroups['grace'] = {
+      'joy': const SmallGroupDetails(id: 'joy', name: '喜樂小組', service: 'sunday'),
+      'peace': const SmallGroupDetails(id: 'peace', name: '平安小組', service: 'sunday'),
+    };
+    b.members['grace']!['hao'] = b.members['grace']!['hao']!.copyWith(smallGroups: const {'joy'});
+    for (final (id, title, group) in [('joy-bbq', '喜樂小組烤肉', 'small:joy'), ('peace-bbq', '平安小組烤肉', 'small:peace')]) {
+      b.calendarEvents['grace']!.add(
+        CalendarEvent(
+          id: id,
+          title: title,
+          start: DateTime(2026, 10, 25, 17),
+          end: DateTime(2026, 10, 25, 20),
+          group: group,
+        ),
+      );
+    }
+    await pumpApp(tester, b);
+    await go(tester, '/calendar');
+    expect(find.text('喜樂小組烤肉'), findsWidgets, reason: 'his 小組');
+    expect(find.text('平安小組烤肉'), findsNothing);
+    await tapText(tester, '跟我有關的');
+    expect(find.text('敬拜團'), findsWidgets);
+    expect(find.text('青年崇拜'), findsWidgets);
+    expect(find.text('喜樂小組'), findsNothing, reason: 'a church may have dozens');
+
+    await tapText(tester, '全部');
+    expect(find.text('平安小組烤肉'), findsWidgets);
+  });
+
   testWidgets('a group picked, then deleted, leaves 跟我有關的', (tester) async {
     final b = church();
     await pumpApp(tester, b);

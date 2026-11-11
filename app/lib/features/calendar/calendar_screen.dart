@@ -50,9 +50,9 @@ class MonthGridShown extends Notifier<bool> {
 final monthGridShownProvider = NotifierProvider<MonthGridShown, bool>(MonthGridShown.new);
 
 /// Which events the calendar shows (#84): `mine` (跟我有關的), `all`,
-/// `church` (全教會) or one group's ([ChurchGroup.key]). Remembered per church
-/// on this device; at first `all` for admins and 行政, who look after the
-/// whole church, and `mine` for everyone else.
+/// `church` (全教會) or one service's or 事工's ([ChurchGroup.key]).
+/// Remembered per church on this device; at first `all` for admins and 行政,
+/// who look after the whole church, and `mine` for everyone else.
 class CalendarFilter extends Notifier<String> {
   String get _key => 'calendar_filter/${ref.read(currentChurchIdProvider)}';
 
@@ -75,7 +75,8 @@ class CalendarFilter extends Notifier<String> {
 final calendarFilterProvider = NotifierProvider<CalendarFilter, String>(CalendarFilter.new);
 
 /// The filters to pick from, with their names: 跟我有關的, 全部, 全教會 and
-/// each group's.
+/// each service's and 事工's. Not each 小組's: a church may have dozens, and
+/// theirs are under 全部 and, for their people, 跟我有關的.
 final _calendarFiltersProvider = Provider<List<(String, String)>?>((ref) {
   final groups = ref.watch(churchGroupsProvider);
   if (groups == null) return null;
@@ -83,7 +84,8 @@ final _calendarFiltersProvider = Provider<List<(String, String)>?>((ref) {
     ('mine', ''),
     ('all', ''),
     ('church', ''),
-    for (final g in groups.all) (g.group.key, g.name),
+    for (final g in groups.all)
+      if (g.group is! SmallGroup) (g.group.key, g.name),
   ];
 });
 
