@@ -308,8 +308,8 @@ const appIcons = <String?>[null, 'Green', 'Purple', 'Night'];
 typedef ChurchIcon = ({String iconId, String name});
 
 const churchIcons = <String, ChurchIcon>{
-  // 竹圍靈糧福音中心: its id goes here once the church is made.
-  'zhuwei': (iconId: 'Zhuwei', name: '竹圍靈糧福音中心'),
+  // 竹圍靈糧福音中心, on marthasit (moved there 2026-11-11).
+  'sJhQdCRzakGMSGHnSrik': (iconId: 'Zhuwei', name: '竹圍靈糧福音中心'),
 };
 
 /// A church's icon, just put on the home screen on its own (sessionEffects),
