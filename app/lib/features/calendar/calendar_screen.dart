@@ -75,8 +75,8 @@ class CalendarFilter extends Notifier<String> {
 final calendarFilterProvider = NotifierProvider<CalendarFilter, String>(CalendarFilter.new);
 
 /// The filters to pick from, with their names: 跟我有關的, 全部, 全教會 and
-/// each service's and 事工's. Not each 小組's: a church may have dozens, and
-/// theirs are under 全部 and, for their people, 跟我有關的.
+/// each service's and 事工's. Not each 小組's: a church may have twenty,
+/// and theirs are under 全部 and, for their people, 跟我有關的.
 final _calendarFiltersProvider = Provider<List<(String, String)>?>((ref) {
   final groups = ref.watch(churchGroupsProvider);
   if (groups == null) return null;
@@ -89,8 +89,9 @@ final _calendarFiltersProvider = Provider<List<(String, String)>?>((ref) {
   ];
 });
 
-/// The filter in effect: the one picked, unless it is a group no longer
-/// there, which shows what this member starts on instead.
+/// The filter in effect: the one picked, unless it is no longer offered (a
+/// group gone, or a 小組 picked before they left the menu), which shows
+/// what this member starts on instead.
 final shownCalendarFilterProvider = Provider<String>((ref) {
   final filter = ref.watch(calendarFilterProvider);
   final filters = ref.watch(_calendarFiltersProvider);

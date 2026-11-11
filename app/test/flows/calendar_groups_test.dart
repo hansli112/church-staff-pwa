@@ -173,10 +173,19 @@ void main() {
     await tapText(tester, '跟我有關的');
     expect(find.text('敬拜團'), findsWidgets);
     expect(find.text('青年崇拜'), findsWidgets);
-    expect(find.text('喜樂小組'), findsNothing, reason: 'a church may have dozens');
+    expect(find.text('喜樂小組'), findsNothing, reason: 'a church may have twenty');
 
     await tapText(tester, '全部');
     expect(find.text('平安小組烤肉'), findsWidgets);
+  });
+
+  testWidgets('a 小組 picked on this device before opens on 跟我有關的', (tester) async {
+    final b = church();
+    b.smallGroups['grace'] = {'joy': const SmallGroupDetails(id: 'joy', name: '喜樂小組', service: 'sunday')};
+    await pumpApp(tester, b, savedPrefs: const {'calendar_filter/grace': 'small:joy'});
+    await go(tester, '/calendar');
+    expect(find.text('跟我有關的'), findsOneWidget);
+    expect(find.text('同工會'), findsWidgets);
   });
 
   testWidgets('a group picked, then deleted, leaves 跟我有關的', (tester) async {
