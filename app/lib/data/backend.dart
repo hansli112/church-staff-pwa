@@ -360,11 +360,11 @@ abstract interface class ChurchData {
   /// 收回: who asked takes request [id] back.
   Future<void> withdrawSwap(String id);
 
-  /// When 請同工填 last asked for [serviceType], if ever: for whoever
+  /// When 通知同工填 last asked for [serviceType], if ever: for whoever
   /// arranges rosters.
   Stream<DateTime?> lastUnavailableAsk(String serviceType);
 
-  /// 請同工填 (#91), by whoever arranges [serviceType]: one push each to
+  /// 通知同工填 (#91), by whoever arranges [serviceType]: one push each to
   /// [askedToFill], for the months of [from] to [to]. How many it told.
   Future<int> askUnavailable(String serviceType, {required Day from, required Day to});
 

@@ -14,7 +14,7 @@ interface Listed {
 }
 
 /**
- * Whom 請同工填 (#91) tells when [caller] asks for [serviceId]: everyone but
+ * Whom 通知同工填 (#91) tells when [caller] asks for [serviceId]: everyone but
  * them on the list of a duty there they arrange
  * (testdata/church_rules.json, askedToFill).
  */
@@ -36,7 +36,7 @@ export function askedToFill(caller: MemberFields & { uid: string }, ministries: 
 const MONTH = /^\d{4}-(0[1-9]|1[0-2])$/;
 
 /**
- * 請同工填不能服事的日子 (#91), by anyone who arranges service
+ * 通知同工填不能服事的日子 (#91), by anyone who arranges service
  * `data.serviceId`: one push each to [askedToFill], asking for the months
  * `data.from` to `data.to` (`YYYY-MM`). Remembers when, for the next to
  * see. Returns how many people.

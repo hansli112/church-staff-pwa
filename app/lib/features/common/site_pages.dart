@@ -35,7 +35,7 @@ enum Guide {
 void openGuide(BuildContext context, WidgetRef ref, [Guide? guide]) =>
     openSitePage(context, ref, guide == null ? '/blog/' : '/blog/${guide.slug}/');
 
-/// 怎麼用？ in the app bar of a page with a guide of its own.
+/// 使用說明 in the app bar of a page with a guide of its own.
 class GuideButton extends ConsumerWidget {
   const GuideButton(this.guide, {super.key});
 

@@ -334,7 +334,7 @@ class RosterActions {
     return notice;
   }
 
-  /// 請同工填 (#91) for [type], the months of [from] to [to]: how many it told.
+  /// 通知同工填 (#91) for [type], the months of [from] to [to]: how many it told.
   Future<int> askUnavailable(String type, {required Day from, required Day to}) async {
     final told = await _data.askUnavailable(type, from: from, to: to);
     _ref.read(telemetryProvider).logEvent('unavailable_ask', {'people': told});

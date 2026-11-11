@@ -126,7 +126,7 @@ export interface Words {
   attendanceBody(group: string, day: string): string;
   /** 回報人數: asked again, the next day or by 提醒 (#93). */
   attendanceAgainBody(group: string, day: string): string;
-  /** 請同工填 (#91): the months `YYYY-MM` [from] to [to]. */
+  /** 通知同工填 (#91): the months `YYYY-MM` [from] to [to]. */
   askUnavailable(from: string, to: string): string;
   /**
    * 找人代／交換 (#92): [name] is who asked or answered, each day

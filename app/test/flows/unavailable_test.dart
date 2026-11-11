@@ -169,6 +169,7 @@ void main() {
     await settle(tester);
     expect(find.text('上次 10月1日 通知過'), findsOneWidget);
   });
+
   testWidgets('with nobody on the lists to ask, 通知 is greyed and says why', (tester) async {
     final b = seededChurch(as: editor);
     final people = b.members['grace']!;

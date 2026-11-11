@@ -117,7 +117,7 @@ class UnavailableDays {
   String toString() => 'UnavailableDays($spans)';
 }
 
-/// Whom 請同工填 tells (#91): everyone but [me] on the list of a duty of
+/// Whom 通知同工填 tells (#91): everyone but [me] on the list of a duty of
 /// [serviceType] that [arranges] covers.
 List<Member> askedToFill(Iterable<Member> members, String serviceType, Arranges arranges, String me) => [
   for (final m in members)

@@ -266,15 +266,16 @@ class _PlanWeeksScreenState extends ConsumerState<PlanWeeksScreen> with SingleTi
   }
 
   /// The menu: 通知同工填 (#91) from [from], the first month being
-  /// arranged, under it when it last asked for this service, or, greyed,
-  /// that nobody on a list is there to ask; 從照片匯入服事表, for a roster
-  /// already on paper; and apart, 使用說明.
+  /// arranged, and photo import, for a roster already on paper; below a
+  /// divider, the guide. Under 通知同工填, when it last asked for this
+  /// service, or, when greyed, that there is nobody on a list to ask.
   Widget _menu(L10n l10n, AppColors c, Day from) {
     final type = _type;
     final asked = ref.watch(lastUnavailableAskProvider(type)).value;
     final people = _askedToFill(type);
-    final note = switch ((people.isEmpty, asked)) {
-      (true, _) => l10n.planAskNobody,
+    final canAsk = people.isNotEmpty;
+    final note = switch ((canAsk, asked)) {
+      (false, _) => l10n.planAskNobody,
       (_, final at?) => l10n.planAskedLast(DateFormat.MMMd().format(at)),
       _ => null,
     };
@@ -290,7 +291,7 @@ class _PlanWeeksScreenState extends ConsumerState<PlanWeeksScreen> with SingleTi
       itemBuilder: (_) => [
         PopupMenuItem(
           value: 'ask',
-          enabled: people.isNotEmpty,
+          enabled: canAsk,
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             mainAxisSize: MainAxisSize.min,
@@ -307,14 +308,14 @@ class _PlanWeeksScreenState extends ConsumerState<PlanWeeksScreen> with SingleTi
     );
   }
 
-  /// Whom 請同工填 tells for [type] now.
+  /// Whom 通知同工填 tells for [type] now.
   List<Member> _askedToFill(String type) {
     final me = ref.watch(meProvider).value;
     if (me == null) return const [];
     return askedToFill(ref.watch(membersProvider).value ?? const [], type, ref.watch(arrangesProvider(type)), me.uid);
   }
 
-  /// 請同工填 (#91): through which month, from [from]; then, asked first as
+  /// 通知同工填 (#91): through which month, from [from]; then, asked first as
   /// it cannot be taken back, one push each.
   Future<void> _askUnavailable(String type, Day from) async {
     final l10n = L10n.of(context);
@@ -356,7 +357,7 @@ class _PlanWeeksScreenState extends ConsumerState<PlanWeeksScreen> with SingleTi
     }
   }
 
-  /// How many months 請同工填 offers to ask through.
+  /// How many months 通知同工填 offers to ask through.
   static const _askMonths = 12;
 
   /// 完成: goes back at once, telling whoever was put on or taken off

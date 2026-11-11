@@ -116,7 +116,7 @@ class MemoryBackend implements Backend {
   /// 不能服事的日子 (#91) per church, by uid.
   final unavailable = <String, Map<String, UnavailableDays>>{};
 
-  /// 請同工填 (#91) per church, by service: when last asked, the months
+  /// 通知同工填 (#91) per church, by service: when last asked, the months
   /// asked for, and whom it told.
   final unavailableAsks = <String, Map<String, ({DateTime at, Day from, Day to, List<String> told})>>{};
 

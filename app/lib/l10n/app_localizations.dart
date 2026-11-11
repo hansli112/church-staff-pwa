@@ -5866,7 +5866,7 @@ abstract class L10n {
   /// **'已更新{duty}・{names}這天不行'**
   String dutyUpdatedUnavailable(String duty, String names);
 
-  /// Menu on 安排服事 (#91): pushes the people on the lists to mark the days they can't serve. Starts with 通知 so it reads as telling people
+  /// Menu on 安排服事 (#91): pushes the people on the lists to mark the days they can't serve
   ///
   /// In zh, this message translates to:
   /// **'通知同工填不能服事的日子'**

@@ -250,7 +250,7 @@ final unavailableDaysProvider = StreamProvider<Map<String, UnavailableDays>>((re
   return openChurch(ref).everyonesUnavailableDays();
 });
 
-/// When 請同工填 last asked for [serviceType] (#91).
+/// When 通知同工填 last asked for [serviceType] (#91).
 final lastUnavailableAskProvider = StreamProvider.autoDispose.family<DateTime?, String>((ref, serviceType) {
   if (!ref.watch(_arrangesRostersProvider)) return Stream.value(null);
   return openChurch(ref).lastUnavailableAsk(serviceType);

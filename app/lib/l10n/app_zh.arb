@@ -2344,7 +2344,7 @@
   "dutyUpdatedUnavailable": "已更新{duty}・{names}這天不行",
   "@dutyUpdatedUnavailable": {"description": "Toast after picking someone who marked the day as one they can't serve", "placeholders": {"duty": {"type": "String"}, "names": {"type": "String"}}},
   "planAskUnavailable": "通知同工填不能服事的日子",
-  "@planAskUnavailable": {"description": "Menu on 安排服事 (#91): pushes the people on the lists to mark the days they can't serve. Starts with 通知 so it reads as telling people"},
+  "@planAskUnavailable": {"description": "Menu on 安排服事 (#91): pushes the people on the lists to mark the days they can't serve"},
   "planAskedLast": "上次 {date} 通知過",
   "@planAskedLast": {"placeholders": {"date": {"type": "String"}}},
   "planAskNobody": "還沒有同工可以通知",

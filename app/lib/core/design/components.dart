@@ -1025,7 +1025,7 @@ class _AppSheetRoute<T> extends ModalBottomSheetRoute<T> {
 }
 
 /// Asks before something that cannot be taken back but destroys nothing,
-/// such as sending a push to many (請同工填, #91): on iPhone from below, as
+/// such as sending a push to many (通知同工填, #91): on iPhone from below, as
 /// [_confirmDiscard] asks, elsewhere as a dialog. True to go ahead.
 Future<bool> confirmAction(
   BuildContext context, {
