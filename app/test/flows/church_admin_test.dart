@@ -319,6 +319,17 @@ void main() {
       expect(find.text('青年崇拜'), findsNWidgets(2), reason: 'the picker, and under the code');
     });
 
+    testWidgets('ticking no service is fine: the screen says so, and they are put in one later', (tester) async {
+      final b = seededChurch();
+      await pumpApp(tester, b);
+      captureOutbox(tester);
+      await go(tester, '/me/invites');
+      expect(find.text('加入後成為這些聚會的同工（選填）'), findsOneWidget);
+      expect(find.text('不選的話，加入後再到「同工」把人加進聚會。'), findsOneWidget);
+      await tapText(tester, '建立邀請連結');
+      expect(b.invites.values.single.zoneTypes, isEmpty);
+    });
+
     testWidgets('an invite leaves the list when it expires, and stops working', (tester) async {
       var now = testNow;
       final b = seededChurch(clock: () => now);

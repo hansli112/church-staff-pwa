@@ -736,7 +736,8 @@
       }
     }
   },
-  "inviteZones": "加入後屬於",
+  "inviteZones": "加入後成為這些聚會的同工（選填）",
+  "inviteZonesFooter": "不選的話，加入後再到「同工」把人加進聚會。",
   "photoImport": "照片匯入",
   "photoImportAction": "照片匯入",
   "@photoImportAction": { "description": "Button in words at the top of 服事表 that opens photo import. Short: it sits beside the title, at large text too" },

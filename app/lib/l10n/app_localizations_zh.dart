@@ -1189,7 +1189,10 @@ class L10nZh extends L10n {
   }
 
   @override
-  String get inviteZones => '加入後屬於';
+  String get inviteZones => '加入後成為這些聚會的同工（選填）';
+
+  @override
+  String get inviteZonesFooter => '不選的話，加入後再到「同工」把人加進聚會。';
 
   @override
   String get photoImport => '照片匯入';
@@ -4640,7 +4643,10 @@ class L10nZhHans extends L10nZh {
   }
 
   @override
-  String get inviteZones => '加入后所属聚会';
+  String get inviteZones => '加入后成为这些聚会的同工（选填）';
+
+  @override
+  String get inviteZonesFooter => '不选的话，加入后再到“同工”把人加进聚会。';
 
   @override
   String get photoImport => '照片导入';

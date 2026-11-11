@@ -2209,8 +2209,14 @@ abstract class L10n {
   /// No description provided for @inviteZones.
   ///
   /// In zh, this message translates to:
-  /// **'加入後屬於'**
+  /// **'加入後成為這些聚會的同工（選填）'**
   String get inviteZones;
+
+  /// No description provided for @inviteZonesFooter.
+  ///
+  /// In zh, this message translates to:
+  /// **'不選的話，加入後再到「同工」把人加進聚會。'**
+  String get inviteZonesFooter;
 
   /// No description provided for @photoImport.
   ///

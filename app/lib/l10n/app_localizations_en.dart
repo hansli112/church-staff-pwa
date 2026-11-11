@@ -1245,7 +1245,10 @@ class L10nEn extends L10n {
   }
 
   @override
-  String get inviteZones => 'Joins these services';
+  String get inviteZones => 'Team member of these services (optional)';
+
+  @override
+  String get inviteZonesFooter => 'Or leave them unchecked and add people to services later in Team members.';
 
   @override
   String get photoImport => 'Import from photo';

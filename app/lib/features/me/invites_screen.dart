@@ -142,6 +142,7 @@ class _InvitesScreenState extends ConsumerState<InvitesScreen> {
           if (enabled.isNotEmpty)
             ListSection(
               header: l10n.inviteZones,
+              footer: l10n.inviteZonesFooter,
               children: [
                 for (final s in enabled)
                   Semantics(

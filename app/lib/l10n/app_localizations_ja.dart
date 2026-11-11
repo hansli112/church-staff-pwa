@@ -1189,7 +1189,10 @@ class L10nJa extends L10n {
   }
 
   @override
-  String get inviteZones => '参加後の所属集会';
+  String get inviteZones => '参加後にメンバーになる集会（任意）';
+
+  @override
+  String get inviteZonesFooter => 'チェックしない場合は、参加後に「メンバー」で集会に加えます。';
 
   @override
   String get photoImport => '写真から読み込み';

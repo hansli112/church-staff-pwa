@@ -1190,7 +1190,10 @@ class L10nKo extends L10n {
   }
 
   @override
-  String get inviteZones => '가입 후 소속 예배';
+  String get inviteZones => '가입 후 멤버가 될 예배(선택)';
+
+  @override
+  String get inviteZonesFooter => '체크하지 않으면 가입 후 ‘멤버’에서 예배에 추가하면 돼요.';
 
   @override
   String get photoImport => '사진으로 가져오기';
