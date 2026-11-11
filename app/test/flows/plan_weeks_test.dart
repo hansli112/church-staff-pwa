@@ -198,13 +198,13 @@ void main() {
   testWidgets('more duties than fit: the next shows in part, so the table says it goes on', (tester) async {
     final b = seededChurch();
     b.setServices('grace', [
-      sundayService.copyWith(duties: ['司會', '司琴', '招待', '音控', '投影']),
+      sundayService.copyWith(duties: ['司會', '司琴', '招待', '音控', '投影', '燈光', '直播', '接待']),
     ]);
     await pumpApp(tester, b);
     await go(tester, '/rosters/plan/sunday');
     final width = tester.view.physicalSize.width / tester.view.devicePixelRatio;
     final cut = [
-      for (final role in ['司會', '司琴', '招待', '音控', '投影'])
+      for (final role in ['司會', '司琴', '招待', '音控', '投影', '燈光', '直播', '接待'])
         // Columns well past the edge are not there yet.
         if (cell(role, 11).evaluate().isNotEmpty)
           if (tester.getRect(cell(role, 11)) case final r when r.left < width && r.right > width) role,
@@ -212,6 +212,33 @@ void main() {
     expect(cut, hasLength(1));
     final shown = tester.getRect(cell(cut.single, 11));
     expect((width - shown.left) / shown.width, inInclusiveRange(0.25, 0.6));
+  });
+
+  testWidgets('a column is as wide as its names: short ones fit more duties, a long one widens them', (tester) async {
+    final b = seededChurch();
+    b.setServices('grace', [
+      sundayService.copyWith(duties: ['司會', '司琴', '招待', '音控', '投影']),
+    ]);
+    await pumpApp(tester, b);
+    await go(tester, '/rosters/plan/sunday');
+    final width = tester.view.physicalSize.width / tester.view.devicePixelRatio;
+    final whole = [
+      for (final role in ['司會', '司琴', '招待', '音控', '投影'])
+        if (cell(role, 11).evaluate().isNotEmpty && tester.getRect(cell(role, 11)).right <= width) role,
+    ];
+    expect(whole.length, greaterThanOrEqualTo(4), reason: 'names of three characters need no 100pt column');
+    final narrow = tester.getRect(cell('司會', 11)).width;
+
+    final id = Roster.idFor('sunday', Day(2026, 10, 11));
+    final day = b.rosters['grace']![id]!;
+    b.rosters['grace']![id] = day.copyWith(
+      duties: [
+        for (final d in day.duties) d.role == '司琴' ? const Duty(role: '司琴', people: ['Christopher Lee']) : d,
+      ],
+    );
+    b.notify();
+    await settle(tester);
+    expect(tester.getRect(cell('司會', 11)).width, greaterThan(narrow), reason: 'every column as wide as the widest');
   });
 
   testWidgets('each duty’s name starts where the names and ＋ under it do, the cut column’s too', (tester) async {
@@ -303,6 +330,24 @@ void main() {
     await tester.tap(find.descendant(of: find.byType(SegmentedButton<String>), matching: find.text('青年崇拜')));
     await tester.pump();
     expect(find.byType(TableView), findsOneWidget, reason: 'its days were read while the page was open');
+  });
+
+  testWidgets('switching between a service whose duties fit and one whose do not keeps the table whole', (
+    tester,
+  ) async {
+    final b = seededChurch();
+    b.setServices('grace', [
+      sundayService.copyWith(duties: ['司會', '司琴', '招待', '音控', '投影', '燈光', '直播', '接待']),
+      youthService,
+    ]);
+    await pumpApp(tester, b);
+    await go(tester, '/rosters/plan/sunday');
+    for (final name in ['青年崇拜', '主日崇拜', '青年崇拜']) {
+      await tester.tap(find.descendant(of: find.byType(SegmentedButton<String>), matching: find.text(name)));
+      await tester.pump();
+      expect(tester.takeException(), isNull, reason: 'to $name: one table, never two at once');
+      await settle(tester);
+    }
   });
 
   testWidgets('opens at this month even when it is all arranged; the months after follow below', (tester) async {
@@ -443,7 +488,7 @@ void main() {
     expect(last, '2027年10月');
   });
 
-  testWidgets('another service, from its first gap', (tester) async {
+  testWidgets('another service, from this month', (tester) async {
     final b = seededChurch();
     await pumpApp(tester, b);
     await go(tester, '/rosters/plan/sunday');
@@ -634,7 +679,11 @@ void main() {
     await gesture.up();
     await settle(tester);
     expect(
-      tester.widgetList<AnimatedOpacity>(find.byType(AnimatedOpacity)).map((o) => o.opacity),
+      tester
+          .widgetList<AnimatedOpacity>(
+            find.descendant(of: find.byType(TableView), matching: find.byType(AnimatedOpacity)),
+          )
+          .map((o) => o.opacity),
       everyElement(1),
       reason: 'nothing left held',
     );

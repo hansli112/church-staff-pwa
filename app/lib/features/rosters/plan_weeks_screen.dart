@@ -54,9 +54,7 @@ const _monthsAhead = 13;
 /// point past it (as ReorderableList).
 const _autoScrollSpeed = 50.0;
 
-/// The narrowest a duty's column gets, and how much of the next one shows
-/// when they do not all fit.
-const _minCellWidth = 100.0;
+/// How much of the next duty's column shows when they do not all fit.
 const _peek = 0.4;
 
 /// How long the cells a drop traded stay lit.
@@ -490,6 +488,56 @@ class _PlanWeeksScreenState extends ConsumerState<PlanWeeksScreen> with SingleTi
     };
   }
 
+  /// Widths measured, by text and size: the names barely change between
+  /// builds, and a build may come with every move of a held cell.
+  final _measured = <(String, double), double>{};
+
+  /// How wide each duty's column is at least, the same for all: the widest
+  /// of their names, on two lines, and of the people on [days], a line
+  /// each with how many more after the second. Measured in the language
+  /// shown, so short names (李美玉) fit more columns than long ones
+  /// (Christopher Lee); the widest is still cut short past a point.
+  double _columnWidth(BuildContext context, List<String> duties, Iterable<Roster> days) {
+    final base = DefaultTextStyle.of(context).style;
+    final scaler = MediaQuery.textScalerOf(context);
+    final dutyStyle = base.merge(AppText.footnote.copyWith(fontWeight: FontWeight.w600));
+    final nameStyle = base.merge(AppText.subheadline);
+    final painter = TextPainter(textDirection: Directionality.of(context), textScaler: scaler, maxLines: 1);
+    double widthOf(String text, TextStyle style) =>
+        _measured.putIfAbsent((text, scaler.scale(style.fontSize ?? 14)), () {
+          painter
+            ..text = TextSpan(text: text, style: style)
+            ..layout();
+          return painter.width;
+        });
+    var widest = 0.0;
+    for (final duty in duties) {
+      // Words keep whole; Chinese and Japanese break anywhere.
+      final words = duty.split(' ');
+      final onTwo = words.length > 1
+          ? math.max(widthOf(duty, dutyStyle) / 2, words.map((w) => widthOf(w, dutyStyle)).reduce(math.max))
+          : widthOf(duty, dutyStyle) / 2;
+      widest = math.max(widest, onTwo);
+    }
+    final wanted = duties.toSet();
+    for (final day in days) {
+      for (final d in day.duties) {
+        if (!wanted.contains(d.role)) continue;
+        for (final (i, name) in d.people.take(2).indexed) {
+          final more = i == 1 && d.people.length > 2 ? widthOf(' +${d.people.length - 2}', nameStyle) : 0.0;
+          widest = math.max(widest, widthOf(name, nameStyle) + more);
+        }
+      }
+    }
+    painter.dispose();
+    if (_measured.length > 2000) _measured.clear();
+    // Room around, as the cells pad, and for the ＋ of a place to fill.
+    return (widest + Space.s * 2 + 2).clamp(_narrowest, _widest);
+  }
+
+  static const _narrowest = 64.0;
+  static const _widest = 120.0;
+
   /// The table: the duties' names stay at the top and the dates at the
   /// start, the rest scrolls both ways; each month starts under its name.
   /// Only the cells on screen are built, however many months there are.
@@ -518,6 +566,7 @@ class _PlanWeeksScreenState extends ConsumerState<PlanWeeksScreen> with SingleTi
     final head = named ? 1 : 0;
     _namesHeight = named ? scale.scale(13) * 1.3 * 2 + Space.s * 2 : 0;
     final dateWidth = _datesWidth = _DateCell.widthFor(context, _shown);
+    final namesWidth = _columnWidth(context, duties, _shown);
 
     Widget cellAt(TableVicinity at) {
       final role = at.column == 0 ? null : duties[at.column - 1];
@@ -608,8 +657,8 @@ class _PlanWeeksScreenState extends ConsumerState<PlanWeeksScreen> with SingleTi
         // All the duties when they fit; when not, the last one shown is
         // cut short of half, so the table says it goes on sideways.
         final room = box.maxWidth - dateWidth;
-        final fits = duties.isNotEmpty && room / duties.length >= _minCellWidth;
-        final whole = (room / _minCellWidth - _peek).floor().clamp(1, math.max(1, duties.length));
+        final fits = duties.isNotEmpty && room / duties.length >= namesWidth;
+        final whole = (room / namesWidth - _peek).floor().clamp(1, math.max(1, duties.length));
         final cellWidth = duties.isEmpty ? 0.0 : (fits ? room / duties.length : room / (whole + _peek));
         final table = NotificationListener<Notification>(
           onNotification: _nearEnd,
@@ -647,8 +696,12 @@ class _PlanWeeksScreenState extends ConsumerState<PlanWeeksScreen> with SingleTi
             ),
           ),
         );
-        if (fits || duties.isEmpty) return table;
         // The cut column fades out at the edge while there is more that way.
+        // Always in a Stack, the fade clear when they all fit: switching to
+        // a service that fits would otherwise move the table, building a
+        // second one while the first still holds the scroll, and the fade
+        // reading it then failed (a grey strip down the edge in release).
+        final cut = !fits && duties.isNotEmpty;
         return Stack(
           children: [
             table,
@@ -661,10 +714,11 @@ class _PlanWeeksScreenState extends ConsumerState<PlanWeeksScreen> with SingleTi
                 child: ListenableBuilder(
                   listenable: _cells,
                   builder: (context, _) => AnimatedOpacity(
-                    opacity:
-                        !_cells.hasClients || !_cells.position.hasContentDimensions || _cells.position.extentAfter > 1
-                        ? 1
-                        : 0,
+                    opacity: switch (_cells.positions.toList()) {
+                      _ when !cut => 0,
+                      [final ScrollPosition at] when at.hasContentDimensions => at.extentAfter > 1 ? 1 : 0,
+                      _ => 1,
+                    },
                     duration: const Duration(milliseconds: 150),
                     child: DecoratedBox(
                       decoration: BoxDecoration(
