@@ -345,6 +345,20 @@ void main() {
     ];
     expect(of(lead, pending: [movedMei], rosters: arranged), isEmpty);
     expect(left(of(lead, rosters: arranged)), [(step: StartStep.addStaff, group: const ServiceGroup('sunday'))]);
+    final worshipLead = staff.withIdentities(const [MinistryLead('worship')]);
+    const pianist = PendingMember(
+      id: 'old-ting',
+      name: '林婷',
+      zones: [
+        Zone(serviceType: 'youth', duties: ['司琴']),
+      ],
+    );
+    expect(
+      left(of(worshipLead, pending: [pianist])).map((s) => s.step),
+      [StartStep.planWeeks],
+      reason: "moved onto 敬拜團's 司琴 list",
+    );
+    expect(left(of(worshipLead)).map((s) => s.step), [StartStep.addStaff, StartStep.planWeeks]);
     const elsewhere = PendingMember(
       id: 'old-hao',
       name: '陳志豪',
@@ -357,6 +371,13 @@ void main() {
       [(step: StartStep.addStaff, group: const SmallGroup('joy'))],
       reason: 'a 小組 of that name in another service is not this one',
     );
+  });
+
+  test('someone moved is in the 小組 of their name, as claiming finds it: of two with one name, the lowest id', () {
+    const twin = SmallGroupDetails(id: 'a-joy', name: '喜樂小組 ', service: 'sunday');
+    expect(movedMei.asMember(const [joy, twin]).smallGroups, {'a-joy'});
+    expect(movedMei.asMember(const [joy]).smallGroups, {'joy'});
+    expect(movedMei.asMember(const []).smallGroups, isEmpty);
   });
 
   test('行政 arranges; a plain 同工 has nothing to start', () {

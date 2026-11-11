@@ -1309,6 +1309,25 @@ class PendingMember {
   final List<Zone> zones;
   final Set<NotificationKind> mutedNotifications;
 
+  /// As a member of what they were in when moved: their services and
+  /// duties, and the 小組 named in [zones], found among [smallGroups] by
+  /// service and name as claiming does (functions/src/smallGroups.ts: the
+  /// lowest id of two with one name).
+  Member asMember(List<SmallGroupDetails> smallGroups) {
+    final byId = [...smallGroups]..sort((a, b) => a.id.compareTo(b.id));
+    String? named(String service, String name) =>
+        byId.where((g) => g.service == service && g.name.trim() == name.trim()).firstOrNull?.id;
+    return Member(
+      uid: id,
+      name: name,
+      zones: zones,
+      smallGroups: {
+        for (final z in zones)
+          for (final name in z.smallGroups) ?named(z.serviceType, name),
+      },
+    );
+  }
+
   @override
   bool operator ==(Object other) =>
       other is PendingMember &&

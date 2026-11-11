@@ -6642,7 +6642,7 @@ class L10nZhHans extends L10nZh {
   String get gettingStartedSmallGroupsBody => '可选 · 小组长加入自己的同工、回报人数';
 
   @override
-  String get gettingStartedLogoBody => '选用 · 邀请页和首页会显示';
+  String get gettingStartedLogoBody => '可选 · 邀请页和首页会显示';
 
   @override
   String get gettingStartedInviteWaiting => '已发出邀请，等同工加入';

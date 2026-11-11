@@ -694,8 +694,10 @@ class FirestoreChurchData implements ChurchData {
                         if (epoch != readEpoch || !open || out.isClosed || pending != lookup || _logoLookup != lookup) {
                           return;
                         }
-                        // The logo is optional; metadata is already available.
-                        if (error is! FirebaseException) out.addError(error, stack);
+                        // The logo is optional; metadata is already available,
+                        // and no room is kept for a logo that cannot be had.
+                        if (error is! FirebaseException) return out.addError(error, stack);
+                        if (latest case final church?) out.add(church.copyWith(hasLogo: false));
                       },
                     ),
                   );

@@ -41,7 +41,11 @@ Church churchFromJson(String id, Json data, {String? logoUrl}) => Church(
     ChurchStatus.suspended,
   ),
   logoUrl: logoUrl,
-  hasLogo: data['logoVersion'] is String && (data['logoVersion'] as String).isNotEmpty,
+  // Only an open church's is looked up (FirestoreChurchData.church).
+  hasLogo:
+      data['status'] == ChurchStatus.active.name &&
+      data['logoVersion'] is String &&
+      (data['logoVersion'] as String).isNotEmpty,
   homeName: data['homeName'] is String ? data['homeName'] as String : null,
   deletedAt: readTime(data['deletedAt']),
   timeZone: ChurchTimeZone.of(data['timeZone'] as String?),

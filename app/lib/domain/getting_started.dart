@@ -107,21 +107,7 @@ List<GettingStarted> gettingStarted({
   bool servicesSeen = false,
   bool hasLogo = false,
 }) {
-  // Someone moved is in the 小組 named in their zones.
-  String? smallGroupNamed(String service, String name) =>
-      smallGroups.where((g) => g.service == service && g.name.trim() == name.trim()).firstOrNull?.id;
-  final moved = [
-    for (final p in pending)
-      Member(
-        uid: p.id,
-        name: p.name,
-        zones: p.zones,
-        smallGroups: {
-          for (final z in p.zones)
-            for (final name in z.smallGroups) ?smallGroupNamed(z.serviceType, name),
-        },
-      ),
-  ];
+  final moved = [for (final p in pending) p.asMember(smallGroups)];
   bool someoneElseIn(ChurchGroup group) => [
     ...members,
     ...moved,

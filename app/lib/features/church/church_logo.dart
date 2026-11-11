@@ -40,7 +40,8 @@ class ChurchTitle extends StatelessWidget {
                     height: 32,
                     fit: BoxFit.cover,
                     semanticLabel: church.name,
-                    frameBuilder: (_, image, frame, loadedAtOnce) => loadedAtOnce
+                    frameBuilder: (context, image, frame, loadedAtOnce) =>
+                        loadedAtOnce || MediaQuery.disableAnimationsOf(context)
                         ? image
                         : Stack(
                             children: [
@@ -52,7 +53,7 @@ class ChurchTitle extends StatelessWidget {
                               ),
                             ],
                           ),
-                    errorBuilder: (_, _, _) => room,
+                    errorBuilder: (_, _, _) => const SizedBox.square(dimension: 32),
                   ),
           ),
           const SizedBox(width: Space.s),
