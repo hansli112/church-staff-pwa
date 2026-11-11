@@ -8,11 +8,11 @@ This guide is for whoever plans the schedule: admins, office staff, and service 
 
 ## Open “Arrange serving”
 
-Go to **Schedule** and tap the table icon at the top right. That’s **Arrange serving**.
+Go to **Schedule** and tap **Arrange serving** at the top right.
 
 - Each row is a day, and each column is a role. If there are a lot of roles, swipe sideways to see the other columns.
 - Switch between services at the top, such as Sunday Service and Youth Service.
-- It opens on the first month that still has open spots. To see earlier months, tap **Show earlier months**. As you scroll down, later months keep appearing, up to the same month next year.
+- It opens on this month. As you scroll down, later months keep appearing, up to the same month next year.
 
 Ministry leads can only change their own ministry’s roles. The other columns still show, so you can see the whole picture.
 
