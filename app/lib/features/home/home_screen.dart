@@ -183,16 +183,17 @@ class HomeScreen extends ConsumerWidget {
                     for (final entry in activityReadStatus.entries)
                       if (entry.value.cached && activities.take(3).any((event) => event.months.contains(entry.key)))
                         CalendarReadNotice(status: entry.value, month: entry.key),
-                    for (final event in activities.take(3))
+                    for (final (event, underway) in [
+                      for (final event in activities.take(3)) (event, event.day.isBefore(today)),
+                    ])
                       ListRow(
-                        // One already under way is on today.
-                        leading: dayBlock(event.day.isBefore(today) ? today : event.day, today),
+                        // One already under way is on today, without the time it
+                        // started: that would read as today's.
+                        leading: dayBlock(underway ? today : event.day, today),
                         title: event.title,
                         subtitle: [
-                          dayBesideBlock(l10n, event.day.isBefore(today) ? today : event.day, today),
-                          // When it starts, unless it started on an earlier day:
-                          // that time would read as today's.
-                          if (!event.allDay && !event.day.isBefore(today)) DateFormat.Hm().format(event.start),
+                          dayBesideBlock(l10n, underway ? today : event.day, today),
+                          if (!event.allDay && !underway) DateFormat.Hm().format(event.start),
                         ].join(' · '),
                         // A new one opens once saved, with its roster.
                         onTap: event.id == null ? null : () => showEventDetail(context, event),

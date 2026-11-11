@@ -155,8 +155,15 @@ class _CalendarPicker extends ConsumerStatefulWidget {
 }
 
 class _CalendarPickerState extends ConsumerState<_CalendarPicker> {
-  /// The one tapped, until the backend has it.
+  /// The one tapped, until the saved settings say so: the call can answer
+  /// before the settings arrive, and the old one must not show again between.
   CalendarChoice? _picking;
+
+  @override
+  void didUpdateWidget(_CalendarPicker old) {
+    super.didUpdateWidget(old);
+    if (_picking?.id == widget.settings.calendarId) _picking = null;
+  }
 
   Future<void> _pick(CalendarChoice cal) async {
     final l10n = L10n.of(context);
@@ -167,9 +174,9 @@ class _CalendarPickerState extends ConsumerState<_CalendarPicker> {
       await ref.churchData.calendar.select(cal.id, cal.name);
       if (first) telemetry.logEvent('calendar_connect');
     } catch (e) {
-      if (mounted) showToast(context, errorText(l10n, e));
-    } finally {
-      if (mounted && _picking == cal) setState(() => _picking = null);
+      if (!mounted) return;
+      showToast(context, errorText(l10n, e));
+      if (_picking == cal) setState(() => _picking = null);
     }
   }
 

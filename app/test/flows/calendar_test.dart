@@ -7,7 +7,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
 import 'package:martha/core/design/components.dart';
-import 'package:martha/data/backend.dart' show WarmUp;
+import 'package:martha/data/backend.dart' show CloudErrorCode, CloudException, WarmUp;
 import 'package:martha/domain/day.dart';
 import 'package:martha/domain/event_roster.dart';
 import 'package:martha/domain/models.dart';
@@ -117,6 +117,25 @@ void main() {
     held.complete();
     await settle(tester);
     expect(picked(), isTrue);
+    expect(b.calendars['grace']!.calendarName, '教會行事曆');
+  });
+
+  testWidgets('a calendar not saved is unmarked again, and says so', (tester) async {
+    final b = seededChurch();
+    b.connectCalendar('grace', calendarName: '教會行事曆');
+    await pumpApp(tester, b);
+    await go(tester, '/me/calendar');
+    bool picked(String name) => tester.widget<ListRow>(find.widgetWithText(ListRow, name)).selected == true;
+    final held = b.calendarSelectHeld = Completer<void>();
+    await tester.tap(findShown('青年行事曆').last);
+    await tester.pump();
+    expect(picked('青年行事曆'), isTrue);
+    held.completeError(const CloudException(CloudErrorCode.unavailable));
+    await tester.pump();
+    await tester.pump();
+    expect(find.text('連不上網路，請檢查後再試一次'), findsOneWidget);
+    expect(picked('青年行事曆'), isFalse);
+    expect(picked('教會行事曆'), isTrue, reason: 'the one still saved');
     expect(b.calendars['grace']!.calendarName, '教會行事曆');
   });
 

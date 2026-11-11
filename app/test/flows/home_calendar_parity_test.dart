@@ -94,7 +94,7 @@ void main() {
     tester,
   ) async {
     // 09:00 in Taipei.
-    final b = CountingCalendarBackend(clock: () => DateTime.utc(2026, 10, 31, 1));
+    final b = MemoryBackend(clock: () => DateTime.utc(2026, 10, 31, 1));
     b.addChurch('恩典堂', id: 'grace');
     b.setServices('grace', const [sundayService]);
     b.addMember('grace', staffMei);

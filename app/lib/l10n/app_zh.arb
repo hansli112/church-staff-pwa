@@ -809,7 +809,7 @@
   "calDisconnect": "中斷連接",
   "calDisconnectTitle": "中斷行事曆連接？",
   "calDisconnectBody": "同工會看不到行事曆，Google 日曆本身不受影響",
-  "calConnectNote": "只會讀寫你選的那個日曆。",
+  "calConnectNote": "只會讀寫你選的那個日曆",
   "calConnectedOk": "已連接 Google 日曆",
   "calConnectFailed": "沒有連接成功，請再試一次",
   "calConnectScopes": "沒有連接成功：Google 的授權畫面上，每個權限都要勾選",

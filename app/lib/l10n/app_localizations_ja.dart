@@ -1307,7 +1307,7 @@ class L10nJa extends L10n {
   String get calDisconnectBody => 'メンバーはカレンダーを見られなくなります。Google カレンダー自体は変わりません。';
 
   @override
-  String get calConnectNote => '読み書きするのは選んだカレンダーだけです。';
+  String get calConnectNote => '読み書きするのは選んだカレンダーだけです';
 
   @override
   String get calConnectedOk => 'Google カレンダーに接続しました';

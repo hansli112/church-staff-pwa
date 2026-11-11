@@ -1308,7 +1308,7 @@ class L10nKo extends L10n {
   String get calDisconnectBody => '멤버들이 캘린더를 볼 수 없게 돼요. Google 캘린더 자체는 바뀌지 않아요.';
 
   @override
-  String get calConnectNote => '선택한 캘린더만 읽고 써요.';
+  String get calConnectNote => '선택한 캘린더만 읽고 써요';
 
   @override
   String get calConnectedOk => 'Google 캘린더를 연결했어요';

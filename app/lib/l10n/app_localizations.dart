@@ -2425,7 +2425,7 @@ abstract class L10n {
   /// No description provided for @calConnectNote.
   ///
   /// In zh, this message translates to:
-  /// **'只會讀寫你選的那個日曆。'**
+  /// **'只會讀寫你選的那個日曆'**
   String get calConnectNote;
 
   /// No description provided for @calConnectedOk.

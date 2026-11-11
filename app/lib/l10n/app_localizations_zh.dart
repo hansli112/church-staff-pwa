@@ -1307,7 +1307,7 @@ class L10nZh extends L10n {
   String get calDisconnectBody => '同工會看不到行事曆，Google 日曆本身不受影響';
 
   @override
-  String get calConnectNote => '只會讀寫你選的那個日曆。';
+  String get calConnectNote => '只會讀寫你選的那個日曆';
 
   @override
   String get calConnectedOk => '已連接 Google 日曆';
@@ -4760,7 +4760,7 @@ class L10nZhHans extends L10nZh {
   String get calDisconnectBody => '同工会看不到行事历，Google 日历本身不受影响';
 
   @override
-  String get calConnectNote => '只会读写你选的那个日历。';
+  String get calConnectNote => '只会读写你选的那个日历';
 
   @override
   String get calConnectedOk => '已连接 Google 日历';
