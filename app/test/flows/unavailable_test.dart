@@ -160,7 +160,7 @@ void main() {
 
     await tester.tap(cell('司琴', 11));
     await settle(tester);
-    expect(find.textContaining('這天不行：出國'), findsOneWidget);
+    expect(findShownContaining('這天不行：出國'), findsOneWidget);
     expect(
       tester.getTopLeft(find.text('陳志豪').last).dy,
       lessThan(tester.getTopLeft(find.text('李美玉').last).dy),
@@ -179,7 +179,7 @@ void main() {
     await go(tester, '/rosters/sunday/2026-10-11');
     await tester.tap(find.text('司琴'));
     await settle(tester);
-    expect(find.textContaining('這天不行'), findsOneWidget);
+    expect(findShownContaining('這天不行'), findsOneWidget);
   });
 
   testWidgets('通知同工填 asks those on the lists, through the month picked, once confirmed', (tester) async {

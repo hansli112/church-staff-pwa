@@ -3160,12 +3160,17 @@ class L10nKo extends L10n {
 
   @override
   String pickerMonthCount(int count) {
-    return '이번 달 전체 $count회';
+    return '이번 달 그 외 $count회';
   }
 
   @override
   String pickerSameDay(String what) {
     return '같은 날: $what';
+  }
+
+  @override
+  String pickerSameService(String duties) {
+    return '같은 예배: $duties';
   }
 
   @override

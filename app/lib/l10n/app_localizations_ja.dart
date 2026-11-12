@@ -3159,12 +3159,17 @@ class L10nJa extends L10n {
 
   @override
   String pickerMonthCount(int count) {
-    return '今月は全部で$count回';
+    return '今月ほかに$count回';
   }
 
   @override
   String pickerSameDay(String what) {
     return '同じ日：$what';
+  }
+
+  @override
+  String pickerSameService(String duties) {
+    return '同じ集会：$duties';
   }
 
   @override

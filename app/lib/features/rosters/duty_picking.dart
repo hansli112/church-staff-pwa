@@ -50,6 +50,12 @@ Future<void> pickPeople(
             if (unavailable[m.uid] case final span?)
               span.note.isEmpty ? l10n.pickerUnavailable : l10n.pickerUnavailableBecause(span.note),
             if (around[m.uid] case final a?) ...[
+              if ([
+                    for (final d in a.here)
+                      if (d != duty.role) d,
+                  ]
+                  case final elsewhere when elsewhere.isNotEmpty)
+                l10n.pickerSameService(elsewhere.join(l10n.listSeparator)),
               if (a.inMonth > 0) l10n.pickerMonthCount(a.inMonth),
               for (final o in a.sameDay) l10n.pickerSameDay('${o.name} ${o.duties.join(l10n.listSeparator)}'),
             ],

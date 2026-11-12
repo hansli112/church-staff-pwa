@@ -5620,10 +5620,10 @@ abstract class L10n {
   /// **'打開 {day}'**
   String planOpenDay(String day);
 
-  /// In the picker, under a name: the other days this month they serve, any duty anywhere in the church, not only this one
+  /// In the picker, under a name: the other services and events this month they serve at, any duty anywhere in the church; the one being arranged not counted
   ///
   /// In zh, this message translates to:
-  /// **'這個月總共排了 {count} 次'**
+  /// **'這個月另有 {count} 次服事'**
   String pickerMonthCount(int count);
 
   /// No description provided for @pickerSameDay.
@@ -5631,6 +5631,12 @@ abstract class L10n {
   /// In zh, this message translates to:
   /// **'同一天：{what}'**
   String pickerSameDay(String what);
+
+  /// In the picker, under a name: their other duties at the service being arranged, e.g. 同一場：司會
+  ///
+  /// In zh, this message translates to:
+  /// **'同一場：{duties}'**
+  String pickerSameService(String duties);
 
   /// Header of 開始使用 for one 身分 that is not admin, e.g. 開始使用 · 青年崇拜 負責人
   ///

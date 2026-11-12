@@ -3155,12 +3155,17 @@ class L10nZh extends L10n {
 
   @override
   String pickerMonthCount(int count) {
-    return '這個月總共排了 $count 次';
+    return '這個月另有 $count 次服事';
   }
 
   @override
   String pickerSameDay(String what) {
     return '同一天：$what';
+  }
+
+  @override
+  String pickerSameService(String duties) {
+    return '同一場：$duties';
   }
 
   @override
@@ -6622,12 +6627,17 @@ class L10nZhHans extends L10nZh {
 
   @override
   String pickerMonthCount(int count) {
-    return '这个月总共排了 $count 次';
+    return '这个月另有 $count 次事奉';
   }
 
   @override
   String pickerSameDay(String what) {
     return '同一天：$what';
+  }
+
+  @override
+  String pickerSameService(String duties) {
+    return '同一场：$duties';
   }
 
   @override

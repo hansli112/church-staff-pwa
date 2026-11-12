@@ -3346,8 +3346,8 @@ class L10nEn extends L10n {
     String _temp0 = intl.Intl.pluralLogic(
       count,
       locale: localeName,
-      other: '$count days this month, all duties',
-      one: '1 day this month, all duties',
+      other: 'Serving $count more times this month',
+      one: 'Serving once more this month',
     );
     return '$_temp0';
   }
@@ -3355,6 +3355,11 @@ class L10nEn extends L10n {
   @override
   String pickerSameDay(String what) {
     return 'Same day: $what';
+  }
+
+  @override
+  String pickerSameService(String duties) {
+    return 'Also here: $duties';
   }
 
   @override

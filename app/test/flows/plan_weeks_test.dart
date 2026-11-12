@@ -406,7 +406,9 @@ void main() {
     expect(find.text('2026年11月'), findsOneWidget);
   });
 
-  testWidgets('the picker says how often someone serves that month, and what else that day', (tester) async {
+  testWidgets('the picker says what else someone serves there, how often that month, and what else that day', (
+    tester,
+  ) async {
     final b = seededChurch();
     b.rosters['grace']![Roster.idFor('youth', Day(2026, 10, 11))] = Roster(
       type: 'youth',
@@ -420,7 +422,8 @@ void main() {
     await tester.tap(find.text('司琴'));
     await settle(tester);
     // 10/4 主日 and 10/11 青年; not the day being arranged.
-    expect(findShown('這個月總共排了 2 次 · 同一天：青年崇拜 司會'), findsOneWidget);
+    // 招待 at this 主日 too: said, and the 主日 not counted again.
+    expect(findShown('同一場：招待 · 這個月另有 2 次服事 · 同一天：青年崇拜 司會'), findsOneWidget);
   });
 
   testWidgets('復原 here also waits for 完成; the day’s own page tells at once', (tester) async {

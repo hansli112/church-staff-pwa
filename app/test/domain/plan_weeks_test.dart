@@ -86,6 +86,14 @@ void main() {
       expect(around['hao']!.inMonth, 1);
     });
 
+    test('on the day itself: their duties there, not counted in the month', () {
+      final here = day(10, 11, [on('司會', '美玉', 'mei'), on('司琴', '美玉', 'mei'), on('招待', '志豪', 'hao')]);
+      final around = servingAround(here, [here], nameOf: (_) => '主日崇拜');
+      expect(around['mei']!.here, ['司會', '司琴']);
+      expect(around['mei']!.inMonth, 0);
+      expect(around['hao']!.here, ['招待']);
+    });
+
     test('a uid whose name is no longer listed serves nothing', () {
       final around = servingAround(
         day(10, 11, const []),
