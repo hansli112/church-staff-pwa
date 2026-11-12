@@ -288,6 +288,12 @@ final myOpenSwapRequestsProvider = StreamProvider<List<SwapRequest>>((ref) {
   return openChurch(ref).myOpenSwapRequests();
 });
 
+/// 找人代／交換 (#92) still open that ask me, by day.
+final swapRequestsToMeProvider = StreamProvider<List<SwapRequest>>((ref) {
+  if (ref.watch(uidProvider) == null) return Stream.value(const []);
+  return openChurch(ref).swapRequestsToMe();
+});
+
 /// Request [id] (#92), for who asked and whoever it asks.
 final swapRequestProvider = StreamProvider.autoDispose.family<SwapRequest?, String>(
   (ref, id) => openChurch(ref).swapRequest(id),

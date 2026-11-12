@@ -3353,6 +3353,14 @@ class L10nJa extends L10n {
   String get swapAskCoverSub => 'その日に空いているリストのメンバーに送られ、最初に「引き受ける」を押した人が担当します';
 
   @override
+  String swapAskCoverConfirm(String day, String duty) {
+    return '$dayの$dutyの代わりを頼みますか？';
+  }
+
+  @override
+  String get swapAskCoverSend => '頼む';
+
+  @override
   String get swapAskSwap => '別の週と交換';
 
   @override
@@ -3392,6 +3400,9 @@ class L10nJa extends L10n {
 
   @override
   String get swapRequestTitle => '代わり・交換';
+
+  @override
+  String get swapWaitingForYou => 'あなたへの依頼';
 
   @override
   String swapCoverAsks(String name) {

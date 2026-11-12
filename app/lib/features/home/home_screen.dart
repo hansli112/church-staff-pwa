@@ -9,6 +9,7 @@ import '../../core/perf.dart';
 import '../../core/design/tokens.dart';
 import '../../domain/getting_started.dart';
 import '../../domain/models.dart';
+import '../../domain/swap.dart';
 import '../../l10n/app_localizations.dart';
 import '../../state/calendar.dart';
 import '../../state/providers.dart';
@@ -26,6 +27,7 @@ import '../rosters/format.dart';
 import '../rosters/day_block.dart';
 import '../rosters/event_roster_screen.dart';
 import '../rosters/rosters_screen.dart';
+import '../rosters/swap_asking.dart';
 
 /// For admins: how many members are a 同工 of no service yet, so their
 /// 服事表 tab is empty.
@@ -102,7 +104,14 @@ class HomeScreen extends ConsumerWidget {
           final addToHome = AddToHomeCard.shown(ref);
           final notifications = TurnOnNotificationsCard.shown(ref);
           final attendance = AttendanceDueCard.shown(ref);
+          // 找人代／交換 asking me (#92): first among what is mine to do.
+          final asks = waitingOnMe(
+            ref.watch(swapRequestsToMeProvider).value ?? const [],
+            ref.watch(uidProvider),
+            today,
+          );
           if (list.isEmpty &&
+              asks.isEmpty &&
               !attendance &&
               link == null &&
               !sourceMissing &&
@@ -127,6 +136,24 @@ class HomeScreen extends ConsumerWidget {
               if (addToHome) const AddToHomeCard(),
               if (notifications) const TurnOnNotificationsCard(),
               // 填寫人數 (#85): what a lead is asked, first among their own things.
+              if (asks.isNotEmpty)
+                ListSection(
+                  header: l10n.swapWaitingForYou,
+                  children: [
+                    for (final r in asks)
+                      ListRow(
+                        leading: dayBlock(r.day, today),
+                        title: r.kind == SwapKind.cover
+                            ? l10n.swapCoverAsks(r.fromName)
+                            : l10n.swapSwapAsks(r.fromName),
+                        subtitle: [
+                          dayBesideBlock(l10n, r.day, today),
+                          '${services?.byId(r.serviceId)?.name ?? ''} ${r.duty}'.trim(),
+                        ].where((t) => t.isNotEmpty).join(' · '),
+                        onTap: () => context.push('/rosters/request/${r.id}'),
+                      ),
+                  ],
+                ),
               if (attendance) const AttendanceDueCard(),
               for (final start in gettingStarted) GettingStartedSection(start),
               if (waiting > 0)

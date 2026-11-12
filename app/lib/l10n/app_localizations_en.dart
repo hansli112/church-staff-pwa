@@ -3551,6 +3551,14 @@ class L10nEn extends L10n {
       'Goes to the team members on the list who are free that day; the first to say “I\'ll do it” takes it';
 
   @override
+  String swapAskCoverConfirm(String day, String duty) {
+    return 'Ask for a cover for $duty on $day?';
+  }
+
+  @override
+  String get swapAskCoverSend => 'Ask';
+
+  @override
   String get swapAskSwap => 'Swap with another week';
 
   @override
@@ -3596,6 +3604,9 @@ class L10nEn extends L10n {
 
   @override
   String get swapRequestTitle => 'Cover or swap';
+
+  @override
+  String get swapWaitingForYou => 'Waiting on you';
 
   @override
   String swapCoverAsks(String name) {

@@ -982,6 +982,20 @@ class FirestoreChurchData implements ChurchData {
       .translated();
 
   @override
+  Stream<List<SwapRequest>> swapRequestsToMe() {
+    final uid = _calls._auth.currentUser?.uid;
+    List<SwapRequest> decode(QuerySnapshot<Json> snap) => [
+      for (final d in snap.docs) ?swapRequestFromJson(d.id, d.data()),
+    ];
+    final open = _col('swapRequests').where('status', isEqualTo: 'open');
+    return _latestOfBoth(
+      open.where('asked', arrayContains: uid).live().map(decode),
+      open.where('to', isEqualTo: uid).live().map(decode),
+      (cover, swap) => [...cover, ...swap]..sort((a, b) => a.day.compareTo(b.day)),
+    ).translated();
+  }
+
+  @override
   Stream<SwapRequest?> swapRequest(String id) => _col(
     'swapRequests',
   ).doc(id).live().map((s) => s.exists ? swapRequestFromJson(id, s.data()!) : null).translated();

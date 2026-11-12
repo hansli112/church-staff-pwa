@@ -1330,6 +1330,15 @@ class MemoryChurchData implements ChurchData {
   }, equals: listEquals);
 
   @override
+  Stream<List<SwapRequest>> swapRequestsToMe() => _b.watch(() {
+    _requireMember();
+    return [
+      for (final r in _b.swapRequests[churchId]?.values ?? const <SwapRequest>[])
+        if (r.canAnswer(_uid ?? '') && _current(r).isOpen) r,
+    ]..sort((a, b) => a.day.compareTo(b.day));
+  }, equals: listEquals);
+
+  @override
   Stream<SwapRequest?> swapRequest(String id) => _b.watch(() {
     _requireMember();
     final r = _b.swapRequests[churchId]?[id];

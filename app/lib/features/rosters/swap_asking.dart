@@ -3,6 +3,7 @@
 library;
 
 import 'package:flutter/material.dart';
+import 'package:intl/intl.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:material_symbols_icons/symbols.dart';
@@ -34,14 +35,26 @@ SwapRequest? myOpenAsk(WidgetRef ref, Roster roster, String duty) =>
 String myOpenAskLabel(L10n l10n, SwapRequest r) =>
     r.kind == SwapKind.cover ? l10n.swapPendingCover : l10n.swapPendingSwap(r.toName ?? '');
 
-/// 請人代 for my [duty] on [roster]: asks, and says how many were asked.
-Future<void> askForCover(BuildContext context, WidgetRef ref, Roster roster, String duty) => _asking(context, () async {
-  final telemetry = ref.read(telemetryProvider);
-  final asked = await ref.churchData.askCover(roster, duty);
-  telemetry.logEvent('swap_ask', {'kind': 'cover'});
-  Haptics.success();
-  if (context.mounted) showToast(context, L10n.of(context).swapAskedCover(asked));
-});
+/// 請人代 for my [duty] on [roster], once I say so: asks, and says how
+/// many were asked.
+Future<void> askForCover(BuildContext context, WidgetRef ref, Roster roster, String duty) async {
+  final l10n = L10n.of(context);
+  final ok = await askChoice(
+    context,
+    title: l10n.swapAskCoverConfirm(DateFormat.MMMd().format(roster.day.midnight), duty),
+    message: l10n.swapAskCoverSub,
+    yes: l10n.swapAskCoverSend,
+    no: l10n.cancel,
+  );
+  if (ok != true || !context.mounted) return;
+  await _asking(context, () async {
+    final telemetry = ref.read(telemetryProvider);
+    final asked = await ref.churchData.askCover(roster, duty);
+    telemetry.logEvent('swap_ask', {'kind': 'cover'});
+    Haptics.success();
+    if (context.mounted) showToast(context, L10n.of(context).swapAskedCover(asked));
+  });
+}
 
 /// 收回 my open request [r].
 Future<void> withdrawAsk(BuildContext context, WidgetRef ref, SwapRequest r) => _asking(context, () async {
@@ -159,6 +172,43 @@ Future<void> _askSwap(BuildContext context, WidgetRef ref, Roster roster, String
   if (context.mounted) showToast(context, l10n.swapAskedSwap(picked.name));
 }
 
+/// 我來／接受 ([yes]) or 不方便 for [r], asked of me. Taken, it goes to the
+/// day I now serve on, with 復原.
+Future<void> answerAsk(BuildContext context, WidgetRef ref, SwapRequest r, {required bool yes}) async {
+  final l10n = L10n.of(context);
+  final data = ref.churchData;
+  final telemetry = ref.read(telemetryProvider);
+  final router = GoRouter.of(context);
+  final toasts = Navigator.of(context, rootNavigator: true).context;
+  try {
+    await data.answerSwap(r.id, yes: yes);
+    telemetry.logEvent('swap_answer', {'kind': r.kind.name, 'result': yes ? 'yes' : 'no'});
+    if (!yes) {
+      if (context.mounted) showToast(context, l10n.swapDeclined);
+      return;
+    }
+    Haptics.success();
+    // To the day I now serve on: theirs, either way.
+    router.go('/rosters/${r.serviceId}/${r.day.key}');
+    if (toasts.mounted) {
+      showToast(
+        toasts,
+        r.kind == SwapKind.cover ? l10n.swapTook : l10n.swapTraded,
+        onUndo: () => data.undoSwap(r.id),
+      );
+    }
+  } catch (e) {
+    if (context.mounted) showToast(context, errorText(l10n, e));
+  }
+}
+
+/// What still waits on me of [asks] (swapRequestsToMeProvider): not over,
+/// and not one I said 不方便 to.
+List<SwapRequest> waitingOnMe(List<SwapRequest> asks, String? me, Day today) => [
+  for (final r in asks)
+    if (me != null && !r.passed.contains(me) && !r.day.isBefore(today)) r,
+];
+
 /// A request I was asked (or asked myself), from its push or the 通知列表:
 /// what it asks, and 我來／接受 or 不方便 while it is open.
 class SwapRequestScreen extends ConsumerStatefulWidget {
@@ -174,32 +224,9 @@ class _SwapRequestScreenState extends ConsumerState<SwapRequestScreen> {
   bool _busy = false;
 
   Future<void> _answer(SwapRequest r, {required bool yes}) async {
-    final l10n = L10n.of(context);
-    final data = ref.churchData;
-    final telemetry = ref.read(telemetryProvider);
-    final router = GoRouter.of(context);
-    final toasts = Navigator.of(context, rootNavigator: true).context;
     setState(() => _busy = true);
     try {
-      await data.answerSwap(r.id, yes: yes);
-      telemetry.logEvent('swap_answer', {'kind': r.kind.name, 'result': yes ? 'yes' : 'no'});
-      if (!mounted) return;
-      if (!yes) {
-        showToast(context, l10n.swapDeclined);
-        return;
-      }
-      Haptics.success();
-      // To the day I now serve on: theirs, either way.
-      router.go('/rosters/${r.serviceId}/${r.day.key}');
-      if (toasts.mounted) {
-        showToast(
-          toasts,
-          r.kind == SwapKind.cover ? l10n.swapTook : l10n.swapTraded,
-          onUndo: () => data.undoSwap(r.id),
-        );
-      }
-    } catch (e) {
-      if (mounted) showToast(context, errorText(l10n, e));
+      await answerAsk(context, ref, r, yes: yes);
     } finally {
       if (mounted) setState(() => _busy = false);
     }
@@ -292,29 +319,39 @@ class _SwapRequestScreenState extends ConsumerState<SwapRequestScreen> {
 }
 
 /// On a day's page, first: my duties there, each with 我不行, or how my
-/// request stands with 收回 (#92). Nothing on an event's roster, a day
-/// gone, or a day I am not on.
-class MyDutyAsks extends ConsumerStatefulWidget {
-  const MyDutyAsks({super.key, required this.roster});
+/// request stands with 收回; then what others ask me for that day, a cover
+/// with 我來 (#92). Nothing on an event's roster, or a day gone.
+class DayAsks extends ConsumerStatefulWidget {
+  const DayAsks({super.key, required this.roster});
 
   final Roster roster;
 
   @override
-  ConsumerState<MyDutyAsks> createState() => _MyDutyAsksState();
+  ConsumerState<DayAsks> createState() => _DayAsksState();
 }
 
-class _MyDutyAsksState extends ConsumerState<MyDutyAsks> {
-  /// Duties with an ask on its way: one tap asks once.
-  final _asking = <String>{};
-  var _warm = false;
+class _DayAsksState extends ConsumerState<DayAsks> {
+  /// Rows with a call on its way: one tap does it once.
+  final _busy = <String>{};
+  final _warm = <WarmUp>{};
 
-  Future<void> _run(String duty, Future<void> Function() ask) async {
-    setState(() => _asking.add(duty));
+  Future<void> _run(String key, Future<void> Function() call) async {
+    setState(() => _busy.add(key));
     try {
-      await ask();
+      await call();
     } finally {
-      if (mounted) setState(() => _asking.remove(duty));
+      if (mounted) setState(() => _busy.remove(key));
     }
+  }
+
+  void _warmUp(WarmUp what) {
+    if (_warm.add(what)) ref.read(backendProvider).warmUp(what);
+  }
+
+  /// The row's action, said at its end; grey while it runs.
+  Widget _action(String label, String key) {
+    final c = AppColors.of(context);
+    return Text(label, style: AppText.body.copyWith(color: _busy.contains(key) ? c.tertiaryLabel : c.accent));
   }
 
   @override
@@ -327,41 +364,67 @@ class _MyDutyAsksState extends ConsumerState<MyDutyAsks> {
       for (final d in roster.duties)
         if (asksForMyDuty(roster, d.role, me, today)) d.role,
     ];
-    if (mine.isEmpty) return const SizedBox.shrink();
     final open = {
       for (final r in ref.watch(myOpenSwapRequestsProvider).value ?? const <SwapRequest>[])
         if (r.rosterId == roster.id) r.duty: r,
     };
-    // Asking waits on the backend; it starts while I look.
-    if (!_warm && mine.any((d) => !open.containsKey(d))) {
-      _warm = true;
-      ref.read(backendProvider).warmUp(WarmUp.swapAsk);
-    }
-    return ListSection(
-      header: l10n.myDutyHere,
+    final asked = roster.isEvent
+        ? const <SwapRequest>[]
+        : [
+            for (final r in waitingOnMe(ref.watch(swapRequestsToMeProvider).value ?? const [], me, today))
+              if (r.rosterId == roster.id) r,
+          ];
+    // Asking and answering wait on the backend; they start while I look.
+    if (mine.any((d) => !open.containsKey(d))) _warmUp(WarmUp.swapAsk);
+    if (asked.isNotEmpty) _warmUp(WarmUp.swapAnswer);
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        for (final duty in mine)
-          if (open[duty] case final r?)
-            ListRow(
-              title: duty,
-              subtitle: myOpenAskLabel(l10n, r),
-              chevron: false,
-              trailing: RowButton(
-                label: l10n.swapWithdraw,
-                onPressed: _asking.contains(duty) ? null : () => _run(duty, () => withdrawAsk(context, ref, r)),
-              ),
-            )
-          else
-            ListRow(
-              title: duty,
-              chevron: false,
-              trailing: RowButton(
-                label: l10n.swapAskCover,
-                onPressed: _asking.contains(duty)
-                    ? null
-                    : () => _run(duty, () => askForCover(context, ref, roster, duty)),
-              ),
-            ),
+        if (mine.isNotEmpty)
+          ListSection(
+            header: l10n.myDutyHere,
+            children: [
+              for (final duty in mine)
+                if (open[duty] case final r?)
+                  ListRow(
+                    title: duty,
+                    subtitle: myOpenAskLabel(l10n, r),
+                    chevron: false,
+                    trailing: _action(l10n.swapWithdraw, duty),
+                    onTap: _busy.contains(duty) ? null : () => _run(duty, () => withdrawAsk(context, ref, r)),
+                  )
+                else
+                  ListRow(
+                    title: duty,
+                    chevron: false,
+                    trailing: _action(l10n.swapAskCover, duty),
+                    onTap: _busy.contains(duty)
+                        ? null
+                        : () => _run(duty, () => askForCover(context, ref, roster, duty)),
+                  ),
+            ],
+          ),
+        if (asked.isNotEmpty)
+          ListSection(
+            header: l10n.swapWaitingForYou,
+            children: [
+              for (final r in asked)
+                if (r.kind == SwapKind.cover)
+                  ListRow(
+                    title: r.duty,
+                    subtitle: l10n.swapCoverAsks(r.fromName),
+                    chevron: false,
+                    trailing: _action(l10n.swapTake, r.id),
+                    onTap: _busy.contains(r.id) ? null : () => _run(r.id, () => answerAsk(context, ref, r, yes: true)),
+                  )
+                else
+                  ListRow(
+                    title: r.duty,
+                    subtitle: l10n.swapSwapAsks(r.fromName),
+                    onTap: () => context.push('/rosters/request/${r.id}'),
+                  ),
+            ],
+          ),
       ],
     );
   }

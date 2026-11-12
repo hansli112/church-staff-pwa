@@ -538,6 +538,11 @@ describe('找人代／交換 (swapRequests)', () => {
     await assertFails(read(EDITOR_A, 's1'));
     await assertSucceeds(getDocs(query(collection(as(MEMBER_A), `churches/${A}/swapRequests`), where('from', '==', MEMBER_A))));
     await assertFails(getDocs(collection(as(MEMBER_A), `churches/${A}/swapRequests`)));
+    // What asks me, for the home page and the day's (#92).
+    const swaps = (uid) => collection(as(uid), `churches/${A}/swapRequests`);
+    await assertSucceeds(getDocs(query(swaps(EDITOR_A), where('status', '==', 'open'), where('asked', 'array-contains', EDITOR_A))));
+    await assertSucceeds(getDocs(query(swaps(OFFICE_A), where('status', '==', 'open'), where('to', '==', OFFICE_A))));
+    await assertFails(getDocs(query(swaps(OFFICE_A), where('status', '==', 'open'), where('asked', 'array-contains', EDITOR_A))));
     await assertFails(setDoc(doc(as(MEMBER_A), `churches/${A}/swapRequests/x`), { kind: 'cover', from: MEMBER_A, status: 'open' }));
     await assertFails(updateDoc(doc(as(EDITOR_A), `churches/${A}/swapRequests/c1`), { status: 'taken' }));
   });

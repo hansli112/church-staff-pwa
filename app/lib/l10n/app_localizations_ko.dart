@@ -3355,6 +3355,14 @@ class L10nKo extends L10n {
   String get swapAskCoverSub => '그날 시간이 되는 명단의 멤버에게 보내고, 먼저 ‘제가 할게요’를 누른 사람이 맡아요';
 
   @override
+  String swapAskCoverConfirm(String day, String duty) {
+    return '$day $duty 대신 봉사를 부탁할까요?';
+  }
+
+  @override
+  String get swapAskCoverSend => '부탁하기';
+
+  @override
   String get swapAskSwap => '다른 주와 교환';
 
   @override
@@ -3394,6 +3402,9 @@ class L10nKo extends L10n {
 
   @override
   String get swapRequestTitle => '대신 봉사·교환';
+
+  @override
+  String get swapWaitingForYou => '답을 기다려요';
 
   @override
   String swapCoverAsks(String name) {

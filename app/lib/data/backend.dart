@@ -334,6 +334,10 @@ abstract interface class ChurchData {
   /// 找人代／交換 (#92) I asked for that are still open.
   Stream<List<SwapRequest>> myOpenSwapRequests();
 
+  /// 找人代／交換 (#92) still open that ask me: a cover I am among those
+  /// asked, a swap to me. By day.
+  Stream<List<SwapRequest>> swapRequestsToMe();
+
   /// Request [id], for who asked and whoever it asks; null when there is
   /// none.
   Stream<SwapRequest?> swapRequest(String id);

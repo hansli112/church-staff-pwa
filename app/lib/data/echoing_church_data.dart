@@ -303,6 +303,9 @@ class EchoingChurchData implements ChurchData {
   Stream<List<SwapRequest>> myOpenSwapRequests() => _inner.myOpenSwapRequests();
 
   @override
+  Stream<List<SwapRequest>> swapRequestsToMe() => _inner.swapRequestsToMe();
+
+  @override
   Stream<SwapRequest?> swapRequest(String id) => _inner.swapRequest(id);
 
   @override

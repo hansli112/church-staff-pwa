@@ -79,6 +79,10 @@ void main() {
     expect(b.warmedUp, contains(WarmUp.swapAsk), reason: 'asking waits on it');
     await tester.tap(onMine('司琴', '我不行'));
     await settle(tester);
+    expect(find.text('10月4日的司琴要請人代嗎？'), findsOneWidget);
+    expect(requests(b), isEmpty, reason: 'not before I say so');
+    await tester.tap(find.text('請人代'));
+    await settle(tester);
     expect(find.text('已請 1 位同工代，有人接手會通知你'), findsOneWidget);
     final r = requests(b).single;
     expect((r.kind, r.from, r.duty), (SwapKind.cover, 'mei', '司琴'));
@@ -113,6 +117,8 @@ void main() {
     await pumpApp(tester, b);
     await go(tester, '/rosters/sunday/2026-10-04');
     await tester.tap(onMine('司琴', '我不行'));
+    await settle(tester);
+    await tester.tap(find.text('請人代'));
     await settle(tester);
     expect(find.text('名單上那天沒有其他有空的同工，請找負責人'), findsOneWidget);
     expect(requests(b), isEmpty);
@@ -167,6 +173,70 @@ void main() {
     await settle(tester);
     expect(peopleOn(b, 4, '司琴'), ['李美玉']);
     expect(requests(b).single.isOpen, isTrue);
+  });
+
+  testWidgets('我不行, then 取消: nobody is asked', (tester) async {
+    final b = church();
+    await pumpApp(tester, b);
+    await go(tester, '/rosters/sunday/2026-10-04');
+    await tester.tap(onMine('司琴', '我不行'));
+    await settle(tester);
+    await tester.tap(find.text('取消'));
+    await settle(tester);
+    expect(requests(b), isEmpty);
+    expect(onMine('司琴', '我不行'), findsOneWidget);
+  });
+
+  testWidgets('asked to cover: on the home page under 等你回覆, and 我來 on the day itself', (tester) async {
+    final b = church(as: yu);
+    b.swapRequests['grace'] = {
+      'r1': SwapRequest(
+        id: 'r1',
+        kind: SwapKind.cover,
+        serviceId: 'sunday',
+        day: Day(2026, 10, 4),
+        duty: '司琴',
+        from: 'mei',
+        fromName: '李美玉',
+        asked: const ['yu'],
+      ),
+    };
+    await pumpApp(tester, b);
+    expect(find.text('等你回覆'), findsOneWidget);
+    expect(find.text('「李美玉」想請你代'), findsOneWidget);
+    await tester.tap(find.text('「李美玉」想請你代'));
+    await settle(tester);
+    expect(path(tester), '/rosters/request/r1');
+
+    await go(tester, '/rosters/sunday/2026-10-04');
+    expect(b.warmedUp, contains(WarmUp.swapAnswer));
+    await tester.tap(onMine('司琴', '我來'));
+    await settle(tester);
+    expect(peopleOn(b, 4, '司琴'), ['張雅雨']);
+    expect(find.text('已接手'), findsOneWidget);
+    expect(find.text('等你回覆'), findsNothing);
+    expect(onMine('司琴', '我不行'), findsOneWidget, reason: 'mine now');
+  });
+
+  testWidgets('asked and said 不方便: no longer waiting on me', (tester) async {
+    final b = church(as: yu);
+    b.swapRequests['grace'] = {
+      'r1': SwapRequest(
+        id: 'r1',
+        kind: SwapKind.cover,
+        serviceId: 'sunday',
+        day: Day(2026, 10, 4),
+        duty: '司琴',
+        from: 'mei',
+        fromName: '李美玉',
+        asked: const ['yu', 'host'],
+        passed: const ['yu'],
+      ),
+    };
+    await pumpApp(tester, b);
+    expect(find.text('等你回覆'), findsNothing);
+    await go(tester, '/rosters/sunday/2026-10-04');
+    expect(find.text('等你回覆'), findsNothing);
   });
 
   testWidgets('asked to swap: 不方便 closes it, and the page says so', (tester) async {
@@ -237,6 +307,8 @@ void main() {
     await settle(tester);
 
     await tester.tap(find.text('我不行'));
+    await settle(tester);
+    await tester.tap(find.text('請人代'));
     await settle(tester);
     expect(requests(b).single.kind, SwapKind.cover);
     expect(requests(b).single.asked, ['host']);

@@ -3349,6 +3349,14 @@ class L10nZh extends L10n {
   String get swapAskCoverSub => '送給名單上那天有空的同工，先按「我來」的人接手';
 
   @override
+  String swapAskCoverConfirm(String day, String duty) {
+    return '$day的$duty要請人代嗎？';
+  }
+
+  @override
+  String get swapAskCoverSend => '請人代';
+
+  @override
   String get swapAskSwap => '和別週交換';
 
   @override
@@ -3388,6 +3396,9 @@ class L10nZh extends L10n {
 
   @override
   String get swapRequestTitle => '找人代／交換';
+
+  @override
+  String get swapWaitingForYou => '等你回覆';
 
   @override
   String swapCoverAsks(String name) {
@@ -6802,6 +6813,14 @@ class L10nZhHans extends L10nZh {
   String get swapAskCoverSub => '送给名单上那天有空的同工，先按“我来”的人接手';
 
   @override
+  String swapAskCoverConfirm(String day, String duty) {
+    return '$day的$duty要请人代吗？';
+  }
+
+  @override
+  String get swapAskCoverSend => '请人代';
+
+  @override
   String get swapAskSwap => '和别周交换';
 
   @override
@@ -6841,6 +6860,9 @@ class L10nZhHans extends L10nZh {
 
   @override
   String get swapRequestTitle => '找人代／交换';
+
+  @override
+  String get swapWaitingForYou => '等你回复';
 
   @override
   String swapCoverAsks(String name) {
