@@ -179,7 +179,7 @@ void main() {
     expect(find.text('平安小組烤肉'), findsWidgets);
   });
 
-  testWidgets("跟我有關的 has the events of the 小組 I lead, though I am not one of its 同工", (tester) async {
+  testWidgets('跟我有關的 has the events of the 小組 I lead, though I am not one of its 同工', (tester) async {
     final b = church();
     b.smallGroups['grace'] = {'joy': const SmallGroupDetails(id: 'joy', name: '喜樂小組', service: 'sunday')};
     b.members['grace']!['hao'] = staffHao.withIdentities(const [MinistryLead('worship'), SmallGroupLead('joy')]);
