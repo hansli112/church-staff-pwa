@@ -624,7 +624,7 @@ class Service {
   /// Common special-event tags offered when editing this service's rosters.
   final List<EventTag> events;
 
-  /// The duties that take several people (可以排好幾位): picked in a list
+  /// The duties that take several people (多人服事): picked in a list
   /// of ticks; for the rest, one tap puts someone in place of whoever was.
   /// Null until an admin first sets one: until then each duty goes by
   /// whether it had two people in the last weeks

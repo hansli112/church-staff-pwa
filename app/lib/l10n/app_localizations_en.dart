@@ -382,7 +382,7 @@ class L10nEn extends L10n {
   String get pickerSwapDay => 'Swap with another week';
 
   @override
-  String get pickerSeveralThisTime => 'More than one this time';
+  String get pickerSeveralThisTime => 'Select several';
 
   @override
   String pickerUseName(String name) {
@@ -729,7 +729,7 @@ class L10nEn extends L10n {
   String get dutyMinistry => 'Ministry';
 
   @override
-  String get dutyTakesMany => 'Can take several people';
+  String get dutyTakesMany => 'Several people';
 
   @override
   String get ministryPickDuties => 'Choose roles';
@@ -3541,7 +3541,7 @@ class L10nEn extends L10n {
   String get swapMenu => 'Find a cover or swap';
 
   @override
-  String get swapAskCover => 'Ask for a cover';
+  String get swapAskCover => 'I can\'t make it';
 
   @override
   String get swapAskCoverSub =>

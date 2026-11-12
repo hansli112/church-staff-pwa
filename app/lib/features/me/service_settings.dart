@@ -201,7 +201,7 @@ class ServiceEdits {
     message: _l10n.dutyRemoved(d),
   );
 
-  /// 可以排好幾位 for duty [d]: set for every duty of the service at once,
+  /// 多人服事 for duty [d]: set for every duty of the service at once,
   /// the others as they stood.
   Future<bool> setMany(String d, bool many) {
     final now = ref.read(rosterActionsProvider).manyDuties(service);
@@ -558,7 +558,7 @@ class _DutyScreenState extends ConsumerState<DutyScreen> {
       return Scaffold(appBar: AppBar());
     }
     final admin = me.editsServiceSettings;
-    // What 可以排好幾位 shows until it is set.
+    // What 多人服事 shows until it is set.
     if (admin) ref.watch(recentRostersProvider);
     final edits = me.editsDutyList(ministries, service.id, duty);
     final ministry = ministries.where((m) => m.duties.contains(MinistryDuty(service.id, duty))).firstOrNull;

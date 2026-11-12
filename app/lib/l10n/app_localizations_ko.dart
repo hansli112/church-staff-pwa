@@ -374,7 +374,7 @@ class L10nKo extends L10n {
   String get pickerSwapDay => '다른 주와 바꾸기';
 
   @override
-  String get pickerSeveralThisTime => '이번에는 두 명 이상';
+  String get pickerSeveralThisTime => '여러 명 선택';
 
   @override
   String pickerUseName(String name) {
@@ -714,7 +714,7 @@ class L10nKo extends L10n {
   String get dutyMinistry => '사역팀';
 
   @override
-  String get dutyTakesMany => '여러 명 넣을 수 있음';
+  String get dutyTakesMany => '여러 명이 봉사';
 
   @override
   String get ministryPickDuties => '담당 선택';
@@ -3346,7 +3346,7 @@ class L10nKo extends L10n {
   String get swapMenu => '대신 봉사·교환';
 
   @override
-  String get swapAskCover => '대신 봉사 부탁';
+  String get swapAskCover => '못 가요';
 
   @override
   String get swapAskCoverSub => '그날 시간이 되는 명단의 멤버에게 보내고, 먼저 ‘제가 할게요’를 누른 사람이 맡아요';

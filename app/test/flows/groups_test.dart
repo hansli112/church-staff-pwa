@@ -241,11 +241,11 @@ void main() {
     await go(tester, '/me/groups/service/sunday');
     expect(find.text('2 人'), findsOneWidget, reason: "how many are on 招待's list");
     await tapText(tester, '司琴');
-    expect(find.text('屬於哪個事工'), findsOneWidget);
-    await tapText(tester, '屬於哪個事工');
+    expect(find.text('事工'), findsOneWidget);
+    await tapText(tester, '事工');
     await tapText(tester, '敬拜團');
     expect(b.ministries['grace']!.ministries.single.duties, const [MinistryDuty('sunday', '司琴')]);
-    await tapText(tester, '屬於哪個事工');
+    await tapText(tester, '事工');
     await tapText(tester, '沒有');
     expect(b.ministries['grace']!.ministries.single.duties, isEmpty);
   });

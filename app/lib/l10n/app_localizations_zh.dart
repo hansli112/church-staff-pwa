@@ -373,7 +373,7 @@ class L10nZh extends L10n {
   String get pickerSwapDay => '和別週交換';
 
   @override
-  String get pickerSeveralThisTime => '這次排兩位以上';
+  String get pickerSeveralThisTime => '選取多位';
 
   @override
   String pickerUseName(String name) {
@@ -710,10 +710,10 @@ class L10nZh extends L10n {
   String get dutyOthers => '其他人';
 
   @override
-  String get dutyMinistry => '屬於哪個事工';
+  String get dutyMinistry => '事工';
 
   @override
-  String get dutyTakesMany => '可以排好幾位';
+  String get dutyTakesMany => '多人服事';
 
   @override
   String get ministryPickDuties => '選服事項目';
@@ -3340,7 +3340,7 @@ class L10nZh extends L10n {
   String get swapMenu => '找人代／交換';
 
   @override
-  String get swapAskCover => '請人代';
+  String get swapAskCover => '我不行';
 
   @override
   String get swapAskCoverSub => '送給名單上那天有空的同工，先按「我來」的人接手';
@@ -3823,7 +3823,7 @@ class L10nZhHans extends L10nZh {
   String get pickerSwapDay => '和别的周交换';
 
   @override
-  String get pickerSeveralThisTime => '这次排两位以上';
+  String get pickerSeveralThisTime => '选择多位';
 
   @override
   String pickerUseName(String name) {
@@ -4160,10 +4160,10 @@ class L10nZhHans extends L10nZh {
   String get dutyOthers => '其他人';
 
   @override
-  String get dutyMinistry => '属于哪个事工';
+  String get dutyMinistry => '事工';
 
   @override
-  String get dutyTakesMany => '可以排好几位';
+  String get dutyTakesMany => '多人事奉';
 
   @override
   String get ministryPickDuties => '选事奉项目';
@@ -6790,7 +6790,7 @@ class L10nZhHans extends L10nZh {
   String get swapMenu => '找人代／交换';
 
   @override
-  String get swapAskCover => '请人代';
+  String get swapAskCover => '我不行';
 
   @override
   String get swapAskCoverSub => '送给名单上那天有空的同工，先按“我来”的人接手';

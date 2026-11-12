@@ -81,7 +81,7 @@ void main() {
     expect(b.warmedUp, isNot(contains(WarmUp.swapAsk)));
     await tester.tap(find.text('林同工').last);
     await settle(tester);
-    expect(find.text('請人代'), findsOneWidget);
+    expect(find.text('我不行'), findsOneWidget);
     expect(b.warmedUp, contains(WarmUp.swapAsk));
   });
 

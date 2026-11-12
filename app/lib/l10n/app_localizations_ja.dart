@@ -373,7 +373,7 @@ class L10nJa extends L10n {
   String get pickerSwapDay => '別の週と交換';
 
   @override
-  String get pickerSeveralThisTime => '今回は二人以上にする';
+  String get pickerSeveralThisTime => '複数選択';
 
   @override
   String pickerUseName(String name) {
@@ -713,7 +713,7 @@ class L10nJa extends L10n {
   String get dutyMinistry => 'ミニストリー';
 
   @override
-  String get dutyTakesMany => '複数の人を入れられる';
+  String get dutyTakesMany => '複数人で担当';
 
   @override
   String get ministryPickDuties => '担当を選ぶ';
@@ -3344,7 +3344,7 @@ class L10nJa extends L10n {
   String get swapMenu => '代わり・交換';
 
   @override
-  String get swapAskCover => '代わりを頼む';
+  String get swapAskCover => '行けない';
 
   @override
   String get swapAskCoverSub => 'その日に空いているリストのメンバーに送られ、最初に「引き受ける」を押した人が担当します';

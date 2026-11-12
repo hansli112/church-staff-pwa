@@ -70,9 +70,9 @@ const searchAutofocusThreshold = 30;
 /// duties up beforehand. Everyone is listed there from the start while
 /// nobody serves the duty yet. In 編輯 an admin takes people off the list
 /// again. A typed name nobody has can be used as is, for a visiting
-/// speaker. For a duty that takes one person (可以排好幾位 off), picking
+/// speaker. For a duty that takes one person (多人服事 off), picking
 /// someone puts them there in place of whoever was, and closes;
-/// 「這次排兩位以上」 at the end ticks several this once.
+/// 「選取多位」 at the end ticks several this once.
 /// Nothing is kept until then or 完成: 取消, or closing it any other way
 /// after a change, asks to discard it ([UnsavedChanges]).
 class PeoplePicker extends StatefulWidget {

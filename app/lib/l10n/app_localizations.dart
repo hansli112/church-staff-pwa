@@ -775,7 +775,7 @@ abstract class L10n {
   /// No description provided for @pickerSeveralThisTime.
   ///
   /// In zh, this message translates to:
-  /// **'這次排兩位以上'**
+  /// **'選取多位'**
   String get pickerSeveralThisTime;
 
   /// No description provided for @pickerUseName.
@@ -1369,13 +1369,13 @@ abstract class L10n {
   /// On a role's page: which ministry it belongs to, one or none (#94)
   ///
   /// In zh, this message translates to:
-  /// **'屬於哪個事工'**
+  /// **'事工'**
   String get dutyMinistry;
 
   /// No description provided for @dutyTakesMany.
   ///
   /// In zh, this message translates to:
-  /// **'可以排好幾位'**
+  /// **'多人服事'**
   String get dutyTakesMany;
 
   /// Last row of a ministry's roles, admins only: pick which roles it leads (#94)
@@ -5923,7 +5923,7 @@ abstract class L10n {
   /// No description provided for @swapAskCover.
   ///
   /// In zh, this message translates to:
-  /// **'請人代'**
+  /// **'我不行'**
   String get swapAskCover;
 
   /// No description provided for @swapAskCoverSub.

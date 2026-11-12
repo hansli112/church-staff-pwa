@@ -67,9 +67,9 @@ void main() {
     await pumpApp(tester, b, overrides: [telemetryProvider.overrideWithValue(telemetry)]);
     await go(tester, '/rosters/sunday/2026-10-04');
     await myRow(tester, '司琴');
-    expect(find.text('請人代'), findsOneWidget);
+    expect(find.text('我不行'), findsOneWidget);
     expect(b.warmedUp, contains(WarmUp.swapAsk), reason: 'asking waits on it');
-    await tester.tap(find.text('請人代'));
+    await tester.tap(find.text('我不行'));
     await settle(tester);
     expect(find.text('已請 1 位同工代，有人接手會通知你'), findsOneWidget);
     final r = requests(b).single;
@@ -94,7 +94,7 @@ void main() {
     await pumpApp(tester, b);
     await go(tester, '/rosters/sunday/2026-10-04');
     await myRow(tester, '司琴');
-    await tester.tap(find.text('請人代'));
+    await tester.tap(find.text('我不行'));
     await settle(tester);
     expect(find.text('名單上那天沒有其他有空的同工，請找負責人'), findsOneWidget);
     expect(requests(b), isEmpty);
@@ -209,7 +209,7 @@ void main() {
     await tester.tap(find.text('林同工'));
     await settle(tester);
     expect(find.text('和別週交換'), findsOneWidget, reason: 'they swap outright');
-    await tester.tap(find.text('請人代'));
+    await tester.tap(find.text('我不行'));
     await settle(tester);
     expect(requests(b).single.kind, SwapKind.cover);
     expect(requests(b).single.asked, ['host']);
@@ -217,7 +217,7 @@ void main() {
     await tester.tap(find.text('林同工'));
     await settle(tester);
     expect(find.text('已請人代，還沒有人接手'), findsOneWidget);
-    expect(find.text('請人代'), findsNothing);
+    expect(find.text('我不行'), findsNothing);
     await tester.tap(find.text('收回'));
     await settle(tester);
     expect(requests(b).single.status, SwapStatus.withdrawn);

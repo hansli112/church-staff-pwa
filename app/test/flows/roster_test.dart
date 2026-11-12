@@ -261,12 +261,12 @@ void main() {
       ], reason: 'the undo is not another edit');
     });
 
-    testWidgets('a duty only ever one person has takes a second with 這次排兩位以上', (tester) async {
+    testWidgets('a duty only ever one person has takes a second with 選取多位', (tester) async {
       final b = seededChurch();
       await pumpApp(tester, b);
       await go(tester, '/rosters/sunday/2026-10-11');
       await tapText(tester, '司會');
-      await tapText(tester, '這次排兩位以上');
+      await tapText(tester, '選取多位');
       await tapText(tester, '林同工');
       expect(find.text('排過司會的人'), findsOneWidget, reason: 'still open for more');
       await tapText(tester, '完成');
@@ -303,39 +303,39 @@ void main() {
       await pumpApp(tester, b);
       await go(tester, '/rosters/sunday/2026-10-11');
       await tapText(tester, '司會');
-      expect(find.text('這次排兩位以上'), findsNothing);
+      expect(find.text('選取多位'), findsNothing);
       await tapText(tester, '林同工');
       expect(find.text('排過司會的人'), findsOneWidget, reason: 'still open for more');
     });
 
-    testWidgets("可以排好幾位 on a duty's page decides: on, ticks; off, one tap puts someone in place", (tester) async {
+    testWidgets("多人服事 on a duty's page decides: on, ticks; off, one tap puts someone in place", (tester) async {
       final b = seededChurch();
       await pumpApp(tester, b);
       await go(tester, '/me/groups/duty?service=sunday&name=司會');
-      await tapText(tester, '可以排好幾位');
+      await tapText(tester, '多人服事');
       expect(b.services['grace']!.byId('sunday')!.manyDuties, ['司會', '招待'], reason: '招待 had two, as it stood');
       await go(tester, '/rosters/sunday/2026-10-11');
       await tapText(tester, '司會');
-      expect(find.text('這次排兩位以上'), findsNothing);
+      expect(find.text('選取多位'), findsNothing);
       await tapText(tester, '林同工');
       expect(find.text('排過司會的人'), findsOneWidget, reason: 'still open for more');
       await tapText(tester, '完成');
       expect(peopleOn(b, 11, '司會'), unorderedEquals(['王牧師', '林同工']));
 
       await go(tester, '/me/groups/duty?service=sunday&name=招待');
-      await tapText(tester, '可以排好幾位');
+      await tapText(tester, '多人服事');
       expect(b.services['grace']!.byId('sunday')!.manyDuties, ['司會']);
       await go(tester, '/rosters/sunday/2026-10-18');
       await tapText(tester, '招待');
-      expect(find.text('這次排兩位以上'), findsOneWidget, reason: 'had two before, and yet one at a time');
+      expect(find.text('選取多位'), findsOneWidget, reason: 'had two before, and yet one at a time');
     });
 
-    testWidgets('a helper found by searching can join as a second with 這次排兩位以上', (tester) async {
+    testWidgets('a helper found by searching can join as a second with 選取多位', (tester) async {
       final b = seededChurch();
       await pumpApp(tester, b);
       await go(tester, '/rosters/sunday/2026-10-11');
       await tapText(tester, '司會');
-      await tapText(tester, '這次排兩位以上');
+      await tapText(tester, '選取多位');
       await tester.enterText(find.byType(TextField), 'John');
       await settle(tester);
       await tapText(tester, 'John Chen');

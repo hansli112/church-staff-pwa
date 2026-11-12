@@ -170,7 +170,7 @@ class RosterActions {
   }
 
   /// Whether [role] on [r] takes one person: as its service says
-  /// (可以排好幾位, Service.manyDuties), or, until an admin sets that, when
+  /// (多人服事, Service.manyDuties), or, until an admin sets that, when
   /// nobody had more on it in the last weeks or the days ahead, in [r]'s
   /// service (in events, for an event's roster). Unsure while the last
   /// weeks are not read yet: no.
@@ -182,7 +182,7 @@ class RosterActions {
   }
 
   /// The duties of [service] that take several people as they stand: set,
-  /// or seen in the last weeks. What 可以排好幾位 starts from.
+  /// or seen in the last weeks. What 多人服事 starts from.
   List<String> manyDuties(Service service) =>
       service.manyDuties ??
       [

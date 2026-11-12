@@ -12,7 +12,7 @@ void main() {
     },
   );
 
-  test('可以排好幾位 goes to Firestore and back; a service that never set it has none', () {
+  test('多人服事 goes to Firestore and back; a service that never set it has none', () {
     final json = {
       'id': 'sunday',
       'name': '主日崇拜',
