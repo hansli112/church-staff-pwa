@@ -26,12 +26,12 @@
 | `invites/{邀請碼}` | `cid`、`churchName`、`expiresAt`（31 天內）、`revoked`、`createdBy`、`createdAt`、`zoneTypes`（選填，加入後屬於的牧區，最多 20 個；加入時只留教會還有的聚會別，不帶服事項目）。管理員建立、撤回，加入經 `redeemInvite` |
 | `churches/{cid}/staff_orders/{type}` | 各聚會別的同工排序 |
 | `churches/{cid}/settings/{doc}` | `services`（聚會別，`ids` 只增不減）、`ministries`（事工：`ministries` 每個 `{id, name, duties: [{service, duty}]}`，最多 50 個；`ids` 只增不減）、`roster_templates` 等 |
-| `churches/{cid}/settings/link` | 教會連結：`title`（1–30 字）、`body`（最多 120 字）、`url`（限 `https`）；`source`（每日內容來源，`https`）與 `fetchMinute`（每天抓取時間，教會時區午夜後的分鐘數，15 分鐘為單位）只能經 `setLinkSource` 設定 |
+| `churches/{cid}/settings/link` | 首頁連結：`title`（1–30 字）、`body`（最多 120 字）、`url`（限 `https`）；`source`（每日內容來源，`https`）與 `fetchMinute`（每天抓取時間，教會時區午夜後的分鐘數，15 分鐘為單位）只能經 `setLinkSource` 設定 |
 | `churches/{cid}/settings/linkContent` | 只有後端寫，兩種形狀擇一：成功時 `source`、`date`（教會的今天，`YYYY-MM-DD`）、`title`、`body`、`link`、`fetchedAt`；失敗時只有 `source`、`error`、`errorStatus`、`errorAt`，不保留之前的內容 |
 | `linkSources/{cid}` | 只有後端讀寫：內容來源的排程，`source`、`fetchMinute`、`epoch`（設定每變一次就換，晚到的結果不能寫回）、`nextAt`、`lastAttemptDay`（排程這天試過了）、`lastDay`（最後成功的那天）、`attemptId`（抓取中才有） |
-| `churches/{cid}/settings/webhook` | 外部通知，只有後端寫、只有管理員讀：`url`（`https`）、`events`（`calendar`、`roster`）、`lastDelivery`（`at`、`event`、`ok`、`status`、`error`） |
-| `webhookSecrets/{cid}` | 只有後端讀寫：外部通知的密鑰，用行事曆 token 的金鑰以 AES-256-GCM 加密 |
-| `webhookOutbox/{cid}/rosterChanges/{eventId}` | 只有後端讀寫：還沒送出的服事表異動，每 5 分鐘合併成一則外部通知後刪除 |
+| `churches/{cid}/settings/webhook` | Webhook，只有後端寫、只有管理員讀：`url`（`https`）、`events`（`calendar`、`roster`）、`lastDelivery`（`at`、`event`、`ok`、`status`、`error`） |
+| `webhookSecrets/{cid}` | 只有後端讀寫：Webhook的密鑰，用行事曆 token 的金鑰以 AES-256-GCM 加密 |
+| `webhookOutbox/{cid}/rosterChanges/{eventId}` | 只有後端讀寫：還沒送出的服事表異動，每 5 分鐘合併成一則Webhook後刪除 |
 | `plannedPushes/{cid}_{rosterId}_{uid}` | 安排服事（#90）等著「完成」通知的服事表異動，只有後端寫：在那頁排（`via: 'plan'`）時，每個被排進或移出的人（排的人自己除外）一筆。`cid`、`rosterId`、`uid`、`roles`（第一筆之前這個人在那天的服事項目；之後照常通知過的、他自己改的、匯入的異動會併進來）、`dateKey`、`serviceId`、`serviceName`、`sendAt`（還沒按是 `null`；夜裡按的是 7:00）。按「完成」（或離開時答「通知」；`notifyPlanned`，能排這個聚會的人）時，那個聚會 `sendAt == null` 的每人合成一則：比對當下的服事表，只說淨變了什麼，過去的日子不說，送完刪除。這個人又變回原本的樣子（排進又移出，或照常通知過）就刪掉；每小時也刪掉日子在各地都已過去的。讀名單的人（admin、行政、負責人）查得到自己教會的，用來決定離開時要不要問 |
 | `joinedPushes/{cid}` | 只有後端讀寫：用邀請加入的人還沒推播給管理員的。`cid`、`lastAt`（上次推播）、`first`（之後第一個加入的名字）、`count`（之後加入幾人）、`sendAt`（什麼時候合成一則送，沒有等著的是 `null`）。一小時最多推播一次，22:00–7:00 等到 7:00；每 15 分鐘的排程送出，教會刪除時一起刪 |
 | `heldPushes/{cid}_{rosterId}_{uid}` | 只有後端讀寫：教會當地 22:00–7:00 的服事表異動推播，等 7:00 再送。`cid`、`rosterId`、`uid`、`roles`（第一筆延後的異動之前，這個人在那天的服事項目；他自己改的、匯入的異動會併進來，不算消息）、`dateKey`（那時的日期，活動改期看得出來）、`serviceId`、`serviceName`、`event`、`sendAt`。送出時比對當下的服事表，只說這段時間淨變了什麼，送完刪除。7:00 後、排程送出前又有異動時，兩者合成一則一起送 |
@@ -61,15 +61,15 @@
 |---|---|---|---|
 | 教會名稱 `churchName` | 60 | App、Functions（建立、搬家、改名） | — |
 | 主畫面名稱 `homeName` | 8 | App | 32 |
-| 教會連結標題 `linkTitle` | 30 | App；抓來的內容由 Functions 截斷 | 120 |
-| 教會連結敘述 `linkBody` | 120 | App；抓來的內容由 Functions 截斷 | 480 |
+| 首頁連結標題 `linkTitle` | 30 | App；抓來的內容由 Functions 截斷 | 120 |
+| 首頁連結敘述 `linkBody` | 120 | App；抓來的內容由 Functions 截斷 | 480 |
 | 雲端費用項目 `costName` | 40 | App、Functions | — |
 | 個人名字 `profileName`（個人資料、同工名單上的名字） | 40 | App（Google 帳號的名字也截到 40 字）；Functions 從別處抄來的名字（登入名稱、搬家檔、個人資料）截到 40 字 | 160 |
 | 活動的服事表名稱 `eventTitle` | 200 | App、Functions 從行事曆抄來時截斷 | 800 |
 
 `firestore.rules` 的 `size()` 算的是 UTF-16 code unit，數不了字，所以規則只擋濫用：上限 × 4。Functions 數字之前也先擋同一個 × 4。一般的字（中文 1 單位、emoji 2–4 單位）到上限都過得了；一個字超過 4 單位的（組合的家庭 emoji、帶 tag 的旗子）可能字數沒到就先碰到 × 4。介於上限和 × 4 之間的直接寫入規則會放行，這段由 App 擋。
 
-其他上限每一邊單位都一樣：網址（教會連結、內容來源、外部通知）500 個 UTF-16 單位，外部通知的密鑰 16–200 個可見 ASCII 字元，服事最多 20 種。
+其他上限每一邊單位都一樣：網址（首頁連結、內容來源、Webhook）500 個 UTF-16 單位，Webhook的密鑰 16–200 個可見 ASCII 字元，服事最多 20 種。
 
 數字在三個地方：`app/lib/domain/limits.dart`、`functions/src/limits.ts`、`firestore.rules`。`functions/test/limits.test.ts`（CI 的 backend job）讀這三個檔，任何一個數字對不上就失敗；規則裡新加一個 `size() <=` 也要在那裡登記。
 
@@ -79,7 +79,7 @@
 
 App 與 Functions 各寫一次的教會資料規則也一樣：新教會的預設聚會、服事項目改名（只能原地改名，其他服事項目不變）、服事表上誰是誰（名字連到 uid 且還在名單上才算，一個服事項目只算一次）、搬家時舊同工資料的轉換，兩邊的測試都跑 `testdata/church_rules.json`。
 
-服事表異動也一樣（`app/lib/domain/roster_news.dart` ↔ `functions/src/rosterNews.ts`，兩邊都跑 `testdata/roster_changes.json`）：服事表上的 `via` 說這次從哪裡寫的、要告訴誰。App 只寫 `app`（照常通知）、`plan`（安排服事，等「完成」）、`import`（匯入，只送外部通知），`firestore.rules` 和 `editLedDuties` 只收這三種；`calendar`、`restore`、`relink`、`timeZone` 只有後端寫（`functions/src/eventRosters.ts`），`swap` 也是（找人代／交換接手時，`functions/src/swaps.ts`，#92）。等「完成」的那筆（`plannedPushes`）怎麼跟著後來的異動變，也在這份表裡。
+服事表異動也一樣（`app/lib/domain/roster_news.dart` ↔ `functions/src/rosterNews.ts`，兩邊都跑 `testdata/roster_changes.json`）：服事表上的 `via` 說這次從哪裡寫的、要告訴誰。App 只寫 `app`（照常通知）、`plan`（安排服事，等「完成」）、`import`（匯入，只送Webhook），`firestore.rules` 和 `editLedDuties` 只收這三種；`calendar`、`restore`、`relink`、`timeZone` 只有後端寫（`functions/src/eventRosters.ts`），`swap` 也是（找人代／交換接手時，`functions/src/swaps.ts`，#92）。等「完成」的那筆（`plannedPushes`）怎麼跟著後來的異動變，也在這份表裡。
 
 活動的服事表一生的規則（`app/lib/domain/event_roster.dart` ↔ `functions/src/eventRosters.ts` ↔ `firestore.rules`）寫在 `testdata/event_rosters.json`：活動改了、刪了、復原、在 Google 還在或不見了時，服事表跟著、取消、搬到復原的活動上，或重新開啟（`fates`，App 做的那幾種 MemoryBackend 也照做）；App 能怎麼寫它（`appWrites`：名稱、日期、屬於都是行事曆的，只有建立時寫；只有後端能取消；和一般服事表不能互換），規則測試也跑同一份。
 
@@ -172,7 +172,7 @@ App 與 Functions 各寫一次的教會資料規則也一樣：新教會的預�
 
 例外：邀請停用教會的回 `inviteInvalid`，教會預覽回 `notFound`（給還不是同工的人看）；排程和觸發器遇到停用的教會直接略過。Firestore 直接讀寫被規則擋下時，規則分不出原因，一律是 permission-denied。
 
-App 看不到這個差別：在一間教會裡做的事，不管是 Firestore、Storage 還是 Function，都在那間教會的 `ChurchData`（`app/lib/data/backend.dart`）上（行事曆、教會連結、外部通知、照片匯入、回報人數、匯出資料各是它底下的一個介面，`church.calendar.save(...)` 這樣用），被擋下一律是 `CloudException`。規則擋下的讀寫和 Function 一樣是 `permissionDenied`，所以畫面說的是同一句「沒有權限」。
+App 看不到這個差別：在一間教會裡做的事，不管是 Firestore、Storage 還是 Function，都在那間教會的 `ChurchData`（`app/lib/data/backend.dart`）上（行事曆、首頁連結、Webhook、照片匯入、回報人數、匯出資料各是它底下的一個介面，`church.calendar.save(...)` 這樣用），被擋下一律是 `CloudException`。規則擋下的讀寫和 Function 一樣是 `permissionDenied`，所以畫面說的是同一句「沒有權限」。
 
 `previewInvite` 不用登入：邀請連結開的登入頁要能顯示是哪間教會邀請。沒登入時只回教會名稱；登入後才回教會 id 和到期日。邀請碼本身就是秘密，拿到碼就能註冊加入，所以這不多露出什麼。
 

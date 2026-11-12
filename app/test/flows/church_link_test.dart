@@ -6,10 +6,14 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
 import 'package:martha/domain/models.dart';
 
+import 'package:martha/features/home/church_link_card.dart';
+
 import '../support/harness.dart';
 import '../support/seed.dart';
 
 Future<void> tapText(WidgetTester tester, String text) async {
+  await tester.ensureVisible(findShown(text).last);
+  await tester.pump();
   await tester.tap(findShown(text).last);
   await settle(tester);
 }
@@ -57,7 +61,7 @@ void main() {
     await pumpApp(tester, b);
     await go(tester, '/me/church');
     expect(find.text('未設定'), findsOneWidget);
-    await tapText(tester, '教會連結');
+    await tapText(tester, '首頁連結');
 
     await tester.enterText(field('連結'), 'http://grace.example');
     await tapText(tester, '儲存');
@@ -65,22 +69,32 @@ void main() {
     expect(find.text('請輸入 https:// 開頭的連結'), findsOneWidget);
     expect(b.churchLinks['grace'], isNull);
 
+    expect(find.text('同工的首頁最上面會這樣顯示'), findsOneWidget);
     await tester.enterText(field('標題'), '主日奉獻');
     await tester.enterText(field('敘述（選填）'), '線上奉獻與收據');
+    await tester.pump();
+    for (final shown in ['主日奉獻', '線上奉獻與收據']) {
+      expect(
+        find.descendant(of: find.byType(ChurchLinkCard), matching: find.text(shown)),
+        findsOneWidget,
+        reason: 'on the card as everyone will see it',
+      );
+    }
     await tester.enterText(field('連結'), 'https://grace.example/give');
     await tapText(tester, '儲存');
     expect(b.churchLinks['grace'], link);
+    expect(find.text('主日奉獻'), findsOneWidget, reason: 'on its row in 教會資訊');
 
-    await tapText(tester, '教會連結');
+    await tapText(tester, '首頁連結');
     expect(tester.widget<TextField>(field('標題')).controller!.text, '主日奉獻', reason: 'filled from the saved link');
     await tester.enterText(field('標題'), '奉獻');
     await tapText(tester, '儲存');
     expect(b.churchLinks['grace']!.title, '奉獻');
 
-    await tapText(tester, '教會連結');
-    await tapText(tester, '移除教會連結');
+    await tapText(tester, '首頁連結');
+    await tapText(tester, '移除首頁連結');
     expect(b.churchLinks['grace'], isNull);
-    expect(find.text('已移除教會連結'), findsOneWidget);
+    expect(find.text('已移除首頁連結'), findsOneWidget);
     await tapText(tester, '復原');
     expect(b.churchLinks['grace']!.title, '奉獻');
   });
@@ -89,7 +103,7 @@ void main() {
     final b = seededChurch(as: editor);
     await pumpApp(tester, b);
     await go(tester, '/me/church');
-    expect(find.text('教會連結'), findsNothing);
+    expect(find.text('首頁連結'), findsNothing);
     await expectLater(b.church('grace').churchLink.save(link), throwsA(anything));
   });
 
@@ -182,7 +196,7 @@ void main() {
       await pumpApp(tester, b);
       await go(tester, '/me/link');
       expect(find.text('每天更新時間'), findsNothing, reason: 'only with a source');
-      await tester.enterText(field('JSON 網址'), src);
+      await tester.enterText(field('內容網址（JSON）'), src);
       await tester.pump();
       expect(find.text('04:30'), findsOneWidget, reason: 'the default');
       await tapText(tester, '每天更新時間');
@@ -194,7 +208,7 @@ void main() {
       expect(b.churchLinks['grace']!.source, src);
       expect(b.churchLinks['grace']!.fetchMinute, 300);
       expect(b.linkSourceFetches, [src]);
-      expect(find.text('JSON 網址'), findsNothing, reason: 'the page closed');
+      expect(find.text('內容網址（JSON）'), findsNothing, reason: 'the page closed');
 
       await go(tester, '/me/link');
       expect(find.textContaining('上次更新：'), findsOneWidget);
@@ -212,7 +226,7 @@ void main() {
         ..linkSourceAnswers[src] = const LinkContent(source: src, title: '今日經文');
       await pumpApp(tester, b);
       await go(tester, '/me/link');
-      await tapText(tester, '移除教會連結');
+      await tapText(tester, '移除首頁連結');
       expect(b.churchLinks['grace'], isNull);
       await tapText(tester, '復原');
       final back = b.churchLinks['grace']!;
@@ -225,10 +239,10 @@ void main() {
         ..linkSourceAnswers[src] = LinkFetchError.timeout;
       await pumpApp(tester, b);
       await go(tester, '/me/link');
-      await tester.enterText(field('JSON 網址'), src);
+      await tester.enterText(field('內容網址（JSON）'), src);
       await tapText(tester, '儲存');
       expect(find.text('上次沒有抓到：對方網站 5 秒內沒有回應'), findsOneWidget);
-      expect(find.text('JSON 網址'), findsOneWidget);
+      expect(find.text('內容網址（JSON）'), findsOneWidget);
       expect(b.churchLinks['grace']!.source, src, reason: 'saved anyway; it runs again tomorrow');
     });
 
@@ -236,7 +250,7 @@ void main() {
       final b = seededChurch()..churchLinks['grace'] = const ChurchLink(title: '教會官網', url: 'https://grace.example');
       await pumpApp(tester, b);
       await go(tester, '/me/link');
-      await tester.enterText(field('JSON 網址'), 'http://feed.example');
+      await tester.enterText(field('內容網址（JSON）'), 'http://feed.example');
       await tapText(tester, '儲存');
       expect(find.text('請輸入 https:// 開頭的連結'), findsOneWidget);
       expect(b.linkSourceFetches, isEmpty);

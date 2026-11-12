@@ -127,6 +127,14 @@ class _SetupState extends ConsumerState<_Setup> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
+              // What it is, before anything is asked: most churches have
+              // no use for it.
+              BalancedText(
+                l10n.webhookFooter,
+                textAlign: TextAlign.start,
+                style: AppText.subheadline.copyWith(color: c.secondaryLabel),
+              ),
+              const SizedBox(height: Space.m),
               TextField(
                 controller: _url,
                 keyboardType: TextInputType.url,
@@ -145,12 +153,6 @@ class _SetupState extends ConsumerState<_Setup> {
                   errorText: _tried ? _secretError : null,
                 ),
                 onChanged: (_) => setState(() {}),
-              ),
-              const SizedBox(height: Space.s),
-              BalancedText(
-                l10n.webhookFooter,
-                textAlign: TextAlign.start,
-                style: AppText.footnote.copyWith(color: c.secondaryLabel),
               ),
             ],
           ),

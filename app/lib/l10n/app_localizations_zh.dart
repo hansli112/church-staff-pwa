@@ -1508,18 +1508,6 @@ class L10nZh extends L10n {
   String get churchUrlShare => '分享教會網址';
 
   @override
-  String get homeName => '主畫面名稱';
-
-  @override
-  String get homeNameUnset => '同教會名稱';
-
-  @override
-  String get homeNameMayBeCut => '部分手機會被截斷';
-
-  @override
-  String get homeNameFooter => '加入主畫面時，圖示下方顯示的名字。留空就用教會名稱。';
-
-  @override
   String get addToHome => '加入主畫面';
 
   @override
@@ -1686,10 +1674,13 @@ class L10nZh extends L10n {
   String get notifNeedsHomeScreen => '先加入主畫面，才收得到通知';
 
   @override
-  String get churchLink => '教會連結';
+  String get churchLink => '首頁連結';
 
   @override
   String get churchLinkNone => '未設定';
+
+  @override
+  String get churchLinkPreview => '同工的首頁最上面會這樣顯示';
 
   @override
   String get churchLinkTitle => '標題';
@@ -1707,28 +1698,25 @@ class L10nZh extends L10n {
   String get churchLinkNeedsHttps => '請輸入 https:// 開頭的連結';
 
   @override
-  String get churchLinkFooter => '顯示在每位同工首頁的最上方';
+  String get churchLinkRemove => '移除首頁連結';
 
   @override
-  String get churchLinkRemove => '移除教會連結';
-
-  @override
-  String get churchLinkRemoved => '已移除教會連結';
+  String get churchLinkRemoved => '已移除首頁連結';
 
   @override
   String get churchLinkOpens => '用瀏覽器打開';
 
   @override
-  String get linkSource => '每日內容來源（選填）';
+  String get linkSource => '每天自動換內容（選填）';
 
   @override
-  String get linkSourceUrl => 'JSON 網址';
+  String get linkSourceUrl => '內容網址（JSON）';
 
   @override
   String get linkFetchTime => '每天更新時間';
 
   @override
-  String get linkSourceFooter => 'JSON 要有 date（YYYY-MM-DD）、title、body、link';
+  String get linkSourceFooter => '每天在設定的時間抓一次，換上當天的標題、敘述和連結。JSON 要有 date（YYYY-MM-DD）、title、body、link';
 
   @override
   String linkSourceUpdated(String time) {
@@ -1769,7 +1757,10 @@ class L10nZh extends L10n {
   String get linkErrUnknown => '原因不明，請再試一次';
 
   @override
-  String get webhook => '外部通知';
+  String get webhook => '串接其他系統';
+
+  @override
+  String get webhookRowSub => '例如把異動轉到 LINE 群組';
 
   @override
   String get webhookUrl => '接收網址';
@@ -1796,7 +1787,7 @@ class L10nZh extends L10n {
   String get webhookRosterHint => '幾分鐘內的異動合併成一則';
 
   @override
-  String get webhookFooter => '行事曆或服事表有異動時，送通知到這個網址，例如交給 n8n 轉發到 LINE 群組';
+  String get webhookFooter => '行事曆或服事表有異動時，送一則通知（Webhook）到你填的網址。要有人用 n8n、Make 之類的工具接收，才能轉到 LINE 群組或其他地方。';
 
   @override
   String get webhookTest => '傳送測試';
@@ -1848,16 +1839,16 @@ class L10nZh extends L10n {
   String get webhookSecretChanged => '已換成新的密鑰';
 
   @override
-  String get webhookOff => '關閉外部通知';
+  String get webhookOff => '停止串接';
 
   @override
-  String get webhookOffTitle => '關閉外部通知？';
+  String get webhookOffTitle => '停止串接？';
 
   @override
   String get webhookOffMessage => '網址和密鑰都會刪掉，之後要重新設定';
 
   @override
-  String get webhookOffAction => '關閉';
+  String get webhookOffAction => '停止';
 
   @override
   String get exportData => '匯出資料';
@@ -3273,16 +3264,7 @@ class L10nZh extends L10n {
   String get unavailableTitle => '不能服事的日子';
 
   @override
-  String get unavailableHint => '點一天標記整天不能服事，再點一次取消；按住拖過幾天，標記一段期間。只有排服事的人看得到。';
-
-  @override
-  String get unavailableAddRange => '加一段期間';
-
-  @override
-  String get unavailableFirstDay => '從哪一天';
-
-  @override
-  String get unavailableLastDay => '到哪一天';
+  String get unavailableHint => '點一天標記，再點一次取消；拖過幾天，一次標好或取消。只有排服事的人看得到。';
 
   @override
   String get unavailableMarked => '已填的日子';
@@ -4970,18 +4952,6 @@ class L10nZhHans extends L10nZh {
   String get churchUrlShare => '分享教会网址';
 
   @override
-  String get homeName => '主屏幕名称';
-
-  @override
-  String get homeNameUnset => '同教会名称';
-
-  @override
-  String get homeNameMayBeCut => '部分手机会被截断';
-
-  @override
-  String get homeNameFooter => '添加到主屏幕时，图标下方显示的名字。留空就用教会名称。';
-
-  @override
   String get addToHome => '添加到主屏幕';
 
   @override
@@ -5148,10 +5118,13 @@ class L10nZhHans extends L10nZh {
   String get notifNeedsHomeScreen => '先添加到主屏幕，才收得到通知';
 
   @override
-  String get churchLink => '教会链接';
+  String get churchLink => '首页链接';
 
   @override
   String get churchLinkNone => '未设置';
+
+  @override
+  String get churchLinkPreview => '同工的首页最上面会这样显示';
 
   @override
   String get churchLinkTitle => '标题';
@@ -5169,28 +5142,25 @@ class L10nZhHans extends L10nZh {
   String get churchLinkNeedsHttps => '请输入 https:// 开头的链接';
 
   @override
-  String get churchLinkFooter => '显示在每位同工首页的最上方';
+  String get churchLinkRemove => '移除首页链接';
 
   @override
-  String get churchLinkRemove => '移除教会链接';
-
-  @override
-  String get churchLinkRemoved => '已移除教会链接';
+  String get churchLinkRemoved => '已移除首页链接';
 
   @override
   String get churchLinkOpens => '用浏览器打开';
 
   @override
-  String get linkSource => '每日内容来源（选填）';
+  String get linkSource => '每天自动换内容（选填）';
 
   @override
-  String get linkSourceUrl => 'JSON 网址';
+  String get linkSourceUrl => '内容网址（JSON）';
 
   @override
   String get linkFetchTime => '每天更新时间';
 
   @override
-  String get linkSourceFooter => 'JSON 要有 date（YYYY-MM-DD）、title、body、link';
+  String get linkSourceFooter => '每天在设置的时间抓一次，换上当天的标题、描述和链接。JSON 要有 date（YYYY-MM-DD）、title、body、link';
 
   @override
   String linkSourceUpdated(String time) {
@@ -5231,7 +5201,10 @@ class L10nZhHans extends L10nZh {
   String get linkErrUnknown => '原因不明，请再试一次';
 
   @override
-  String get webhook => '外部通知';
+  String get webhook => '对接其他系统';
+
+  @override
+  String get webhookRowSub => '例如把变动转到 LINE 群组';
 
   @override
   String get webhookUrl => '接收网址';
@@ -5258,7 +5231,7 @@ class L10nZhHans extends L10nZh {
   String get webhookRosterHint => '几分钟内的变动合并成一条';
 
   @override
-  String get webhookFooter => '行事历或事奉表有变动时，发送通知到这个网址，例如交给 n8n 转发到 LINE 群组';
+  String get webhookFooter => '行事历或事奉表有变动时，发送一则通知（Webhook）到你填的网址。要有人用 n8n、Make 之类的工具接收，才能转到 LINE 群组或其他地方。';
 
   @override
   String get webhookTest => '发送测试';
@@ -5310,16 +5283,16 @@ class L10nZhHans extends L10nZh {
   String get webhookSecretChanged => '已更换为新的密钥';
 
   @override
-  String get webhookOff => '关闭外部通知';
+  String get webhookOff => '停止对接';
 
   @override
-  String get webhookOffTitle => '关闭外部通知？';
+  String get webhookOffTitle => '停止对接？';
 
   @override
   String get webhookOffMessage => '网址和密钥都会删除，之后要重新设置';
 
   @override
-  String get webhookOffAction => '关闭';
+  String get webhookOffAction => '停止';
 
   @override
   String get exportData => '导出数据';
@@ -6735,16 +6708,7 @@ class L10nZhHans extends L10nZh {
   String get unavailableTitle => '不能事奉的日子';
 
   @override
-  String get unavailableHint => '点一天标记整天不能事奉，再点一次取消；按住拖过几天，标记一段时间。只有排事奉的人看得到。';
-
-  @override
-  String get unavailableAddRange => '添加一段时间';
-
-  @override
-  String get unavailableFirstDay => '从哪一天';
-
-  @override
-  String get unavailableLastDay => '到哪一天';
+  String get unavailableHint => '点一天标记，再点一次取消；拖过几天，一次标好或取消。只有排事奉的人看得到。';
 
   @override
   String get unavailableMarked => '已填的日子';

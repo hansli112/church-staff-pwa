@@ -237,10 +237,10 @@ void main() {
     expect(findShown('新朋友'), findsNothing);
   });
 
-  testWidgets('an admin stops taking requests in 教會資訊; only admins see the switch', (tester) async {
+  testWidgets('an admin stops taking requests in 邀請; only admins see the switch', (tester) async {
     final b = seededChurch();
     await pumpApp(tester, b);
-    await go(tester, '/me/church');
+    await go(tester, '/me/invites');
     await tapText(tester, '開放申請加入');
     expect(b.churches['grace']!.takesJoinRequests, isFalse);
     await tapText(tester, '開放申請加入');

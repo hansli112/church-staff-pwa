@@ -10,11 +10,14 @@ import '../../domain/models.dart';
 import '../../l10n/app_localizations.dart';
 import '../../state/providers.dart';
 import '../common/errors.dart';
+import '../home/church_link_card.dart';
 import '../common/link_errors.dart';
 import '../common/time_zones.dart';
 
 /// Admins set the church link shown at the top of everyone's home page,
 /// and optionally a content source fetched once a day at a time they pick.
+/// The page opens on the card as everyone will see it, which says what it
+/// is better than words would.
 class ChurchLinkScreen extends ConsumerStatefulWidget {
   const ChurchLinkScreen({super.key});
 
@@ -161,6 +164,19 @@ class _ChurchLinkScreenState extends ConsumerState<ChurchLinkScreen> {
         padding: const EdgeInsets.symmetric(vertical: Space.m),
         children: [
           Padding(
+            padding: const EdgeInsets.symmetric(horizontal: Space.l),
+            child: Text(l10n.churchLinkPreview, style: AppText.footnote.copyWith(color: c.secondaryLabel)),
+          ),
+          ExcludeSemantics(
+            child: IgnorePointer(
+              child: ChurchLinkCard(
+                title: _title.text.trim().isEmpty ? l10n.churchLinkTitle : _title.text.trim(),
+                body: _body.text.trim(),
+                url: '',
+              ),
+            ),
+          ),
+          Padding(
             padding: fieldPadding,
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -179,6 +195,7 @@ class _ChurchLinkScreenState extends ConsumerState<ChurchLinkScreen> {
                   minLines: 2,
                   maxLines: 4,
                   decoration: InputDecoration(labelText: l10n.churchLinkBody),
+                  onChanged: (_) => setState(() {}),
                 ),
                 const SizedBox(height: Space.s),
                 TextField(
@@ -188,12 +205,6 @@ class _ChurchLinkScreenState extends ConsumerState<ChurchLinkScreen> {
                   textInputAction: TextInputAction.done,
                   decoration: InputDecoration(labelText: l10n.churchLinkUrl, errorText: _tried ? _urlError : null),
                   onChanged: (_) => setState(() {}),
-                ),
-                const SizedBox(height: Space.s),
-                BalancedText(
-                  l10n.churchLinkFooter,
-                  textAlign: TextAlign.start,
-                  style: AppText.footnote.copyWith(color: c.secondaryLabel),
                 ),
                 const SizedBox(height: Space.xl),
                 Text(l10n.linkSource, style: AppText.headline),

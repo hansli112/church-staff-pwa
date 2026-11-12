@@ -1595,19 +1595,6 @@ class L10nEn extends L10n {
   String get churchUrlShare => 'Share church URL';
 
   @override
-  String get homeName => 'Home Screen name';
-
-  @override
-  String get homeNameUnset => 'Same as church name';
-
-  @override
-  String get homeNameMayBeCut => 'May be cut off on some phones';
-
-  @override
-  String get homeNameFooter =>
-      'The name shown under the icon when added to the Home Screen. Leave blank to use the church name.';
-
-  @override
   String get addToHome => 'Add to Home Screen';
 
   @override
@@ -1781,10 +1768,13 @@ class L10nEn extends L10n {
   String get notifNeedsHomeScreen => 'Add to your Home Screen first to get notifications';
 
   @override
-  String get churchLink => 'Church link';
+  String get churchLink => 'Home page link';
 
   @override
   String get churchLinkNone => 'Not set';
+
+  @override
+  String get churchLinkPreview => 'Everyone’s home page shows this at the top';
 
   @override
   String get churchLinkTitle => 'Title';
@@ -1802,28 +1792,26 @@ class L10nEn extends L10n {
   String get churchLinkNeedsHttps => 'Enter a link that starts with https://';
 
   @override
-  String get churchLinkFooter => 'Shown at the top of every team member’s home page';
+  String get churchLinkRemove => 'Remove home page link';
 
   @override
-  String get churchLinkRemove => 'Remove church link';
-
-  @override
-  String get churchLinkRemoved => 'Church link removed';
+  String get churchLinkRemoved => 'Home page link removed';
 
   @override
   String get churchLinkOpens => 'Opens in browser';
 
   @override
-  String get linkSource => 'Daily content source (optional)';
+  String get linkSource => 'Update it daily (optional)';
 
   @override
-  String get linkSourceUrl => 'JSON URL';
+  String get linkSourceUrl => 'Content URL (JSON)';
 
   @override
   String get linkFetchTime => 'Daily update time';
 
   @override
-  String get linkSourceFooter => 'The JSON needs date (YYYY-MM-DD), title, body, and link';
+  String get linkSourceFooter =>
+      'Fetched once a day at the time set, replacing the title, description, and link with that day’s. The JSON needs date (YYYY-MM-DD), title, body, and link';
 
   @override
   String linkSourceUpdated(String time) {
@@ -1864,7 +1852,10 @@ class L10nEn extends L10n {
   String get linkErrUnknown => 'Something went wrong. Try again.';
 
   @override
-  String get webhook => 'Webhook';
+  String get webhook => 'Connect other systems';
+
+  @override
+  String get webhookRowSub => 'For example, pass changes on to a LINE group';
 
   @override
   String get webhookUrl => 'Receiving URL';
@@ -1892,7 +1883,7 @@ class L10nEn extends L10n {
 
   @override
   String get webhookFooter =>
-      'When the calendar or a schedule changes, a notification is sent to this URL, for example to n8n to forward to a LINE group';
+      'When the calendar or a schedule changes, a notification (webhook) is sent to the URL you enter. Someone needs a tool such as n8n or Make to receive it and pass it on to a LINE group or elsewhere.';
 
   @override
   String get webhookTest => 'Send test';
@@ -1945,16 +1936,16 @@ class L10nEn extends L10n {
   String get webhookSecretChanged => 'Secret replaced';
 
   @override
-  String get webhookOff => 'Turn off webhook';
+  String get webhookOff => 'Disconnect';
 
   @override
-  String get webhookOffTitle => 'Turn off webhook?';
+  String get webhookOffTitle => 'Disconnect?';
 
   @override
   String get webhookOffMessage => 'The URL and secret will be deleted. You’ll need to set it up again.';
 
   @override
-  String get webhookOffAction => 'Turn off';
+  String get webhookOffAction => 'Disconnect';
 
   @override
   String get exportData => 'Export data';
@@ -3468,16 +3459,7 @@ class L10nEn extends L10n {
 
   @override
   String get unavailableHint =>
-      'Tap a day to mark it, tap it again to clear it; press and drag across days to mark a stretch. Only those who arrange serving see them.';
-
-  @override
-  String get unavailableAddRange => 'Add a stretch of days';
-
-  @override
-  String get unavailableFirstDay => 'First day';
-
-  @override
-  String get unavailableLastDay => 'Last day';
+      'Tap a day to mark it, tap it again to clear it; drag across days to mark or clear them all at once. Only those who arrange serving see them.';
 
   @override
   String get unavailableMarked => 'Marked';

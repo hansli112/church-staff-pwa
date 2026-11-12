@@ -186,6 +186,11 @@ class MemoryBackend implements Backend {
   /// fails the stream instead.
   Completer<void>? linkContentHeld;
 
+  /// Scripted: while set, a member's own 不能服事的日子 come back changed
+  /// only once this completes: the backend keeps them through a function,
+  /// and the snapshot follows its answer, sometimes after it.
+  Completer<void>? unavailableEchoHeld;
+
   /// Scripted Google Calendar: the events per church, and its calendars
   /// ([connectCalendar] stands in for the OAuth callback).
   final calendarEvents = <String, List<CalendarEvent>>{};
@@ -1274,11 +1279,16 @@ class MemoryChurchData implements ChurchData {
   }
 
   @override
-  Stream<UnavailableDays> unavailableDays(String uid) => _b.watch(() {
-    if (uid != _uid) _requireArrangesRosters();
-    _requireMember();
-    return _b.unavailable[churchId]?[uid] ?? const UnavailableDays();
-  });
+  Stream<UnavailableDays> unavailableDays(String uid) => _b
+      .watch(() {
+        if (uid != _uid) _requireArrangesRosters();
+        _requireMember();
+        return _b.unavailable[churchId]?[uid] ?? const UnavailableDays();
+      })
+      .asyncMap((days) async {
+        await _b.unavailableEchoHeld?.future;
+        return days;
+      });
 
   @override
   Stream<Map<String, UnavailableDays>> everyonesUnavailableDays() => _b.watch(() {

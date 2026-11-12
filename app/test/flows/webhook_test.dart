@@ -26,7 +26,7 @@ void main() {
     final out = captureOutbox(tester);
     await pumpApp(tester, b);
     await go(tester, '/me/church');
-    await tapText(tester, '外部通知');
+    await tapText(tester, '串接其他系統');
 
     await tester.enterText(field('接收網址'), 'http://n8n.example');
     await tapText(tester, '儲存');
@@ -107,11 +107,11 @@ void main() {
       ..webhookSecrets['grace'] = 'whsec_existing';
     await pumpApp(tester, b);
     await go(tester, '/me/webhook');
-    await tapText(tester, '關閉外部通知');
+    await tapText(tester, '停止串接');
     await tapText(tester, '取消');
     expect(b.webhooks['grace'], isNotNull);
-    await tapText(tester, '關閉外部通知');
-    await tapText(tester, '關閉');
+    await tapText(tester, '停止串接');
+    await tapText(tester, '停止');
     expect(b.webhooks['grace'], isNull);
     expect(b.webhookSecrets['grace'], isNull);
   });
@@ -119,6 +119,6 @@ void main() {
   testWidgets('only admins see it', (tester) async {
     await pumpApp(tester, seededChurch(as: editor));
     await go(tester, '/me/church');
-    expect(find.text('外部通知'), findsNothing);
+    expect(find.text('串接其他系統'), findsNothing);
   });
 }

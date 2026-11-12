@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:material_symbols_icons/symbols.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:image_picker/image_picker.dart';
@@ -12,17 +11,14 @@ import '../../domain/models.dart';
 import '../../l10n/app_localizations.dart';
 import '../../state/export.dart';
 import '../../state/providers.dart';
-import '../../state/support.dart';
 import '../../state/session.dart';
 import '../church/add_to_home.dart';
-import '../church/links.dart';
 import '../common/errors.dart';
-import '../common/labels.dart';
 import '../common/time_zones.dart';
-import 'home_name_dialog.dart';
 
-/// 教會資訊: the church's name and logo, the admin tools, and at the very
-/// bottom, in red, leaving the church.
+/// 教會資訊: the church's name and logo, its time zone, the admin tools,
+/// and at the very bottom, in red, leaving the church. How people join
+/// (the church URL, 開放申請加入) is in 邀請; the app icon in 我的.
 ///
 /// Self-host had no way to leave; an admin had to delete the account.
 class ChurchInfoScreen extends ConsumerStatefulWidget {
@@ -83,48 +79,6 @@ class _ChurchInfoScreenState extends ConsumerState<ChurchInfoScreen> {
       if (mounted) showToast(context, errorText(l10n, e));
     } finally {
       if (mounted) setState(() => _uploading = false);
-    }
-  }
-
-  Future<void> _churchUrlActions(String url) async {
-    final l10n = L10n.of(context);
-    final choice = await showAppSheet<String>(
-      context,
-      builder: (context) => SafeArea(
-        child: ListSection(
-          header: displayUrl(url),
-          children: [
-            ListRow(
-              title: l10n.churchUrlShare,
-              leading: const Icon(Symbols.ios_share_rounded),
-              onTap: () => Navigator.pop(context, 'share'),
-            ),
-            ListRow(
-              title: l10n.churchUrlCopy,
-              leading: const Icon(Symbols.content_copy_rounded),
-              onTap: () => Navigator.pop(context, 'copy'),
-            ),
-          ],
-        ),
-      ),
-    );
-    if (!mounted) return;
-    switch (choice) {
-      case 'share':
-        await shareText(context, url, copied: l10n.churchUrlCopied);
-      case 'copy':
-        await copyText(context, url, copied: l10n.churchUrlCopied);
-    }
-  }
-
-  Future<void> _editHomeName(Church church) async {
-    final l10n = L10n.of(context);
-    final name = await askHomeName(context, churchName: church.name, current: church.homeName);
-    if (name == null || name == (church.homeName ?? '') || !mounted) return;
-    try {
-      await ref.churchData.setHomeName(name.isEmpty ? null : name);
-    } catch (_) {
-      if (mounted) showToast(context, l10n.saveFailed);
     }
   }
 
@@ -208,18 +162,6 @@ class _ChurchInfoScreenState extends ConsumerState<ChurchInfoScreen> {
             // or iPad (native or web): Android updates its icons itself.
             footer: admin && Theme.of(context).platform == TargetPlatform.iOS ? l10n.addToHomeIosNote : null,
             children: [
-              ListRow(
-                title: l10n.churchUrl,
-                subtitle: displayUrl(churchUrl(church.id)),
-                chevron: false,
-                onTap: () => _churchUrlActions(churchUrl(church.id)),
-              ),
-              if (admin)
-                ListRow(
-                  title: l10n.homeName,
-                  value: church.homeName ?? l10n.homeNameUnset,
-                  onTap: () => _editHomeName(church),
-                ),
               // Everyone's times are the church's: everyone may see whose.
               ListRow(
                 title: l10n.timeZone,
@@ -232,47 +174,15 @@ class _ChurchInfoScreenState extends ConsumerState<ChurchInfoScreen> {
                 ListRow(title: l10n.addToHome, onTap: () => openAddToHome(context, ref, church.id)),
             ],
           ),
-          // 申請加入 (#88): who may ask to join from the church URL above.
-          if (admin)
-            ListSection(
-              footer: l10n.takesJoinRequestsFooter,
-              children: [
-                SwitchRow(
-                  title: l10n.takesJoinRequests,
-                  value: church.takesJoinRequests,
-                  onChanged: (on) async {
-                    try {
-                      await ref.churchData.setTakesJoinRequests(on);
-                    } catch (e) {
-                      if (context.mounted) showToast(context, saveErrorText(l10n, e));
-                    }
-                  },
-                ),
-              ],
-            ),
-          // Its own icon, bundled in the store apps: the way back to the
-          // default, and to it again. Not under the note above on icons
-          // added from the browser, which do not follow.
-          if (churchIcons[church.id] != null && !ref.watch(isWebProvider))
-            ListSection(
-              children: [
-                ListRow(
-                  title: l10n.appIcon,
-                  value: appIconName(l10n, ref.watch(currentAppIconProvider).value),
-                  onTap: () => context.push('/me/church/icon'),
-                ),
-              ],
-            ),
           if (admin)
             ListSection(
               children: [
                 ListRow(title: l10n.calendarSetting, onTap: () => context.push('/me/calendar')),
                 ListRow(
                   title: l10n.churchLink,
-                  value: ref.watch(churchLinkProvider).value == null ? l10n.churchLinkNone : null,
+                  value: ref.watch(churchLinkProvider).value?.title ?? l10n.churchLinkNone,
                   onTap: () => context.push('/me/link'),
                 ),
-                ListRow(title: l10n.webhook, onTap: () => context.push('/me/webhook')),
                 ListRow(
                   title: logo == null ? l10n.uploadLogo : l10n.changeLogo,
                   trailing: _uploading
@@ -294,9 +204,15 @@ class _ChurchInfoScreenState extends ConsumerState<ChurchInfoScreen> {
                 ),
               ],
             ),
+          // For whoever in the church writes code: last of the tools.
           if (admin)
             ListSection(
               children: [
+                ListRow(
+                  title: l10n.webhook,
+                  subtitle: l10n.webhookRowSub,
+                  onTap: () => context.push('/me/webhook'),
+                ),
                 ListRow(
                   title: l10n.exportData,
                   chevron: false,

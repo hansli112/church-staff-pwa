@@ -1509,18 +1509,6 @@ class L10nJa extends L10n {
   String get churchUrlShare => '教会の URL を共有';
 
   @override
-  String get homeName => 'ホーム画面の名前';
-
-  @override
-  String get homeNameUnset => '教会名と同じ';
-
-  @override
-  String get homeNameMayBeCut => '一部のスマホでは途中で切れることがあります';
-
-  @override
-  String get homeNameFooter => 'ホーム画面に追加したとき、アイコンの下に表示される名前です。空欄なら教会名を使います。';
-
-  @override
   String get addToHome => 'ホーム画面に追加';
 
   @override
@@ -1687,10 +1675,13 @@ class L10nJa extends L10n {
   String get notifNeedsHomeScreen => '通知を受け取るには、先にホーム画面に追加してください';
 
   @override
-  String get churchLink => '教会のリンク';
+  String get churchLink => 'ホームのリンク';
 
   @override
   String get churchLinkNone => '未設定';
+
+  @override
+  String get churchLinkPreview => 'メンバーのホームのいちばん上にこう表示されます';
 
   @override
   String get churchLinkTitle => 'タイトル';
@@ -1708,28 +1699,25 @@ class L10nJa extends L10n {
   String get churchLinkNeedsHttps => 'https:// で始まるリンクを入力してください';
 
   @override
-  String get churchLinkFooter => 'すべてのメンバーのホームのいちばん上に表示されます';
+  String get churchLinkRemove => 'ホームのリンクを外す';
 
   @override
-  String get churchLinkRemove => '教会のリンクを外す';
-
-  @override
-  String get churchLinkRemoved => '教会のリンクを外しました';
+  String get churchLinkRemoved => 'ホームのリンクを外しました';
 
   @override
   String get churchLinkOpens => 'ブラウザで開く';
 
   @override
-  String get linkSource => '毎日のコンテンツの取得元（任意）';
+  String get linkSource => '毎日自動で更新（任意）';
 
   @override
-  String get linkSourceUrl => 'JSON の URL';
+  String get linkSourceUrl => '内容の URL（JSON）';
 
   @override
   String get linkFetchTime => '毎日の更新時刻';
 
   @override
-  String get linkSourceFooter => 'JSON には date（YYYY-MM-DD）、title、body、link が必要です';
+  String get linkSourceFooter => '設定した時刻に毎日取得し、その日のタイトル・説明・リンクに置き換えます。JSON には date（YYYY-MM-DD）、title、body、link が必要です';
 
   @override
   String linkSourceUpdated(String time) {
@@ -1770,7 +1758,10 @@ class L10nJa extends L10n {
   String get linkErrUnknown => '原因不明です。もう一度お試しください。';
 
   @override
-  String get webhook => '外部通知';
+  String get webhook => 'ほかのシステムと連携';
+
+  @override
+  String get webhookRowSub => 'たとえば変更を LINE グループに転送';
 
   @override
   String get webhookUrl => '受信 URL';
@@ -1797,7 +1788,8 @@ class L10nJa extends L10n {
   String get webhookRosterHint => '数分以内の変更は1件にまとめて送ります';
 
   @override
-  String get webhookFooter => 'カレンダーや奉仕表が変更されたとき、この URL に通知を送ります。たとえば n8n で受けて LINE グループに転送できます。';
+  String get webhookFooter =>
+      'カレンダーや奉仕表が変更されたとき、入力した URL に通知（Webhook）を送ります。n8n や Make などのツールで受け取ると、LINE グループなどに転送できます。';
 
   @override
   String get webhookTest => 'テスト送信';
@@ -1849,16 +1841,16 @@ class L10nJa extends L10n {
   String get webhookSecretChanged => '新しいシークレットに変更しました';
 
   @override
-  String get webhookOff => '外部通知をオフにする';
+  String get webhookOff => '連携をやめる';
 
   @override
-  String get webhookOffTitle => '外部通知をオフにしますか？';
+  String get webhookOffTitle => '連携をやめますか？';
 
   @override
   String get webhookOffMessage => 'URL とシークレットは削除され、もう一度設定が必要になります';
 
   @override
-  String get webhookOffAction => 'オフにする';
+  String get webhookOffAction => 'やめる';
 
   @override
   String get exportData => 'データをエクスポート';
@@ -3276,16 +3268,7 @@ class L10nJa extends L10n {
   String get unavailableTitle => '奉仕できない日';
 
   @override
-  String get unavailableHint => '日をタップすると終日奉仕できない日になり、もう一度タップで解除。長押しして数日なぞると期間で入力できます。奉仕を割り当てる人だけが見られます。';
-
-  @override
-  String get unavailableAddRange => '期間を追加';
-
-  @override
-  String get unavailableFirstDay => '最初の日';
-
-  @override
-  String get unavailableLastDay => '最後の日';
+  String get unavailableHint => '日をタップすると奉仕できない日になり、もう一度タップで解除。数日なぞると、まとめて入力・解除できます。奉仕を割り当てる人だけが見られます。';
 
   @override
   String get unavailableMarked => '入力した日';

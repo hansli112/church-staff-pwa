@@ -1510,18 +1510,6 @@ class L10nKo extends L10n {
   String get churchUrlShare => '교회 주소 공유';
 
   @override
-  String get homeName => '홈 화면 이름';
-
-  @override
-  String get homeNameUnset => '교회 이름과 같음';
-
-  @override
-  String get homeNameMayBeCut => '일부 휴대폰에서는 잘릴 수 있어요';
-
-  @override
-  String get homeNameFooter => '홈 화면에 추가했을 때 아이콘 아래에 표시되는 이름이에요. 비워 두면 교회 이름을 사용해요.';
-
-  @override
   String get addToHome => '홈 화면에 추가';
 
   @override
@@ -1688,10 +1676,13 @@ class L10nKo extends L10n {
   String get notifNeedsHomeScreen => '알림을 받으려면 먼저 홈 화면에 추가해 주세요';
 
   @override
-  String get churchLink => '교회 링크';
+  String get churchLink => '홈 링크';
 
   @override
   String get churchLinkNone => '설정 안 됨';
+
+  @override
+  String get churchLinkPreview => '모든 멤버의 홈 맨 위에 이렇게 보여요';
 
   @override
   String get churchLinkTitle => '제목';
@@ -1709,28 +1700,26 @@ class L10nKo extends L10n {
   String get churchLinkNeedsHttps => 'https://로 시작하는 링크를 입력해 주세요';
 
   @override
-  String get churchLinkFooter => '모든 멤버의 홈 맨 위에 표시돼요';
+  String get churchLinkRemove => '홈 링크 빼기';
 
   @override
-  String get churchLinkRemove => '교회 링크 빼기';
-
-  @override
-  String get churchLinkRemoved => '교회 링크를 뺐어요';
+  String get churchLinkRemoved => '홈 링크를 뺐어요';
 
   @override
   String get churchLinkOpens => '브라우저에서 열림';
 
   @override
-  String get linkSource => '매일 콘텐츠 출처(선택)';
+  String get linkSource => '매일 자동으로 바꾸기(선택)';
 
   @override
-  String get linkSourceUrl => 'JSON 주소';
+  String get linkSourceUrl => '내용 주소(JSON)';
 
   @override
   String get linkFetchTime => '매일 업데이트 시간';
 
   @override
-  String get linkSourceFooter => 'JSON에는 date(YYYY-MM-DD), title, body, link가 있어야 해요';
+  String get linkSourceFooter =>
+      '정한 시각에 하루 한 번 가져와서 그날의 제목, 설명, 링크로 바꿔요. JSON에는 date(YYYY-MM-DD), title, body, link가 있어야 해요';
 
   @override
   String linkSourceUpdated(String time) {
@@ -1771,7 +1760,10 @@ class L10nKo extends L10n {
   String get linkErrUnknown => '알 수 없는 오류예요. 다시 시도해 주세요.';
 
   @override
-  String get webhook => '외부 알림';
+  String get webhook => '다른 시스템과 연결';
+
+  @override
+  String get webhookRowSub => '예: 변경 사항을 LINE 그룹으로 전달';
 
   @override
   String get webhookUrl => '받는 주소';
@@ -1798,7 +1790,7 @@ class L10nKo extends L10n {
   String get webhookRosterHint => '몇 분 안의 변경은 하나로 묶어 보내요';
 
   @override
-  String get webhookFooter => '캘린더나 봉사표가 바뀌면 이 주소로 알림을 보내요. 예를 들어 n8n을 거쳐 LINE 그룹으로 전달할 수 있어요.';
+  String get webhookFooter => '캘린더나 봉사표가 바뀌면 입력한 주소로 알림(Webhook)을 보내요. n8n, Make 같은 도구로 받아야 LINE 그룹 등으로 전달할 수 있어요.';
 
   @override
   String get webhookTest => '테스트 보내기';
@@ -1850,16 +1842,16 @@ class L10nKo extends L10n {
   String get webhookSecretChanged => '비밀 키를 교체했어요';
 
   @override
-  String get webhookOff => '외부 알림 끄기';
+  String get webhookOff => '연결 끊기';
 
   @override
-  String get webhookOffTitle => '외부 알림을 끌까요?';
+  String get webhookOffTitle => '연결을 끊을까요?';
 
   @override
   String get webhookOffMessage => '주소와 비밀 키가 삭제돼요. 다시 쓰려면 처음부터 설정해야 해요.';
 
   @override
-  String get webhookOffAction => '끄기';
+  String get webhookOffAction => '끊기';
 
   @override
   String get exportData => '데이터 내보내기';
@@ -3278,16 +3270,7 @@ class L10nKo extends L10n {
 
   @override
   String get unavailableHint =>
-      '날짜를 누르면 하루 종일 봉사할 수 없는 날로 표시되고, 다시 누르면 지워져요. 길게 눌러 여러 날을 끌면 기간으로 표시돼요. 봉사를 배정하는 사람만 볼 수 있어요.';
-
-  @override
-  String get unavailableAddRange => '기간 추가';
-
-  @override
-  String get unavailableFirstDay => '첫날';
-
-  @override
-  String get unavailableLastDay => '마지막 날';
+      '날짜를 누르면 봉사할 수 없는 날로 표시되고, 다시 누르면 지워져요. 여러 날을 끌면 한 번에 표시하거나 지울 수 있어요. 봉사를 배정하는 사람만 볼 수 있어요.';
 
   @override
   String get unavailableMarked => '표시한 날';

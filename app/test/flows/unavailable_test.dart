@@ -1,4 +1,5 @@
-import 'package:flutter/gestures.dart' show kLongPressTimeout;
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
@@ -45,6 +46,27 @@ Finder cell(String role, int date) => find.byWidgetPredicate(
   (w) => w is Semantics && w.properties.label == '$role, 10月$date日 週日',
 );
 
+/// A finger put down on October [from] and lifted on [to], straight away:
+/// no holding first.
+Future<void> dragAcross(WidgetTester tester, int from, int to) async {
+  final start = tester.getCenter(await october(tester, from));
+  final end = tester.getCenter(await october(tester, to));
+  final gesture = await tester.startGesture(start);
+  await gesture.moveTo(Offset.lerp(start, end, 0.5)!);
+  await tester.pump();
+  await gesture.moveTo(end);
+  await tester.pump();
+  await gesture.up();
+  await settle(tester);
+}
+
+bool shownMarked(WidgetTester tester, int day) {
+  final f = find.byWidgetPredicate(
+    (w) => w is Semantics && (w.properties.label?.startsWith('2026年10月$day日') ?? false),
+  );
+  return tester.widget<Semantics>(f).properties.selected ?? false;
+}
+
 void main() {
   testWidgets('a tap marks a day, again clears it; one already served on is said', (tester) async {
     final b = seededChurch(as: staffMei);
@@ -68,18 +90,13 @@ void main() {
     expect(telemetry.named('unavailable_set'), [null, null], reason: 'each change kept');
   });
 
-  testWidgets('held and dragged, a stretch; it takes a reason, and is removed with 復原', (tester) async {
+  testWidgets('dragged across days, a stretch; it takes a reason, and is removed with 復原', (tester) async {
     final b = seededChurch(as: staffMei);
     await pumpApp(tester, b);
     await go(tester, '/me/unavailable');
+    expect(find.text('加一段期間'), findsNothing, reason: 'dragging does it');
 
-    final from = await october(tester, 20);
-    final gesture = await tester.startGesture(tester.getCenter(from));
-    await tester.pump(kLongPressTimeout + const Duration(milliseconds: 50));
-    await gesture.moveTo(tester.getCenter(await october(tester, 23)));
-    await tester.pump();
-    await gesture.up();
-    await settle(tester);
+    await dragAcross(tester, 20, 23);
     expect(meisDays(b)!.spans, [UnavailableSpan(_oct(20), _oct(23))]);
 
     await top(tester);
@@ -97,6 +114,39 @@ void main() {
     await tester.tap(find.text('復原'));
     await settle(tester);
     expect(meisDays(b)!.spans, [UnavailableSpan(_oct(20), _oct(23), note: '出國')]);
+  });
+
+  testWidgets('dragged from a day already marked, the days are cleared instead', (tester) async {
+    final b = seededChurch(as: staffMei);
+    b.unavailable['grace'] = {'mei': const UnavailableDays().add(_oct(19), _oct(24), note: '出國')};
+    await pumpApp(tester, b);
+    await go(tester, '/me/unavailable');
+
+    await dragAcross(tester, 22, 26);
+    expect(meisDays(b)!.spans, [UnavailableSpan(_oct(19), _oct(21), note: '出國')]);
+  });
+
+  testWidgets('days tapped while a slow save is on its way stay marked, until the saved ones come back too', (
+    tester,
+  ) async {
+    final b = seededChurch(as: staffMei);
+    await pumpApp(tester, b);
+    await go(tester, '/me/unavailable');
+    b.writeDelay = const Duration(seconds: 1);
+    final echo = b.unavailableEchoHeld = Completer<void>();
+
+    await tester.tap(await october(tester, 20));
+    await tester.pump(const Duration(milliseconds: 300));
+    await tester.tap(await october(tester, 21));
+    for (var i = 0; i < 10; i++) {
+      await tester.pump(const Duration(milliseconds: 300));
+      expect([shownMarked(tester, 20), shownMarked(tester, 21)], [true, true], reason: 'after ${i * 300} ms');
+    }
+    expect(meisDays(b)!.spans, [UnavailableSpan(_oct(20), _oct(21))], reason: 'saved one after the other');
+    b.unavailableEchoHeld = null;
+    echo.complete();
+    await settle(tester);
+    expect([shownMarked(tester, 20), shownMarked(tester, 21)], [true, true]);
   });
 
   testWidgets('whoever arranges sees it: last in the picker with its reason, greyed in the table', (tester) async {

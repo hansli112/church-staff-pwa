@@ -35,7 +35,7 @@ void main() {
     expect(find.text('同工'), findsNothing);
     expect(find.text('邀請'), findsNothing);
     expect(find.text('聚會與事工'), findsNothing);
-    expect(find.text('外部通知'), findsOneWidget);
+    expect(find.text('串接其他系統'), findsOneWidget);
   });
 
   testWidgets('staff have no 管理教會', (tester) async {

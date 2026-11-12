@@ -302,7 +302,7 @@ final fundingProvider = StreamProvider.autoDispose<Funding?>((ref) => ref.watch(
 const appIcons = <String?>[null, 'Green', 'Purple', 'Night'];
 
 /// A church's own app icon, bundled like the others, by church id: its
-/// members may pick it (教會資訊 › App 圖示), not only supporters. It is
+/// members may pick it (我的 › App 圖示), not only supporters. It is
 /// never put on by itself: iOS covers the app with a note on the change, and
 /// the icon people look for would be gone. [iconId] is the icon's, as in
 /// [appIcons]; Android shows [name] under it too, iOS keeps the app's.

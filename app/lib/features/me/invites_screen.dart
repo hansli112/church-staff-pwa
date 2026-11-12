@@ -8,6 +8,7 @@ import '../../domain/models.dart';
 import '../../l10n/app_localizations.dart';
 import '../../state/providers.dart';
 import '../church/links.dart';
+import '../common/errors.dart';
 import '../common/time_zones.dart';
 import '../../state/session.dart';
 
@@ -31,7 +32,8 @@ final _liveInvitesProvider = Provider.autoDispose<List<Invite>>((ref) {
 
 /// Admins make invite links (7 or 30 days, 7 unless they choose 30), share
 /// them, and revoke them.
-/// A link can put the people who join with it in some 牧區 at once.
+/// A link can put the people who join with it in some 牧區 at once. Under
+/// them, the other way in: 申請加入 from the church URL (#88), and the URL.
 class InvitesScreen extends ConsumerStatefulWidget {
   const InvitesScreen({super.key});
 
@@ -121,10 +123,42 @@ class _InvitesScreenState extends ConsumerState<InvitesScreen> {
     }
   }
 
+  Future<void> _churchUrlActions(String url) async {
+    final l10n = L10n.of(context);
+    final choice = await showAppSheet<String>(
+      context,
+      builder: (context) => SafeArea(
+        child: ListSection(
+          header: displayUrl(url),
+          children: [
+            ListRow(
+              title: l10n.churchUrlShare,
+              leading: const Icon(Symbols.ios_share_rounded),
+              onTap: () => Navigator.pop(context, 'share'),
+            ),
+            ListRow(
+              title: l10n.churchUrlCopy,
+              leading: const Icon(Symbols.content_copy_rounded),
+              onTap: () => Navigator.pop(context, 'copy'),
+            ),
+          ],
+        ),
+      ),
+    );
+    if (!mounted) return;
+    switch (choice) {
+      case 'share':
+        await shareText(context, url, copied: l10n.churchUrlCopied);
+      case 'copy':
+        await copyText(context, url, copied: l10n.churchUrlCopied);
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final l10n = L10n.of(context);
     final c = AppColors.of(context);
+    final church = ref.watch(churchProvider).value;
     final live = ref.watch(_liveInvitesProvider);
     final services = ref.watch(servicesProvider).value;
     final enabled = services?.enabled ?? const <Service>[];
@@ -200,6 +234,31 @@ class _InvitesScreenState extends ConsumerState<InvitesScreen> {
                   ),
               ],
             ),
+          if (church != null)
+            ListSection(
+              footer: l10n.takesJoinRequestsFooter,
+              children: [
+                SwitchRow(
+                  title: l10n.takesJoinRequests,
+                  value: church.takesJoinRequests,
+                  onChanged: (on) async {
+                    try {
+                      await ref.churchData.setTakesJoinRequests(on);
+                    } catch (e) {
+                      if (context.mounted) showToast(context, saveErrorText(l10n, e));
+                    }
+                  },
+                ),
+                if (church.takesJoinRequests)
+                  ListRow(
+                    title: l10n.churchUrl,
+                    subtitle: displayUrl(churchUrl(church.id)),
+                    chevron: false,
+                    onTap: () => _churchUrlActions(churchUrl(church.id)),
+                  ),
+              ],
+            ),
+          SizedBox(height: Space.l + MediaQuery.paddingOf(context).bottom),
         ],
       ),
     );

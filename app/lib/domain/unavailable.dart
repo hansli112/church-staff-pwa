@@ -70,17 +70,18 @@ class UnavailableDays {
     return UnavailableDays(_sorted([...rest, UnavailableSpan(start, end, note: says)]));
   }
 
-  /// [day] taken out, splitting its stretch in two when it is inside.
-  UnavailableDays without(Day day) {
-    final s = on(day);
-    if (s == null) return this;
+  /// [from] to [to] (or [from] alone) taken out, splitting a stretch in
+  /// two where they are inside it.
+  UnavailableDays without(Day from, [Day? to]) {
+    var (a, b) = (from, to ?? from);
+    if (b.isBefore(a)) (a, b) = (b, a);
     return UnavailableDays([
-      for (final x in spans)
-        if (x != s)
-          x
+      for (final s in spans)
+        if (s.to.isBefore(a) || b.isBefore(s.from))
+          s
         else ...[
-          if (s.from.isBefore(day)) UnavailableSpan(s.from, day.addDays(-1), note: s.note),
-          if (s.to.isAfter(day)) UnavailableSpan(day.addDays(1), s.to, note: s.note),
+          if (s.from.isBefore(a)) UnavailableSpan(s.from, a.addDays(-1), note: s.note),
+          if (s.to.isAfter(b)) UnavailableSpan(b.addDays(1), s.to, note: s.note),
         ],
     ]);
   }

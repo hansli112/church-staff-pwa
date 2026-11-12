@@ -87,10 +87,10 @@
   // 行事曆：只有有沒有連接、連的是哪本。沒有授權。
   "calendar": { "connected": true, "calendarName": "教會行事曆" },
 
-  // 教會連結。fetchMinute 是教會時區午夜後的分鐘數。
+  // 首頁連結。fetchMinute 是教會時區午夜後的分鐘數。
   "churchLink": { "title": "奉獻", "body": "", "url": "https://…", "source": null, "fetchMinute": 270 },
 
-  // 外部通知：網址與開了哪些事件。沒有密鑰。
+  // Webhook：網址與開了哪些事件。沒有密鑰。
   "webhook": { "url": "https://…", "events": { "calendar": true, "roster": false } }
 }
 ```
@@ -99,6 +99,6 @@
 
 ## 不包含
 
-- 推播 token、行事曆的 Google 授權、外部通知的密鑰、邀請碼。
+- 推播 token、行事曆的 Google 授權、Webhook的密鑰、邀請碼。
 - 其他教會的任何資料。
 - 帳號本身（登入方式、密碼）。同工在新的地方要重新註冊。

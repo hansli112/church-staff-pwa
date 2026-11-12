@@ -96,51 +96,37 @@ void main() {
     }
   });
 
-  testWidgets('church info shows the church URL, to copy or share', (tester) async {
-    await pumpApp(tester, seededChurch(as: staffMei));
-    await go(tester, '/me/church');
-    expect(find.text('marthasit-dev.web.app/c/grace'), findsOneWidget);
+  testWidgets('邀請 shows the church URL, to copy or share, while requests are taken', (tester) async {
+    final b = seededChurch();
+    await pumpApp(tester, b);
+    await go(tester, '/me/invites');
     final out = captureOutbox(tester);
     await tapText(tester, '教會網址');
     expect(find.text('分享教會網址'), findsOneWidget);
     await tapText(tester, '複製教會網址');
     expect(out.copied.single, 'https://marthasit-dev.web.app/c/grace');
     expect(find.text('已複製教會網址'), findsOneWidget);
-  });
 
-  testWidgets('an admin sets a shorter home-screen name, and can clear it', (tester) async {
-    final b = seededChurch();
-    await pumpApp(tester, b);
-    await go(tester, '/me/church');
-    expect(find.text('同教會名稱'), findsOneWidget);
-
-    await tapText(tester, '主畫面名稱');
-    await tester.enterText(find.byType(TextField), '恩典堂台北分堂');
-    await tester.pump();
-    expect(find.text('部分手機會被截斷'), findsOneWidget, reason: 'over 6 characters');
-    await tester.enterText(find.byType(TextField), '恩典堂一二三四五六');
-    await tester.pump();
-    expect(tester.widget<TextField>(find.byType(TextField)).controller!.text, '恩典堂一二三四五', reason: 'at most 8');
-    await tester.enterText(find.byType(TextField), '恩典堂');
-    await tester.pump();
-    expect(find.text('部分手機會被截斷'), findsNothing);
-    await tapText(tester, '儲存');
-    expect(b.churches['grace']!.homeName, '恩典堂');
-    expect(find.text('恩典堂'), findsWidgets);
-
-    await tapText(tester, '主畫面名稱');
-    await tester.enterText(find.byType(TextField), '');
-    await tapText(tester, '儲存');
-    expect(b.churches['grace']!.homeName, isNull);
+    await tapText(tester, '開放申請加入');
+    expect(find.text('教會網址'), findsNothing, reason: 'nobody can ask from it');
   });
 
   const iconsStay = 'iPhone 上已經加入的圖示不會跟著更新。換了名稱或 logo 之後，請刪掉圖示再加入一次。';
 
-  testWidgets('only admins see the home-screen name, and that icons on an iPhone keep the old one', (tester) async {
+  testWidgets('church info is about the church: how people join is in 邀請', (tester) async {
+    await pumpApp(tester, seededChurch());
+    await go(tester, '/me/church');
+    for (final gone in ['教會網址', '主畫面名稱', '開放申請加入', 'App 圖示']) {
+      expect(find.text(gone), findsNothing, reason: gone);
+    }
+  });
+
+  testWidgets('only admins are told icons on an iPhone keep the old name and logo', (tester) async {
+    debugDefaultTargetPlatformOverride = TargetPlatform.iOS;
     await pumpApp(tester, seededChurch(as: staffMei));
     await go(tester, '/me/church');
-    expect(find.text('主畫面名稱'), findsNothing);
     expect(find.text(iconsStay), findsNothing);
+    debugDefaultTargetPlatformOverride = null;
   });
 
   testWidgets('away from a phone’s browser, nobody is told to add the app to home', (tester) async {

@@ -569,7 +569,7 @@ void main() {
       expect(icons.icon, isNull);
     });
 
-    testWidgets('教會資訊 › App 圖示 puts it on or away, no subscription needed', (tester) async {
+    testWidgets('我的 › App 圖示 puts it on or away, no subscription needed', (tester) async {
       final icons = FakeIcons();
       await pumpWithStore(
         tester,
@@ -577,8 +577,9 @@ void main() {
         icons,
         backend: seededChurch(as: staffMei, id: zhuwei),
       );
-      GoRouter.of(tester.element(find.byType(Scaffold).first)).go('/me/church');
+      GoRouter.of(tester.element(find.byType(Scaffold).first)).go('/me');
       await settle(tester);
+      await tester.scrollUntilVisible(find.text('App 圖示'), 200, scrollable: find.byType(Scrollable).last);
       await tester.tap(find.text('App 圖示'));
       await settle(tester);
       expect(find.text('紫'), findsNothing, reason: "a supporter's");
@@ -656,7 +657,7 @@ void main() {
       final icons = FakeIcons();
       await pumpWithStore(tester, FakeStore(), icons);
       expect(icons.icon, isNull);
-      GoRouter.of(tester.element(find.byType(Scaffold).first)).go('/me/church');
+      GoRouter.of(tester.element(find.byType(Scaffold).first)).go('/me');
       await settle(tester);
       expect(find.text('App 圖示'), findsNothing);
 
@@ -667,7 +668,7 @@ void main() {
         overrides: [isWebProvider.overrideWithValue(true)],
       );
       await settle(tester);
-      GoRouter.of(tester.element(find.byType(Scaffold).first)).go('/me/church');
+      GoRouter.of(tester.element(find.byType(Scaffold).first)).go('/me');
       await settle(tester);
       expect(find.text('App 圖示'), findsNothing, reason: 'the web app has no home-screen icon');
     });

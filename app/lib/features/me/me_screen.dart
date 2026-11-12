@@ -15,6 +15,7 @@ import '../../l10n/app_localizations.dart';
 import '../../state/providers.dart';
 import '../../state/session.dart';
 import '../church/church_switcher.dart';
+import '../common/labels.dart';
 import '../common/site_pages.dart';
 import 'groups_screen.dart';
 
@@ -148,6 +149,15 @@ class SettingsScreen extends ConsumerWidget {
                 value: AppLanguage.fromTag(ref.watch(profileProvider).value?.locale)?.label ?? l10n.languageSystem,
                 onTap: () => context.push('/me/language'),
               ),
+              // My church's own icon, or the default: no subscription
+              // needed. The store apps only; the web app has none.
+              if (ref.watch(myChurchIconProvider) != null && !ref.watch(isWebProvider))
+                ListRow(
+                  leading: const IconTile(Symbols.apps_rounded, color: TileColors.neutral),
+                  title: l10n.appIcon,
+                  value: appIconName(l10n, ref.watch(currentAppIconProvider).value),
+                  onTap: () => context.push('/me/icon'),
+                ),
             ],
           ),
           // 馬大別忙's own, last as in most apps: supporting it, its guides,

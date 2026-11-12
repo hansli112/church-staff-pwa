@@ -34,6 +34,20 @@ void main() {
     expect(const UnavailableDays().add(_nov(3), _nov(3)).without(_nov(3)).isEmpty, isTrue);
   });
 
+  test('taking days out, either way round, splits or drops each stretch they cross', () {
+    final days = const UnavailableDays().add(_nov(3), _nov(5)).add(_nov(10), _nov(20), note: '出國');
+    expect(days.without(_nov(15), _nov(4)).spans, [
+      UnavailableSpan(_nov(3), _nov(3)),
+      UnavailableSpan(_nov(16), _nov(20), note: '出國'),
+    ]);
+    expect(days.without(_nov(12), _nov(13)).spans, [
+      UnavailableSpan(_nov(3), _nov(5)),
+      UnavailableSpan(_nov(10), _nov(11), note: '出國'),
+      UnavailableSpan(_nov(14), _nov(20), note: '出國'),
+    ]);
+    expect(days.without(_nov(1), _nov(30)).isEmpty, isTrue);
+  });
+
   test('a stretch is noted or taken out whole', () {
     final days = const UnavailableDays().add(_nov(20), _nov(25)).add(_nov(3), _nov(3));
     final trip = days.spans.last;

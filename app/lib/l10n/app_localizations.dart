@@ -2788,30 +2788,6 @@ abstract class L10n {
   /// **'分享教會網址'**
   String get churchUrlShare;
 
-  /// No description provided for @homeName.
-  ///
-  /// In zh, this message translates to:
-  /// **'主畫面名稱'**
-  String get homeName;
-
-  /// No description provided for @homeNameUnset.
-  ///
-  /// In zh, this message translates to:
-  /// **'同教會名稱'**
-  String get homeNameUnset;
-
-  /// No description provided for @homeNameMayBeCut.
-  ///
-  /// In zh, this message translates to:
-  /// **'部分手機會被截斷'**
-  String get homeNameMayBeCut;
-
-  /// No description provided for @homeNameFooter.
-  ///
-  /// In zh, this message translates to:
-  /// **'加入主畫面時，圖示下方顯示的名字。留空就用教會名稱。'**
-  String get homeNameFooter;
-
   /// No description provided for @addToHome.
   ///
   /// In zh, this message translates to:
@@ -3115,7 +3091,7 @@ abstract class L10n {
   /// No description provided for @churchLink.
   ///
   /// In zh, this message translates to:
-  /// **'教會連結'**
+  /// **'首頁連結'**
   String get churchLink;
 
   /// No description provided for @churchLinkNone.
@@ -3123,6 +3099,12 @@ abstract class L10n {
   /// In zh, this message translates to:
   /// **'未設定'**
   String get churchLinkNone;
+
+  /// No description provided for @churchLinkPreview.
+  ///
+  /// In zh, this message translates to:
+  /// **'同工的首頁最上面會這樣顯示'**
+  String get churchLinkPreview;
 
   /// No description provided for @churchLinkTitle.
   ///
@@ -3154,22 +3136,16 @@ abstract class L10n {
   /// **'請輸入 https:// 開頭的連結'**
   String get churchLinkNeedsHttps;
 
-  /// No description provided for @churchLinkFooter.
-  ///
-  /// In zh, this message translates to:
-  /// **'顯示在每位同工首頁的最上方'**
-  String get churchLinkFooter;
-
   /// No description provided for @churchLinkRemove.
   ///
   /// In zh, this message translates to:
-  /// **'移除教會連結'**
+  /// **'移除首頁連結'**
   String get churchLinkRemove;
 
   /// No description provided for @churchLinkRemoved.
   ///
   /// In zh, this message translates to:
-  /// **'已移除教會連結'**
+  /// **'已移除首頁連結'**
   String get churchLinkRemoved;
 
   /// No description provided for @churchLinkOpens.
@@ -3181,13 +3157,13 @@ abstract class L10n {
   /// No description provided for @linkSource.
   ///
   /// In zh, this message translates to:
-  /// **'每日內容來源（選填）'**
+  /// **'每天自動換內容（選填）'**
   String get linkSource;
 
   /// No description provided for @linkSourceUrl.
   ///
   /// In zh, this message translates to:
-  /// **'JSON 網址'**
+  /// **'內容網址（JSON）'**
   String get linkSourceUrl;
 
   /// No description provided for @linkFetchTime.
@@ -3199,7 +3175,7 @@ abstract class L10n {
   /// No description provided for @linkSourceFooter.
   ///
   /// In zh, this message translates to:
-  /// **'JSON 要有 date（YYYY-MM-DD）、title、body、link'**
+  /// **'每天在設定的時間抓一次，換上當天的標題、敘述和連結。JSON 要有 date（YYYY-MM-DD）、title、body、link'**
   String get linkSourceFooter;
 
   /// No description provided for @linkSourceUpdated.
@@ -3265,8 +3241,14 @@ abstract class L10n {
   /// No description provided for @webhook.
   ///
   /// In zh, this message translates to:
-  /// **'外部通知'**
+  /// **'串接其他系統'**
   String get webhook;
+
+  /// No description provided for @webhookRowSub.
+  ///
+  /// In zh, this message translates to:
+  /// **'例如把異動轉到 LINE 群組'**
+  String get webhookRowSub;
 
   /// No description provided for @webhookUrl.
   ///
@@ -3319,7 +3301,7 @@ abstract class L10n {
   /// No description provided for @webhookFooter.
   ///
   /// In zh, this message translates to:
-  /// **'行事曆或服事表有異動時，送通知到這個網址，例如交給 n8n 轉發到 LINE 群組'**
+  /// **'行事曆或服事表有異動時，送一則通知（Webhook）到你填的網址。要有人用 n8n、Make 之類的工具接收，才能轉到 LINE 群組或其他地方。'**
   String get webhookFooter;
 
   /// No description provided for @webhookTest.
@@ -3415,13 +3397,13 @@ abstract class L10n {
   /// No description provided for @webhookOff.
   ///
   /// In zh, this message translates to:
-  /// **'關閉外部通知'**
+  /// **'停止串接'**
   String get webhookOff;
 
   /// No description provided for @webhookOffTitle.
   ///
   /// In zh, this message translates to:
-  /// **'關閉外部通知？'**
+  /// **'停止串接？'**
   String get webhookOffTitle;
 
   /// No description provided for @webhookOffMessage.
@@ -3433,7 +3415,7 @@ abstract class L10n {
   /// No description provided for @webhookOffAction.
   ///
   /// In zh, this message translates to:
-  /// **'關閉'**
+  /// **'停止'**
   String get webhookOffAction;
 
   /// No description provided for @exportData.
@@ -5806,29 +5788,11 @@ abstract class L10n {
   /// **'不能服事的日子'**
   String get unavailableTitle;
 
-  /// Above the months on the page of days a member can't serve
+  /// Under the month on the page of days a member can't serve
   ///
   /// In zh, this message translates to:
-  /// **'點一天標記整天不能服事，再點一次取消；按住拖過幾天，標記一段期間。只有排服事的人看得到。'**
+  /// **'點一天標記，再點一次取消；拖過幾天，一次標好或取消。只有排服事的人看得到。'**
   String get unavailableHint;
-
-  /// Row: marks several days by picking the first and last, without dragging
-  ///
-  /// In zh, this message translates to:
-  /// **'加一段期間'**
-  String get unavailableAddRange;
-
-  /// No description provided for @unavailableFirstDay.
-  ///
-  /// In zh, this message translates to:
-  /// **'從哪一天'**
-  String get unavailableFirstDay;
-
-  /// No description provided for @unavailableLastDay.
-  ///
-  /// In zh, this message translates to:
-  /// **'到哪一天'**
-  String get unavailableLastDay;
 
   /// Header over the stretches a member has marked
   ///

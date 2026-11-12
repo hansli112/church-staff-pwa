@@ -184,9 +184,6 @@ const _rosterKeys = {
 const _churchInfoKeys = {
   'churchInfo',
   'churchLogo',
-  'churchUrl',
-  'homeName',
-  'homeNameUnset',
   'timeZone',
   'cityAuckland',
   'citySydney',
@@ -220,14 +217,13 @@ const _churchInfoKeys = {
   'churchLink',
   'churchLinkNone',
   'webhook',
+  'webhookRowSub',
   'uploadLogo',
   'changeLogo',
   'exportData',
   'adminCannotLeave',
   'deleteChurch',
   'leaveChurch',
-  'takesJoinRequests',
-  'takesJoinRequestsFooter',
 };
 
 Set<String>? _initialKeys(Uri location, [int depth = 0]) {

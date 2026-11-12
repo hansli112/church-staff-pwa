@@ -1,3 +1,6 @@
+import 'dart:async';
+
+import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -23,8 +26,8 @@ const _months = 12;
 
 /// 不能服事的日子 (#91): the days I cannot serve, whole days in every
 /// service, a month at a time over the next [_months]. A tap marks a day or
-/// clears it; held and dragged, a stretch.
-/// Each change is kept at once. Only those who arrange rosters see them,
+/// clears it; a drag marks the days it crosses, or clears them when it
+/// starts on a marked one. Each change shows at once and is kept in turn. Only those who arrange rosters see them,
 /// with what I wrote about each stretch.
 class UnavailableScreen extends ConsumerStatefulWidget {
   const UnavailableScreen({super.key});
@@ -34,9 +37,13 @@ class UnavailableScreen extends ConsumerStatefulWidget {
 }
 
 class _UnavailableScreenState extends ConsumerState<UnavailableScreen> {
-  /// What was last changed here, shown before the backend has it; null
-  /// once it does.
+  /// What was last changed here, shown until the backend's days are the
+  /// same: they come back after the save, sometimes well after.
   UnavailableDays? _shown;
+
+  /// The save on its way, if any. The next waits for it, so they land in
+  /// order, and one overtaken while waiting is left to the next.
+  Future<void>? _writing;
 
   /// Which month shows: this one, or so many after it.
   var _page = 0;
@@ -44,21 +51,42 @@ class _UnavailableScreenState extends ConsumerState<UnavailableScreen> {
   UnavailableDays get _days => _shown ?? ref.read(myUnavailableDaysProvider).value ?? const UnavailableDays();
 
   /// Keeps [next] (what is past dropped), showing it at once; put back as
-  /// it was when it is refused.
+  /// the backend has it when it is refused.
   Future<bool> _save(UnavailableDays next) async {
     final l10n = L10n.of(context);
+    final data = ref.churchData;
+    final telemetry = ref.read(telemetryProvider);
     final kept = next.since(ref.read(todayProvider));
     setState(() => _shown = kept);
-    final telemetry = ref.read(telemetryProvider);
+    final before = _writing;
+    final done = Completer<void>();
+    _writing = done.future;
     try {
-      await ref.churchData.saveMyUnavailableDays(kept);
+      await before;
+      if (!identical(_shown, kept)) return true;
+      await data.saveMyUnavailableDays(kept);
       telemetry.logEvent('unavailable_set');
       return true;
     } catch (e) {
-      if (mounted) showToast(context, errorText(l10n, e));
+      if (mounted) {
+        showToast(context, errorText(l10n, e));
+        if (identical(_shown, kept)) setState(() => _shown = null);
+      }
       return false;
     } finally {
-      if (mounted && identical(_shown, kept)) setState(() => _shown = null);
+      done.complete();
+      if (identical(_writing, done.future)) _writing = null;
+      _settle();
+    }
+  }
+
+  /// Back to the backend's days once nothing is on its way and they are
+  /// what was last shown.
+  void _settle() {
+    final shown = _shown;
+    if (!mounted || shown == null || _writing != null) return;
+    if (ref.read(myUnavailableDaysProvider).value?.since(ref.read(todayProvider)) == shown) {
+      setState(() => _shown = null);
     }
   }
 
@@ -68,33 +96,9 @@ class _UnavailableScreenState extends ConsumerState<UnavailableScreen> {
     _save(days.on(day) == null ? days.add(day, day) : days.without(day));
   }
 
-  void _mark(Day from, Day to) {
+  void _drag(Day from, Day to, {required bool clear}) {
     Haptics.success();
-    _save(_days.add(from, to));
-  }
-
-  /// 加一段期間: the first day and the last, without dragging.
-  Future<void> _addRange(Day today) async {
-    final l10n = L10n.of(context);
-    final last = Day(today.year, today.month + _months, 1).addDays(-1);
-    final first = await pickDay(
-      context,
-      title: l10n.unavailableFirstDay,
-      initial: today.midnight,
-      first: today.midnight,
-      last: last.midnight,
-    );
-    if (first == null || !mounted) return;
-    final from = Day(first.year, first.month, first.day);
-    final end = await pickDay(
-      context,
-      title: l10n.unavailableLastDay,
-      initial: first,
-      first: first,
-      last: last.midnight,
-    );
-    if (end == null || !mounted) return;
-    _mark(from, Day(end.year, end.month, end.day));
+    _save(clear ? _days.without(from, to) : _days.add(from, to));
   }
 
   Future<void> _note(UnavailableSpan span) async {
@@ -140,6 +144,7 @@ class _UnavailableScreenState extends ConsumerState<UnavailableScreen> {
         if (days.during(s.roster.day, s.roster.lastDay) != null && !s.roster.lastDay.isBefore(today)) s,
     ];
     final services = ref.watch(servicesProvider).value;
+    ref.listen(myUnavailableDaysProvider, (_, _) => _settle());
     // What 找人代 says of a day already asked about (#92).
     ref.watch(myOpenSwapRequestsProvider);
     return Scaffold(
@@ -158,20 +163,17 @@ class _UnavailableScreenState extends ConsumerState<UnavailableScreen> {
                   today: today,
                   days: days,
                   onTap: _toggle,
-                  onMark: _mark,
+                  onDrag: _drag,
                   onShift: (by) => setState(() => _page = (_page + by).clamp(0, _months - 1).toInt()),
                   first: _page == 0,
                   last: _page == _months - 1,
                 ),
-                ListSection(
-                  footer: l10n.unavailableHint,
-                  children: [
-                    ListRow(
-                      leading: const Icon(Symbols.date_range_rounded),
-                      title: l10n.unavailableAddRange,
-                      onTap: () => _addRange(today),
-                    ),
-                  ],
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(Space.l, Space.s, Space.l, Space.m),
+                  child: Text(
+                    l10n.unavailableHint,
+                    style: AppText.footnote.copyWith(color: AppColors.of(context).secondaryLabel),
+                  ),
                 ),
                 if (serving.isNotEmpty)
                   ListSection(
@@ -227,8 +229,10 @@ class _UnavailableScreenState extends ConsumerState<UnavailableScreen> {
 }
 
 /// One month of days to mark, with arrows to the others: a tap marks or
-/// clears a day; held, the finger marks the days it passes over, in this
-/// month. Days gone by are only shown. One month at a time, above what it
+/// clears a day; a finger dragged marks the days it passes over in this
+/// month, or clears them when it starts on a marked day. The days take the
+/// finger at once, so the page does not scroll from them; a tap is one day
+/// dragged over. Days gone by are only shown. One month at a time, above what it
 /// lists: a list growing above the days would move them under the finger.
 class _Month extends StatefulWidget {
   const _Month({
@@ -236,7 +240,7 @@ class _Month extends StatefulWidget {
     required this.today,
     required this.days,
     required this.onTap,
-    required this.onMark,
+    required this.onDrag,
     required this.onShift,
     required this.first,
     required this.last,
@@ -247,7 +251,9 @@ class _Month extends StatefulWidget {
   final Day today;
   final UnavailableDays days;
   final ValueChanged<Day> onTap;
-  final void Function(Day from, Day to) onMark;
+
+  /// [from] to [to] dragged over: to clear when it started on a marked day.
+  final void Function(Day from, Day to, {required bool clear}) onDrag;
 
   /// To the month before (-1) or after (1); none before [first] or after
   /// [last].
@@ -260,9 +266,10 @@ class _Month extends StatefulWidget {
 }
 
 class _MonthState extends State<_Month> {
-  /// Where a held finger started and where it is now.
+  /// Where the finger started and where it is now, and whether it clears.
   Day? _from;
   Day? _to;
+  var _clearing = false;
 
   bool _marking(Day day) {
     final (from, to) = (_from, _to);
@@ -338,28 +345,33 @@ class _MonthState extends State<_Month> {
           LayoutBuilder(
             builder: (context, constraints) {
               final width = constraints.maxWidth;
-              return GestureDetector(
-                onTapUp: (d) {
-                  if (dayAt(d.localPosition, width) case final day?) widget.onTap(day);
+              return RawGestureDetector(
+                gestures: {
+                  _EagerPan: GestureRecognizerFactoryWithHandlers<_EagerPan>(_EagerPan.new, (pan) {
+                    pan
+                      ..onStart = (d) {
+                        final day = dayAt(d.localPosition, width);
+                        if (day == null) return;
+                        setState(() {
+                          _from = _to = day;
+                          _clearing = widget.days.on(day) != null;
+                        });
+                      }
+                      ..onUpdate = (d) {
+                        final day = dayAt(d.localPosition, width);
+                        if (_from == null || day == null || day == _to) return;
+                        Haptics.selection();
+                        setState(() => _to = day);
+                      }
+                      ..onEnd = (_) {
+                        final (from, to, clear) = (_from, _to, _clearing);
+                        setState(() => _from = _to = null);
+                        if (from == null || to == null) return;
+                        from == to ? widget.onTap(from) : widget.onDrag(from, to, clear: clear);
+                      }
+                      ..onCancel = () => setState(() => _from = _to = null);
+                  }),
                 },
-                onLongPressStart: (d) {
-                  final day = dayAt(d.localPosition, width);
-                  if (day == null) return;
-                  Haptics.selection();
-                  setState(() => _from = _to = day);
-                },
-                onLongPressMoveUpdate: (d) {
-                  final day = dayAt(d.localPosition, width);
-                  if (day == null || day == _to) return;
-                  Haptics.selection();
-                  setState(() => _to = day);
-                },
-                onLongPressEnd: (_) {
-                  final (from, to) = (_from, _to);
-                  setState(() => _from = _to = null);
-                  if (from != null && to != null) widget.onMark(from, to);
-                },
-                onLongPressCancel: () => setState(() => _from = _to = null),
                 child: Column(
                   children: [
                     for (var w = 0; w < weeks; w++)
@@ -385,7 +397,7 @@ class _MonthState extends State<_Month> {
   Widget _cell(BuildContext context, L10n l10n, AppColors c, Day day, {required int column}) {
     if (day.month != widget.month.month) return const SizedBox.shrink();
     final past = day.isBefore(widget.today);
-    bool on(Day d) => d.month == day.month && (widget.days.on(d) != null || _marking(d));
+    bool on(Day d) => d.month == day.month && (_marking(d) ? !_clearing : widget.days.on(d) != null);
     final marked = !past && on(day);
     // A stretch reads as one band: round only where it starts and ends.
     final joinsBefore = marked && column > 0 && on(day.addDays(-1));
@@ -418,5 +430,19 @@ class _MonthState extends State<_Month> {
         ),
       ),
     );
+  }
+}
+
+/// A drag that takes the pointer as soon as it is down: the page around
+/// would otherwise take a drag down the month as a scroll.
+class _EagerPan extends PanGestureRecognizer {
+  _EagerPan() {
+    dragStartBehavior = DragStartBehavior.down;
+  }
+
+  @override
+  void addAllowedPointer(PointerDownEvent event) {
+    super.addAllowedPointer(event);
+    resolve(GestureDisposition.accepted);
   }
 }
