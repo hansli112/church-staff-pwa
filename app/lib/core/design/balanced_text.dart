@@ -215,7 +215,18 @@ class _RenderBalanced extends RenderShiftedBox {
   @override
   double computeMaxIntrinsicWidth(double height) => _intrinsic(true);
 
-  double? _width(BoxConstraints constraints) => constraints.hasBoundedWidth
+  /// Whether [plain] is sure to fit on one line in [maxWidth], told
+  /// without laying it out: no character takes more than 1.3 em, an emoji
+  /// (two UTF-16 units) 2.6. A name in a list, its line under it: a sheet
+  /// of them opens a frame sooner without measuring each twice more.
+  bool _surelyOneLine(double maxWidth) {
+    if (plain.contains('\n')) return false;
+    final em = textScaler.scale(style.fontSize ?? 14);
+    final spacing = textScaler.scale((style.letterSpacing ?? 0).abs() + (style.wordSpacing ?? 0).abs());
+    return plain.length * (em * 1.3 + spacing) <= maxWidth;
+  }
+
+  double? _width(BoxConstraints constraints) => constraints.hasBoundedWidth && !_surelyOneLine(constraints.maxWidth)
       ? (centered ? balancedWidth : paragraphWidth)(
           text,
           style: style,
@@ -266,6 +277,7 @@ class _RenderBalanced extends RenderShiftedBox {
   /// that would end inside a phrase ending at a punctuation mark.
   String _startAligned(double? width) {
     if (!constraints.hasBoundedWidth) return text;
+    if (_surelyOneLine(constraints.maxWidth)) return plain;
     final lines = _Lines(text, style, textScaler, direction);
     try {
       if (lines.endsAt(constraints.maxWidth).length <= 1) return plain;

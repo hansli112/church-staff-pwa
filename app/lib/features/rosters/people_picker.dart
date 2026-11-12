@@ -340,12 +340,33 @@ class _PeoplePickerState extends State<PeoplePicker> {
   bool _matches(String name, String query) =>
       query.isEmpty || _keys.putIfAbsent(name, () => nameKey(name)).contains(query);
 
+  /// Who is on the duty that day, as the picker opened: listed first, so
+  /// the ticks are in sight. Fixed while it is open; a tap moves no row.
+  late final _onDay = widget.initial.toSet();
+
+  /// A row for [name], one of [_onDay]: a name arranged this once, one
+  /// on the duty's list, or another 同工.
+  Widget _onDayRow(String name, AppColors c, L10n l10n) {
+    if (widget.initialGuests.contains(name)) return _guestRow(name, c, l10n);
+    if (!_serving.contains(name)) {
+      if (_others.where((m) => m.name == name).firstOrNull case final m?) {
+        return _row(name, c, note: widget.notes[name], onTap: () => _pickOther(m));
+      }
+      return _guestRow(name, c, l10n);
+    }
+    return _row(name, c, note: widget.notes[name], onTap: () => _choose(name));
+  }
+
   Widget _list(L10n l10n, AppColors c) {
     final q = nameKey(_query);
     final servingSet = _serving.toSet();
+    final onDay = [
+      for (final n in widget.initial)
+        if (_matches(n, q)) n,
+    ];
     final serving = _unavailableLast([
       for (final n in _serving)
-        if (_matches(n, q)) n,
+        if (_matches(n, q) && !_onDay.contains(n)) n,
     ], (n) => n);
     final searching = q.isNotEmpty;
     // Nobody serves this duty yet (a new church): offer everyone rather
@@ -354,7 +375,10 @@ class _PeoplePickerState extends State<PeoplePicker> {
     final everyone = searching || _serving.isEmpty;
     final others = _unavailableLast([
       for (final m in _others)
-        if (!servingSet.contains(m.name) && (everyone ? _matches(m.name, q) : _selected.contains(m.name))) m,
+        if (!servingSet.contains(m.name) &&
+            !_onDay.contains(m.name) &&
+            (everyone ? _matches(m.name, q) : _selected.contains(m.name)))
+          m,
     ], (m) => m.name);
     final typed = _query.trim();
     // Guests are an explicit separate choice, even when a member shares a name.
@@ -363,17 +387,21 @@ class _PeoplePickerState extends State<PeoplePicker> {
       ..._guests,
       for (final n in _selected)
         if (!_serving.contains(n) && !_others.any((m) => m.name == n)) n,
-    }.where((n) => _matches(n, q)).toList();
+    }.where((n) => _matches(n, q) && !_onDay.contains(n)).toList();
     final typedIsKnown =
         typed.isEmpty ||
+        onDay.contains(typed) ||
         serving.contains(typed) ||
         others.any((m) => m.name == typed) ||
         guests.contains(typed) ||
         _selected.contains(typed);
 
     final rows = <Widget Function()>[];
-    if (serving.isNotEmpty) {
+    if (onDay.isNotEmpty || serving.isNotEmpty) {
       rows.add(() => SectionHeader(l10n.pickerServes(widget.duty)));
+      for (final n in onDay) {
+        rows.add(() => _onDayRow(n, c, l10n));
+      }
       for (final n in serving) {
         rows.add(() => _row(n, c, note: widget.notes[n], onTap: () => _choose(n)));
       }

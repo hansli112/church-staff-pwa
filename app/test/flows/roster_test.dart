@@ -8,6 +8,7 @@ import 'package:martha/data/memory/memory_backend.dart';
 import 'package:martha/domain/day.dart';
 import 'package:martha/domain/models.dart';
 import 'package:martha/features/rosters/editable_roster.dart';
+import 'package:martha/features/rosters/people_picker.dart';
 import 'package:martha/features/rosters/roster_card.dart';
 import 'package:martha/state/session.dart';
 
@@ -181,7 +182,7 @@ void main() {
   });
 
   group('arranging', () {
-    testWidgets('picker lists people who serve the duty, in staff order', (tester) async {
+    testWidgets('picker lists who is on the day first, then the rest who serve the duty', (tester) async {
       final b = seededChurch();
       await pumpApp(tester, b);
       await go(tester, '/rosters/sunday/2026-10-11');
@@ -189,7 +190,7 @@ void main() {
       expect(find.text('排過招待的人'), findsOneWidget);
       final hao = tester.getTopLeft(find.text('陳志豪').last).dy;
       final mei = tester.getTopLeft(find.text('李美玉').last).dy;
-      expect(hao < mei, isTrue, reason: 'staff order puts 陳志豪 first');
+      expect(mei < hao, isTrue, reason: 'on the day: first, though staff order puts 陳志豪 first');
       expect(find.text('John Chen'), findsNothing, reason: 'does not serve 招待');
 
       await tapText(tester, '陳志豪');
@@ -423,7 +424,11 @@ void main() {
       await tapText(tester, '找其他人');
       await tester.enterText(find.byType(TextField), '美玉');
       await settle(tester);
-      expect(find.text('其他同工'), findsOneWidget, reason: 'off the list, still in the church');
+      expect(
+        find.descendant(of: find.byType(PeoplePicker), matching: find.text('李美玉')),
+        findsOneWidget,
+        reason: 'off the list, still in the church',
+      );
       await tapText(tester, '完成');
       expect(b.members['grace']!['mei']!.serves('sunday', '招待'), isFalse);
       expect(b.members['grace']!['mei']!.serves('sunday', '司琴'), isTrue);
@@ -562,6 +567,32 @@ void main() {
       expect(tester.getSemantics(find.text('John Chen')).flagsCollection.isSelected, Tristate.isTrue);
       await tapText(tester, '完成');
       expect(peopleOn(b, 11, '招待'), unorderedEquals(['李美玉', 'John Chen']));
+    });
+
+    testWidgets('who is on the day comes first, ticked; unticked, they stay where they were', (tester) async {
+      final many = [
+        for (var i = 0; i < 20; i++)
+          Member(
+            uid: 'u$i',
+            name: '同工$i',
+            zones: const [
+              Zone(serviceType: 'sunday', duties: ['招待']),
+            ],
+          ),
+      ];
+      final b = seededChurch(extra: many);
+      await pumpApp(tester, b);
+      await go(tester, '/rosters/sunday/2026-10-11');
+      await tapText(tester, '招待');
+      await tester.scrollUntilVisible(find.text('同工19'), 300, scrollable: find.byType(Scrollable).last);
+      await tapText(tester, '同工19');
+      await tapText(tester, '完成');
+      await tapText(tester, '招待');
+      final first = tester.getTopLeft(find.text('同工19').last).dy;
+      expect(first, lessThan(tester.getTopLeft(find.text('同工0').last).dy));
+      expect(tester.getSemantics(find.text('同工19').last).flagsCollection.isSelected, Tristate.isTrue);
+      await tapText(tester, '同工19');
+      expect(tester.getTopLeft(find.text('同工19').last).dy, first);
     });
 
     testWidgets('on a duty of one, tapping whoever is ticked unticks them, and the picker stays', (tester) async {
