@@ -1620,6 +1620,26 @@ void contractTests(Future<ContractWorld> Function() open) {
       },
     );
 
+    test("a service's 負責人 adds one by name, who is claimed by name on joining", () async {
+      final g = await Grace.open(w);
+      await w.signIn(Grace.editorEmail);
+      await expectLater(g.church.addByName('王小明', 'youth'), denied());
+      final id = await g.church.addByName(' 王小明 ', 'sunday');
+      await expectLater(g.church.addByName('王小明', 'sunday'), fails(CloudErrorCode.duplicateName));
+      await expectLater(g.church.addByName('李美玉', 'sunday'), fails(CloudErrorCode.duplicateName));
+      final added = (await g.church.pendingMembers().firstWhere((p) => p.isNotEmpty)).single;
+      expect((added.id, added.name, added.email), (id, '王小明', ''));
+      expect(added.zones, const [Zone(serviceType: 'sunday')]);
+      await w.signIn(Grace.meiEmail);
+      await expectLater(g.church.addByName('陳小華', 'sunday'), denied());
+
+      await w.signIn(Grace.pastorEmail);
+      final invite = await g.church.createInvite(validFor: const Duration(days: 7));
+      await w.signUp('ming@example.com', name: '王小明');
+      await g.cloud.redeemInvite(invite.code);
+      expect((await cloud().pendingClaims()).map((c) => (c.pendingId, c.byName)), [(id, true)]);
+    });
+
     test('an admin merges one into a member, who keeps their role and gains the rest', () async {
       final g = await moved();
       await g.church.putMember(

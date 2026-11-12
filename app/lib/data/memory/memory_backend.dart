@@ -1699,6 +1699,35 @@ class MemoryChurchData implements ChurchData {
       Member(uid: p.id, name: p.name, role: p.role, groups: p.groups, zones: p.zones, smallGroups: p.smallGroups);
 
   @override
+  Future<String> addByName(String name, String serviceType) async {
+    var id = '';
+    await _b.write(() {
+      // As functions/src/groupMembers.ts addByName.
+      final me = _b.requireMember(churchId);
+      final named = _text(name, TextLimits.profileName);
+      if (_b.services[churchId]!.byId(serviceType) == null ||
+          !me.mayMove(const Member(uid: '', name: ''), ServiceGroup(serviceType))) {
+        throw const CloudException(CloudErrorCode.permissionDenied);
+      }
+      final key = nameKey(named);
+      final pending = _b.pendingMembers[churchId] ??= {};
+      if ([
+        ..._b.members[churchId]!.values.map((m) => m.name),
+        ...pending.values.map((p) => p.name),
+      ].any((n) => nameKey(n) == key)) {
+        throw const CloudException(CloudErrorCode.duplicateName);
+      }
+      id = 'named-${pending.length + 1}-${_b.clock().microsecondsSinceEpoch}';
+      pending[id] = PendingMember(
+        id: id,
+        name: named,
+        zones: [Zone(serviceType: serviceType)],
+      );
+    });
+    return id;
+  }
+
+  @override
   Future<void> grantDuty(String uid, String serviceType, String duty) =>
       _setDuty(uid, serviceType, duty, (m) => m.withDuty(serviceType, duty), granting: true);
 

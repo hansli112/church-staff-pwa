@@ -72,4 +72,34 @@ void main() {
     await tapText(tester, '司會');
     expect(b.pendingMembers['grace']!['old-huang']!.zones.single.duties, ['招待', '司會']);
   });
+
+  testWidgets('加入同工 adds someone not in the church by name, and goes on to what they serve', (tester) async {
+    final b = church(as: editor);
+    await pumpApp(tester, b);
+    await go(tester, '/me/groups/service/sunday');
+    await tester.scrollUntilVisible(find.text('4 人'), 200, scrollable: find.byType(Scrollable).last);
+    await tapText(tester, '4 人');
+    await tapText(tester, '加入同工');
+    await tester.enterText(find.byType(TextField).last, '黃鎮台');
+    await settle(tester);
+    expect(find.textContaining('新增「'), findsNothing, reason: 'a name someone here has');
+    await tester.enterText(find.byType(TextField).last, '王小明');
+    await settle(tester);
+    await tapText(tester, '新增「王小明」');
+    final added = b.pendingMembers['grace']!.values.singleWhere((p) => p.name == '王小明');
+    expect(added.zones.single.serviceType, 'sunday');
+    await tapText(tester, '服事項目');
+    await tapText(tester, '招待');
+    expect(b.pendingMembers['grace']![added.id]!.zones.single.duties, ['招待']);
+  });
+
+  testWidgets('a name typed in the picker is for this once, not a 同工', (tester) async {
+    final b = church(as: editor);
+    await pumpApp(tester, b);
+    await go(tester, '/rosters/sunday/2026-10-11');
+    await tapText(tester, '招待');
+    await tester.enterText(find.byType(TextField).last, '張講員');
+    await settle(tester);
+    expect(find.text('只排這一次'), findsOneWidget);
+  });
 }

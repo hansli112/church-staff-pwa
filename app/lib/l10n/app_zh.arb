@@ -232,7 +232,7 @@
       }
     }
   },
-  "pickerUseNameDetail": "無帳號的名字",
+  "pickerUseNameDetail": "只排這一次",
   "pickerNoOneServes": "還沒有人負責{duty}",
   "@pickerNoOneServes": {
     "placeholders": {
@@ -1874,7 +1874,7 @@
   "@rosterShowPrevious": { "description": "服事表 tab: shows the saved day before the ones listed, one at a time" },
   "rosterNoEarlier": "沒有更早的服事表",
   "@rosterNoEarlier": { "description": "服事表 tab: in place of rosterShowPrevious once no earlier day is saved" },
-  "pickerGuestNames": "無帳號的名字",
+  "pickerGuestNames": "臨時排過的人",
   "serviceSettingsSaved": "已更新聚會",
   "serviceSyncOriginalEvent": "原本的特別活動",
   "serviceSyncOriginalDuty": "原本的服事項目",

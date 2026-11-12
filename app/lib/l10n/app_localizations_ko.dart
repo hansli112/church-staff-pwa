@@ -382,7 +382,7 @@ class L10nKo extends L10n {
   }
 
   @override
-  String get pickerUseNameDetail => '계정 없는 이름';
+  String get pickerUseNameDetail => '이번만';
 
   @override
   String pickerNoOneServes(String duty) {
@@ -2484,7 +2484,7 @@ class L10nKo extends L10n {
   String get rosterNoEarlier => '이전 봉사표가 없어요';
 
   @override
-  String get pickerGuestNames => '계정 없는 이름';
+  String get pickerGuestNames => '임시로 넣은 사람';
 
   @override
   String get serviceSettingsSaved => '예배를 변경했어요';

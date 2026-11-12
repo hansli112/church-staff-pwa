@@ -271,13 +271,15 @@ class GroupStaffSections extends ConsumerWidget {
     if (me == null || members == null) return const SizedBox.shrink();
     String? lineOf(List<String> parts) => parts.isEmpty ? null : parts.join(l10n.dotSeparator);
     final (:staff, :addable, :candidates) = groupPeople(ref, me, members, group);
-    final add = addable.isEmpty
+    // A service's takes someone new by name too, who may add a plain 同工.
+    final byName = group is ServiceGroup && me.mayMove(const Member(uid: '', name: ''), group);
+    final add = addable.isEmpty && !byName
         ? null
         : ListRow(
             title: l10n.addGroupStaff,
             leading: const Icon(Symbols.add_rounded),
             chevron: false,
-            onTap: () => _add(context, ref, addable),
+            onTap: () => _add(context, ref, addable, everyone: members, byName: byName),
           );
     final shownStaff = [
       for (final m in staff)
@@ -360,28 +362,42 @@ class GroupStaffSections extends ConsumerWidget {
     );
   }
 
-  /// 加入同工: anyone in the church this lead may add, picked from a list.
-  Future<void> _add(BuildContext context, WidgetRef ref, List<Member> addable) async {
+  /// 加入同工: anyone in the church this lead may add, picked from a list
+  /// with a search; or, [byName], someone nobody here is named, who does not
+  /// use the app (addByName). Then what they serve there.
+  Future<void> _add(
+    BuildContext context,
+    WidgetRef ref,
+    List<Member> addable, {
+    required List<Member> everyone,
+    required bool byName,
+  }) async {
     final l10n = L10n.of(context);
-    final picked = await showAppSheet<Member>(
+    final picked = await showAppSheet<Object>(
       context,
-      expand: addable.length > 8,
-      builder: (context) => SafeArea(
-        child: SingleChildScrollView(
-          child: ListSection(
-            header: l10n.addGroupStaff,
-            children: [for (final m in addable) ListRow(title: m.name, onTap: () => Navigator.pop(context, m))],
-          ),
-        ),
-      ),
+      expand: true,
+      builder: (context) => _AddStaffSheet(addable: addable, everyone: everyone, byName: byName),
     );
-    if (picked == null || !context.mounted) return;
-    final added = await runWithUndo(
-      context,
-      l10n.addedToGroup(picked.name, name),
-      () => ref.read(churchWritesProvider).groupMember(picked, group, member: true),
-    );
-    if (added && group is ServiceGroup && context.mounted) await _edit(context, picked);
+    if (!context.mounted) return;
+    switch (picked) {
+      case final Member m:
+        final added = await runWithUndo(
+          context,
+          l10n.addedToGroup(m.name, name),
+          () => ref.read(churchWritesProvider).groupMember(m, group, member: true),
+        );
+        if (added && group is ServiceGroup && context.mounted) await _edit(context, m);
+      case final String typed:
+        try {
+          final id = await ref.churchData.addByName(typed, group.id);
+          if (!context.mounted) return;
+          Haptics.success();
+          showToast(context, l10n.addedToGroup(typed, name));
+          await _edit(context, Member(uid: id, name: typed));
+        } catch (e) {
+          if (context.mounted) showToast(context, saveErrorText(l10n, e));
+        }
+    }
   }
 
   /// What [person] serves in this service and their 小組 in it, each
@@ -422,6 +438,61 @@ class GroupStaffSections extends ConsumerWidget {
       ),
     ),
   );
+}
+
+/// 加入同工's list: those who may be added, narrowed by a search; with
+/// [byName], a name nobody in [everyone] has is offered as someone new.
+/// Closes with the [Member] picked, or the name typed.
+class _AddStaffSheet extends StatefulWidget {
+  const _AddStaffSheet({required this.addable, required this.everyone, required this.byName});
+
+  final List<Member> addable;
+  final List<Member> everyone;
+  final bool byName;
+
+  @override
+  State<_AddStaffSheet> createState() => _AddStaffSheetState();
+}
+
+class _AddStaffSheetState extends State<_AddStaffSheet> {
+  String _query = '';
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = L10n.of(context);
+    final typed = _query.trim();
+    final known = widget.everyone.any((m) => nameKey(m.name) == nameKey(typed));
+    return SafeArea(
+      child: Column(
+        children: [
+          SheetBar(title: l10n.addGroupStaff, actions: const []),
+          Padding(
+            padding: const EdgeInsets.fromLTRB(Space.m, 0, Space.m, Space.s),
+            child: SearchField(hint: l10n.searchMembers, onChanged: (q) => setState(() => _query = q)),
+          ),
+          Expanded(
+            child: ListView(
+              children: [
+                ListSection(
+                  children: [
+                    for (final m in widget.addable)
+                      if (matchesSearch(m.name, _query)) ListRow(title: m.name, onTap: () => Navigator.pop(context, m)),
+                    if (widget.byName && typed.isNotEmpty && !known)
+                      ListRow(
+                        title: l10n.pickerUseName(typed),
+                        subtitle: l10n.getsNoNotice,
+                        leading: const Icon(Symbols.add_rounded),
+                        onTap: () => Navigator.pop(context, typed),
+                      ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
 }
 
 /// One group's page (#82, #94). A service's: its settings (name, weekday,

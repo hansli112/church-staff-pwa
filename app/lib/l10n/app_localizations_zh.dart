@@ -381,7 +381,7 @@ class L10nZh extends L10n {
   }
 
   @override
-  String get pickerUseNameDetail => '無帳號的名字';
+  String get pickerUseNameDetail => '只排這一次';
 
   @override
   String pickerNoOneServes(String duty) {
@@ -2480,7 +2480,7 @@ class L10nZh extends L10n {
   String get rosterNoEarlier => '沒有更早的服事表';
 
   @override
-  String get pickerGuestNames => '無帳號的名字';
+  String get pickerGuestNames => '臨時排過的人';
 
   @override
   String get serviceSettingsSaved => '已更新聚會';
@@ -3838,7 +3838,7 @@ class L10nZhHans extends L10nZh {
   }
 
   @override
-  String get pickerUseNameDetail => '无账号的名字';
+  String get pickerUseNameDetail => '只排这一次';
 
   @override
   String pickerNoOneServes(String duty) {
@@ -5937,7 +5937,7 @@ class L10nZhHans extends L10nZh {
   String get rosterNoEarlier => '没有更早的事奉表';
 
   @override
-  String get pickerGuestNames => '无账号的名字';
+  String get pickerGuestNames => '临时排过的人';
 
   @override
   String get serviceSettingsSaved => '已更新聚会';

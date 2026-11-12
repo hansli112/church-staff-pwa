@@ -787,7 +787,7 @@ abstract class L10n {
   /// No description provided for @pickerUseNameDetail.
   ///
   /// In zh, this message translates to:
-  /// **'無帳號的名字'**
+  /// **'只排這一次'**
   String get pickerUseNameDetail;
 
   /// No description provided for @pickerNoOneServes.
@@ -4471,7 +4471,7 @@ abstract class L10n {
   /// No description provided for @pickerGuestNames.
   ///
   /// In zh, this message translates to:
-  /// **'無帳號的名字'**
+  /// **'臨時排過的人'**
   String get pickerGuestNames;
 
   /// No description provided for @serviceSettingsSaved.

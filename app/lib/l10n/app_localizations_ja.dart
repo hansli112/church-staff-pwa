@@ -381,7 +381,7 @@ class L10nJa extends L10n {
   }
 
   @override
-  String get pickerUseNameDetail => 'アカウントのない名前';
+  String get pickerUseNameDetail => '今回だけ';
 
   @override
   String pickerNoOneServes(String duty) {
@@ -2483,7 +2483,7 @@ class L10nJa extends L10n {
   String get rosterNoEarlier => 'これより前の奉仕表はありません';
 
   @override
-  String get pickerGuestNames => 'アカウントのない名前';
+  String get pickerGuestNames => '臨時で入った人';
 
   @override
   String get serviceSettingsSaved => '集会を更新しました';

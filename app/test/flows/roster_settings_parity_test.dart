@@ -366,7 +366,7 @@ void main() {
     await pumpApp(tester, b);
     await go(tester, '/rosters/sunday/2026-10-11');
     await tapText(tester, '司琴');
-    expect(find.text('無帳號的名字'), findsOneWidget);
+    expect(find.text('臨時排過的人'), findsOneWidget);
     await tapText(tester, 'John Chen');
 
     final duty = savedDay(b, 11).duties.firstWhere((d) => d.role == '司琴');

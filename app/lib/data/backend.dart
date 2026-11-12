@@ -399,6 +399,12 @@ abstract interface class ChurchData {
     List<String> smallGroups = const [],
   });
 
+  /// 加入同工 by [name]: someone who does not use the app, made one of
+  /// [serviceType]'s 同工 without an account (a pending member, no email),
+  /// by whoever may add a plain 同工 to it. [CloudErrorCode.duplicateName]
+  /// for a name someone in the church has. Their ID.
+  Future<String> addByName(String name, String serviceType);
+
   /// Puts member [uid] on the list of [duty] in [serviceType] (#94),
   /// applied to the member as they are when written: one of its 同工 now
   /// if they were not, and nothing else on them changes. Only a duty the

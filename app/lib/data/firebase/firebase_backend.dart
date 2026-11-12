@@ -114,7 +114,7 @@ class FirebaseBackend implements Backend {
     WarmUp.ledDuties => const ['editLedDuties'],
     WarmUp.swapAsk => const ['askCover', 'askSwap'],
     WarmUp.swapAnswer => const ['answerSwap'],
-    WarmUp.groupStaff => const ['setGroupMember'],
+    WarmUp.groupStaff => const ['setGroupMember', 'addByName'],
     WarmUp.joinAnswer => const ['answerJoinRequest'],
     WarmUp.attendanceRemind => const ['remindAttendance'],
     WarmUp.attendanceTogether => const ['fillAttendanceTogether'],
@@ -1080,6 +1080,10 @@ class FirestoreChurchData implements ChurchData {
     },
     'member': member,
   });
+
+  @override
+  Future<String> addByName(String name, String serviceType) async =>
+      (await _call('addByName', {'name': name, 'service': serviceType}))['id']! as String;
 
   @override
   Future<void> grantDuty(String uid, String serviceType, String duty) =>

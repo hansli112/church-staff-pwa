@@ -371,6 +371,9 @@ class EchoingChurchData implements ChurchData {
   );
 
   @override
+  Future<String> addByName(String name, String serviceType) => _inner.addByName(name, serviceType);
+
+  @override
   Future<void> grantDuty(String uid, String serviceType, String duty) => _send(
     _Echo(members: {uid: (m) => m.withDuty(serviceType, duty)}),
     () => _inner.grantDuty(uid, serviceType, duty),

@@ -390,7 +390,7 @@ class L10nEn extends L10n {
   }
 
   @override
-  String get pickerUseNameDetail => 'Name without an account';
+  String get pickerUseNameDetail => 'Just this once';
 
   @override
   String pickerNoOneServes(String duty) {
@@ -2609,7 +2609,7 @@ class L10nEn extends L10n {
   String get rosterNoEarlier => 'No earlier schedules';
 
   @override
-  String get pickerGuestNames => 'Names without an account';
+  String get pickerGuestNames => 'Filled in before';
 
   @override
   String get serviceSettingsSaved => 'Service updated';
