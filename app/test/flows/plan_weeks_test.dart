@@ -420,7 +420,7 @@ void main() {
     await tester.tap(find.text('司琴'));
     await settle(tester);
     // 10/4 主日 and 10/11 青年; not the day being arranged.
-    expect(find.text('這個月已排 2 次 · 同一天：青年崇拜 司會'), findsOneWidget);
+    expect(findShown('這個月總共排了 2 次 · 同一天：青年崇拜 司會'), findsOneWidget);
   });
 
   testWidgets('復原 here also waits for 完成; the day’s own page tells at once', (tester) async {

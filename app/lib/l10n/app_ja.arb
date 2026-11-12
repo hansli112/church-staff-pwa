@@ -118,6 +118,7 @@
     }
   },
   "pickerOthers": "ほかのメンバー",
+  "pickerFindOthers": "ほかの人を探す",
   "pickerSwapDay": "別の週と交換",
   "pickerSeveralThisTime": "複数選択",
   "pickerUseName": "「{name}」を追加",
@@ -946,7 +947,7 @@
   "planNotified": "{count}人に通知しました",
   "planNotifiedLater": "朝7時に{count}人に通知します",
   "planOpenDay": "{day}を開く",
-  "pickerMonthCount": "今月すでに{count}回",
+  "pickerMonthCount": "今月は全部で{count}回",
   "pickerSameDay": "同じ日：{what}",
   "gettingStartedAs": "はじめに · {identity}",
   "@gettingStartedAs": {"placeholders": {"identity": {"type": "String"}}},

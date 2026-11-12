@@ -98,6 +98,7 @@ void main() {
     await pumpApp(tester, b);
     await go(tester, '/rosters/sunday/2026-10-11');
     await tapText(tester, '招待');
+    await tapText(tester, '找其他人');
     await tester.enterText(find.byType(TextField).last, '張講員');
     await settle(tester);
     expect(find.text('只排這一次'), findsOneWidget);

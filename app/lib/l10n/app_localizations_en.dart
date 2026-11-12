@@ -379,6 +379,9 @@ class L10nEn extends L10n {
   String get pickerOthers => 'Other team members';
 
   @override
+  String get pickerFindOthers => 'Someone else';
+
+  @override
   String get pickerSwapDay => 'Swap with another week';
 
   @override
@@ -3343,8 +3346,8 @@ class L10nEn extends L10n {
     String _temp0 = intl.Intl.pluralLogic(
       count,
       locale: localeName,
-      other: 'Already on $count days this month',
-      one: 'Already on 1 day this month',
+      other: '$count days this month, all duties',
+      one: '1 day this month, all duties',
     );
     return '$_temp0';
   }

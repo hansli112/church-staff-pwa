@@ -1,3 +1,5 @@
+import 'dart:ui' show Tristate;
+
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -336,6 +338,7 @@ void main() {
       await go(tester, '/rosters/sunday/2026-10-11');
       await tapText(tester, '司會');
       await tapText(tester, '選取多位');
+      await tapText(tester, '找其他人');
       await tester.enterText(find.byType(TextField), 'John');
       await settle(tester);
       await tapText(tester, 'John Chen');
@@ -350,6 +353,7 @@ void main() {
       await pumpApp(tester, b);
       await go(tester, '/rosters/sunday/2026-10-11');
       await tapText(tester, '司琴');
+      await tapText(tester, '找其他人');
       await tester.enterText(find.byType(TextField), 'ｊｏｈｎ');
       await settle(tester);
       expect(find.text('其他同工'), findsOneWidget);
@@ -365,6 +369,7 @@ void main() {
       await pumpApp(tester, b);
       await go(tester, '/rosters/sunday/2026-10-11');
       await tapText(tester, '司琴');
+      await tapText(tester, '找其他人');
       await tester.enterText(find.byType(TextField), 'John');
       await settle(tester);
       await tapText(tester, 'John Chen');
@@ -397,6 +402,7 @@ void main() {
       await pumpApp(tester, b);
       await go(tester, '/rosters/sunday/2026-10-11');
       await tapText(tester, '司琴');
+      await tapText(tester, '找其他人');
       await tester.enterText(find.byType(TextField), 'John');
       await settle(tester);
       await tapText(tester, 'John Chen');
@@ -414,6 +420,7 @@ void main() {
       await settle(tester);
       await tapText(tester, '完成');
       expect(find.text('排過招待的人'), findsOneWidget);
+      await tapText(tester, '找其他人');
       await tester.enterText(find.byType(TextField), '美玉');
       await settle(tester);
       expect(find.text('其他同工'), findsOneWidget, reason: 'off the list, still in the church');
@@ -445,6 +452,7 @@ void main() {
       await pumpApp(tester, b);
       await go(tester, '/rosters/sunday/2026-10-11');
       await tapText(tester, '招待');
+      await tapText(tester, '找其他人');
       await tester.enterText(find.byType(TextField), 'John');
       await settle(tester);
       await tapText(tester, 'John Chen');
@@ -463,6 +471,7 @@ void main() {
       await tester.tap(find.byTooltip('從名單移除李美玉'));
       await settle(tester);
       await tapText(tester, '完成');
+      await tapText(tester, '找其他人');
       await tester.enterText(find.byType(TextField), '美玉');
       await settle(tester);
       await tapText(tester, '李美玉');
@@ -477,6 +486,7 @@ void main() {
       await go(tester, '/rosters/sunday/2026-10-11');
       // 司琴 has no staff order yet: by name, John Chen would come first.
       await tapText(tester, '司琴');
+      await tapText(tester, '找其他人');
       await tester.enterText(find.byType(TextField), 'John');
       await settle(tester);
       await tapText(tester, 'John Chen');
@@ -508,6 +518,7 @@ void main() {
       await pumpApp(tester, b);
       await go(tester, '/rosters/sunday/2026-10-11');
       await tapText(tester, '司琴');
+      await tapText(tester, '找其他人');
       await tester.enterText(find.byType(TextField), '外請講員');
       await settle(tester);
       expect(find.text('新增「外請講員」'), findsOneWidget);
@@ -516,13 +527,52 @@ void main() {
       expect(savedDay(b, 11).duties[1].uids, isEmpty);
     });
 
-    testWidgets('the search box gets focus once the church has more than 30 people', (tester) async {
+    testWidgets('the search waits behind 找其他人, under those who did the duty; then it has the keyboard', (
+      tester,
+    ) async {
       final many = [for (var i = 0; i < 30; i++) Member(uid: 'x$i', name: '同工$i')];
       await pumpApp(tester, seededChurch(extra: many));
       await go(tester, '/rosters/sunday/2026-10-11');
       await tapText(tester, '司琴');
-      final field = tester.widget<TextField>(find.byType(TextField));
-      expect(field.autofocus, isTrue);
+      expect(find.byType(TextField), findsNothing);
+      expect(
+        tester.getTopLeft(find.text('找其他人')).dy,
+        greaterThan(tester.getTopLeft(find.text('李美玉').last).dy),
+      );
+      await tapText(tester, '找其他人');
+      expect(tester.widget<TextField>(find.byType(TextField)).autofocus, isTrue);
+      expect(find.text('找其他人'), findsNothing);
+    });
+
+    testWidgets('who is picked shows only by their tick: someone found stays, ticked, once the search is cleared', (
+      tester,
+    ) async {
+      final b = seededChurch();
+      await pumpApp(tester, b);
+      await go(tester, '/rosters/sunday/2026-10-11');
+      await tapText(tester, '招待');
+      await tapText(tester, '找其他人');
+      await tester.enterText(find.byType(TextField), 'John');
+      await settle(tester);
+      await tapText(tester, 'John Chen');
+      await tester.enterText(find.byType(TextField), '');
+      await settle(tester);
+      expect(find.byType(InputChip), findsNothing);
+      expect(find.text('John Chen'), findsOneWidget);
+      expect(tester.getSemantics(find.text('John Chen')).flagsCollection.isSelected, Tristate.isTrue);
+      await tapText(tester, '完成');
+      expect(peopleOn(b, 11, '招待'), unorderedEquals(['李美玉', 'John Chen']));
+    });
+
+    testWidgets('on a duty of one, tapping whoever is ticked unticks them, and the picker stays', (tester) async {
+      final b = seededChurch();
+      await pumpApp(tester, b);
+      await go(tester, '/rosters/sunday/2026-10-04');
+      await tapText(tester, '司琴');
+      await tapText(tester, '李美玉');
+      expect(find.text('完成'), findsOneWidget);
+      await tapText(tester, '完成');
+      expect(peopleOn(b, 4, '司琴'), isEmpty);
     });
 
     testWidgets('a large picker can search, select different distant names, and keep them when closed', (tester) async {
@@ -540,6 +590,8 @@ void main() {
       await pumpApp(tester, b);
       await go(tester, '/rosters/sunday/2026-10-11');
       await tapText(tester, '招待');
+      await tester.scrollUntilVisible(find.text('找其他人'), 2000, scrollable: find.byType(Scrollable).last);
+      await tapText(tester, '找其他人');
       for (final name in ['同工0499', '同工0000']) {
         await tester.enterText(find.byType(TextField), name);
         await settle(tester);
@@ -742,7 +794,7 @@ void main() {
       await pumpApp(tester, b);
       await go(tester, '/rosters/sunday/2026-10-04');
       await tapText(tester, '司琴');
-      await tester.tap(find.byTooltip('已移除「李美玉」'));
+      await tapText(tester, '李美玉');
       await settle(tester);
       await tapText(tester, '完成');
       expect(peopleOn(b, 4, '司琴'), isEmpty);
@@ -771,7 +823,7 @@ void main() {
       b.setOnline(false);
       await settle(tester);
       await tapText(tester, '司琴');
-      await tester.tap(find.byTooltip('已移除「李美玉」'));
+      await tapText(tester, '李美玉');
       await settle(tester);
       await tapText(tester, '完成');
       expect(find.text('離線中，連線後才能儲存'), findsOneWidget);

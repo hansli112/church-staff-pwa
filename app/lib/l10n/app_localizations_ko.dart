@@ -371,6 +371,9 @@ class L10nKo extends L10n {
   String get pickerOthers => '다른 멤버';
 
   @override
+  String get pickerFindOthers => '다른 사람 찾기';
+
+  @override
   String get pickerSwapDay => '다른 주와 바꾸기';
 
   @override
@@ -3157,7 +3160,7 @@ class L10nKo extends L10n {
 
   @override
   String pickerMonthCount(int count) {
-    return '이번 달 이미 $count회';
+    return '이번 달 전체 $count회';
   }
 
   @override

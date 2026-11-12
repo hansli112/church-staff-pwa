@@ -118,6 +118,7 @@
     }
   },
   "pickerOthers": "다른 멤버",
+  "pickerFindOthers": "다른 사람 찾기",
   "pickerSwapDay": "다른 주와 바꾸기",
   "pickerSeveralThisTime": "여러 명 선택",
   "pickerUseName": "‘{name}’ 추가",
@@ -946,7 +947,7 @@
   "planNotified": "{count}명에게 알렸어요",
   "planNotifiedLater": "오전 7시에 {count}명에게 알려요",
   "planOpenDay": "{day} 열기",
-  "pickerMonthCount": "이번 달 이미 {count}회",
+  "pickerMonthCount": "이번 달 전체 {count}회",
   "pickerSameDay": "같은 날: {what}",
   "gettingStartedAs": "시작하기 · {identity}",
   "@gettingStartedAs": {"placeholders": {"identity": {"type": "String"}}},

@@ -370,6 +370,9 @@ class L10nZh extends L10n {
   String get pickerOthers => '其他同工';
 
   @override
+  String get pickerFindOthers => '找其他人';
+
+  @override
   String get pickerSwapDay => '和別週交換';
 
   @override
@@ -3152,7 +3155,7 @@ class L10nZh extends L10n {
 
   @override
   String pickerMonthCount(int count) {
-    return '這個月已排 $count 次';
+    return '這個月總共排了 $count 次';
   }
 
   @override
@@ -3832,6 +3835,9 @@ class L10nZhHans extends L10nZh {
 
   @override
   String get pickerOthers => '其他同工';
+
+  @override
+  String get pickerFindOthers => '找其他人';
 
   @override
   String get pickerSwapDay => '和别的周交换';
@@ -6616,7 +6622,7 @@ class L10nZhHans extends L10nZh {
 
   @override
   String pickerMonthCount(int count) {
-    return '这个月已排 $count 次';
+    return '这个月总共排了 $count 次';
   }
 
   @override

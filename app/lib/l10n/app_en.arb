@@ -118,6 +118,7 @@
     }
   },
   "pickerOthers": "Other team members",
+  "pickerFindOthers": "Someone else",
   "pickerSwapDay": "Swap with another week",
   "pickerSeveralThisTime": "Select several",
   "pickerUseName": "Add “{name}”",
@@ -946,7 +947,7 @@
   "planNotified": "{count, plural, =1{Notified 1 person} other{Notified {count} people}}",
   "planNotifiedLater": "{count, plural, =1{1 person will be notified at 7 AM} other{{count} people will be notified at 7 AM}}",
   "planOpenDay": "Open {day}",
-  "pickerMonthCount": "{count, plural, =1{Already on 1 day this month} other{Already on {count} days this month}}",
+  "pickerMonthCount": "{count, plural, =1{1 day this month, all duties} other{{count} days this month, all duties}}",
   "pickerSameDay": "Same day: {what}",
   "gettingStartedAs": "Get started · {identity}",
   "@gettingStartedAs": {"placeholders": {"identity": {"type": "String"}}},

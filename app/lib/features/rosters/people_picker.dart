@@ -51,10 +51,6 @@ class PickerResult {
   final bool swapDay;
 }
 
-/// When to focus the search box on open: long lists are faster to search
-/// than to scroll.
-const searchAutofocusThreshold = 30;
-
 /// Picks the people for one duty on one day.
 ///
 /// Like self-host it lists only the people who serve this duty here, in
@@ -153,6 +149,11 @@ class _PeoplePickerState extends State<PeoplePicker> {
   final _grant = <Member>[];
   final _takeOff = <Member>[];
   String _query = '';
+
+  /// The search box, out of the way until 找其他人: whoever is likely is on
+  /// the duty's list already. Shown from the start when nobody is.
+  late bool _searchShown = _serving.isEmpty;
+  bool _searchFocus = false;
   bool _reordering = false;
   List<String>? _ranking;
 
@@ -217,17 +218,16 @@ class _PeoplePickerState extends State<PeoplePicker> {
   }
 
   /// A name tapped in the list: for a duty of one, [name] in place of
-  /// whoever was there, and done; otherwise picked or unpicked.
+  /// whoever was there, and done; otherwise, or [name] ticked already,
+  /// picked or unpicked.
   void _choose(String name, {bool guest = false}) {
-    if (!_tapReplaces) return _toggle(name, guest: guest);
+    if (!_tapReplaces || _selected.contains(name)) return _toggle(name, guest: guest);
     Haptics.selection();
-    if (!_selected.contains(name)) {
-      _selected
-        ..clear()
-        ..add(name);
-      _guests.clear();
-      if (guest) _guests.add(name);
-    }
+    _selected
+      ..clear()
+      ..add(name);
+    _guests.clear();
+    if (guest) _guests.add(name);
     Navigator.pop(context, result);
   }
 
@@ -317,41 +317,18 @@ class _PeoplePickerState extends State<PeoplePicker> {
           if (_reordering)
             Expanded(child: _reorderList(l10n, c))
           else ...[
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: Space.m),
-              child: SearchField(
-                hint: l10n.pickerSearchHint,
-                autofocus: widget.members.length > searchAutofocusThreshold,
-                onChanged: (q) => setState(() => _query = q),
+            if (_searchShown)
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: Space.m),
+                child: SearchField(
+                  hint: l10n.pickerSearchHint,
+                  autofocus: _searchFocus,
+                  onChanged: (q) => setState(() => _query = q),
+                ),
               ),
-            ),
-            if (_selected.isNotEmpty) _selectedChips(c),
             Expanded(child: _list(l10n, c)),
           ],
         ],
-      ),
-    );
-  }
-
-  Widget _selectedChips(AppColors c) {
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(Space.m, Space.s, Space.m, 0),
-      child: Align(
-        alignment: AlignmentDirectional.centerStart,
-        child: Wrap(
-          spacing: Space.s,
-          runSpacing: Space.s,
-          children: [
-            for (final name in widget.order.sort(widget.duty, _selected))
-              InputChip(
-                label: Text(name),
-                onDeleted: () => _toggle(name),
-                deleteButtonTooltipMessage: L10n.of(context).removed(name),
-                backgroundColor: c.accentSoft,
-                side: BorderSide.none,
-              ),
-          ],
-        ),
       ),
     );
   }
@@ -372,13 +349,13 @@ class _PeoplePickerState extends State<PeoplePicker> {
     ], (n) => n);
     final searching = q.isNotEmpty;
     // Nobody serves this duty yet (a new church): offer everyone rather
-    // than an empty list that only a search would fill.
-    final others = searching || _serving.isEmpty
-        ? _unavailableLast([
-            for (final m in _others)
-              if (_matches(m.name, q) && !servingSet.contains(m.name)) m,
-          ], (m) => m.name)
-        : const <Member>[];
+    // than an empty list that only a search would fill. Otherwise those
+    // found and picked: ticked where they were, the search cleared.
+    final everyone = searching || _serving.isEmpty;
+    final others = _unavailableLast([
+      for (final m in _others)
+        if (!servingSet.contains(m.name) && (everyone ? _matches(m.name, q) : _selected.contains(m.name))) m,
+    ], (m) => m.name);
     final typed = _query.trim();
     // Guests are an explicit separate choice, even when a member shares a name.
     final guests = <String>{
@@ -421,6 +398,16 @@ class _PeoplePickerState extends State<PeoplePicker> {
                 ),
             ],
           ),
+        ),
+      );
+    }
+    if (!_searchShown) {
+      rows.add(
+        () => ListRow(
+          title: l10n.pickerFindOthers,
+          leading: const Icon(Symbols.search_rounded),
+          chevron: false,
+          onTap: () => setState(() => _searchShown = _searchFocus = true),
         ),
       );
     }

@@ -46,6 +46,7 @@ void main() {
     expect(find.text('完成'), findsNothing);
 
     await tapText(tester, '司琴');
+    await tapText(tester, '找其他人');
     await tester.enterText(find.byType(TextField), '陳志豪');
     await settle(tester);
     await tapText(tester, '陳志豪');

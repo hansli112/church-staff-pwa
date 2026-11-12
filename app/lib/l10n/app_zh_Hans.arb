@@ -118,6 +118,7 @@
     }
   },
   "pickerOthers": "其他同工",
+  "pickerFindOthers": "找其他人",
   "pickerSwapDay": "和别的周交换",
   "pickerSeveralThisTime": "选择多位",
   "pickerUseName": "新增“{name}”",
@@ -946,7 +947,7 @@
   "planNotified": "已通知 {count} 位同工",
   "planNotifiedLater": "早上 7 点会通知 {count} 位同工",
   "planOpenDay": "打开 {day}",
-  "pickerMonthCount": "这个月已排 {count} 次",
+  "pickerMonthCount": "这个月总共排了 {count} 次",
   "pickerSameDay": "同一天：{what}",
   "gettingStartedAs": "开始使用 · {identity}",
   "@gettingStartedAs": {"placeholders": {"identity": {"type": "String"}}},

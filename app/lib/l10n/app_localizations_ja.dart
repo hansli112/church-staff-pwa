@@ -370,6 +370,9 @@ class L10nJa extends L10n {
   String get pickerOthers => 'ほかのメンバー';
 
   @override
+  String get pickerFindOthers => 'ほかの人を探す';
+
+  @override
   String get pickerSwapDay => '別の週と交換';
 
   @override
@@ -3156,7 +3159,7 @@ class L10nJa extends L10n {
 
   @override
   String pickerMonthCount(int count) {
-    return '今月すでに$count回';
+    return '今月は全部で$count回';
   }
 
   @override

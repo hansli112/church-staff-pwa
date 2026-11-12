@@ -308,6 +308,7 @@ void main() {
     await pumpApp(tester, b);
     await go(tester, '/rosters/sunday/2026-10-04');
     await tapText(tester, '招待');
+    await tapText(tester, '找其他人');
     await tester.enterText(find.byType(TextField), '新外請');
     await settle(tester);
     await tapText(tester, '新增「新外請」');

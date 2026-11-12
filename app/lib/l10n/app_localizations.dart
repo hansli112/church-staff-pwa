@@ -766,6 +766,12 @@ abstract class L10n {
   /// **'其他同工'**
   String get pickerOthers;
 
+  /// In the picker, under those who served the duty before: shows the search box, for other 同工 or a name typed
+  ///
+  /// In zh, this message translates to:
+  /// **'找其他人'**
+  String get pickerFindOthers;
+
   /// No description provided for @pickerSwapDay.
   ///
   /// In zh, this message translates to:
@@ -5614,10 +5620,10 @@ abstract class L10n {
   /// **'打開 {day}'**
   String planOpenDay(String day);
 
-  /// No description provided for @pickerMonthCount.
+  /// In the picker, under a name: the other days this month they serve, any duty anywhere in the church, not only this one
   ///
   /// In zh, this message translates to:
-  /// **'這個月已排 {count} 次'**
+  /// **'這個月總共排了 {count} 次'**
   String pickerMonthCount(int count);
 
   /// No description provided for @pickerSameDay.
