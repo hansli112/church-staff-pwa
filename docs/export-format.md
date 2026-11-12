@@ -40,7 +40,8 @@
         "weekday": 7,                      // 1 = 週一 … 7 = 週日
         "enabled": true,
         "duties": ["司會", "司琴"],         // 服事表的範本
-        "events": [{ "name": "聖餐", "color": 0 }]  // color：0 紅、1 橘、2 黃、3 綠、4 藍、5 紫
+        "events": [{ "name": "聖餐", "color": 0 }],  // color：0 紅、1 橘、2 黃、3 綠、4 藍、5 紫
+        "manyDuties": ["招待"]             // 可以排好幾位的服事項目；管理員沒設過就沒有這個欄位
       }
     ],
     "ids": ["sunday"]

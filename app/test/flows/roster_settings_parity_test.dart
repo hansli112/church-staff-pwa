@@ -47,6 +47,17 @@ TextSpan shownName(WidgetTester tester, String name) {
   return found!;
 }
 
+/// [name], arranged this once on [duty], swiped in its picker: 之後都不排.
+Future<void> swipeGuest(WidgetTester tester, String name, {String duty = '司琴'}) async {
+  await tapText(tester, duty);
+  final row = find.byKey(ValueKey('guest/$name'));
+  await tester.ensureVisible(row);
+  // Near its top: with large text the row runs past the screen.
+  final rect = tester.getRect(row);
+  await tester.dragFrom(Offset(rect.center.dx, rect.top + 20), const Offset(-600, 0));
+  await settle(tester);
+}
+
 void main() {
   testWidgets('a guest future-removal menu opens a cancellable preview before changing any day', (tester) async {
     final b = seededChurch(as: editor);
@@ -64,18 +75,16 @@ void main() {
     b.rosters['grace']![next.id] = next;
     await pumpApp(tester, b);
     await go(tester, '/rosters/sunday/2026-10-04');
-    await tapText(tester, '外請老師');
-    await tapText(tester, '移除未來的安排');
+    await swipeGuest(tester, '外請老師');
 
-    expect(find.text('移除「外請老師」的未來安排'), findsOneWidget);
+    expect(find.text('之後的服事表都不排「外請老師」'), findsOneWidget);
     expect(find.textContaining('10月11日'), findsOneWidget);
     expect(savedDay(b, 4), first);
     expect(savedDay(b, 11), next);
     await tapText(tester, '取消');
     expect(savedDay(b, 4), first);
 
-    await tapText(tester, '外請老師');
-    await tapText(tester, '移除未來的安排');
+    await swipeGuest(tester, '外請老師');
     await tapText(tester, '套用變更');
     expect(savedDay(b, 4).duties.single.people, isEmpty);
     expect(savedDay(b, 11).duties.single.people, isEmpty);
@@ -331,9 +340,7 @@ void main() {
     b.rosters['grace']![before.id] = before;
     await pumpApp(tester, b, textScale: 3, brightness: Brightness.dark);
     await go(tester, '/rosters/sunday/2026-10-04');
-    await tapText(tester, name);
-    expect(tester.takeException(), isNull, reason: 'the person menu must also fit large text');
-    await tapText(tester, '移除未來的安排');
+    await swipeGuest(tester, name, duty: '司琴');
 
     expect(tester.takeException(), isNull);
     expect(findShown('取消'), findsOneWidget);

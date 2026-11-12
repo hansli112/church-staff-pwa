@@ -202,14 +202,13 @@ void main() {
     expect(find.text('我來'), findsNothing);
   });
 
-  testWidgets('whoever arranges: 請人代 right on their own name, beside 交換 outright', (tester) async {
+  testWidgets('whoever arranges: 請人代 at the top of their own duty\'s picker, 和別週交換 outright below', (tester) async {
     final b = church(as: editor);
     await pumpApp(tester, b);
     await go(tester, '/rosters/sunday/2026-10-04');
     await tester.tap(find.text('林同工'));
     await settle(tester);
-    expect(find.text('交換'), findsOneWidget);
-    expect(find.text('和別週交換'), findsNothing, reason: 'they swap outright');
+    expect(find.text('和別週交換'), findsOneWidget, reason: 'they swap outright');
     await tester.tap(find.text('請人代'));
     await settle(tester);
     expect(requests(b).single.kind, SwapKind.cover);

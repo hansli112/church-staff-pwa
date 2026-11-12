@@ -370,10 +370,10 @@ class L10nJa extends L10n {
   String get pickerOthers => 'ほかのメンバー';
 
   @override
-  String get pickerAddAnother => 'もう一人追加';
+  String get pickerSwapDay => '別の週と交換';
 
   @override
-  String get pickerSwapDay => '別の週と交換';
+  String get pickerSeveralThisTime => '今回は二人以上にする';
 
   @override
   String pickerUseName(String name) {
@@ -425,6 +425,9 @@ class L10nJa extends L10n {
   String swapWith(String duty) {
     return '$dutyを誰と交換しますか？';
   }
+
+  @override
+  String get swapWhich => '誰を交換しますか？';
 
   @override
   String get swapNone => 'ほかの日に交換できる人がいません';
@@ -708,6 +711,9 @@ class L10nJa extends L10n {
 
   @override
   String get dutyMinistry => 'ミニストリー';
+
+  @override
+  String get dutyTakesMany => '複数の人を入れられる';
 
   @override
   String get ministryPickDuties => '担当を選ぶ';
@@ -2525,16 +2531,16 @@ class L10nJa extends L10n {
   String get rosterApplyFutureChanges => '変更を適用';
 
   @override
-  String get rosterRemoveFutureGuest => '今後の割り当てを外す';
+  String get rosterRemoveFutureGuest => '今後は入れない';
 
   @override
   String rosterRemoveFutureGuestTitle(String name) {
-    return '「$name」の今後の割り当てを外す';
+    return '今後の奉仕表から「$name」を外す';
   }
 
   @override
   String rosterFutureGuestRemoved(int count) {
-    return '今後の割り当てを$count件外しました';
+    return '$count日分の奉仕表から外しました';
   }
 
   @override

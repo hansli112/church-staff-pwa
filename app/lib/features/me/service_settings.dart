@@ -191,9 +191,29 @@ class ServiceEdits {
         for (final x in service.duties)
           if (x != d) x,
       ],
+      manyDuties: service.manyDuties == null
+          ? null
+          : [
+              for (final x in service.manyDuties!)
+                if (x != d) x,
+            ],
     ),
     message: _l10n.dutyRemoved(d),
   );
+
+  /// 可以排好幾位 for duty [d]: set for every duty of the service at once,
+  /// the others as they stood.
+  Future<bool> setMany(String d, bool many) {
+    final now = ref.read(rosterActionsProvider).manyDuties(service);
+    return save(
+      service.copyWith(
+        manyDuties: [
+          for (final x in service.duties)
+            if (x == d ? many : now.contains(x)) x,
+        ],
+      ),
+    );
+  }
 
   /// 改名 for duty [from]: its new name once saved, and then 同步未來服事表
   /// offered; null if not.
@@ -201,7 +221,10 @@ class ServiceEdits {
     final to = await promptText(context, title: _l10n.rename, hint: _l10n.dutyName, initial: from);
     if (to == null || to == from || service.duties.contains(to)) return null;
     final saved = await save(
-      service.copyWith(duties: [for (final d in service.duties) d == from ? to : d]),
+      service.copyWith(
+        duties: [for (final d in service.duties) d == from ? to : d],
+        manyDuties: service.manyDuties == null ? null : [for (final d in service.manyDuties!) d == from ? to : d],
+      ),
       dutyRename: (from: from, to: to),
     );
     if (!saved || !context.mounted) return null;
@@ -513,6 +536,16 @@ class _DutyScreenState extends ConsumerState<DutyScreen> {
   Set<String>? _staffAtOpen;
 
   @override
+  void didUpdateWidget(DutyScreen old) {
+    super.didUpdateWidget(old);
+    // Another duty's link, onto this page kept in its tab.
+    if (old.duty != widget.duty || old.serviceId != widget.serviceId) {
+      _duty = widget.duty;
+      _staffAtOpen = null;
+    }
+  }
+
+  @override
   Widget build(BuildContext context) {
     final l10n = L10n.of(context);
     final me = ref.watch(meProvider).value;
@@ -525,6 +558,8 @@ class _DutyScreenState extends ConsumerState<DutyScreen> {
       return Scaffold(appBar: AppBar());
     }
     final admin = me.editsServiceSettings;
+    // What 可以排好幾位 shows until it is set.
+    if (admin) ref.watch(recentRostersProvider);
     final edits = me.editsDutyList(ministries, service.id, duty);
     final ministry = ministries.where((m) => m.duties.contains(MinistryDuty(service.id, duty))).firstOrNull;
     final serving = dutyPeople(
@@ -585,6 +620,12 @@ class _DutyScreenState extends ConsumerState<DutyScreen> {
                     final to = await serviceEdits.renameDuty(duty);
                     if (to != null && mounted) setState(() => _duty = to);
                   },
+                ),
+              if (admin)
+                SwitchRow(
+                  title: l10n.dutyTakesMany,
+                  value: ref.read(rosterActionsProvider).manyDuties(service).contains(duty),
+                  onChanged: (on) => serviceEdits.setMany(duty, on),
                 ),
               ListRow(
                 title: l10n.dutyMinistry,

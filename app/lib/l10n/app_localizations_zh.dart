@@ -370,10 +370,10 @@ class L10nZh extends L10n {
   String get pickerOthers => '其他同工';
 
   @override
-  String get pickerAddAnother => '再加一位';
+  String get pickerSwapDay => '和別週交換';
 
   @override
-  String get pickerSwapDay => '和別週交換';
+  String get pickerSeveralThisTime => '這次排兩位以上';
 
   @override
   String pickerUseName(String name) {
@@ -425,6 +425,9 @@ class L10nZh extends L10n {
   String swapWith(String duty) {
     return '和誰交換$duty？';
   }
+
+  @override
+  String get swapWhich => '交換哪一位？';
 
   @override
   String get swapNone => '其他日期沒有可以交換的人';
@@ -708,6 +711,9 @@ class L10nZh extends L10n {
 
   @override
   String get dutyMinistry => '屬於哪個事工';
+
+  @override
+  String get dutyTakesMany => '可以排好幾位';
 
   @override
   String get ministryPickDuties => '選服事項目';
@@ -2521,16 +2527,16 @@ class L10nZh extends L10n {
   String get rosterApplyFutureChanges => '套用變更';
 
   @override
-  String get rosterRemoveFutureGuest => '移除未來的安排';
+  String get rosterRemoveFutureGuest => '之後都不排';
 
   @override
   String rosterRemoveFutureGuestTitle(String name) {
-    return '移除「$name」的未來安排';
+    return '之後的服事表都不排「$name」';
   }
 
   @override
   String rosterFutureGuestRemoved(int count) {
-    return '已移除 $count 份未來安排';
+    return '已從 $count 天的服事表拿掉';
   }
 
   @override
@@ -3814,10 +3820,10 @@ class L10nZhHans extends L10nZh {
   String get pickerOthers => '其他同工';
 
   @override
-  String get pickerAddAnother => '再加一位';
+  String get pickerSwapDay => '和别的周交换';
 
   @override
-  String get pickerSwapDay => '和别的周交换';
+  String get pickerSeveralThisTime => '这次排两位以上';
 
   @override
   String pickerUseName(String name) {
@@ -3869,6 +3875,9 @@ class L10nZhHans extends L10nZh {
   String swapWith(String duty) {
     return '和谁交换$duty？';
   }
+
+  @override
+  String get swapWhich => '交换哪一位？';
 
   @override
   String get swapNone => '其他日期没有可以交换的人';
@@ -4152,6 +4161,9 @@ class L10nZhHans extends L10nZh {
 
   @override
   String get dutyMinistry => '属于哪个事工';
+
+  @override
+  String get dutyTakesMany => '可以排好几位';
 
   @override
   String get ministryPickDuties => '选事奉项目';
@@ -5965,16 +5977,16 @@ class L10nZhHans extends L10nZh {
   String get rosterApplyFutureChanges => '应用更改';
 
   @override
-  String get rosterRemoveFutureGuest => '移除未来的安排';
+  String get rosterRemoveFutureGuest => '之后都不排';
 
   @override
   String rosterRemoveFutureGuestTitle(String name) {
-    return '移除“$name”的未来安排';
+    return '之后的事奉表都不排“$name”';
   }
 
   @override
   String rosterFutureGuestRemoved(int count) {
-    return '已移除 $count 份未来安排';
+    return '已从 $count 天的事奉表拿掉';
   }
 
   @override

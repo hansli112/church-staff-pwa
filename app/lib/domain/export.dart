@@ -109,6 +109,7 @@ Map<String, Object?> exportJson(ChurchSnapshot s, DateTime exportedAt) => {
           'events': [
             for (final e in svc.events) {'name': e.name, 'color': e.color},
           ],
+          'manyDuties': ?svc.manyDuties,
         },
     ],
     'ids': s.services.ids,

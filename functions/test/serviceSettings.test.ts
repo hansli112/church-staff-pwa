@@ -78,6 +78,10 @@ test('service edits reject noncanonical input, identity changes and ambiguous du
     { ...valid, dutyRename: { from: '沒有', to: '主持' } },
     { ...valid, after: { ...sunday, duties: ['主持'] }, dutyRename: { from: '司會', to: '主持' } },
     { ...valid, after: { ...sunday, duties: ['主持', '司琴'] }, dutyRename: { from: '司會', to: '主持', members: [] } },
+    { ...valid, after: { ...sunday, manyDuties: ['招待'] } },
+    { ...valid, after: { ...sunday, manyDuties: ['司會', '司會'] } },
+    { ...valid, after: { ...sunday, manyDuties: '司會' } },
+    { ...valid, before: { ...sunday, manyDuties: ['司會'] }, after: { ...sunday, duties: ['主持', '司琴'], manyDuties: ['司會'] }, dutyRename: { from: '司會', to: '主持' } },
   ];
   for (const input of invalid) {
     const error = await rejectsWith(editService(deps, caller('admin'), input), 'unknown') as { code: string };
@@ -201,4 +205,14 @@ test('a duty rename moves the 事工 that link it too (#82)', async () => {
     { id: 'worship', name: '敬拜團', duties: [{ service: 'sunday', duty: '主持' }, { service: 'youth', duty: '司會' }] },
     { id: 'care', name: '關懷', duties: [] },
   ]);
+});
+
+test('可以排好幾位 is kept on the service, and goes with a duty renamed', async () => {
+  await church();
+  const many = { ...sunday, manyDuties: ['司會'] };
+  await editService(deps, caller('admin'), { churchId: 'C1', before: sunday, after: many });
+  assert.deepEqual((await db.doc('churches/C1/settings/services').get()).get('services'), [many, youth]);
+  const renamed = { ...sunday, duties: ['主持', '司琴'], manyDuties: ['主持'] };
+  await editService(deps, caller('admin'), { churchId: 'C1', before: many, after: renamed, dutyRename: { from: '司會', to: '主持' } });
+  assert.deepEqual((await db.doc('churches/C1/settings/services').get()).get('services'), [renamed, youth]);
 });

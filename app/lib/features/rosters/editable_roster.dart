@@ -1,5 +1,5 @@
 /// A roster as its editors see it, on a day's page and on an event's
-/// (活動的服事表): duties to tap, names to swap or remove, 新增服事項目.
+/// (活動的服事表): duties to tap, 新增服事項目.
 library;
 
 import 'dart:async';
@@ -10,24 +10,19 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../core/design/components.dart';
 import '../../core/design/tokens.dart';
-import '../../data/backend.dart' show WarmUp;
 import '../../domain/models.dart';
-import '../../domain/roster_edit.dart';
 import '../../l10n/app_localizations.dart';
 import '../../state/providers.dart';
 import '../../state/roster_actions.dart';
 import 'duty_picking.dart';
-import 'format.dart';
 import 'future_changes.dart';
-import 'swap_asking.dart';
 
 /// Whether what editing [roster] reads is loaded; watching it keeps it so.
 bool _editingReady(WidgetRef ref, Roster roster) =>
     roster.isEvent ? ref.watch(eventEditingProvider) : ref.watch(rosterEditingProvider(roster.type));
 
-/// A roster as its editors see it: tap a duty to pick people, a name to
-/// swap or remove it (no swap on an event's roster: it has no other days),
-/// swipe a duty away.
+/// A roster as its editors see it: tap a duty, names and all, to pick
+/// people, swipe it away.
 class EditableRoster extends ConsumerWidget {
   const EditableRoster({
     super.key,
@@ -131,121 +126,15 @@ class _DutyRow extends ConsumerWidget {
   /// False for a duty someone else arranges: it only shows.
   final bool editable;
 
-  Future<void> _pick(BuildContext context, WidgetRef ref) => pickPeople(context, ref, roster, duty);
-
-  Future<void> _personMenu(
-    BuildContext context,
-    WidgetRef ref,
-    String person,
-  ) async {
-    final l10n = L10n.of(context);
-    // Mine: 請人代 as anyone asks (#92), beside 交換, which whoever
-    // arranges does outright.
-    final me = ref.read(uidProvider);
-    final mine = duty.uids[person] == me && asksForMyDuty(roster, duty.role, me, ref.read(todayProvider));
-    final open = mine ? myOpenAsk(ref, roster, duty.role) : null;
-    // 請人代 waits on the backend; it starts while I choose.
-    if (mine && open == null) ref.read(backendProvider).warmUp(WarmUp.swapAsk);
-    final choice = await showAppSheet<String>(
-      context,
-      builder: (context) => SafeArea(
-        child: ListSection(
-          header: person,
-          children: [
-            if (open != null)
-              ListRow(
-                title: myOpenAskLabel(l10n, open),
-                chevron: false,
-                trailing: RowButton(label: l10n.swapWithdraw, onPressed: () => Navigator.pop(context, 'withdraw')),
-              )
-            else if (mine)
-              ListRow(
-                title: l10n.swapAskCover,
-                subtitle: l10n.swapAskCoverSub,
-                leading: const Icon(Symbols.front_hand_rounded),
-                onTap: () => Navigator.pop(context, 'cover'),
-              ),
-            if (!roster.isEvent)
-              ListRow(
-                title: l10n.swap,
-                leading: const Icon(Symbols.swap_horiz_rounded),
-                onTap: () => Navigator.pop(context, 'swap'),
-              ),
-            ListRow(
-              title: l10n.removeFromDuty(duty.role),
-              destructive: true,
-              leading: const Icon(Symbols.remove_circle_rounded),
-              onTap: () => Navigator.pop(context, 'remove'),
-            ),
-            if (!roster.isEvent && !duty.uids.containsKey(person))
-              ListRow(
-                title: L10n.of(context).rosterRemoveFutureGuest,
-                destructive: true,
-                leading: const Icon(Symbols.event_busy_rounded),
-                onTap: () => Navigator.pop(context, 'removeFutureGuest'),
-              ),
-          ],
-        ),
-      ),
-    );
-    if (!context.mounted) return;
-    if (choice == 'remove') {
-      await runWithUndo(
-        context,
-        l10n.removed(person),
-        () => ref.read(rosterActionsProvider).setPeople(roster, duty.role, [
-          for (final p in duty.people)
-            if (p != person) p,
-        ]),
-      );
-    } else if (choice == 'removeFutureGuest') {
-      final actions = ref.read(rosterActionsProvider);
-      final preview = actions.previewGuestRemoval(roster.type, duty.role, person);
-      final apply = await showFutureRosterPreview(
-        context,
-        title: L10n.of(context).rosterRemoveFutureGuestTitle(person),
-        preview: preview,
-        today: ref.read(todayProvider),
-      );
-      if (!apply || !context.mounted) return;
-      await runWithUndo(
-        context,
-        L10n.of(context).rosterFutureGuestRemoved(preview.plan.before.length),
-        () => actions.applyFuturePreview(preview),
-      );
-    } else if (choice == 'swap') {
-      await _swap(context, ref, person);
-    } else if (choice == 'cover') {
-      await askForCover(context, ref, roster, duty.role);
-    } else if (choice == 'withdraw') {
-      await withdrawAsk(context, ref, open!);
-    }
-  }
-
-  Future<void> _swap(BuildContext context, WidgetRef ref, String person) async {
-    final l10n = L10n.of(context);
-    final today = ref.read(todayProvider);
-    final days = ref.read(serviceRostersProvider(roster.type)).value ?? const <Roster>[];
-    final targets = swapTargets(days, roster, duty.role, person);
-    final target = await showAppSheet<SwapSide>(
-      context,
-      expand: targets.length > 6,
-      builder: (context) => SwapSheet(
-        title: l10n.swapWith(duty.role),
-        targets: targets,
-        today: today,
-      ),
-    );
-    if (target == null || !context.mounted) return;
-    final message = target.person == null
-        ? l10n.moved(person, dayLabel(l10n, target.roster.day, today))
-        : l10n.swapped(person, target.person!);
-    await runWithUndo(
-      context,
-      message,
-      () => ref.read(rosterActionsProvider).swap(duty.role, SwapSide(roster, person), target),
-    );
-  }
+  /// The picker, for the whole row, names and all: who is on it, 請人代
+  /// on my own, 和別週交換 with the service's other days.
+  Future<void> _pick(BuildContext context, WidgetRef ref) => pickPeople(
+    context,
+    ref,
+    roster,
+    duty,
+    swapDays: roster.isEvent ? const [] : ref.read(serviceRostersProvider(roster.type)).value ?? const [],
+  );
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -258,8 +147,7 @@ class _DutyRow extends ConsumerWidget {
       child: ConstrainedBox(
         constraints: BoxConstraints(minHeight: Space.minTap(platform)),
         child: Padding(
-          // A name is a full tap target of its own; the rest of the row
-          // (the duty, 待定, the space after the names) opens the picker.
+          // One tap target, names and all: it opens the picker.
           padding: const EdgeInsets.symmetric(
             horizontal: Space.m,
             vertical: Space.xs,
@@ -281,57 +169,11 @@ class _DutyRow extends ConsumerWidget {
                         l10n.nobodyYet,
                         style: AppText.body.copyWith(color: c.secondaryLabel),
                       )
-                    : Wrap(
-                        spacing: Space.s,
-                        runSpacing: Space.s,
-                        children: [
-                          for (final p in duty.people)
-                            _NameButton(
-                              name: p,
-                              onTap: ready ? () => _personMenu(context, ref, p) : null,
-                            ),
-                        ],
-                      ),
+                    : Text(duty.people.join(l10n.listSeparator), style: AppText.body),
               ),
               const SizedBox(width: Space.s),
               if (editable) Icon(Symbols.chevron_right_rounded, color: c.tertiaryLabel, size: 22),
             ],
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-/// A name inside a duty row: its own tap target for swap and remove, as
-/// large as any other (44pt, Android 48dp), apart from the next by 8.
-class _NameButton extends StatelessWidget {
-  const _NameButton({required this.name, this.onTap});
-
-  final String name;
-  final VoidCallback? onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    final c = AppColors.of(context);
-    final tap = Space.minTap(Theme.of(context).platform);
-    return Semantics(
-      button: true,
-      child: InkWell(
-        onTap: onTap,
-        borderRadius: BorderRadius.circular(Radii.s),
-        child: Container(
-          constraints: BoxConstraints(minHeight: tap, minWidth: tap),
-          padding: const EdgeInsets.symmetric(horizontal: Space.m - 4, vertical: 6),
-          decoration: BoxDecoration(
-            color: c.fill,
-            borderRadius: BorderRadius.circular(Radii.s),
-          ),
-          // Fills the minimum size with the name centred in it.
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [Text(name, style: AppText.body)],
           ),
         ),
       ),

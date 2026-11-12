@@ -766,17 +766,17 @@ abstract class L10n {
   /// **'其他同工'**
   String get pickerOthers;
 
-  /// No description provided for @pickerAddAnother.
-  ///
-  /// In zh, this message translates to:
-  /// **'再加一位'**
-  String get pickerAddAnother;
-
   /// No description provided for @pickerSwapDay.
   ///
   /// In zh, this message translates to:
   /// **'和別週交換'**
   String get pickerSwapDay;
+
+  /// No description provided for @pickerSeveralThisTime.
+  ///
+  /// In zh, this message translates to:
+  /// **'這次排兩位以上'**
+  String get pickerSeveralThisTime;
 
   /// No description provided for @pickerUseName.
   ///
@@ -855,6 +855,12 @@ abstract class L10n {
   /// In zh, this message translates to:
   /// **'和誰交換{duty}？'**
   String swapWith(String duty);
+
+  /// No description provided for @swapWhich.
+  ///
+  /// In zh, this message translates to:
+  /// **'交換哪一位？'**
+  String get swapWhich;
 
   /// No description provided for @swapNone.
   ///
@@ -1365,6 +1371,12 @@ abstract class L10n {
   /// In zh, this message translates to:
   /// **'屬於哪個事工'**
   String get dutyMinistry;
+
+  /// No description provided for @dutyTakesMany.
+  ///
+  /// In zh, this message translates to:
+  /// **'可以排好幾位'**
+  String get dutyTakesMany;
 
   /// Last row of a ministry's roles, admins only: pick which roles it leads (#94)
   ///
@@ -4537,19 +4549,19 @@ abstract class L10n {
   /// No description provided for @rosterRemoveFutureGuest.
   ///
   /// In zh, this message translates to:
-  /// **'移除未來的安排'**
+  /// **'之後都不排'**
   String get rosterRemoveFutureGuest;
 
   /// No description provided for @rosterRemoveFutureGuestTitle.
   ///
   /// In zh, this message translates to:
-  /// **'移除「{name}」的未來安排'**
+  /// **'之後的服事表都不排「{name}」'**
   String rosterRemoveFutureGuestTitle(String name);
 
   /// No description provided for @rosterFutureGuestRemoved.
   ///
   /// In zh, this message translates to:
-  /// **'已移除 {count} 份未來安排'**
+  /// **'已從 {count} 天的服事表拿掉'**
   String rosterFutureGuestRemoved(int count);
 
   /// No description provided for @rosterFutureDutyChange.

@@ -1,4 +1,5 @@
 import 'package:flutter/foundation.dart' show listEquals, setEquals;
+import 'package:flutter/rendering.dart' show CustomSemanticsAction;
 import 'package:flutter/material.dart';
 import 'package:material_symbols_icons/symbols.dart';
 
@@ -21,7 +22,17 @@ class PickerResult {
     this.removeDuty = false,
     this.swapDay = false,
     this.guestNames = const {},
+    this.removeFutureGuest,
+    this.askedFor,
   });
+
+  /// A name arranged this once, to take off the days ahead too
+  /// (之後都不排), swiped in 臨時排過的人.
+  final String? removeFutureGuest;
+
+  /// What the row at the top asked for, for my own duty (#92): its
+  /// caller knows.
+  final Object? askedFor;
 
   /// Names explicitly arranged without binding a same-name member.
   final Set<String> guestNames;
@@ -59,8 +70,9 @@ const searchAutofocusThreshold = 30;
 /// duties up beforehand. Everyone is listed there from the start while
 /// nobody serves the duty yet. In 編輯 an admin takes people off the list
 /// again. A typed name nobody has can be used as is, for a visiting
-/// speaker. For a duty that takes one person, picking someone puts them
-/// there in place of whoever was, and closes; 「再加一位」 picks several.
+/// speaker. For a duty that takes one person (可以排好幾位 off), picking
+/// someone puts them there in place of whoever was, and closes;
+/// 「這次排兩位以上」 at the end ticks several this once.
 /// Nothing is kept until then or 完成: 取消, or closing it any other way
 /// after a change, asks to discard it ([UnsavedChanges]).
 class PeoplePicker extends StatefulWidget {
@@ -81,7 +93,18 @@ class PeoplePicker extends StatefulWidget {
     this.onInvite,
     this.notes = const {},
     this.unavailable = const {},
+    this.mine,
+    this.canRemoveFutureGuests = false,
   });
+
+  /// For my own duty: the row at the top for 請人代, or how my request
+  /// stands with 收回 (#92). Built in the sheet; it closes it with a
+  /// [PickerResult.askedFor].
+  final WidgetBuilder? mine;
+
+  /// Names arranged this once swipe away from the days ahead too: a
+  /// service's roster, not an event's.
+  final bool canRemoveFutureGuests;
 
   /// The service, or null for an event's roster: then whoever serves the
   /// duty in any service is listed first.
@@ -383,15 +406,7 @@ class _PeoplePickerState extends State<PeoplePicker> {
         _selected.contains(typed);
 
     final rows = <Widget Function()>[];
-    if (_tapReplaces && _selected.isNotEmpty) {
-      rows.add(
-        () => ListRow(
-          title: l10n.pickerAddAnother,
-          leading: const Icon(Symbols.person_add_rounded),
-          onTap: () => setState(() => _tapReplaces = false),
-        ),
-      );
-    }
+    if (widget.mine case final mine? when !searching) rows.add(() => mine(context));
     if (serving.isNotEmpty) {
       rows.add(() => SectionHeader(l10n.pickerServes(widget.duty)));
       for (final n in serving) {
@@ -430,7 +445,7 @@ class _PeoplePickerState extends State<PeoplePicker> {
     if (guests.isNotEmpty) {
       rows.add(() => SectionHeader(l10n.pickerGuestNames));
       for (final name in guests) {
-        rows.add(() => _row(name, c, onTap: () => _choose(name, guest: true)));
+        rows.add(() => _guestRow(name, c, l10n));
       }
     }
     if (!typedIsKnown) {
@@ -453,8 +468,18 @@ class _PeoplePickerState extends State<PeoplePicker> {
     }
     // Only before anyone is picked here: a swap does not keep picks.
     final swaps = widget.canSwapDay && !searching && listEquals(_selected, widget.initial);
-    if ((swaps || widget.canRemove) && !searching) {
+    if ((swaps || widget.canRemove || _tapReplaces) && !searching) {
       rows.add(() => const SizedBox(height: Space.l));
+    }
+    if (_tapReplaces && !searching) {
+      rows.add(
+        () => ListRow(
+          title: l10n.pickerSeveralThisTime,
+          leading: const Icon(Symbols.group_add_rounded),
+          chevron: false,
+          onTap: () => setState(() => _tapReplaces = false),
+        ),
+      );
     }
     if (swaps) {
       rows.add(
@@ -493,6 +518,26 @@ class _PeoplePickerState extends State<PeoplePicker> {
     for (final x in list)
       if (widget.unavailable.contains(name(x))) x,
   ];
+
+  /// A name arranged before without an account; swiped, 之後都不排.
+  Widget _guestRow(String name, AppColors c, L10n l10n) {
+    final row = _row(name, c, onTap: () => _choose(name, guest: true));
+    if (!widget.canRemoveFutureGuests) return row;
+    void remove() => Navigator.pop(context, PickerResult(people: widget.initial, removeFutureGuest: name));
+    return Semantics(
+      customSemanticsActions: {CustomSemanticsAction(label: l10n.rosterRemoveFutureGuest): remove},
+      child: Dismissible(
+        key: ValueKey('guest/$name'),
+        direction: DismissDirection.endToStart,
+        background: SwipeDeleteBackground(label: l10n.rosterRemoveFutureGuest),
+        confirmDismiss: (_) async {
+          remove();
+          return false;
+        },
+        child: row,
+      ),
+    );
+  }
 
   Widget _row(String name, AppColors c, {String? note, required VoidCallback onTap}) {
     final on = _selected.contains(name);

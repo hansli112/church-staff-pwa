@@ -379,10 +379,10 @@ class L10nEn extends L10n {
   String get pickerOthers => 'Other team members';
 
   @override
-  String get pickerAddAnother => 'Add another person';
+  String get pickerSwapDay => 'Swap with another week';
 
   @override
-  String get pickerSwapDay => 'Swap with another week';
+  String get pickerSeveralThisTime => 'More than one this time';
 
   @override
   String pickerUseName(String name) {
@@ -434,6 +434,9 @@ class L10nEn extends L10n {
   String swapWith(String duty) {
     return 'Swap $duty with whom?';
   }
+
+  @override
+  String get swapWhich => 'Swap whom?';
 
   @override
   String get swapNone => 'No one on other dates to swap with';
@@ -724,6 +727,9 @@ class L10nEn extends L10n {
 
   @override
   String get dutyMinistry => 'Ministry';
+
+  @override
+  String get dutyTakesMany => 'Can take several people';
 
   @override
   String get ministryPickDuties => 'Choose roles';
@@ -2656,11 +2662,11 @@ class L10nEn extends L10n {
   String get rosterApplyFutureChanges => 'Apply changes';
 
   @override
-  String get rosterRemoveFutureGuest => 'Remove future assignments';
+  String get rosterRemoveFutureGuest => 'Not on later dates';
 
   @override
   String rosterRemoveFutureGuestTitle(String name) {
-    return 'Remove future assignments for “$name”';
+    return 'Take “$name” off later dates';
   }
 
   @override
@@ -2668,8 +2674,8 @@ class L10nEn extends L10n {
     String _temp0 = intl.Intl.pluralLogic(
       count,
       locale: localeName,
-      other: 'Removed $count future assignments',
-      one: 'Removed 1 future assignment',
+      other: 'Taken off $count dates',
+      one: 'Taken off 1 date',
     );
     return '$_temp0';
   }

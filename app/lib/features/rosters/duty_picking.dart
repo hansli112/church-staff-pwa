@@ -7,12 +7,15 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:material_symbols_icons/symbols.dart';
 
 import '../../core/design/components.dart';
+import '../../data/backend.dart' show WarmUp;
 import '../../domain/day.dart';
 import '../../domain/models.dart';
 import '../../domain/roster_edit.dart';
 import '../../domain/roster_news.dart';
+import '../../domain/swap.dart';
 import '../../l10n/app_localizations.dart';
 import '../../state/providers.dart';
 import '../../state/roster_actions.dart';
@@ -20,11 +23,13 @@ import '../common/errors.dart';
 import 'format.dart';
 import 'future_changes.dart';
 import 'people_picker.dart';
+import 'swap_asking.dart';
 
 /// Opens the picker for [duty] on [roster] and saves what was picked: the
 /// day page's, and 安排服事's (#90), whose changes go [via] `plan`.
-/// [swapDays]: the days of 安排服事 the duty can be traded with, from the
-/// picker (#90).
+/// [swapDays]: the days the duty can be traded with, from the picker
+/// (#90): 安排服事's shown, or on a day's page the service's. On my own
+/// duty it also asks for a cover, or takes the ask back (#92).
 Future<void> pickPeople(
   BuildContext context,
   WidgetRef ref,
@@ -75,6 +80,11 @@ Future<void> pickPeople(
       (ref.read(servicesProvider).value?.byId(roster.type)?.duties.contains(duty.role) ?? false) &&
       (me?.editsDutyList(ref.read(ministriesProvider).value?.ministries ?? const [], roster.type, duty.role) ?? false);
   final onePerson = actions.takesOnePerson(roster, duty.role);
+  final today = ref.read(todayProvider);
+  final mine = asksForMyDuty(roster, duty.role, me?.uid, today);
+  final open = mine ? myOpenAsk(ref, roster, duty.role) : null;
+  // 請人代 waits on the backend; it starts while I choose.
+  if (mine && open == null) ref.read(backendProvider).warmUp(WarmUp.swapAsk);
   var invite = false;
   final result = await showAppSheet<PickerResult>(
     context,
@@ -96,13 +106,37 @@ Future<void> pickPeople(
       canRemove: true,
       canSwapDay: swapDays.any((d) => canSwapDuty(duty.role, roster, d)),
       onePerson: onePerson,
+      canRemoveFutureGuests: !roster.isEvent,
+      mine: !mine
+          ? null
+          : (context) => open != null
+                ? ListRow(
+                    title: myOpenAskLabel(l10n, open),
+                    chevron: false,
+                    trailing: RowButton(
+                      label: l10n.swapWithdraw,
+                      onPressed: () => Navigator.pop(context, PickerResult(people: duty.people, askedFor: open)),
+                    ),
+                  )
+                : ListRow(
+                    title: l10n.swapAskCover,
+                    subtitle: l10n.swapAskCoverSub,
+                    leading: const Icon(Symbols.front_hand_rounded),
+                    onTap: () => Navigator.pop(context, PickerResult(people: duty.people, askedFor: _cover)),
+                  ),
       onInvite: (me?.isAdmin ?? false) ? () => invite = true : null,
       notes: notes,
       unavailable: unavailableNames,
     ),
   );
   if (result != null && context.mounted) {
-    if (result.swapDay) {
+    if (result.askedFor case final SwapRequest r) {
+      await withdrawAsk(context, ref, r);
+    } else if (result.askedFor == _cover) {
+      await askForCover(context, ref, roster, duty.role);
+    } else if (result.removeFutureGuest case final name?) {
+      await _removeFutureGuest(context, ref, roster.type, duty.role, name);
+    } else if (result.swapDay) {
       await pickDayToSwap(context, ref, roster, duty, swapDays, via: via);
     } else {
       await _savePicked(context, ref, roster, duty, result, via, unavailable: unavailableNames);
@@ -111,8 +145,31 @@ Future<void> pickPeople(
   if (invite) unawaited(router.push('/me/invites'));
 }
 
+/// What the top row asks for on my own duty: 請人代.
+const _cover = 'cover';
+
+/// 之後都不排: [name], arranged this once, off [role] on the days ahead
+/// of [type], once the preview says which.
+Future<void> _removeFutureGuest(BuildContext context, WidgetRef ref, String type, String role, String name) async {
+  final actions = ref.read(rosterActionsProvider);
+  final preview = actions.previewGuestRemoval(type, role, name);
+  final apply = await showFutureRosterPreview(
+    context,
+    title: L10n.of(context).rosterRemoveFutureGuestTitle(name),
+    preview: preview,
+    today: ref.read(todayProvider),
+  );
+  if (!apply || !context.mounted) return;
+  await runWithUndo(
+    context,
+    L10n.of(context).rosterFutureGuestRemoved(preview.plan.before.length),
+    () => actions.applyFuturePreview(preview),
+  );
+}
+
 /// 和別週交換: which of [days] to trade [duty] on [roster] with, then
-/// traded.
+/// traded. With several on it, which of them first: that one trades
+/// places with someone there.
 Future<void> pickDayToSwap(
   BuildContext context,
   WidgetRef ref,
@@ -122,6 +179,7 @@ Future<void> pickDayToSwap(
   required RosterVia via,
 }) async {
   final l10n = L10n.of(context);
+  if (duty.people.length > 1) return _swapOne(context, ref, roster, duty, days, via: via);
   String? onIt(Roster d) {
     final people = d.duties.firstWhere((x) => x.role == duty.role).people;
     return people.isEmpty ? null : people.join(l10n.listSeparator);
@@ -139,6 +197,45 @@ Future<void> pickDayToSwap(
   );
   if (target == null || !context.mounted) return;
   await swapDutyDays(context, ref, duty.role, roster, target.roster, via: via);
+}
+
+/// One of the several on [duty] traded with someone on another of [days].
+Future<void> _swapOne(
+  BuildContext context,
+  WidgetRef ref,
+  Roster roster,
+  Duty duty,
+  List<Roster> days, {
+  required RosterVia via,
+}) async {
+  final l10n = L10n.of(context);
+  final person = await showAppSheet<String>(
+    context,
+    builder: (context) => SafeArea(
+      child: SingleChildScrollView(
+        child: ListSection(
+          header: l10n.swapWhich,
+          children: [for (final p in duty.people) ListRow(title: p, onTap: () => Navigator.pop(context, p))],
+        ),
+      ),
+    ),
+  );
+  if (person == null || !context.mounted) return;
+  final targets = swapTargets(days, roster, duty.role, person);
+  final today = ref.read(todayProvider);
+  final target = await showAppSheet<SwapSide>(
+    context,
+    expand: targets.length > 6,
+    builder: (context) => SwapSheet(title: l10n.swapWith(duty.role), targets: targets, today: today),
+  );
+  if (target == null || !context.mounted) return;
+  await runWithUndo(
+    context,
+    target.person == null
+        ? l10n.moved(person, dayLabel(l10n, target.roster.day, today))
+        : l10n.swapped(person, target.person!),
+    () => ref.read(rosterActionsProvider).swap(duty.role, SwapSide(roster, person), target, via: via),
+  );
 }
 
 /// Trades whoever is on [role] on [from] and [to] (canSwapDuty), saying

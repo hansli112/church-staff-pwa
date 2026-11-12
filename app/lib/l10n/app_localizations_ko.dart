@@ -371,10 +371,10 @@ class L10nKo extends L10n {
   String get pickerOthers => '다른 멤버';
 
   @override
-  String get pickerAddAnother => '한 명 더 추가';
+  String get pickerSwapDay => '다른 주와 바꾸기';
 
   @override
-  String get pickerSwapDay => '다른 주와 바꾸기';
+  String get pickerSeveralThisTime => '이번에는 두 명 이상';
 
   @override
   String pickerUseName(String name) {
@@ -426,6 +426,9 @@ class L10nKo extends L10n {
   String swapWith(String duty) {
     return '$duty 담당을 누구와 바꿀까요?';
   }
+
+  @override
+  String get swapWhich => '누구를 바꿀까요?';
 
   @override
   String get swapNone => '다른 날짜에 바꿀 수 있는 사람이 없어요';
@@ -709,6 +712,9 @@ class L10nKo extends L10n {
 
   @override
   String get dutyMinistry => '사역팀';
+
+  @override
+  String get dutyTakesMany => '여러 명 넣을 수 있음';
 
   @override
   String get ministryPickDuties => '담당 선택';
@@ -2526,16 +2532,16 @@ class L10nKo extends L10n {
   String get rosterApplyFutureChanges => '변경 적용';
 
   @override
-  String get rosterRemoveFutureGuest => '이후 배정 빼기';
+  String get rosterRemoveFutureGuest => '앞으로 넣지 않기';
 
   @override
   String rosterRemoveFutureGuestTitle(String name) {
-    return '‘$name’ 님의 이후 배정 빼기';
+    return '앞으로의 봉사표에서 ‘$name’ 빼기';
   }
 
   @override
   String rosterFutureGuestRemoved(int count) {
-    return '이후 배정 $count개를 뺐어요';
+    return '$count일 봉사표에서 뺐어요';
   }
 
   @override

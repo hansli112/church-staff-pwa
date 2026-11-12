@@ -343,6 +343,7 @@ Service serviceFromJson(Json data) => Service(
     if (data['events'] is List)
       for (final e in data['events'] as List<dynamic>) ?_event(e),
   ],
+  manyDuties: data['manyDuties'] is List ? _strings(data['manyDuties']) : null,
 );
 
 Json serviceToJson(Service s) => {
@@ -352,6 +353,7 @@ Json serviceToJson(Service s) => {
   'enabled': s.enabled,
   'duties': s.duties,
   'events': [for (final e in s.events) _eventToJson(e)],
+  'manyDuties': ?s.manyDuties,
 };
 
 ServiceSettings serviceSettingsFromJson(Json? data) {

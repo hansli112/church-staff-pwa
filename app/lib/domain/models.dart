@@ -605,6 +605,7 @@ class Service {
     this.enabled = true,
     this.duties = const [],
     this.events = const [],
+    this.manyDuties,
   });
 
   /// Stable ID. Never reused, never deleted (settings/services `ids`).
@@ -623,12 +624,20 @@ class Service {
   /// Common special-event tags offered when editing this service's rosters.
   final List<EventTag> events;
 
+  /// The duties that take several people (可以排好幾位): picked in a list
+  /// of ticks; for the rest, one tap puts someone in place of whoever was.
+  /// Null until an admin first sets one: until then each duty goes by
+  /// whether it had two people in the last weeks
+  /// (RosterActions.takesOnePerson).
+  final List<String>? manyDuties;
+
   Service copyWith({
     String? name,
     int? weekday,
     bool? enabled,
     List<String>? duties,
     List<EventTag>? events,
+    List<String>? manyDuties,
   }) => Service(
     id: id,
     name: name ?? this.name,
@@ -636,6 +645,7 @@ class Service {
     enabled: enabled ?? this.enabled,
     duties: duties ?? this.duties,
     events: events ?? this.events,
+    manyDuties: manyDuties ?? this.manyDuties,
   );
 
   @override
@@ -646,7 +656,8 @@ class Service {
       other.weekday == weekday &&
       other.enabled == enabled &&
       listEquals(other.duties, duties) &&
-      listEquals(other.events, events);
+      listEquals(other.events, events) &&
+      listEquals(other.manyDuties, manyDuties);
 
   @override
   int get hashCode => Object.hash(
@@ -656,6 +667,7 @@ class Service {
     enabled,
     Object.hashAll(duties),
     Object.hashAll(events),
+    manyDuties == null ? null : Object.hashAll(manyDuties!),
   );
 }
 

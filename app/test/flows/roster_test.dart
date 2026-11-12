@@ -2,7 +2,6 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
-import 'package:martha/core/design/tokens.dart';
 import 'package:martha/data/memory/memory_backend.dart';
 import 'package:martha/domain/day.dart';
 import 'package:martha/domain/models.dart';
@@ -262,12 +261,12 @@ void main() {
       ], reason: 'the undo is not another edit');
     });
 
-    testWidgets('a duty only ever one person has takes a second with 再加一位', (tester) async {
+    testWidgets('a duty only ever one person has takes a second with 這次排兩位以上', (tester) async {
       final b = seededChurch();
       await pumpApp(tester, b);
       await go(tester, '/rosters/sunday/2026-10-11');
       await tapText(tester, '司會');
-      await tapText(tester, '再加一位');
+      await tapText(tester, '這次排兩位以上');
       await tapText(tester, '林同工');
       expect(find.text('排過司會的人'), findsOneWidget, reason: 'still open for more');
       await tapText(tester, '完成');
@@ -304,19 +303,41 @@ void main() {
       await pumpApp(tester, b);
       await go(tester, '/rosters/sunday/2026-10-11');
       await tapText(tester, '司會');
-      expect(find.text('再加一位'), findsNothing);
+      expect(find.text('這次排兩位以上'), findsNothing);
       await tapText(tester, '林同工');
       expect(find.text('排過司會的人'), findsOneWidget, reason: 'still open for more');
     });
 
-    testWidgets('a helper found by searching can join as a second with 再加一位', (tester) async {
+    testWidgets("可以排好幾位 on a duty's page decides: on, ticks; off, one tap puts someone in place", (tester) async {
+      final b = seededChurch();
+      await pumpApp(tester, b);
+      await go(tester, '/me/groups/duty?service=sunday&name=司會');
+      await tapText(tester, '可以排好幾位');
+      expect(b.services['grace']!.byId('sunday')!.manyDuties, ['司會', '招待'], reason: '招待 had two, as it stood');
+      await go(tester, '/rosters/sunday/2026-10-11');
+      await tapText(tester, '司會');
+      expect(find.text('這次排兩位以上'), findsNothing);
+      await tapText(tester, '林同工');
+      expect(find.text('排過司會的人'), findsOneWidget, reason: 'still open for more');
+      await tapText(tester, '完成');
+      expect(peopleOn(b, 11, '司會'), unorderedEquals(['王牧師', '林同工']));
+
+      await go(tester, '/me/groups/duty?service=sunday&name=招待');
+      await tapText(tester, '可以排好幾位');
+      expect(b.services['grace']!.byId('sunday')!.manyDuties, ['司會']);
+      await go(tester, '/rosters/sunday/2026-10-18');
+      await tapText(tester, '招待');
+      expect(find.text('這次排兩位以上'), findsOneWidget, reason: 'had two before, and yet one at a time');
+    });
+
+    testWidgets('a helper found by searching can join as a second with 這次排兩位以上', (tester) async {
       final b = seededChurch();
       await pumpApp(tester, b);
       await go(tester, '/rosters/sunday/2026-10-11');
       await tapText(tester, '司會');
+      await tapText(tester, '這次排兩位以上');
       await tester.enterText(find.byType(TextField), 'John');
       await settle(tester);
-      await tapText(tester, '再加一位');
       await tapText(tester, 'John Chen');
       await tapText(tester, '完成');
       expect(peopleOn(b, 11, '司會'), unorderedEquals(['王牧師', 'John Chen']));
@@ -556,17 +577,12 @@ void main() {
       );
     });
 
-    testWidgets('a name on the day is its own tap target, full size and apart from the next', (tester) async {
+    testWidgets('the names on a duty open its picker, as the rest of the row does', (tester) async {
       await pumpApp(tester, seededChurch());
       await go(tester, '/rosters/sunday/2026-10-04');
-      Finder chip(String name) => find.ancestor(of: find.text(name), matching: find.byType(InkWell)).first;
-      final minimum = Space.minTap(Theme.of(tester.element(find.text('陳志豪'))).platform);
-      final hao = tester.getRect(chip('陳志豪'));
-      expect(hao.height, greaterThanOrEqualTo(minimum));
-      expect(hao.width, greaterThanOrEqualTo(minimum));
-      // 招待: 陳志豪、李美玉 (李美玉 is on 司琴 above too).
-      final next = tester.getRect(find.ancestor(of: find.text('李美玉').last, matching: find.byType(InkWell)).first);
-      expect(next.left - hao.right, greaterThanOrEqualTo(Space.s), reason: 'a gap between two names on one row');
+      await tester.tap(find.textContaining('陳志豪'));
+      await settle(tester);
+      expect(find.text('排過招待的人'), findsOneWidget);
     });
 
     testWidgets('when nobody serves a duty, an admin can invite people from the picker', (tester) async {
@@ -770,10 +786,10 @@ void main() {
       final b = seededChurch();
       await pumpApp(tester, b);
       await go(tester, '/rosters/sunday/2026-10-04');
-      await tester.tap(find.text('陳志豪'));
-      await settle(tester);
-      await tapText(tester, '交換');
-      expect(find.text('和誰交換招待？'), findsOneWidget);
+      await tapText(tester, '招待');
+      await tapText(tester, '和別週交換');
+      await tapText(tester, '陳志豪');
+      expect(find.text('和誰交換招待？'), findsOneWidget, reason: 'one of the two on it');
       // 李美玉 already serves 招待 on 10/4, so 10/11 offers nobody to swap
       // with; draft weeks offer an empty slot.
       final sheet = find.byType(BottomSheet);
@@ -791,9 +807,8 @@ void main() {
       final b = seededChurch();
       await pumpApp(tester, b);
       await go(tester, '/rosters/sunday/2026-10-11');
-      await tester.tap(find.text('王牧師'));
-      await settle(tester);
-      await tapText(tester, '交換');
+      await tapText(tester, '司會');
+      await tapText(tester, '和別週交換');
       b.failNextWrite = Exception('offline');
       await tapText(tester, '林同工');
       expect(peopleOn(b, 4, '司會'), ['林同工']);
@@ -801,7 +816,7 @@ void main() {
       expect(find.text('沒有儲存成功，請檢查網路後再試一次'), findsOneWidget);
     });
 
-    testWidgets('nobody to swap with says so in one sentence', (tester) async {
+    testWidgets('nobody to swap with: no 和別週交換', (tester) async {
       // A service that no longer runs has no drafts; with one saved day
       // there is nobody to swap with.
       final b = seededChurch();
@@ -809,10 +824,8 @@ void main() {
       b.rosters['grace']!.remove(Roster.idFor('sunday', Day(2026, 10, 11)));
       await pumpApp(tester, b);
       await go(tester, '/rosters/sunday/2026-10-04');
-      await tester.tap(find.text('李美玉').first);
-      await settle(tester);
-      await tapText(tester, '交換');
-      expect(find.text('其他日期沒有可以交換的人'), findsOneWidget);
+      await tapText(tester, '司琴');
+      expect(find.text('和別週交換'), findsNothing);
     });
   });
 

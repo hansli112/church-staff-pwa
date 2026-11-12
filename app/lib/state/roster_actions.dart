@@ -169,13 +169,31 @@ class RosterActions {
     return type == null ? names : _order(type).sort(role, names);
   }
 
-  /// Whether [role] on [r] takes one person: nobody had more on it in the
-  /// last weeks or the days ahead, in [r]'s service (in events, for an
-  /// event's roster). Unsure while the last weeks are not read yet: no.
+  /// Whether [role] on [r] takes one person: as its service says
+  /// (可以排好幾位, Service.manyDuties), or, until an admin sets that, when
+  /// nobody had more on it in the last weeks or the days ahead, in [r]'s
+  /// service (in events, for an event's roster). Unsure while the last
+  /// weeks are not read yet: no.
   bool takesOnePerson(Roster r, String role) {
+    if (!r.isEvent) {
+      if (_ref.read(servicesProvider).value?.byId(r.type)?.manyDuties case final many?) return !many.contains(role);
+    }
+    return !_hadSeveral(r, role);
+  }
+
+  /// The duties of [service] that take several people as they stand: set,
+  /// or seen in the last weeks. What 可以排好幾位 starts from.
+  List<String> manyDuties(Service service) =>
+      service.manyDuties ??
+      [
+        for (final d in service.duties)
+          if (_hadSeveral(Roster(type: service.id, day: _ref.read(todayProvider)), d)) d,
+      ];
+
+  bool _hadSeveral(Roster r, String role) {
     final recent = _ref.read(recentRostersProvider);
-    if (!recent.hasValue) return false;
-    return ![...recent.requireValue, ..._saved, r].any(
+    if (!recent.hasValue) return true;
+    return [...recent.requireValue, ..._saved, r].any(
       (o) =>
           (r.isEvent ? o.isEvent : !o.isEvent && o.type == r.type) &&
           o.duties.any((d) => d.role == role && d.people.length > 1),
@@ -281,9 +299,9 @@ class RosterActions {
 
   /// Swaps two people in [role] in one batch; undo puts both days' [role]
   /// back, also in one batch.
-  ChurchWrite swap(String role, SwapSide a, SwapSide b) {
+  ChurchWrite swap(String role, SwapSide a, SwapSide b, {RosterVia via = RosterVia.app}) {
     final (a2, b2) = swapPeople(role, a, b, nameIds: _nameIds, order: _order(a.roster.type));
-    return _pairWrite(role, (a.roster, a2), (b.roster, b2));
+    return _pairWrite(role, (a.roster, a2), (b.roster, b2), via: via);
   }
 
   /// Trades whoever is on [role] on [a] and [b] (canSwapDuty), as

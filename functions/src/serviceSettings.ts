@@ -11,6 +11,8 @@ interface Service {
   enabled: boolean;
   duties: string[];
   events: { name: string; color: number }[];
+  /** The duties that take several people; absent until an admin sets one. */
+  manyDuties?: string[];
 }
 
 interface DutyRename { from: string; to: string }
@@ -26,7 +28,7 @@ function label(value: unknown): string {
 
 function service(value: unknown): Service {
   const s = record(value);
-  exactKeys(s, ['id', 'name', 'weekday', 'enabled', 'duties', 'events']);
+  exactKeys(s, ['id', 'name', 'weekday', 'enabled', 'duties', 'events', ...(Object.hasOwn(s, 'manyDuties') ? ['manyDuties'] : [])]);
   const serviceId = id(s.id);
   const name = label(s.name);
   if (!Number.isInteger(s.weekday) || (s.weekday as number) < 1 || (s.weekday as number) > 7 || typeof s.enabled !== 'boolean') {
@@ -41,7 +43,13 @@ function service(value: unknown): Service {
     return { name: label(e.name), color: e.color as number };
   });
   if (new Set(duties).size !== duties.length || new Set(events.map((e) => e.name)).size !== events.length) fail('invalid-argument', 'unknown');
-  return { id: serviceId, name, weekday: s.weekday as number, enabled: s.enabled, duties, events };
+  let manyDuties: string[] | undefined;
+  if (Object.hasOwn(s, 'manyDuties')) {
+    if (!Array.isArray(s.manyDuties)) fail('invalid-argument', 'unknown');
+    manyDuties = s.manyDuties.map(label);
+    if (new Set(manyDuties).size !== manyDuties.length || manyDuties.some((d) => !duties.includes(d))) fail('invalid-argument', 'unknown');
+  }
+  return { id: serviceId, name, weekday: s.weekday as number, enabled: s.enabled, duties, events, ...(manyDuties && { manyDuties }) };
 }
 
 function rename(value: unknown, before: Service, after: Service): DutyRename | undefined {
@@ -51,6 +59,8 @@ function rename(value: unknown, before: Service, after: Service): DutyRename | u
   const from = label(r.from);
   const to = label(r.to);
   if (!validDutyRename(before.duties, after.duties, from, to)) fail('invalid-argument', 'unknown');
+  // 可以排好幾位 goes with the duty under its new name.
+  if (!isDeepStrictEqual(after.manyDuties, before.manyDuties?.map((d) => d === from ? to : d))) fail('invalid-argument', 'unknown');
   return { from, to };
 }
 

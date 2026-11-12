@@ -222,8 +222,8 @@
     }
   },
   "pickerOthers": "其他同工",
-  "pickerAddAnother": "再加一位",
   "pickerSwapDay": "和別週交換",
+  "pickerSeveralThisTime": "這次排兩位以上",
   "pickerUseName": "新增「{name}」",
   "@pickerUseName": {
     "placeholders": {
@@ -286,6 +286,7 @@
       }
     }
   },
+  "swapWhich": "交換哪一位？",
   "swapNone": "其他日期沒有可以交換的人",
   "swapped": "已交換「{a}」和「{b}」",
   "@swapped": {
@@ -464,6 +465,7 @@
   "@dutyOthers": {"description": "On a role's page, the people list: header over those not yet the service's team members (#94)"},
   "dutyMinistry": "屬於哪個事工",
   "@dutyMinistry": {"description": "On a role's page: which ministry it belongs to, one or none (#94)"},
+  "dutyTakesMany": "可以排好幾位",
   "ministryPickDuties": "選服事項目",
   "@ministryPickDuties": {"description": "Last row of a ministry's roles, admins only: pick which roles it leads (#94)"},
   "ministryDutiesNone": "沒有",
@@ -1910,8 +1912,8 @@
   "rosterFutureChangesFooter": "只變更明天起已儲存的服事表",
   "rosterFutureChangesConflict": "已有同名項目，請先調整",
   "rosterApplyFutureChanges": "套用變更",
-  "rosterRemoveFutureGuest": "移除未來的安排",
-  "rosterRemoveFutureGuestTitle": "移除「{name}」的未來安排",
+  "rosterRemoveFutureGuest": "之後都不排",
+  "rosterRemoveFutureGuestTitle": "之後的服事表都不排「{name}」",
   "@rosterRemoveFutureGuestTitle": {
     "placeholders": {
       "name": {
@@ -1919,7 +1921,7 @@
       }
     }
   },
-  "rosterFutureGuestRemoved": "已移除 {count} 份未來安排",
+  "rosterFutureGuestRemoved": "已從 {count} 天的服事表拿掉",
   "@rosterFutureGuestRemoved": {
     "placeholders": {
       "count": {

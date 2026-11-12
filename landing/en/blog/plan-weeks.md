@@ -22,7 +22,7 @@ Tap a cell to bring up the list of people:
 
 - At the top are people who have served in this role, with how many times they’re already scheduled this month and anything else they’re doing that day, so no one gets scheduled too often.
 - Below them are the other team members. You can also search by name.
-- For roles that take one person (like Host or Piano), tap a name and you’re set. To schedule two or more people, tap **Add another person**, make your picks, then tap **Done**.
+- For roles that take one person (like Host or Piano), tap a name and you’re set. To schedule two or more people this time, tap **More than one this time** at the bottom, make your picks, then tap **Done**. For a role that usually takes several, an admin can turn on **Can take several people** on the role’s page.
 
 ![Tap Host for two weeks, pick someone for each, then tap Done to notify the team](media:plan)
 
