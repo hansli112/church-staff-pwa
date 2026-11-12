@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
+import 'package:martha/core/design/components.dart';
 import 'package:martha/domain/models.dart';
 import 'package:martha/domain/event_roster.dart';
 
@@ -146,5 +147,48 @@ void main() {
     final events = await b.church('grace').calendar.events('2026-10');
     expect(events.length, 1);
     expect((events.single.id, events.single.title), ('meeting', '同工會'));
+  });
+
+  testWidgets('a long address takes one line in the day list; the editor rows are as tall as any other', (
+    tester,
+  ) async {
+    final b = seededChurch();
+    b.connectCalendar('grace', calendarName: '教會行事曆');
+    const address = '台北市大安區復興南路一段 390 號 3 樓 恩典堂副堂（從後門電梯上樓）';
+    b.calendarEvents['grace'] = [
+      CalendarEvent(
+        id: 'a',
+        title: '同工會',
+        start: DateTime(2026, 10, 9, 19),
+        end: DateTime(2026, 10, 9, 21),
+        location: address,
+      ),
+    ];
+    await pumpApp(tester, b);
+    await go(tester, '/calendar');
+    await tapText(tester, '9');
+    final line = tester.getSize(find.text('同工會').last).height;
+    expect(tester.getSize(find.text(address)).height, lessThan(line * 1.5), reason: 'the rest is on the event');
+
+    // Wider than a phone: the test font's square glyphs would put the time
+    // under the date, as large text does.
+    tester.view.physicalSize = const Size(600 * 3, 852 * 3);
+    await tapText(tester, '同工會');
+    double rowOf(String text) => tester
+        .getSize(
+          find
+              .ancestor(
+                of: find.textContaining(text).last,
+                matching: find.byWidgetPredicate((w) => w is ListRow || w.runtimeType.toString() == '_WhenRow'),
+              )
+              .first,
+        )
+        .height;
+    final row = rowOf('刪除活動');
+    expect([rowOf('整天'), rowOf('開始'), rowOf('結束')], [row, row, row]);
+    final duplicate = tester.widget<ListRow>(
+      find.ancestor(of: find.text('複製活動'), matching: find.byType(ListRow)).first,
+    );
+    expect((duplicate.tinted, duplicate.chevron ?? false), (true, false), reason: 'done at once, nothing more opens');
   });
 }

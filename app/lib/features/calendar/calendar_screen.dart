@@ -367,7 +367,9 @@ class _AgendaState extends ConsumerState<_Agenda> {
 
     Widget row(CalendarEvent e) => ListRow(
       title: e.title,
+      // One line: the whole address is on the event's page.
       subtitle: e.location,
+      subtitleLines: 1,
       trailing: Text(
         _when(l10n, e),
         textAlign: TextAlign.end,

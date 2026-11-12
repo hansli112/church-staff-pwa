@@ -358,7 +358,7 @@ void main() {
     await settle(tester);
     await tester.enterText(find.byType(TextField).first, '禱告會');
     await tester.pump();
-    expect(find.text('1 小時 30 分鐘'), findsOneWidget, reason: 'how long, under 結束');
+    expect(find.textContaining('1 小時 30 分鐘', findRichText: true), findsOneWidget, reason: 'how long, beside 結束');
 
     // 7:30 to 9:00 in the evening. The start's wheels first, then the
     // end's, which start from the end.
@@ -372,7 +372,7 @@ void main() {
     expect(tester.testTextInput.isVisible, isFalse);
     expect(find.byType(CupertinoDatePicker), findsOneWidget);
     await turn(tester, '00', 6);
-    expect(find.text('2 小時'), findsOneWidget);
+    expect(find.textContaining('2 小時', findRichText: true), findsOneWidget);
 
     // Back to 6 o'clock, before the start: the next day.
     await turn(tester, '09', -3);

@@ -14,6 +14,7 @@ import 'package:flutter/cupertino.dart'
         showCupertinoModalPopup;
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/rendering.dart' show OverflowBoxFit;
 import 'package:material_symbols_icons/symbols.dart';
 import 'package:flutter/services.dart';
 
@@ -358,12 +359,18 @@ class ListRow extends StatelessWidget {
     this.onTap,
     this.chevron,
     this.destructive = false,
+    this.tinted = false,
     this.dimmed = false,
     this.selected,
+    this.subtitleLines,
   });
 
   final String title;
   final String? subtitle;
+
+  /// At most this many lines of [subtitle], the rest cut with an
+  /// ellipsis: a long address in a list, whole on the page it opens.
+  final int? subtitleLines;
   final Widget? leading;
   final Widget? trailing;
 
@@ -375,6 +382,10 @@ class ListRow extends StatelessWidget {
   /// there is no [trailing] widget.
   final bool? chevron;
   final bool destructive;
+
+  /// An action done at once, such as 複製活動: the title in the accent
+  /// color and no chevron, which would say another page opens.
+  final bool tinted;
 
   /// Greys the title, for a row that counts for less than those around it,
   /// such as a meeting that did not happen.
@@ -402,7 +413,7 @@ class ListRow extends StatelessWidget {
   Widget build(BuildContext context) {
     final c = AppColors.of(context);
     final platform = Theme.of(context).platform;
-    final showChevron = chevron ?? (onTap != null && trailing == null && selected == null && !destructive);
+    final showChevron = chevron ?? (onTap != null && trailing == null && selected == null && !destructive && !tinted);
     final textScaler = MediaQuery.textScalerOf(context);
     final valueStyle = AppText.body.copyWith(color: c.secondaryLabel);
     final row = InkWell(
@@ -447,6 +458,8 @@ class ListRow extends StatelessWidget {
                           style: AppText.body.copyWith(
                             color: destructive
                                 ? c.destructive
+                                : tinted
+                                ? c.accent
                                 : dimmed
                                 ? c.secondaryLabel
                                 : c.label,
@@ -460,13 +473,18 @@ class ListRow extends StatelessWidget {
                         if (subtitle != null)
                           Padding(
                             padding: const EdgeInsets.only(top: 2),
-                            child: BalancedText(
-                              subtitle!,
-                              textAlign: TextAlign.start,
-                              style: AppText.subheadline.copyWith(
-                                color: c.secondaryLabel,
-                              ),
-                            ),
+                            child: subtitleLines == null
+                                ? BalancedText(
+                                    subtitle!,
+                                    textAlign: TextAlign.start,
+                                    style: AppText.subheadline.copyWith(color: c.secondaryLabel),
+                                  )
+                                : Text(
+                                    subtitle!,
+                                    maxLines: subtitleLines,
+                                    overflow: TextOverflow.ellipsis,
+                                    style: AppText.subheadline.copyWith(color: c.secondaryLabel),
+                                  ),
                           ),
                       ],
                     ),
@@ -539,7 +557,21 @@ class SwitchRow extends StatelessWidget {
         subtitle: subtitle,
         leading: leading,
         onTap: onChanged == null ? null : () => onChanged!(!value),
-        trailing: Switch.adaptive(value: value, onChanged: onChanged),
+        // As tall as a line of the title, the switch overflowing into the
+        // row's padding: a row with a switch is as tall as any other. The
+        // whole row toggles, so its tap target is the row's.
+        trailing: SizedBox(
+          height: 22,
+          child: OverflowBox(
+            maxHeight: double.infinity,
+            fit: OverflowBoxFit.deferToChild,
+            child: Switch.adaptive(
+              value: value,
+              onChanged: onChanged,
+              materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+            ),
+          ),
+        ),
       ),
     );
   }

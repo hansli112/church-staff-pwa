@@ -554,6 +554,7 @@ class _EventEditorState extends State<_EventEditor> {
                     children: [
                       ListRow(
                         title: l10n.calDuplicate,
+                        tinted: true,
                         onTap: _savable
                             ? () => Navigator.pop(context, _EditResult(event: _edited.anew, duplicate: true))
                             : null,
@@ -608,35 +609,49 @@ class _WhenRow extends StatelessWidget {
     final c = AppColors.of(context);
     final style = AppText.body.copyWith(color: c.label);
     final date = (day.year == thisYear ? DateFormat.MMMEd() : DateFormat.yMMMEd()).format(day);
-    Widget chip(String text, bool open, VoidCallback onTap) => Material(
-      color: c.fill,
-      borderRadius: BorderRadius.circular(Radii.s),
-      child: InkWell(
-        borderRadius: BorderRadius.circular(Radii.s),
-        onTap: onTap,
-        child: ConstrainedBox(
-          constraints: BoxConstraints(minHeight: Space.minTap(Theme.of(context).platform)),
-          child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: Space.s),
-            child: Center(
-              widthFactor: 1,
-              child: Text(text, style: open ? style.copyWith(color: c.accent) : style),
+    final tap = Space.minTap(Theme.of(context).platform);
+    // A pill a line of text tall, as the iPhone's Calendar has, so the row
+    // is as tall as any other; it takes taps the row's whole height.
+    Widget chip(String text, bool open, VoidCallback onTap) => GestureDetector(
+      behavior: HitTestBehavior.opaque,
+      onTap: onTap,
+      child: ConstrainedBox(
+        constraints: BoxConstraints(minHeight: tap),
+        child: Center(
+          widthFactor: 1,
+          heightFactor: 1,
+          child: Material(
+            color: c.fill,
+            borderRadius: BorderRadius.circular(Radii.s),
+            child: InkWell(
+              borderRadius: BorderRadius.circular(Radii.s),
+              onTap: onTap,
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: Space.s, vertical: 6),
+                child: Text(text, style: open ? style.copyWith(color: c.accent) : style),
+              ),
             ),
           ),
         ),
       ),
     );
     return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: Space.m, vertical: Space.xs),
+      padding: const EdgeInsets.symmetric(horizontal: Space.m),
       child: Row(
         children: [
-          Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(title, style: AppText.body),
-              if (note != null) Text(note!, style: AppText.footnote.copyWith(color: c.secondaryLabel)),
-            ],
+          // How long, beside 結束 rather than under it: one line.
+          Text.rich(
+            TextSpan(
+              text: title,
+              children: [
+                if (note != null)
+                  TextSpan(
+                    text: '  $note',
+                    style: AppText.footnote.copyWith(color: c.secondaryLabel),
+                  ),
+              ],
+            ),
+            style: AppText.body,
           ),
           const SizedBox(width: Space.s),
           // With large text the time goes under the day.
@@ -644,7 +659,6 @@ class _WhenRow extends StatelessWidget {
             child: Wrap(
               alignment: WrapAlignment.end,
               spacing: Space.xs,
-              runSpacing: Space.xs,
               children: [chip(date, dayOpen, onDay), if (time != null) chip(time!.format(context), timeOpen, onTime)],
             ),
           ),
