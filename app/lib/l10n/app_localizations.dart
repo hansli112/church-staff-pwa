@@ -5920,6 +5920,12 @@ abstract class L10n {
   /// **'找人代／交換'**
   String get swapMenu;
 
+  /// No description provided for @myDutyHere.
+  ///
+  /// In zh, this message translates to:
+  /// **'你的服事'**
+  String get myDutyHere;
+
   /// No description provided for @swapAskCover.
   ///
   /// In zh, this message translates to:

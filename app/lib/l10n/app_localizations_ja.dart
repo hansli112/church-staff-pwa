@@ -3344,6 +3344,9 @@ class L10nJa extends L10n {
   String get swapMenu => '代わり・交換';
 
   @override
+  String get myDutyHere => 'あなたの担当';
+
+  @override
   String get swapAskCover => '行けない';
 
   @override

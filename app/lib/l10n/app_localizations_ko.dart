@@ -3346,6 +3346,9 @@ class L10nKo extends L10n {
   String get swapMenu => '대신 봉사·교환';
 
   @override
+  String get myDutyHere => '내 봉사';
+
+  @override
   String get swapAskCover => '못 가요';
 
   @override

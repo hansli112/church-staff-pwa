@@ -3541,6 +3541,9 @@ class L10nEn extends L10n {
   String get swapMenu => 'Find a cover or swap';
 
   @override
+  String get myDutyHere => 'You\'re on';
+
+  @override
   String get swapAskCover => 'I can\'t make it';
 
   @override

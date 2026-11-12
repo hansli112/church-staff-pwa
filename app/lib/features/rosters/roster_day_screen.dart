@@ -111,6 +111,7 @@ class RosterDayScreen extends ConsumerWidget {
       body: ListView(
         padding: const EdgeInsets.only(bottom: Space.xl),
         children: [
+          if (!past) MyDutyAsks(roster: roster),
           if (!canEdit)
             RosterDayView(
               roster: roster,

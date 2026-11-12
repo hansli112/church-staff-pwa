@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:martha/features/rosters/people_picker.dart';
 import 'package:go_router/go_router.dart';
+import 'package:martha/core/design/components.dart';
 import 'package:martha/data/backend.dart';
 import 'package:martha/data/memory/memory_backend.dart';
 import 'package:martha/domain/day.dart';
@@ -54,22 +56,28 @@ String path(WidgetTester tester) => GoRouter.of(tester.element(find.byType(Scaff
 
 List<SwapRequest> requests(MemoryBackend b) => [...?b.swapRequests['grace']?.values];
 
-/// My row of [duty] on the day's page, tapped.
+/// My row of [duty] in the day's roster, tapped.
 Future<void> myRow(WidgetTester tester, String duty) async {
-  await tester.tap(find.text(duty).first);
+  await tester.tap(find.text(duty).last);
   await settle(tester);
 }
 
+/// [label] on my [duty]'s row in 你的服事, first on the day's page.
+Finder onMine(String duty, String label) =>
+    find.descendant(of: find.widgetWithText(ListRow, duty), matching: find.text(label));
+
 void main() {
-  testWidgets('my own duty: 請人代 asks those free on the list, and 收回 takes it back', (tester) async {
+  testWidgets("my own duty, first on the day's page: 我不行 asks those free on the list, and 收回 takes it back", (
+    tester,
+  ) async {
     final b = church();
     final telemetry = RecordingTelemetry();
     await pumpApp(tester, b, overrides: [telemetryProvider.overrideWithValue(telemetry)]);
     await go(tester, '/rosters/sunday/2026-10-04');
-    await myRow(tester, '司琴');
-    expect(find.text('我不行'), findsOneWidget);
+    expect(find.text('你的服事'), findsOneWidget);
+    expect(find.text('我不行'), findsNWidgets(2), reason: '司琴 and 招待');
     expect(b.warmedUp, contains(WarmUp.swapAsk), reason: 'asking waits on it');
-    await tester.tap(find.text('我不行'));
+    await tester.tap(onMine('司琴', '我不行'));
     await settle(tester);
     expect(find.text('已請 1 位同工代，有人接手會通知你'), findsOneWidget);
     final r = requests(b).single;
@@ -80,12 +88,23 @@ void main() {
     ]);
 
     expect(find.text('已請人代'), findsOneWidget, reason: 'said on the row');
-    await myRow(tester, '司琴');
-    expect(find.text('已請人代，還沒有人接手'), findsOneWidget);
-    await tester.tap(find.text('收回'));
+    expect(onMine('司琴', '已請人代，還沒有人接手'), findsOneWidget);
+    expect(onMine('司琴', '我不行'), findsNothing);
+    await tester.tap(onMine('司琴', '收回'));
     await settle(tester);
     expect(find.text('已收回'), findsOneWidget);
     expect(requests(b).single.status, SwapStatus.withdrawn);
+    expect(onMine('司琴', '我不行'), findsOneWidget);
+  });
+
+  testWidgets('a day ahead I am not on, or one gone, has no 你的服事', (tester) async {
+    final b = church();
+    await pumpApp(tester, b);
+    await go(tester, '/rosters/sunday/2026-10-18');
+    expect(find.text('張雅雨'), findsOneWidget);
+    expect(find.text('你的服事'), findsNothing);
+    await go(tester, '/rosters/sunday/2026-09-27');
+    expect(find.text('你的服事'), findsNothing);
   });
 
   testWidgets('nobody free on the list: says to ask the lead, and asks nobody', (tester) async {
@@ -93,8 +112,7 @@ void main() {
     b.unavailable['grace'] = {'yu': const UnavailableDays().add(Day(2026, 10, 4), Day(2026, 10, 4))};
     await pumpApp(tester, b);
     await go(tester, '/rosters/sunday/2026-10-04');
-    await myRow(tester, '司琴');
-    await tester.tap(find.text('我不行'));
+    await tester.tap(onMine('司琴', '我不行'));
     await settle(tester);
     expect(find.text('名單上那天沒有其他有空的同工，請找負責人'), findsOneWidget);
     expect(requests(b), isEmpty);
@@ -202,22 +220,27 @@ void main() {
     expect(find.text('我來'), findsNothing);
   });
 
-  testWidgets('whoever arranges: 請人代 at the top of their own duty\'s picker, 和別週交換 outright below', (tester) async {
+  testWidgets("whoever arranges: 我不行 on the day's page too, not in the picker; 和別週交換 outright in it", (tester) async {
     final b = church(as: editor);
     await pumpApp(tester, b);
     await go(tester, '/rosters/sunday/2026-10-04');
     await tester.tap(find.text('林同工'));
     await settle(tester);
-    expect(find.text('和別週交換'), findsOneWidget, reason: 'they swap outright');
+    final picker = find.byType(PeoplePicker);
+    expect(
+      find.descendant(of: picker, matching: find.text('和別週交換')),
+      findsOneWidget,
+      reason: 'they swap outright',
+    );
+    expect(find.descendant(of: picker, matching: find.text('我不行')), findsNothing);
+    await tester.tap(find.text('取消'));
+    await settle(tester);
+
     await tester.tap(find.text('我不行'));
     await settle(tester);
     expect(requests(b).single.kind, SwapKind.cover);
     expect(requests(b).single.asked, ['host']);
-
-    await tester.tap(find.text('林同工'));
-    await settle(tester);
     expect(find.text('已請人代，還沒有人接手'), findsOneWidget);
-    expect(find.text('我不行'), findsNothing);
     await tester.tap(find.text('收回'));
     await settle(tester);
     expect(requests(b).single.status, SwapStatus.withdrawn);

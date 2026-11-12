@@ -290,3 +290,79 @@ class _SwapRequestScreenState extends ConsumerState<SwapRequestScreen> {
     );
   }
 }
+
+/// On a day's page, first: my duties there, each with 我不行, or how my
+/// request stands with 收回 (#92). Nothing on an event's roster, a day
+/// gone, or a day I am not on.
+class MyDutyAsks extends ConsumerStatefulWidget {
+  const MyDutyAsks({super.key, required this.roster});
+
+  final Roster roster;
+
+  @override
+  ConsumerState<MyDutyAsks> createState() => _MyDutyAsksState();
+}
+
+class _MyDutyAsksState extends ConsumerState<MyDutyAsks> {
+  /// Duties with an ask on its way: one tap asks once.
+  final _asking = <String>{};
+  var _warm = false;
+
+  Future<void> _run(String duty, Future<void> Function() ask) async {
+    setState(() => _asking.add(duty));
+    try {
+      await ask();
+    } finally {
+      if (mounted) setState(() => _asking.remove(duty));
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = L10n.of(context);
+    final roster = widget.roster;
+    final me = ref.watch(uidProvider);
+    final today = ref.watch(todayProvider);
+    final mine = [
+      for (final d in roster.duties)
+        if (asksForMyDuty(roster, d.role, me, today)) d.role,
+    ];
+    if (mine.isEmpty) return const SizedBox.shrink();
+    final open = {
+      for (final r in ref.watch(myOpenSwapRequestsProvider).value ?? const <SwapRequest>[])
+        if (r.rosterId == roster.id) r.duty: r,
+    };
+    // Asking waits on the backend; it starts while I look.
+    if (!_warm && mine.any((d) => !open.containsKey(d))) {
+      _warm = true;
+      ref.read(backendProvider).warmUp(WarmUp.swapAsk);
+    }
+    return ListSection(
+      header: l10n.myDutyHere,
+      children: [
+        for (final duty in mine)
+          if (open[duty] case final r?)
+            ListRow(
+              title: duty,
+              subtitle: myOpenAskLabel(l10n, r),
+              chevron: false,
+              trailing: RowButton(
+                label: l10n.swapWithdraw,
+                onPressed: _asking.contains(duty) ? null : () => _run(duty, () => withdrawAsk(context, ref, r)),
+              ),
+            )
+          else
+            ListRow(
+              title: duty,
+              chevron: false,
+              trailing: RowButton(
+                label: l10n.swapAskCover,
+                onPressed: _asking.contains(duty)
+                    ? null
+                    : () => _run(duty, () => askForCover(context, ref, roster, duty)),
+              ),
+            ),
+      ],
+    );
+  }
+}

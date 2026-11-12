@@ -7,15 +7,12 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import 'package:material_symbols_icons/symbols.dart';
 
 import '../../core/design/components.dart';
-import '../../data/backend.dart' show WarmUp;
 import '../../domain/day.dart';
 import '../../domain/models.dart';
 import '../../domain/roster_edit.dart';
 import '../../domain/roster_news.dart';
-import '../../domain/swap.dart';
 import '../../l10n/app_localizations.dart';
 import '../../state/providers.dart';
 import '../../state/roster_actions.dart';
@@ -23,7 +20,6 @@ import '../common/errors.dart';
 import 'format.dart';
 import 'future_changes.dart';
 import 'people_picker.dart';
-import 'swap_asking.dart';
 
 /// Opens the picker for [duty] on [roster] and saves what was picked: the
 /// day page's, and 安排服事's (#90), whose changes go [via] `plan`.
@@ -80,11 +76,6 @@ Future<void> pickPeople(
       (ref.read(servicesProvider).value?.byId(roster.type)?.duties.contains(duty.role) ?? false) &&
       (me?.editsDutyList(ref.read(ministriesProvider).value?.ministries ?? const [], roster.type, duty.role) ?? false);
   final onePerson = actions.takesOnePerson(roster, duty.role);
-  final today = ref.read(todayProvider);
-  final mine = asksForMyDuty(roster, duty.role, me?.uid, today);
-  final open = mine ? myOpenAsk(ref, roster, duty.role) : null;
-  // 請人代 waits on the backend; it starts while I choose.
-  if (mine && open == null) ref.read(backendProvider).warmUp(WarmUp.swapAsk);
   var invite = false;
   final result = await showAppSheet<PickerResult>(
     context,
@@ -107,34 +98,13 @@ Future<void> pickPeople(
       canSwapDay: swapDays.any((d) => canSwapDuty(duty.role, roster, d)),
       onePerson: onePerson,
       canRemoveFutureGuests: !roster.isEvent,
-      mine: !mine
-          ? null
-          : (context) => open != null
-                ? ListRow(
-                    title: myOpenAskLabel(l10n, open),
-                    chevron: false,
-                    trailing: RowButton(
-                      label: l10n.swapWithdraw,
-                      onPressed: () => Navigator.pop(context, PickerResult(people: duty.people, askedFor: open)),
-                    ),
-                  )
-                : ListRow(
-                    title: l10n.swapAskCover,
-                    subtitle: l10n.swapAskCoverSub,
-                    leading: const Icon(Symbols.front_hand_rounded),
-                    onTap: () => Navigator.pop(context, PickerResult(people: duty.people, askedFor: _cover)),
-                  ),
       onInvite: (me?.isAdmin ?? false) ? () => invite = true : null,
       notes: notes,
       unavailable: unavailableNames,
     ),
   );
   if (result != null && context.mounted) {
-    if (result.askedFor case final SwapRequest r) {
-      await withdrawAsk(context, ref, r);
-    } else if (result.askedFor == _cover) {
-      await askForCover(context, ref, roster, duty.role);
-    } else if (result.removeFutureGuest case final name?) {
+    if (result.removeFutureGuest case final name?) {
       await _removeFutureGuest(context, ref, roster.type, duty.role, name);
     } else if (result.swapDay) {
       await pickDayToSwap(context, ref, roster, duty, swapDays, via: via);
@@ -144,9 +114,6 @@ Future<void> pickPeople(
   }
   if (invite) unawaited(router.push('/me/invites'));
 }
-
-/// What the top row asks for on my own duty: 請人代.
-const _cover = 'cover';
 
 /// 之後都不排: [name], arranged this once, off [role] on the days ahead
 /// of [type], once the preview says which.

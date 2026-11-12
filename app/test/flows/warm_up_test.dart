@@ -74,13 +74,12 @@ void main() {
     expect(admin.warmedUp, isNot(contains(WarmUp.ledDuties)), reason: 'saved without it');
   });
 
-  testWidgets('whoever arranges, tapping their own name on the day, warms up 請人代', (tester) async {
+  testWidgets('a day I am on warms up 我不行 as it opens, for whoever arranges too', (tester) async {
     final b = seededChurch(as: editor);
     await pumpApp(tester, b);
-    await go(tester, '/rosters/sunday/2026-10-04');
+    await go(tester, '/rosters');
     expect(b.warmedUp, isNot(contains(WarmUp.swapAsk)));
-    await tester.tap(find.text('林同工').last);
-    await settle(tester);
+    await go(tester, '/rosters/sunday/2026-10-04');
     expect(find.text('我不行'), findsOneWidget);
     expect(b.warmedUp, contains(WarmUp.swapAsk));
   });

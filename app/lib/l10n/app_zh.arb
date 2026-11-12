@@ -2362,6 +2362,7 @@
   "notifSwapSub": "找人代、交換、填不能服事的日子",
   "swapMenu": "找人代／交換",
   "@swapMenu": {"description": "On one's own name on a roster (#92)"},
+  "myDutyHere": "你的服事",
   "swapAskCover": "我不行",
   "swapAskCoverSub": "送給名單上那天有空的同工，先按「我來」的人接手",
   "swapAskSwap": "和別週交換",

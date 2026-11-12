@@ -3340,6 +3340,9 @@ class L10nZh extends L10n {
   String get swapMenu => '找人代／交換';
 
   @override
+  String get myDutyHere => '你的服事';
+
+  @override
   String get swapAskCover => '我不行';
 
   @override
@@ -6788,6 +6791,9 @@ class L10nZhHans extends L10nZh {
 
   @override
   String get swapMenu => '找人代／交换';
+
+  @override
+  String get myDutyHere => '你的事奉';
 
   @override
   String get swapAskCover => '我不行';

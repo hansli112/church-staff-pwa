@@ -23,16 +23,11 @@ class PickerResult {
     this.swapDay = false,
     this.guestNames = const {},
     this.removeFutureGuest,
-    this.askedFor,
   });
 
   /// A name arranged this once, to take off the days ahead too
   /// (之後都不排), swiped in 臨時排過的人.
   final String? removeFutureGuest;
-
-  /// What the row at the top asked for, for my own duty (#92): its
-  /// caller knows.
-  final Object? askedFor;
 
   /// Names explicitly arranged without binding a same-name member.
   final Set<String> guestNames;
@@ -93,14 +88,8 @@ class PeoplePicker extends StatefulWidget {
     this.onInvite,
     this.notes = const {},
     this.unavailable = const {},
-    this.mine,
     this.canRemoveFutureGuests = false,
   });
-
-  /// For my own duty: the row at the top for 請人代, or how my request
-  /// stands with 收回 (#92). Built in the sheet; it closes it with a
-  /// [PickerResult.askedFor].
-  final WidgetBuilder? mine;
 
   /// Names arranged this once swipe away from the days ahead too: a
   /// service's roster, not an event's.
@@ -406,7 +395,6 @@ class _PeoplePickerState extends State<PeoplePicker> {
         _selected.contains(typed);
 
     final rows = <Widget Function()>[];
-    if (widget.mine case final mine? when !searching) rows.add(() => mine(context));
     if (serving.isNotEmpty) {
       rows.add(() => SectionHeader(l10n.pickerServes(widget.duty)));
       for (final n in serving) {

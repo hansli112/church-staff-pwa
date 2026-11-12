@@ -1002,6 +1002,7 @@
   "notifSwap": "Covers and swaps",
   "notifSwapSub": "Covering, swapping, and days you can’t serve",
   "swapMenu": "Find a cover or swap",
+  "myDutyHere": "You're on",
   "swapAskCover": "I can't make it",
   "swapAskCoverSub": "Goes to the team members on the list who are free that day; the first to say “I'll do it” takes it",
   "swapAskSwap": "Swap with another week",
