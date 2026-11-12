@@ -45,7 +45,7 @@ Future<void> pickPeople(
     for (final m in members)
       if ([
             // Nobody to notify: whoever arranges tells them.
-            if (noAccount.contains(m.uid)) l10n.getsNoNotice,
+            if (noAccount.contains(m.uid)) l10n.noAccount,
             if (unavailable[m.uid] case final span?)
               span.note.isEmpty ? l10n.pickerUnavailable : l10n.pickerUnavailableBecause(span.note),
             if (around[m.uid] case final a?) ...[

@@ -226,7 +226,7 @@ class _MembersScreenState extends ConsumerState<MembersScreen> {
                             return Padding(
                               padding: const EdgeInsets.fromLTRB(Space.l, Space.l, Space.l, Space.s),
                               child: Text(
-                                l10n.noNoticeCount(pending.length),
+                                l10n.noAccountCount(pending.length),
                                 style: AppText.footnote.copyWith(color: c.secondaryLabel),
                               ),
                             );
@@ -240,7 +240,7 @@ class _MembersScreenState extends ConsumerState<MembersScreen> {
                             child: ListRow(
                               title: p.name.isEmpty ? p.email : p.name,
                               subtitle: [
-                                l10n.getsNoNotice,
+                                l10n.noAccount,
                                 if (p.email.isNotEmpty && p.name.isNotEmpty) p.email,
                                 ...smallGroupLabels(p),
                               ].join(l10n.dotSeparator),

@@ -57,7 +57,7 @@ Your browser downloads `move.json`. It has your team members’ names and emails
 
 ## 4. Have your team join
 
-Until they sign in, team members who came over show **Gets no notifications** under their name, and you can still put them on the schedule. Go to **Settings** → **Invites**, create an invite link, and send it to your team’s group.
+Until they sign in, team members who came over show **No account** under their name, and you can still put them on the schedule. Go to **Settings** → **Invites**, create an invite link, and send it to your team’s group.
 
 - Team members who sign in with the same email as on the old site are asked whether to join your church. Tapping **Join** brings their schedules with them.
 - Old passwords don’t work. Anyone who signed in with an email and password should sign up again with the same email, or sign in with Google.

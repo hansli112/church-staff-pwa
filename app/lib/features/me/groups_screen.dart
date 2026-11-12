@@ -310,7 +310,7 @@ class GroupStaffSections extends ConsumerWidget {
                     if (m.zones.where((z) => z.serviceType == id).firstOrNull?.duties case final duties?
                         when duties.isNotEmpty)
                       duties.join(l10n.listSeparator),
-                  if (noAccount.contains(m.uid)) l10n.getsNoNotice,
+                  if (noAccount.contains(m.uid)) l10n.noAccount,
                 ]),
                 chevron: false,
                 // What they serve there and their 小組, for who may move them.
@@ -475,7 +475,7 @@ class _AddStaffSheetState extends State<_AddStaffSheet> {
                     if (widget.byName && typed.isNotEmpty && !known)
                       ListRow(
                         title: l10n.pickerUseName(typed),
-                        subtitle: l10n.getsNoNotice,
+                        subtitle: l10n.noAccount,
                         leading: const Icon(Symbols.add_rounded),
                         onTap: () => Navigator.pop(context, typed),
                       ),

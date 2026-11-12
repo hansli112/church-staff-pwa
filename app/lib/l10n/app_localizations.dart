@@ -3556,17 +3556,17 @@ abstract class L10n {
   /// **'已建立〈{church}〉'**
   String moveDone(String church);
 
-  /// Under one of the 同工 without an account (moved, or added by name): nobody to notify, so whoever arranges tells them
+  /// Under one of the 同工 without an account (moved, or added by name). Nobody gets notified for them, so whoever arranges tells them
   ///
   /// In zh, this message translates to:
-  /// **'收不到通知'**
-  String get getsNoNotice;
+  /// **'沒有帳號'**
+  String get noAccount;
 
-  /// No description provided for @noNoticeCount.
+  /// No description provided for @noAccountCount.
   ///
   /// In zh, this message translates to:
-  /// **'{count} 位收不到通知'**
-  String noNoticeCount(int count);
+  /// **'{count} 位沒有帳號'**
+  String noAccountCount(int count);
 
   /// No description provided for @claimTitle.
   ///

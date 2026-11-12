@@ -225,7 +225,7 @@ class _NoAccountScreen extends ConsumerWidget {
           Padding(
             padding: const EdgeInsets.fromLTRB(Space.l, Space.s, Space.l, 0),
             child: Text(
-              l10n.getsNoNotice,
+              l10n.noAccount,
               style: AppText.footnote.copyWith(color: AppColors.of(context).secondaryLabel),
             ),
           ),

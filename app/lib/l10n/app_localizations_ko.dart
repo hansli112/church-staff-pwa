@@ -1930,11 +1930,11 @@ class L10nKo extends L10n {
   }
 
   @override
-  String get getsNoNotice => '알림을 받지 못해요';
+  String get noAccount => '계정 없음';
 
   @override
-  String noNoticeCount(int count) {
-    return '$count명은 알림을 받지 못해요';
+  String noAccountCount(int count) {
+    return '$count명은 계정이 없어요';
   }
 
   @override

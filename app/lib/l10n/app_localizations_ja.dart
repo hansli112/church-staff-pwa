@@ -1930,11 +1930,11 @@ class L10nJa extends L10n {
   }
 
   @override
-  String get getsNoNotice => '通知が届きません';
+  String get noAccount => 'アカウントなし';
 
   @override
-  String noNoticeCount(int count) {
-    return '$count人に通知が届きません';
+  String noAccountCount(int count) {
+    return '$count人はアカウントがありません';
   }
 
   @override

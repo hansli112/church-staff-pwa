@@ -1926,11 +1926,11 @@ class L10nZh extends L10n {
   }
 
   @override
-  String get getsNoNotice => '收不到通知';
+  String get noAccount => '沒有帳號';
 
   @override
-  String noNoticeCount(int count) {
-    return '$count 位收不到通知';
+  String noAccountCount(int count) {
+    return '$count 位沒有帳號';
   }
 
   @override
@@ -5370,11 +5370,11 @@ class L10nZhHans extends L10nZh {
   }
 
   @override
-  String get getsNoNotice => '收不到通知';
+  String get noAccount => '没有账号';
 
   @override
-  String noNoticeCount(int count) {
-    return '$count 位收不到通知';
+  String noAccountCount(int count) {
+    return '$count 位没有账号';
   }
 
   @override

@@ -40,7 +40,7 @@ void main() {
     await pumpApp(tester, b);
     await go(tester, '/rosters/sunday/2026-10-11');
     await tapText(tester, '招待');
-    expect(find.text('收不到通知'), findsOneWidget, reason: 'under his name: tell him yourself');
+    expect(find.text('沒有帳號'), findsOneWidget, reason: 'under his name: tell him yourself');
     await tapText(tester, '黃鎮台');
     await tapText(tester, '完成');
     final duty = savedDay(b, 11).duties.firstWhere((d) => d.role == '招待');
@@ -51,7 +51,7 @@ void main() {
     final b = church();
     await pumpApp(tester, b);
     await go(tester, '/me/members');
-    expect(find.textContaining('收不到通知'), findsWidgets);
+    expect(find.textContaining('沒有帳號'), findsWidgets);
     expect(find.textContaining('還沒登入'), findsNothing);
     await tapText(tester, '黃鎮台');
     expect(find.text('新增身分'), findsNothing);

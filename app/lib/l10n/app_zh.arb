@@ -1143,10 +1143,10 @@
       }
     }
   },
-  "getsNoNotice": "收不到通知",
-  "@getsNoNotice": {"description": "Under one of the 同工 without an account (moved, or added by name): nobody to notify, so whoever arranges tells them"},
-  "noNoticeCount": "{count} 位收不到通知",
-  "@noNoticeCount": {
+  "noAccount": "沒有帳號",
+  "@noAccount": {"description": "Under one of the 同工 without an account (moved, or added by name). Nobody gets notified for them, so whoever arranges tells them"},
+  "noAccountCount": "{count} 位沒有帳號",
+  "@noAccountCount": {
     "placeholders": {
       "count": {
         "type": "int"

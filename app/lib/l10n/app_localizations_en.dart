@@ -2038,15 +2038,15 @@ class L10nEn extends L10n {
   }
 
   @override
-  String get getsNoNotice => 'Gets no notifications';
+  String get noAccount => 'No account';
 
   @override
-  String noNoticeCount(int count) {
+  String noAccountCount(int count) {
     String _temp0 = intl.Intl.pluralLogic(
       count,
       locale: localeName,
-      other: '$count people get no notifications',
-      one: '1 person gets no notifications',
+      other: '$count people have no account',
+      one: '1 person has no account',
     );
     return '$_temp0';
   }
