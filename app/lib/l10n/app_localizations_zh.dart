@@ -658,9 +658,6 @@ class L10nZh extends L10n {
   }
 
   @override
-  String get canStaff => '同工：看所有服事表和活動';
-
-  @override
   String get addIdentity => '新增身分';
 
   @override
@@ -1135,6 +1132,20 @@ class L10nZh extends L10n {
 
   @override
   String get pushView => '查看';
+
+  @override
+  String get staffDuties => '服事項目';
+
+  @override
+  String get joinService => '加入聚會';
+
+  @override
+  String leaveService(String service) {
+    return '移出$service';
+  }
+
+  @override
+  String get noneChosen => '無';
 
   @override
   String zoneSwitch(String service) {
@@ -2854,11 +2865,6 @@ class L10nZh extends L10n {
   }
 
   @override
-  String inSmallGroup(String group) {
-    return '在$group';
-  }
-
-  @override
   String get attendance => '回報人數';
 
   @override
@@ -4109,9 +4115,6 @@ class L10nZhHans extends L10nZh {
   }
 
   @override
-  String get canStaff => '同工：看所有事奉表和活动';
-
-  @override
   String get addIdentity => '新增身份';
 
   @override
@@ -4586,6 +4589,20 @@ class L10nZhHans extends L10nZh {
 
   @override
   String get pushView => '查看';
+
+  @override
+  String get staffDuties => '事奉项目';
+
+  @override
+  String get joinService => '加入聚会';
+
+  @override
+  String leaveService(String service) {
+    return '移出$service';
+  }
+
+  @override
+  String get noneChosen => '无';
 
   @override
   String zoneSwitch(String service) {
@@ -6302,11 +6319,6 @@ class L10nZhHans extends L10nZh {
   @override
   String smallGroupDeleted(String name) {
     return '已关闭“$name”';
-  }
-
-  @override
-  String inSmallGroup(String group) {
-    return '在$group';
   }
 
   @override

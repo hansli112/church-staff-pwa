@@ -674,9 +674,6 @@ class L10nEn extends L10n {
   }
 
   @override
-  String get canStaff => 'Team member: sees every schedule and event';
-
-  @override
   String get addIdentity => 'Add a church role';
 
   @override
@@ -1173,6 +1170,20 @@ class L10nEn extends L10n {
 
   @override
   String get pushView => 'View';
+
+  @override
+  String get staffDuties => 'Roles';
+
+  @override
+  String get joinService => 'Add to a service';
+
+  @override
+  String leaveService(String service) {
+    return 'Remove from $service';
+  }
+
+  @override
+  String get noneChosen => 'None';
 
   @override
   String zoneSwitch(String service) {
@@ -2996,11 +3007,6 @@ class L10nEn extends L10n {
   @override
   String smallGroupDeleted(String name) {
     return 'Closed “$name”';
-  }
-
-  @override
-  String inSmallGroup(String group) {
-    return 'In $group';
   }
 
   @override

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:material_symbols_icons/symbols.dart';
 
 import '../../core/design/components.dart';
 import '../../domain/models.dart';
@@ -10,10 +11,11 @@ import '../../state/providers.dart';
 import '../common/errors.dart';
 import '../common/saving_indicator.dart';
 import 'identity_section.dart';
+import 'service_staff.dart';
 
-/// An admin editing one member: their 身分 (#82), and per service whether
-/// they are one of its 同工, in which of its 小組, and the duties they
-/// serve there (#94). Every change saves at once.
+/// An admin editing one member: their 身分 (#82), and each service they
+/// are one of the 同工 of, with the duties they serve there and their
+/// 小組 in it (#94); 加入聚會 for another. Every change saves at once.
 ///
 /// An admin cannot demote or remove themself (the rules forbid it too), so
 /// those controls do not appear on their own page.
@@ -98,23 +100,46 @@ class MemberEditorScreen extends ConsumerWidget {
     if (member == null || services == null) return Scaffold(appBar: AppBar());
 
     final zoneTypes = member.zoneTypes.toSet();
-    final shown = [
+    final joinable = [
       for (final s in services.services)
-        if (s.enabled || zoneTypes.contains(s.id)) s,
+        if (s.enabled && !zoneTypes.contains(s.id)) s,
     ];
+    Future<bool> save(Member next) => _save(context, ref, member, next);
 
     return Scaffold(
       appBar: AppBar(title: Text(member.name), actions: const [SavingIndicator()]),
       body: ListView(
         children: [
           IdentitySection(member: member, self: self),
-          for (final s in shown)
-            _ZoneSection(
-              member: member,
-              service: s,
-              smallGroups: [...smallGroups.where((g) => g.service == s.id)],
-              onSave: (m) => _save(context, ref, member, m),
-              onLeave: () => _leaveZone(context, ref, member, s),
+          for (final s in services.services)
+            if (zoneTypes.contains(s.id))
+              ServiceStaffSection(
+                person: member,
+                service: s,
+                header: s.name,
+                smallGroups: [...smallGroups.where((g) => g.service == s.id)],
+                onDuty: (duty, on) => save(on ? member.withDuty(s.id, duty) : member.withoutDuty(s.id, duty)),
+                onSmallGroup: (g, on) => save(member.inGroupAs(g.group, member: on)),
+                onLeave: () => _leaveZone(context, ref, member, s),
+              ),
+          if (joinable.isNotEmpty)
+            ListSection(
+              children: [
+                MenuRow<Service>(
+                  title: l10n.joinService,
+                  leading: const Icon(Symbols.add_rounded),
+                  options: joinable,
+                  label: (s) => s.name,
+                  onPicked: (s) => save(
+                    member.copyWith(
+                      zones: [
+                        ...member.zones,
+                        Zone(serviceType: s.id),
+                      ],
+                    ),
+                  ),
+                ),
+              ],
             ),
           if (pending.isNotEmpty)
             ListSection(
@@ -136,76 +161,6 @@ class MemberEditorScreen extends ConsumerWidget {
           const SizedBox(height: 32),
         ],
       ),
-    );
-  }
-}
-
-class _ZoneSection extends StatelessWidget {
-  const _ZoneSection({
-    required this.member,
-    required this.service,
-    required this.smallGroups,
-    required this.onSave,
-    required this.onLeave,
-  });
-
-  final Member member;
-  final Service service;
-
-  /// The service's 小組 (#85).
-  final List<SmallGroupDetails> smallGroups;
-  final ValueChanged<Member> onSave;
-  final VoidCallback onLeave;
-
-  @override
-  Widget build(BuildContext context) {
-    final zone = member.zones.where((z) => z.serviceType == service.id).firstOrNull;
-    final duties = {...service.duties, ...?zone?.duties}.toList();
-    Member withZone(Zone? next) => member.copyWith(
-      zones: [
-        for (final z in member.zones)
-          if (z.serviceType != service.id) z,
-        ?next,
-      ],
-    );
-    return ListSection(
-      header: service.name,
-      children: [
-        SwitchRow(
-          title: L10n.of(context).zoneSwitch(service.name),
-          value: zone != null,
-          onChanged: (on) => on ? onSave(withZone(Zone(serviceType: service.id))) : onLeave(),
-        ),
-        if (zone != null) ...[
-          // Which of the service's 小組 they are in, switched on and off.
-          for (final g in smallGroups)
-            SwitchRow(
-              title: L10n.of(context).inSmallGroup(g.name),
-              value: member.smallGroups.contains(g.id),
-              onChanged: (on) => onSave(member.inGroupAs(g.group, member: on)),
-            ),
-          for (final d in duties)
-            ListRow(
-              title: d,
-              selected: zone.duties.contains(d),
-              onTap: () {
-                Haptics.selection();
-                onSave(
-                  withZone(
-                    zone.copyWith(
-                      duties: zone.duties.contains(d)
-                          ? [
-                              for (final x in zone.duties)
-                                if (x != d) x,
-                            ]
-                          : [...zone.duties, d],
-                    ),
-                  ),
-                );
-              },
-            ),
-        ],
-      ],
     );
   }
 }

@@ -23,21 +23,22 @@ Future<void> go(WidgetTester tester, String location) async {
 
 void main() {
   group('members', () {
-    testWidgets('an admin gives a 身分, which says what it lets them do, and takes it back (#82)', (tester) async {
+    testWidgets('an admin gives a 身分 and takes it back (#82); only 行政 says what it is when picked', (tester) async {
       final b = seededChurch();
       await pumpApp(tester, b);
       await go(tester, '/me/members');
       expect(find.text('5 位同工'), findsOneWidget);
       await tapText(tester, '李美玉');
-      expect(findShown('同工：看所有服事表和活動'), findsOneWidget, reason: 'no 身分 yet');
       await tapText(tester, '新增身分');
+      expect(findShown('排所有服事表、改所有活動，不能管同工和設定'), findsOneWidget, reason: 'how 行政 differs from 管理員');
+      expect(findShown('什麼都能管'), findsNothing, reason: '管理員 says it');
       await tapText(tester, '聚會負責人');
       await tapText(tester, '主日崇拜');
       final mei = b.members['grace']!['mei']!;
       expect(mei.identities, const [ServiceLead('sunday')]);
       expect(mei.canEditRosters('sunday'), isTrue);
       expect(find.text('主日崇拜 負責人'), findsOneWidget);
-      expect(findShown('排主日崇拜的服事表、加入和移出它的同工'), findsOneWidget);
+      expect(findShown('排主日崇拜的服事表、加入和移出它的同工'), findsNothing, reason: 'the name says it');
 
       await tapText(tester, '再加一個');
       await tapText(tester, '行政');
@@ -68,21 +69,35 @@ void main() {
       expect(mei.role, Role.admin, reason: 'what the rules and older apps read');
     });
 
-    testWidgets('zones write the flattened zoneTypes', (tester) async {
+    testWidgets('加入聚會 adds a service, and writes the flattened zoneTypes', (tester) async {
       final b = seededChurch();
       await pumpApp(tester, b);
       await go(tester, '/me/members/john');
-      await tester.tap(find.text('青年崇拜的同工'));
-      await settle(tester);
+      expect(find.text('主日崇拜'), findsNothing, reason: 'in no service yet');
+      await tapText(tester, '加入聚會');
+      await tapText(tester, '青年崇拜');
       expect(b.members['grace']!['john']!.zoneTypes, ['youth']);
+      expect(find.text('移出青年崇拜'), findsOneWidget);
+    });
+
+    testWidgets("a member's page has only their services, what they serve there ticked in a menu", (tester) async {
+      final b = seededChurch();
+      await pumpApp(tester, b);
+      await go(tester, '/me/members/mei');
+      expect(find.text('青年崇拜'), findsNothing, reason: 'not one of hers');
+      expect(find.text('司琴、招待'), findsOneWidget);
+      await tapText(tester, '服事項目');
+      await tapText(tester, '司會');
+      expect(b.members['grace']!['mei']!.zones.single.duties, ['司琴', '招待', '司會']);
+      await tapText(tester, '司琴');
+      expect(b.members['grace']!['mei']!.zones.single.duties, ['招待', '司會'], reason: 'the menu stays open');
     });
 
     testWidgets('leaving a 牧區 clears its duties, and undo brings both back', (tester) async {
       final b = seededChurch();
       await pumpApp(tester, b);
       await go(tester, '/me/members/mei');
-      await tester.tap(find.text('主日崇拜的同工'));
-      await settle(tester);
+      await tapText(tester, '移出主日崇拜');
       expect(b.members['grace']!['mei']!.zones, isEmpty);
       expect(find.text('不再是主日崇拜的同工'), findsOneWidget);
       await tapText(tester, '復原');
@@ -102,8 +117,8 @@ void main() {
         reason: 'above the admins: the next thing to do is putting him in one',
       );
       await tapText(tester, 'John Chen');
-      await tester.tap(find.text('主日崇拜的同工'));
-      await settle(tester);
+      await tapText(tester, '加入聚會');
+      await tapText(tester, '主日崇拜');
       await go(tester, '/home');
       expect(find.textContaining('還沒加入任何聚會'), findsNothing, reason: 'everyone is in a 牧區 now');
     });

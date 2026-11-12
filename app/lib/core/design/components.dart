@@ -545,6 +545,109 @@ class SwitchRow extends StatelessWidget {
   }
 }
 
+/// A row whose value is any of [options], ticked in a menu that opens
+/// from it and stays open while they are ticked; the row shows those
+/// ticked, or [none]. A tick shows at once; one that did not save
+/// ([onChanged] false) goes back.
+class MultiSelectRow<T> extends StatefulWidget {
+  const MultiSelectRow({
+    super.key,
+    required this.title,
+    required this.options,
+    required this.selected,
+    required this.label,
+    required this.none,
+    required this.onChanged,
+  });
+
+  final String title;
+  final List<T> options;
+  final Set<T> selected;
+  final String Function(T option) label;
+  final String none;
+  final Future<bool> Function(T option, bool on) onChanged;
+
+  @override
+  State<MultiSelectRow<T>> createState() => _MultiSelectRowState<T>();
+}
+
+class _MultiSelectRowState<T> extends State<MultiSelectRow<T>> {
+  /// Ticks not yet in [MultiSelectRow.selected]: saving, or saved and on
+  /// their way back.
+  final _ticking = <T, bool>{};
+
+  @override
+  void didUpdateWidget(MultiSelectRow<T> old) {
+    super.didUpdateWidget(old);
+    _ticking.removeWhere((option, on) => widget.selected.contains(option) == on);
+  }
+
+  bool _ticked(T option) => _ticking[option] ?? widget.selected.contains(option);
+
+  Future<void> _tick(T option, bool on) async {
+    Haptics.selection();
+    setState(() => _ticking[option] = on);
+    final saved = await widget.onChanged(option, on);
+    if (!saved && mounted) setState(() => _ticking.remove(option));
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final ticked = [
+      for (final o in widget.options)
+        if (_ticked(o)) widget.label(o),
+    ];
+    return MenuAnchor(
+      menuChildren: [
+        for (final o in widget.options)
+          CheckboxMenuButton(
+            value: _ticked(o),
+            closeOnActivate: false,
+            onChanged: (on) => _tick(o, on ?? false),
+            child: Text(widget.label(o)),
+          ),
+      ],
+      builder: (context, menu, _) => ListRow(
+        title: widget.title,
+        value: ticked.isEmpty ? widget.none : ticked.join(L10n.of(context).listSeparator),
+        trailing: Icon(Symbols.unfold_more_rounded, color: AppColors.of(context).tertiaryLabel, size: 20),
+        onTap: () => menu.isOpen ? menu.close() : menu.open(),
+      ),
+    );
+  }
+}
+
+/// A row that opens a menu of [options], one to pick: e.g. 加入聚會.
+class MenuRow<T> extends StatelessWidget {
+  const MenuRow({
+    super.key,
+    required this.title,
+    this.leading,
+    required this.options,
+    required this.label,
+    required this.onPicked,
+  });
+
+  final String title;
+  final Widget? leading;
+  final List<T> options;
+  final String Function(T option) label;
+  final ValueChanged<T> onPicked;
+
+  @override
+  Widget build(BuildContext context) => MenuAnchor(
+    menuChildren: [
+      for (final o in options) MenuItemButton(onPressed: () => onPicked(o), child: Text(label(o))),
+    ],
+    builder: (context, menu, _) => ListRow(
+      title: title,
+      leading: leading,
+      chevron: false,
+      onTap: () => menu.isOpen ? menu.close() : menu.open(),
+    ),
+  );
+}
+
 /// One sentence and at most one button, inviting the next step; above
 /// them, an [icon] for what would be here.
 class EmptyState extends StatelessWidget {

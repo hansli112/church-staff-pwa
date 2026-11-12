@@ -39,15 +39,16 @@ void main() {
     );
     await pumpApp(tester, b);
     await go(tester, '/me/members/mei');
-    expect(find.text('在青年小組'), findsNothing, reason: "青年崇拜's: not one of her 牧區");
-    await tapText(tester, '在喜樂小組');
+    await tapText(tester, '小組');
+    expect(find.text('青年小組'), findsNothing, reason: "青年崇拜's: not one of hers");
+    await tapText(tester, '喜樂小組');
     final member = (await b.church('grace').readOnce.members()).singleWhere((m) => m.uid == 'mei');
     expect(member.smallGroups, {'joy'});
     expect(member.zones.single.duties, ['司琴', '招待']);
     expect(member.groups, isEmpty);
     expect(member.role, Role.staff);
 
-    await tapText(tester, '在喜樂小組');
+    await tapText(tester, '喜樂小組');
     expect((await b.church('grace').readOnce.members()).singleWhere((m) => m.uid == 'mei').smallGroups, isEmpty);
   });
 
@@ -68,7 +69,7 @@ void main() {
     await go(tester, '/me/members');
     expect(findShownContaining('喜樂小組'), findsOneWidget);
     await tapText(tester, '李美玉');
-    expect(findShown('主日崇拜的同工'), findsNothing, reason: 'the read-only list does not open the member editor');
+    expect(findShown('移出主日崇拜'), findsNothing, reason: 'the read-only list does not open the member editor');
     await tester.scrollUntilVisible(find.textContaining('主日崇拜：恩典小組'), 150, scrollable: find.byType(Scrollable).last);
     expect(find.textContaining('主日崇拜：恩典小組'), findsOneWidget);
   });

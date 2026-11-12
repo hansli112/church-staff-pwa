@@ -1270,12 +1270,6 @@ abstract class L10n {
   /// **'排{ministry}的服事項目、加入和移出它的同工'**
   String canMinistryLead(String ministry);
 
-  /// What every team member can do, under 身分 when they hold none; one sentence
-  ///
-  /// In zh, this message translates to:
-  /// **'同工：看所有服事表和活動'**
-  String get canStaff;
-
   /// Button under 身分 on a member's page when they hold none
   ///
   /// In zh, this message translates to:
@@ -2121,6 +2115,30 @@ abstract class L10n {
   /// In zh, this message translates to:
   /// **'查看'**
   String get pushView;
+
+  /// Row on a member's page, under a service: the duties they serve there, ticked in a menu
+  ///
+  /// In zh, this message translates to:
+  /// **'服事項目'**
+  String get staffDuties;
+
+  /// Row at the end of a member's services: makes them one of another service's 同工, picked from a menu
+  ///
+  /// In zh, this message translates to:
+  /// **'加入聚會'**
+  String get joinService;
+
+  /// No description provided for @leaveService.
+  ///
+  /// In zh, this message translates to:
+  /// **'移出{service}'**
+  String leaveService(String service);
+
+  /// A menu row's value with nothing ticked
+  ///
+  /// In zh, this message translates to:
+  /// **'無'**
+  String get noneChosen;
 
   /// On a member's page, per service: whether they are one of its team members (#94)
   ///
@@ -5115,12 +5133,6 @@ abstract class L10n {
   /// In zh, this message translates to:
   /// **'已關閉「{name}」'**
   String smallGroupDeleted(String name);
-
-  /// Switch on a member's page, under a service: whether they are in this 小組
-  ///
-  /// In zh, this message translates to:
-  /// **'在{group}'**
-  String inSmallGroup(String group);
 
   /// Row in 設定 for admins and 行政, its page, and the switch on it turning 回報人數 on for the church (#85, #93)
   ///

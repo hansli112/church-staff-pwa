@@ -10,9 +10,10 @@ import '../../state/providers.dart';
 import '../common/errors.dart';
 import '../common/labels.dart';
 
-/// A member's 身分 (#82), on their page, for an admin: what each lets them
-/// do in a sentence, one more added from a short list, one taken away with
-/// 復原. Holding none, they are a 同工, and the footer says what that is.
+/// A member's 身分 (#82), on their page, for an admin: each by its name,
+/// which says what it is, one more added from a short list (行政 and a
+/// whole church's 牧者 saying what they are, which their names do not),
+/// one taken away with 復原.
 ///
 /// An admin cannot take away what makes themself an admin (the rules
 /// refuse it too), so that row offers no removal on their own page.
@@ -33,12 +34,10 @@ class IdentitySection extends ConsumerWidget {
         identityLabel(l10n, i, services: services, ministries: ministries, smallGroups: smallGroups);
     return ListSection(
       header: l10n.role,
-      footer: held.isEmpty ? l10n.canStaff : null,
       children: [
         for (final i in held)
           ListRow(
             title: label(i),
-            subtitle: identityCan(l10n, i, services: services, ministries: ministries, smallGroups: smallGroups),
             chevron: false,
             // Taken away at once, with 復原 (docs/design-principles.md).
             trailing: _removable(i)
@@ -117,7 +116,7 @@ class IdentitySection extends ConsumerWidget {
       for (final m in ref.read(membersProvider).value ?? const <Member>[]) ...m.leadSmallGroups,
     };
     final kind = await _choose<String>(context, l10n.addIdentity, [
-      if (!held.contains(const AdminIdentity())) ('admin', l10n.roleAdmin, l10n.canAdmin),
+      if (!held.contains(const AdminIdentity())) ('admin', l10n.roleAdmin, null),
       if (!held.contains(const OfficeIdentity())) ('office', l10n.identityOffice, l10n.canOffice),
       ('pastor', l10n.identityPastor, null),
       if (services.any((s) => !led.contains(s.id))) ('service', l10n.identityServiceLead, null),

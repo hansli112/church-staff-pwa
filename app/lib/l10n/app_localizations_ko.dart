@@ -659,9 +659,6 @@ class L10nKo extends L10n {
   }
 
   @override
-  String get canStaff => '멤버: 모든 봉사표와 일정을 볼 수 있어요';
-
-  @override
   String get addIdentity => '역할 추가';
 
   @override
@@ -1136,6 +1133,20 @@ class L10nKo extends L10n {
 
   @override
   String get pushView => '보기';
+
+  @override
+  String get staffDuties => '담당';
+
+  @override
+  String get joinService => '예배에 추가';
+
+  @override
+  String leaveService(String service) {
+    return '$service에서 빼기';
+  }
+
+  @override
+  String get noneChosen => '없음';
 
   @override
   String zoneSwitch(String service) {
@@ -2855,11 +2866,6 @@ class L10nKo extends L10n {
   @override
   String smallGroupDeleted(String name) {
     return '‘$name’ 닫음';
-  }
-
-  @override
-  String inSmallGroup(String group) {
-    return '$group 멤버';
   }
 
   @override

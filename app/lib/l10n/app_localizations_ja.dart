@@ -658,9 +658,6 @@ class L10nJa extends L10n {
   }
 
   @override
-  String get canStaff => 'メンバー：すべての奉仕表と行事を見られる';
-
-  @override
   String get addIdentity => '役割を追加';
 
   @override
@@ -1135,6 +1132,20 @@ class L10nJa extends L10n {
 
   @override
   String get pushView => '表示';
+
+  @override
+  String get staffDuties => '担当';
+
+  @override
+  String get joinService => '集会に加える';
+
+  @override
+  String leaveService(String service) {
+    return '$serviceから外す';
+  }
+
+  @override
+  String get noneChosen => 'なし';
 
   @override
   String zoneSwitch(String service) {
@@ -2854,11 +2865,6 @@ class L10nJa extends L10n {
   @override
   String smallGroupDeleted(String name) {
     return '「$name」を閉じました';
-  }
-
-  @override
-  String inSmallGroup(String group) {
-    return '$groupのメンバー';
   }
 
   @override

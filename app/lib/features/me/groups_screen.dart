@@ -22,6 +22,7 @@ import '../common/saving_indicator.dart';
 import '../rosters/future_changes.dart';
 import 'attendance.dart';
 import 'service_settings.dart';
+import 'service_staff.dart';
 
 /// The page of [group]: `/me/groups/service/<id>`, `ministry/<id>` or
 /// `small/<id>`.
@@ -242,7 +243,9 @@ class _GroupStaffScreenState extends ConsumerState<GroupStaffScreen> {
 
 /// [group]'s 同工, each to 移出 for who may move them, and 加入同工 ([addFirst]:
 /// above them, in its own section); then, for a service, who served it
-/// without being one, each to 加為同工. Only names matching [query].
+/// without being one, each to 加為同工. Only names matching [query]. In a
+/// service, tapping one of its 同工 (or one just added) opens what they
+/// serve there and their 小組.
 class GroupStaffSections extends ConsumerWidget {
   const GroupStaffSections({
     super.key,
@@ -305,6 +308,8 @@ class GroupStaffSections extends ConsumerWidget {
                   MinistryGroup() || SmallGroup() => null,
                 },
                 chevron: false,
+                // What they serve there and their 小組, for who may move them.
+                onTap: group is ServiceGroup && me.mayMove(m, group) ? () => _edit(context, m) : null,
                 // Taken out at once, with 復原; only who this lead may move.
                 trailing: me.mayMove(m, group)
                     ? RowButton(
@@ -369,12 +374,52 @@ class GroupStaffSections extends ConsumerWidget {
       ),
     );
     if (picked == null || !context.mounted) return;
-    await runWithUndo(
+    final added = await runWithUndo(
       context,
       l10n.addedToGroup(picked.name, name),
       () => ref.read(churchWritesProvider).groupMember(picked, group, member: true),
     );
+    if (added && group is ServiceGroup && context.mounted) await _edit(context, picked);
   }
+
+  /// What [person] serves in this service and their 小組 in it, each
+  /// ticked through the backend, as a 負責人 may (an admin alike).
+  Future<void> _edit(BuildContext context, Member person) => showAppSheet<void>(
+    context,
+    builder: (context) => SafeArea(
+      child: Consumer(
+        builder: (context, ref, _) {
+          final l10n = L10n.of(context);
+          final now = ref.watch(membersProvider.select((v) => v.value?.where((m) => m.uid == person.uid).firstOrNull));
+          final service = ref.watch(servicesProvider.select((v) => v.value?.byId(group.id)));
+          final smallGroups = ref.watch(smallGroupsProvider).value ?? const <SmallGroupDetails>[];
+          if (now == null || service == null) return const SizedBox.shrink();
+          Future<bool> saved(Future<void> write) async {
+            try {
+              await write;
+              return true;
+            } catch (e) {
+              if (context.mounted) showToast(context, saveErrorText(l10n, e));
+              return false;
+            }
+          }
+
+          return SingleChildScrollView(
+            child: ServiceStaffSection(
+              person: now,
+              service: service,
+              header: now.name,
+              smallGroups: [...smallGroups.where((g) => g.service == service.id)],
+              onDuty: (duty, on) => saved(
+                (on ? ref.churchData.grantDuty : ref.churchData.revokeDuty)(now.uid, service.id, duty),
+              ),
+              onSmallGroup: (g, on) => saved(ref.read(churchWritesProvider).groupMember(now, g.group, member: on).done),
+            ),
+          );
+        },
+      ),
+    ),
+  );
 }
 
 /// One group's page (#82, #94). A service's: its settings (name, weekday,

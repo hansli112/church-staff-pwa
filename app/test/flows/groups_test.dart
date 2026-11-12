@@ -312,6 +312,38 @@ void main() {
     expect(b.members['grace']!['mei']!.zoneTypes, isEmpty);
   });
 
+  testWidgets("a service's 負責人 sets what one of its 同工 serves there, and their 小組, from its 同工", (tester) async {
+    final b = seededChurch(as: editor);
+    b.smallGroups['grace'] = {'joy': const SmallGroupDetails(id: 'joy', name: '喜樂小組', service: 'sunday')};
+    await pumpApp(tester, b);
+    await go(tester, '/me/groups/service/sunday');
+    await tester.scrollUntilVisible(find.text('3 人'), 200, scrollable: find.byType(Scrollable).last);
+    await tapText(tester, '3 人');
+    await tapText(tester, '李美玉');
+    expect(find.text('司琴、招待'), findsWidgets);
+    await tapText(tester, '服事項目');
+    await tapText(tester, '司會');
+    expect(b.members['grace']!['mei']!.serves('sunday', '司會'), isTrue);
+    await tapText(tester, '服事項目');
+    await tapText(tester, '小組');
+    await tapText(tester, '喜樂小組');
+    expect(b.members['grace']!['mei']!.smallGroups, {'joy'});
+  });
+
+  testWidgets('加入同工 goes on to what they serve there', (tester) async {
+    final b = seededChurch(as: editor);
+    await pumpApp(tester, b);
+    await go(tester, '/me/groups/service/sunday');
+    await tester.scrollUntilVisible(find.text('3 人'), 200, scrollable: find.byType(Scrollable).last);
+    await tapText(tester, '3 人');
+    await tapText(tester, '加入同工');
+    await tapText(tester, 'John Chen');
+    expect(b.members['grace']!['john']!.zoneTypes, ['sunday']);
+    await tapText(tester, '服事項目');
+    await tapText(tester, '招待');
+    expect(b.members['grace']!['john']!.serves('sunday', '招待'), isTrue);
+  });
+
   testWidgets("a duty's list on its service's page: the first three, and how many more", (tester) async {
     final b = seededChurch(
       extra: [
