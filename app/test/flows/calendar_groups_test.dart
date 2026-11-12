@@ -179,6 +179,25 @@ void main() {
     expect(find.text('平安小組烤肉'), findsWidgets);
   });
 
+  testWidgets("跟我有關的 has the events of the 小組 I lead, though I am not one of its 同工", (tester) async {
+    final b = church();
+    b.smallGroups['grace'] = {'joy': const SmallGroupDetails(id: 'joy', name: '喜樂小組', service: 'sunday')};
+    b.members['grace']!['hao'] = staffHao.withIdentities(const [MinistryLead('worship'), SmallGroupLead('joy')]);
+    b.calendarEvents['grace']!.add(
+      CalendarEvent(
+        id: 'joy-bbq',
+        title: '喜樂小組烤肉',
+        start: DateTime(2026, 10, 25, 17),
+        end: DateTime(2026, 10, 25, 20),
+        group: 'small:joy',
+      ),
+    );
+    await pumpApp(tester, b);
+    await go(tester, '/calendar');
+    expect(find.text('跟我有關的'), findsOneWidget);
+    expect(find.text('喜樂小組烤肉'), findsWidgets);
+  });
+
   testWidgets('a 小組 picked on this device before opens on 跟我有關的', (tester) async {
     final b = church();
     b.smallGroups['grace'] = {'joy': const SmallGroupDetails(id: 'joy', name: '喜樂小組', service: 'sunday')};
