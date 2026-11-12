@@ -106,10 +106,18 @@ const takesByName = (member: FirebaseFirestore.DocumentSnapshot, pending: Fireba
   member.exists && !pending.get('emailHash') && !!personName(member.get('name')) && personName(member.get('name')) === personName(pending.get('name'));
 
 /**
- * Points every roster that names [pid] at [uid] instead. Only the days the
- * move recorded for [pid] are read.
+ * Points every roster that names [pid] at [uid] instead: the days the move
+ * recorded for [pid], and any they were put on since, as one without an
+ * account can be. Every roster of the church is read for those, once a
+ * person.
  */
-async function repoint(deps: Deps, cid: string, pid: string, uid: string, rosterIds: string[]) {
+async function repoint(deps: Deps, cid: string, pid: string, uid: string, recorded: string[]) {
+  const all = await deps.db.collection(`churches/${cid}/rosters`).get();
+  const since = all.docs
+    .filter((r) => ((r.get('duties') as { uids?: Record<string, string> }[] | undefined) ?? [])
+      .some((d) => Object.values(d?.uids ?? {}).includes(pid)))
+    .map((r) => r.id);
+  const rosterIds = [...new Set([...recorded, ...since])];
   // One transaction per day, a few at a time: an editor changing the same
   // day meanwhile is never overwritten.
   const one = (id: string) =>
@@ -175,7 +183,7 @@ function mergedMember(member: FirebaseFirestore.DocumentSnapshot, pending: Fireb
       ...claimedGroups(pending.get('groups'), pending.get('zoneTypes')),
       ...small.identities,
     ]),
-    smallGroups: union(member.get('smallGroups'), small.smallGroups),
+    smallGroups: union(member.get('smallGroups'), union(small.smallGroups, pending.get('smallGroups'))),
     zones: mergeZones(member.get('zones'), pending.get('zones')),
     zoneTypes: union(member.get('zoneTypes'), pending.get('zoneTypes')),
     // Merge opt-outs, never reset a current preference to a pending default.
@@ -226,7 +234,7 @@ export async function claimPending(deps: ClaimDeps, caller: Caller | null, data:
           ...claimedGroups(pending.get('groups'), pending.get('zoneTypes')),
           ...small.identities,
         ]),
-        smallGroups: small.smallGroups,
+        smallGroups: union(small.smallGroups, pending.get('smallGroups')),
         zones: pending.get('zones') ?? [],
         zoneTypes: pending.get('zoneTypes') ?? [],
         notificationPrefs: pending.get('notificationPrefs') ?? { muted: [] },

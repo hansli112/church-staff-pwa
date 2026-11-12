@@ -33,7 +33,8 @@ Future<void> pickPeople(
   RosterVia via = RosterVia.app,
   List<Roster> swapDays = const [],
 }) async {
-  final members = ref.read(membersProvider).requireValue;
+  final members = ref.read(staffProvider).requireValue;
+  final noAccount = ref.read(noAccountProvider);
   final order = ref.read(rosterActionsProvider).orderOf(roster);
   final me = ref.read(meProvider).value;
   final router = GoRouter.of(context);
@@ -43,6 +44,8 @@ Future<void> pickPeople(
   final notes = <String, String>{
     for (final m in members)
       if ([
+            // Nobody to notify: whoever arranges tells them.
+            if (noAccount.contains(m.uid)) l10n.getsNoNotice,
             if (unavailable[m.uid] case final span?)
               span.note.isEmpty ? l10n.pickerUnavailable : l10n.pickerUnavailableBecause(span.note),
             if (around[m.uid] case final a?) ...[

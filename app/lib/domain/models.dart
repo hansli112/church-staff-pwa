@@ -1298,6 +1298,7 @@ class PendingMember {
     this.role = Role.staff,
     this.groups = const {},
     this.zones = const [],
+    this.smallGroups = const {},
     this.mutedNotifications = const {},
   });
 
@@ -1307,26 +1308,44 @@ class PendingMember {
   final Role role;
   final Set<Group> groups;
   final List<Zone> zones;
+
+  /// The 小組 they were put in here, by ID, besides those [zones] name
+  /// from the move.
+  final Set<String> smallGroups;
   final Set<NotificationKind> mutedNotifications;
 
-  /// As a member of what they were in when moved: their services and
-  /// duties, and the 小組 named in [zones], found among [smallGroups] by
-  /// service and name as claiming does (functions/src/smallGroups.ts: the
-  /// lowest id of two with one name).
-  Member asMember(List<SmallGroupDetails> smallGroups) {
-    final byId = [...smallGroups]..sort((a, b) => a.id.compareTo(b.id));
+  /// As a member of what they are in: their services and duties, the 小組
+  /// put in here, and those named in [zones], found among [all] by service
+  /// and name as claiming does (functions/src/smallGroups.ts: the lowest id
+  /// of two with one name).
+  Member asMember(List<SmallGroupDetails> all) {
+    final byId = [...all]..sort((a, b) => a.id.compareTo(b.id));
     String? named(String service, String name) =>
         byId.where((g) => g.service == service && g.name.trim() == name.trim()).firstOrNull?.id;
     return Member(
       uid: id,
       name: name,
+      role: role,
+      groups: groups,
       zones: zones,
       smallGroups: {
+        ...smallGroups,
         for (final z in zones)
           for (final name in z.smallGroups) ?named(z.serviceType, name),
       },
     );
   }
+
+  PendingMember copyWith({List<Zone>? zones, Set<String>? smallGroups}) => PendingMember(
+    id: id,
+    name: name,
+    email: email,
+    role: role,
+    groups: groups,
+    zones: zones ?? this.zones,
+    smallGroups: smallGroups ?? this.smallGroups,
+    mutedNotifications: mutedNotifications,
+  );
 
   @override
   bool operator ==(Object other) =>
@@ -1337,6 +1356,7 @@ class PendingMember {
       other.role == role &&
       setEquals(other.groups, groups) &&
       listEquals(other.zones, zones) &&
+      setEquals(other.smallGroups, smallGroups) &&
       setEquals(other.mutedNotifications, mutedNotifications);
 
   @override
@@ -1347,6 +1367,7 @@ class PendingMember {
     role,
     Object.hashAll(groups),
     Object.hashAll(zones),
+    Object.hashAllUnordered(smallGroups),
     Object.hashAllUnordered(mutedNotifications),
   );
 }

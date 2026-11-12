@@ -90,9 +90,9 @@ void main() {
     ]);
 
     await go(tester, '/me/members');
-    expect(find.text('2 位還沒登入'), findsOneWidget);
-    expect(findShown('還沒登入 · mei@example.com'), findsOneWidget);
-    expect(findShown('還沒登入'), findsOneWidget, reason: '陳志豪 has no email');
+    expect(find.text('2 位收不到通知'), findsOneWidget);
+    expect(findShown('收不到通知 · mei@example.com'), findsOneWidget);
+    expect(findShown('收不到通知'), findsOneWidget, reason: '陳志豪 has no email');
   });
 
   testWidgets('the church name sits right above the button it unlocks, after who I am', (tester) async {

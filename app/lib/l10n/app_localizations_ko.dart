@@ -1933,11 +1933,11 @@ class L10nKo extends L10n {
   }
 
   @override
-  String get notSignedInYet => '아직 로그인 안 함';
+  String get getsNoNotice => '알림을 받지 못해요';
 
   @override
-  String pendingCount(int count) {
-    return '$count명이 아직 로그인하지 않았어요';
+  String noNoticeCount(int count) {
+    return '$count명은 알림을 받지 못해요';
   }
 
   @override

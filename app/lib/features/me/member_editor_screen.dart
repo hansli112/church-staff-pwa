@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:material_symbols_icons/symbols.dart';
 
 import '../../core/design/components.dart';
+import '../../core/design/tokens.dart';
 import '../../domain/models.dart';
 import '../../domain/text.dart';
 import '../../l10n/app_localizations.dart';
@@ -12,6 +13,7 @@ import '../common/errors.dart';
 import '../common/saving_indicator.dart';
 import 'identity_section.dart';
 import 'service_staff.dart';
+import '../rosters/future_changes.dart';
 
 /// An admin editing one member: their 身分 (#82), and each service they
 /// are one of the 同工 of, with the duties they serve there and their
@@ -97,6 +99,7 @@ class MemberEditorScreen extends ConsumerWidget {
     final services = ref.watch(servicesProvider).value;
     final smallGroups = ref.watch(smallGroupsProvider).value ?? const <SmallGroupDetails>[];
     final self = ref.watch(uidProvider) == uid;
+    if (member == null && pending.any((p) => p.id == uid)) return _NoAccountScreen(id: uid);
     if (member == null || services == null) return Scaffold(appBar: AppBar());
 
     final zoneTypes = member.zoneTypes.toSet();
@@ -184,5 +187,112 @@ Future<void> mergePendingInto(BuildContext context, WidgetRef ref, PendingMember
     if (context.mounted) showToast(context, l10n.merged);
   } catch (e) {
     if (context.mounted) showToast(context, errorText(l10n, e));
+  }
+}
+
+/// One of the 同工 without an account yet (moved, or added by name), for
+/// an admin: as a member's page, but no 身分 (not using the app, they lead
+/// nothing), each change through the backend, and 刪除 at the end.
+class _NoAccountScreen extends ConsumerWidget {
+  const _NoAccountScreen({required this.id});
+
+  final String id;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final l10n = L10n.of(context);
+    final pending = ref.watch(
+      pendingMembersProvider.select((v) => v.value?.where((p) => p.id == id).firstOrNull),
+    );
+    final services = ref.watch(servicesProvider).value;
+    final smallGroups = ref.watch(smallGroupsProvider).value ?? const <SmallGroupDetails>[];
+    if (pending == null || services == null) return Scaffold(appBar: AppBar());
+    final person = pending.asMember(smallGroups);
+    final name = pending.name.isEmpty ? pending.email : pending.name;
+    final writes = ref.read(churchWritesProvider);
+    Future<bool> saved(Future<void> write) async {
+      try {
+        await write;
+        return true;
+      } catch (e) {
+        if (context.mounted) showToast(context, saveErrorText(l10n, e));
+        return false;
+      }
+    }
+
+    final zoneTypes = person.zoneTypes.toSet();
+    final joinable = [
+      for (final s in services.services)
+        if (s.enabled && !zoneTypes.contains(s.id)) s,
+    ];
+    return Scaffold(
+      appBar: AppBar(title: Text(name)),
+      body: ListView(
+        children: [
+          // Whoever arranges them tells them: said once, at the top.
+          Padding(
+            padding: const EdgeInsets.fromLTRB(Space.l, Space.s, Space.l, 0),
+            child: Text(
+              l10n.getsNoNotice,
+              style: AppText.footnote.copyWith(color: AppColors.of(context).secondaryLabel),
+            ),
+          ),
+          for (final s in services.services)
+            if (zoneTypes.contains(s.id))
+              ServiceStaffSection(
+                person: person,
+                service: s,
+                header: s.name,
+                smallGroups: [...smallGroups.where((g) => g.service == s.id)],
+                onDuty: (duty, on) =>
+                    saved((on ? ref.churchData.grantDuty : ref.churchData.revokeDuty)(id, s.id, duty)),
+                onSmallGroup: (g, on) => saved(writes.groupMember(person, g.group, member: on).done),
+                onLeave: () => runWithUndo(
+                  context,
+                  l10n.zoneLeft(s.name),
+                  () => writes.groupMember(person, ServiceGroup(s.id), member: false),
+                ),
+              ),
+          if (joinable.isNotEmpty)
+            ListSection(
+              children: [
+                MenuRow<Service>(
+                  title: l10n.joinService,
+                  leading: const Icon(Symbols.add_rounded),
+                  options: joinable,
+                  label: (s) => s.name,
+                  onPicked: (s) => saved(writes.groupMember(person, ServiceGroup(s.id), member: true).done),
+                ),
+              ],
+            ),
+          ListSection(
+            children: [
+              ListRow(title: l10n.pendingDelete, destructive: true, onTap: () => _delete(context, ref, name)),
+            ],
+          ),
+          const SizedBox(height: 32),
+        ],
+      ),
+    );
+  }
+
+  /// Deleted once confirmed; their name stays on the rosters.
+  Future<void> _delete(BuildContext context, WidgetRef ref, String name) async {
+    final l10n = L10n.of(context);
+    final ok = await confirmDestructive(
+      context,
+      title: l10n.pendingDeleteTitle(name),
+      message: l10n.pendingDeleteBody,
+      action: l10n.delete,
+    );
+    if (!ok || !context.mounted) return;
+    try {
+      await ref.churchData.deletePendingMember(id);
+      if (!context.mounted) return;
+      showToast(context, l10n.pendingDeleted);
+      Navigator.of(context).pop();
+    } catch (e) {
+      if (context.mounted) showToast(context, errorText(l10n, e));
+    }
   }
 }

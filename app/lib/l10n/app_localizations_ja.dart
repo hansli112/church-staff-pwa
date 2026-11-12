@@ -1933,11 +1933,11 @@ class L10nJa extends L10n {
   }
 
   @override
-  String get notSignedInYet => '未ログイン';
+  String get getsNoNotice => '通知が届きません';
 
   @override
-  String pendingCount(int count) {
-    return '$count人が未ログイン';
+  String noNoticeCount(int count) {
+    return '$count人に通知が届きません';
   }
 
   @override

@@ -1214,6 +1214,8 @@ class MemoryChurchData implements ChurchData {
           for (final d in r.duties) ...d.uids.values,
       };
       for (final uid in uids) {
+        // One of the 同工 without an account yet has no member to tell.
+        if (!_b.members[churchId]!.containsKey(uid)) continue;
         final before = was?.dutiesOf(uid: uid) ?? const <String>[];
         final after = now?.dutiesOf(uid: uid) ?? const <String>[];
         if (setEquals(before.toSet(), after.toSet())) continue;
@@ -1655,20 +1657,46 @@ class MemoryChurchData implements ChurchData {
         SmallGroup() => small != null,
       };
       if (!known) throw const CloudException(CloudErrorCode.permissionDenied);
-      final them = members[uid];
+      final pending = _b.pendingMembers[churchId]?[uid];
+      final them = members[uid] ?? (pending == null ? null : _pendingAsTarget(pending));
       if (them == null) throw const CloudException(CloudErrorCode.notFound);
       if (!me.mayMove(them, small?.group ?? group)) {
         throw const CloudException(CloudErrorCode.permissionDenied);
       }
       if (duties.any((d) => !(service?.duties.contains(d) ?? true))) throw const CloudException(CloudErrorCode.unknown);
-      members[uid] = them.inGroupAs(
+      final next = them.inGroupAs(
         group,
         member: member,
         duties: duties.toSet().toList(),
         smallGroups: smallGroups.toSet().toList(),
       );
+      if (pending == null) {
+        members[uid] = next;
+        return;
+      }
+      // One without an account may be in a 小組 by the name their move kept.
+      _b.pendingMembers[churchId]![uid] = pending.copyWith(
+        smallGroups: next.smallGroups,
+        zones: [
+          for (final z in next.zones)
+            if (small != null && !member && z.serviceType == small.service)
+              z.copyWith(
+                smallGroups: [
+                  for (final g in z.smallGroups)
+                    if (g.trim() != small.name.trim()) g,
+                ],
+              )
+            else
+              z,
+        ],
+      );
     });
   }
+
+  /// Pending member [p] as setGroupMember and setDuty read them: their own
+  /// 小組 by ID, those their move named left in their zones.
+  static Member _pendingAsTarget(PendingMember p) =>
+      Member(uid: p.id, name: p.name, role: p.role, groups: p.groups, zones: p.zones, smallGroups: p.smallGroups);
 
   @override
   Future<void> grantDuty(String uid, String serviceType, String duty) =>
@@ -1694,10 +1722,15 @@ class MemoryChurchData implements ChurchData {
       if (service == null || !me.editsDutyList(ministries, serviceType, duty)) {
         throw const CloudException(CloudErrorCode.permissionDenied);
       }
-      final now = _b.members[churchId]![uid];
+      final pending = _b.pendingMembers[churchId]?[uid];
+      final now = _b.members[churchId]![uid] ?? (pending == null ? null : _pendingAsTarget(pending));
       if (now == null) throw const CloudException(CloudErrorCode.notFound);
       if (granting && !service.duties.contains(duty)) throw const CloudException(CloudErrorCode.unknown);
-      _b.members[churchId]![uid] = change(now);
+      if (pending == null) {
+        _b.members[churchId]![uid] = change(now);
+      } else {
+        _b.pendingMembers[churchId]![uid] = pending.copyWith(zones: change(now).zones);
+      }
     });
   }
 
@@ -2792,6 +2825,7 @@ class MemoryCloud implements CloudApi {
               email: user.email,
               role: p.role,
               zones: p.zones,
+              smallGroups: p.smallGroups,
               mutedNotifications: p.mutedNotifications,
               joinedAt: _b.clock(),
             ),
@@ -2996,10 +3030,12 @@ class MemoryCloud implements CloudApi {
 /// instead, and drops [pid]; as functions/src/claim.ts does.
 void _settlePending(MemoryBackend b, String cid, String pid, String uid) {
   b.pendingMembers[cid]!.remove(pid);
+  b.pendingRosterIds[cid]?.remove(pid);
   final rosters = b.rosters[cid]!;
-  for (final key in b.pendingRosterIds[cid]?.remove(pid) ?? const <String>[]) {
-    final value = rosters[key];
-    if (value == null) continue;
+  // The days the move recorded, and any they were put on since.
+  for (final key in [...rosters.keys]) {
+    final value = rosters[key]!;
+    if (!value.duties.any((d) => d.uids.containsValue(pid))) continue;
     rosters[key] = value.copyWith(
       duties: [
         for (final d in value.duties)
@@ -3042,6 +3078,7 @@ Member _withClaimedLeads(Member m, PendingMember p) => m.withIdentities([...m.id
 /// [m] with the groups, zones and leads of pending member [p] added.
 Member _absorb(Member m, PendingMember p) => _withClaimedLeads(m, p).copyWith(
   mutedNotifications: {...m.mutedNotifications, ...p.mutedNotifications},
+  smallGroups: {...m.smallGroups, ...p.smallGroups},
   zones: [
     for (final type in {...m.zoneTypes, for (final z in p.zones) z.serviceType})
       Zone(

@@ -1508,14 +1508,14 @@ void contractTests(Future<ContractWorld> Function() open) {
 
     test('claiming one makes them a member and gives their rosters back', () async {
       final g = await moved();
-      // Only the days the move recorded are pointed at the member.
-      final unrecorded = sundayOn(
+      // A day they were put on since the move is pointed at them too.
+      final since = sundayOn(
         25,
         duties: const [
           Duty(role: '司琴', people: ['美玉'], uids: {'美玉': pid}),
         ],
       );
-      await g.church.putRoster(unrecorded);
+      await g.church.putRoster(since);
       final uid = await w.signUp('mei.old@example.com');
       await expectLater(cloud().claimPending(g.cid, 'nobody'), fails(CloudErrorCode.notFound));
       expect(await cloud().claimPending(g.cid, pid), g.cid);
@@ -1527,7 +1527,7 @@ void contractTests(Future<ContractWorld> Function() open) {
       expect(me.zones, pending.zones);
       final rosters = await g.church.rosters(from: Day(2026, 10, 1)).first;
       expect(rosters.first.duties.single.uids, {'美玉': uid});
-      expect(rosters.last.duties.single.uids, {'美玉': pid});
+      expect(rosters.last.duties.single.uids, {'美玉': uid});
       expect(await cloud().claimPending(g.cid, pid), g.cid, reason: 'a retry by the same person');
       expect(await cloud().pendingClaims(), isEmpty);
       expect(await g.church.pendingMembers().first, isEmpty);
@@ -1567,6 +1567,58 @@ void contractTests(Future<ContractWorld> Function() open) {
       expect((await g.church.rosters(from: Day(2026, 10, 1)).first).single.duties.single.uids, {'黃鎮台': uid});
       expect(await cloud().pendingClaims(), isEmpty);
     });
+
+    test(
+      "one's duties and 小組 are set as a member's are, and every day they were put on is theirs once claimed",
+      () async {
+        final g = await Grace.open(w);
+        final joy = await g.church.saveSmallGroup(
+          const SmallGroupDetails(id: '', name: '喜樂小組', service: 'sunday'),
+          leads: const [],
+        );
+        const huang = PendingMember(
+          id: 'old-huang',
+          name: '黃鎮台',
+          zones: [
+            Zone(serviceType: 'sunday', duties: ['招待']),
+          ],
+        );
+        await w.addPending(g.cid, huang);
+        // 林同工 leads 主日崇拜: what 黃鎮台 serves there, and his 小組 in it.
+        await w.signIn(Grace.editorEmail);
+        await g.church.grantDuty('old-huang', 'sunday', '司琴');
+        await g.church.revokeDuty('old-huang', 'sunday', '招待');
+        await g.church.setGroupMember('old-huang', SmallGroup(joy), member: true);
+        await expectLater(g.church.setGroupMember('old-huang', const ServiceGroup('youth'), member: true), denied());
+        expect(await g.church.pendingMembers().firstWhere((p) => p.single.smallGroups.isNotEmpty), [
+          huang.copyWith(
+            zones: const [
+              Zone(serviceType: 'sunday', duties: ['司琴']),
+            ],
+            smallGroups: {joy},
+          ),
+        ]);
+        final his = sundayOn(
+          18,
+          duties: const [
+            Duty(role: '司琴', people: ['黃鎮台'], uids: {'黃鎮台': 'old-huang'}),
+          ],
+        );
+        await g.church.putRoster(his);
+
+        await w.signIn(Grace.pastorEmail);
+        final invite = await g.church.createInvite(validFor: const Duration(days: 7));
+        final uid = await w.signUp('huang@example.com', name: '黃鎮台');
+        await g.cloud.redeemInvite(invite.code);
+        expect(await cloud().claimPending(g.cid, 'old-huang'), g.cid);
+        final him = (await g.church.member(uid).first)!;
+        expect(him.zones, const [
+          Zone(serviceType: 'sunday', duties: ['司琴']),
+        ]);
+        expect(him.smallGroups, {joy});
+        expect((await g.church.rosters(from: Day(2026, 10, 1)).first).single.duties.single.uids, {'黃鎮台': uid});
+      },
+    );
 
     test('an admin merges one into a member, who keeps their role and gains the rest', () async {
       final g = await moved();

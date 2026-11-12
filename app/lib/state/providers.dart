@@ -11,6 +11,7 @@ import '../domain/models.dart';
 import '../domain/schedule.dart';
 import '../domain/staff_order.dart';
 import '../domain/swap.dart';
+import '../domain/text.dart';
 import 'current_church.dart';
 
 export 'current_church.dart';
@@ -204,6 +205,31 @@ final pendingMembersProvider = StreamProvider<List<PendingMember>>((ref) {
   if (!canRead) return Stream.value(const []);
   return openChurch(ref).pendingMembers();
 });
+
+/// Everyone a roster can name (#94): the members, and, as members, the
+/// 同工 without an account yet (pending members: moved from self-host, or
+/// added by name), who are 同工 all the same. One with a member's name is
+/// left out: the same person, waiting to be merged. Like [membersProvider],
+/// only for those who read the member list.
+final staffProvider = Provider<AsyncValue<List<Member>>>((ref) {
+  final members = ref.watch(membersProvider);
+  final pending = ref.watch(pendingMembersProvider).value ?? const <PendingMember>[];
+  final smallGroups = ref.watch(smallGroupsProvider).value ?? const <SmallGroupDetails>[];
+  return members.whenData((list) {
+    final names = {for (final m in list) nameKey(m.name)};
+    return [
+      ...list,
+      for (final p in pending)
+        if (!names.contains(nameKey(p.name))) p.asMember(smallGroups),
+    ];
+  });
+});
+
+/// The IDs of those in [staffProvider] without an account: nobody to
+/// notify.
+final noAccountProvider = Provider<Set<String>>(
+  (ref) => {for (final p in ref.watch(pendingMembersProvider).value ?? const <PendingMember>[]) p.id},
+);
 
 /// Requests to join still waiting (申請加入, #88), oldest first. Only for
 /// admins.

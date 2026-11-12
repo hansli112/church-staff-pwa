@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:material_symbols_icons/symbols.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
@@ -221,7 +220,7 @@ class _MembersScreenState extends ConsumerState<MembersScreen> {
                             return Padding(
                               padding: const EdgeInsets.fromLTRB(Space.l, Space.l, Space.l, Space.s),
                               child: Text(
-                                l10n.pendingCount(pending.length),
+                                l10n.noNoticeCount(pending.length),
                                 style: AppText.footnote.copyWith(color: c.secondaryLabel),
                               ),
                             );
@@ -235,12 +234,12 @@ class _MembersScreenState extends ConsumerState<MembersScreen> {
                             child: ListRow(
                               title: p.name.isEmpty ? p.email : p.name,
                               subtitle: [
-                                l10n.notSignedInYet,
+                                l10n.getsNoNotice,
                                 if (p.email.isNotEmpty && p.name.isNotEmpty) p.email,
                                 ...smallGroupLabels(p.zones),
                               ].join(l10n.dotSeparator),
                               value: p.role == Role.admin ? l10n.roleAdmin : null,
-                              onTap: isAdmin ? () => _openPending(p) : null,
+                              onTap: isAdmin ? () => context.push('/me/members/${p.id}') : null,
                             ),
                           );
                         },
@@ -358,44 +357,6 @@ class _MembersScreenState extends ConsumerState<MembersScreen> {
       child: child,
     ),
   );
-
-  /// What an admin can do with someone who has not signed in yet.
-  Future<void> _openPending(PendingMember p) async {
-    final l10n = L10n.of(context);
-    final name = p.name.isEmpty ? p.email : p.name;
-    final choice = await showAppSheet<String>(
-      context,
-      builder: (context) => SafeArea(
-        child: ListSection(
-          header: name,
-          children: [
-            ListRow(
-              title: l10n.pendingDelete,
-              destructive: true,
-              leading: const Icon(Symbols.delete_rounded),
-              onTap: () => Navigator.pop(context, 'delete'),
-            ),
-          ],
-        ),
-      ),
-    );
-    if (!mounted || choice == null) return;
-    if (choice == 'delete') {
-      final ok = await confirmDestructive(
-        context,
-        title: l10n.pendingDeleteTitle(name),
-        message: l10n.pendingDeleteBody,
-        action: l10n.delete,
-      );
-      if (!ok || !mounted) return;
-      try {
-        await ref.churchData.deletePendingMember(p.id);
-        if (mounted) showToast(context, l10n.pendingDeleted);
-      } catch (e) {
-        if (mounted) showToast(context, errorText(l10n, e));
-      }
-    }
-  }
 
   Future<void> _open(Member m) async {
     final l10n = L10n.of(context);

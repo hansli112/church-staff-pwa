@@ -100,7 +100,7 @@ List<Member> dutyPeople(List<Member> members, String serviceType, String duty, S
 /// are is a tap away (Apple HIG 〈Lists and tables〉: titles in the list, the
 /// content in a detail view). Null while nobody is on it.
 String? dutyPeopleLabel(WidgetRef ref, L10n l10n, String serviceType, String duty) {
-  final members = ref.watch(membersProvider).value ?? const <Member>[];
+  final members = ref.watch(staffProvider).value ?? const <Member>[];
   final order = ref.watch(staffOrderProvider(serviceType)).value ?? StaffOrder();
   final people = dutyPeople(members, serviceType, duty, order);
   if (people.isEmpty) return null;
@@ -517,7 +517,7 @@ class _DutyScreenState extends ConsumerState<DutyScreen> {
     final l10n = L10n.of(context);
     final me = ref.watch(meProvider).value;
     final service = ref.watch(servicesProvider).value?.byId(widget.serviceId);
-    final members = ref.watch(membersProvider).value;
+    final members = ref.watch(staffProvider).value;
     final ministries = ref.watch(ministriesProvider).value?.ministries ?? const <Ministry>[];
     // Renamed back by 復原: the name it opened with again.
     final duty = service == null || service.duties.contains(_duty) ? _duty : widget.duty;

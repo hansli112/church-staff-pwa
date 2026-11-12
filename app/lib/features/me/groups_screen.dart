@@ -266,8 +266,10 @@ class GroupStaffSections extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final l10n = L10n.of(context);
     final me = ref.watch(meProvider).value;
-    final members = ref.watch(membersProvider).value;
+    final members = ref.watch(staffProvider).value;
+    final noAccount = ref.watch(noAccountProvider);
     if (me == null || members == null) return const SizedBox.shrink();
+    String? lineOf(List<String> parts) => parts.isEmpty ? null : parts.join(l10n.dotSeparator);
     final (:staff, :addable, :candidates) = groupPeople(ref, me, members, group);
     final add = addable.isEmpty
         ? null
@@ -300,13 +302,13 @@ class GroupStaffSections extends ConsumerWidget {
             for (final m in shownStaff)
               ListRow(
                 title: m.name,
-                subtitle: switch (group) {
-                  ServiceGroup(:final id) => switch (m.zones.where((z) => z.serviceType == id).firstOrNull?.duties) {
-                    final duties? when duties.isNotEmpty => duties.join(l10n.listSeparator),
-                    _ => null,
-                  },
-                  MinistryGroup() || SmallGroup() => null,
-                },
+                subtitle: lineOf([
+                  if (group case ServiceGroup(:final id))
+                    if (m.zones.where((z) => z.serviceType == id).firstOrNull?.duties case final duties?
+                        when duties.isNotEmpty)
+                      duties.join(l10n.listSeparator),
+                  if (noAccount.contains(m.uid)) l10n.getsNoNotice,
+                ]),
                 chevron: false,
                 // What they serve there and their 小組, for who may move them.
                 onTap: group is ServiceGroup && me.mayMove(m, group) ? () => _edit(context, m) : null,
@@ -390,7 +392,7 @@ class GroupStaffSections extends ConsumerWidget {
       child: Consumer(
         builder: (context, ref, _) {
           final l10n = L10n.of(context);
-          final now = ref.watch(membersProvider.select((v) => v.value?.where((m) => m.uid == person.uid).firstOrNull));
+          final now = ref.watch(staffProvider.select((v) => v.value?.where((m) => m.uid == person.uid).firstOrNull));
           final service = ref.watch(servicesProvider.select((v) => v.value?.byId(group.id)));
           final smallGroups = ref.watch(smallGroupsProvider).value ?? const <SmallGroupDetails>[];
           if (now == null || service == null) return const SizedBox.shrink();
@@ -447,7 +449,7 @@ class GroupScreen extends ConsumerWidget {
     final services = ref.watch(servicesProvider).value;
     final ministries = ref.watch(ministriesProvider).value;
     final smallGroups = ref.watch(smallGroupsProvider).value ?? const <SmallGroupDetails>[];
-    final members = ref.watch(membersProvider).value;
+    final members = ref.watch(staffProvider).value;
     final attendanceOn = ref.watch(churchProvider.select((c) => c.value?.attendanceSince != null));
     final service = switch (group) {
       ServiceGroup(:final id) => services?.byId(id),

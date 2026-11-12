@@ -2042,15 +2042,15 @@ class L10nEn extends L10n {
   }
 
   @override
-  String get notSignedInYet => 'Not signed in yet';
+  String get getsNoNotice => 'Gets no notifications';
 
   @override
-  String pendingCount(int count) {
+  String noNoticeCount(int count) {
     String _temp0 = intl.Intl.pluralLogic(
       count,
       locale: localeName,
-      other: '$count people haven’t signed in yet',
-      one: '1 person hasn’t signed in yet',
+      other: '$count people get no notifications',
+      one: '1 person gets no notifications',
     );
     return '$_temp0';
   }

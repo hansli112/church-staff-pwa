@@ -99,6 +99,19 @@ describe('claiming', () => {
     assert.equal((await db.doc(`churches/${cid}/pendingMembers/old-mei`).get()).exists, false);
   });
 
+  test('a day they were put on since the move, and a 小組 they were put in, are theirs once claimed', async () => {
+    const cid = await moved();
+    await db.doc(`churches/${cid}/smallGroups/joy`).set({ name: '喜樂', service: 'sunday' });
+    await db.doc(`churches/${cid}/pendingMembers/old-mei`).update({ smallGroups: ['joy'] });
+    await db.doc(`churches/${cid}/rosters/2026-10-18_sunday`).set({
+      type: 'sunday',
+      duties: [{ role: '司琴', people: ['李美玉'], uids: { 李美玉: 'old-mei' } }],
+    });
+    await claimPending(cd, mei(), { churchId: cid, pendingId: 'old-mei' });
+    assert.deepEqual((await db.doc(`churches/${cid}/members/new-mei`).get()).get('smallGroups'), ['joy']);
+    assert.deepEqual(await uidsOn(cid, '2026-10-18'), [{ 李美玉: 'new-mei' }]);
+  });
+
   test('a claim made, its rosters still being pointed at them, is not asked again', async () => {
     const cid = await moved();
     // Where claimPending is between making the member and dropping the

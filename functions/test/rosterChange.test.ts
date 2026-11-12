@@ -30,7 +30,8 @@ async function church(cid = 'C1', events: { calendar: boolean; roster: boolean }
   if (events) await webhookSave(d, caller('pastor'), { churchId: cid, url: HOOK, events });
 }
 
-const UIDS: Record<string, string> = { 美玉: 'mei', 志豪: 'hao' };
+/** 黃鎮台 (old-huang) is one of the 同工 without an account: no member, nobody to tell. */
+const UIDS: Record<string, string> = { 美玉: 'mei', 志豪: 'hao', 黃鎮台: 'old-huang' };
 const duty = (role: string, people: string[]) => ({
   role,
   people,
@@ -297,6 +298,12 @@ describe('安排服事 (#90)', () => {
     ]);
     assert.deepEqual(await planned(), []);
     assert.deepEqual(await notify(), { people: 0, later: false }, 'nothing left to tell');
+  });
+
+  test('one without an account is not counted among those told', async () => {
+    await church();
+    await plan('2026-10-11', [duty('司琴', ['美玉']), duty('招待', ['黃鎮台'])]);
+    assert.deepEqual(await notify(), { people: 1, later: false });
   });
 
   test('taken off a day arranged before: told so; their own edits are not news', async () => {

@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import { beforeEach, test } from 'node:test';
 
-import { setDuty, setGroupMember } from '../src/groupMembers.js';
+import { addByName, setDuty, setGroupMember } from '../src/groupMembers.js';
 import { caller, clearFirestore, db, deps, rejectsWith, seedChurch } from './support.js';
 
 // 加為同工, 移出 (#82): a group's 負責人 adds or takes out a 同工 who is
@@ -81,6 +81,45 @@ test('a lead moves only plain 同工; a service keeps its 小組 when one comes 
     churchId: 'C1', uid: 'mei', service: 'youth', member: true, duties: ['敬拜'], smallGroups: ['喜樂'],
   });
   assert.deepEqual((await mei()).get('zones'), [{ serviceType: 'youth', duties: ['敬拜'], smallGroups: ['喜樂'] }]);
+});
+
+test('one without an account yet is set the same way: duties, 小組, a service, a 小組 their move named', async () => {
+  await church();
+  await db.doc('churches/C1/smallGroups/grace').set({ name: '恩典', service: 'sunday' });
+  await db.doc('churches/C1/smallGroups/joy').set({ name: '喜樂', service: 'sunday' });
+  const huang = db.doc('churches/C1/pendingMembers/old-huang');
+  await huang.set({
+    name: '黃鎮台', role: 'member', groups: [], zoneTypes: ['sunday'],
+    zones: [{ serviceType: 'sunday', duties: ['招待'], smallGroups: ['恩典'] }],
+  });
+  await setDuty(deps, caller('sundayLead'), { churchId: 'C1', uid: 'old-huang', service: 'sunday', duty: '司琴', on: true });
+  await setDuty(deps, caller('sundayLead'), { churchId: 'C1', uid: 'old-huang', service: 'sunday', duty: '招待', on: false });
+  await setGroupMember(deps, caller('sundayLead'), { churchId: 'C1', uid: 'old-huang', smallGroup: 'joy', member: true });
+  await setGroupMember(deps, caller('sundayLead'), { churchId: 'C1', uid: 'old-huang', smallGroup: 'grace', member: false });
+  assert.deepEqual((await huang.get()).get('zones'), [{ serviceType: 'sunday', duties: ['司琴'], smallGroups: [] }]);
+  assert.deepEqual((await huang.get()).get('smallGroups'), ['joy']);
+  await rejectsWith(
+    setGroupMember(deps, caller('sundayLead'), { churchId: 'C1', uid: 'old-huang', service: 'youth', member: true }),
+    'permissionDenied',
+  );
+  await setGroupMember(deps, caller('admin'), { churchId: 'C1', uid: 'old-huang', service: 'sunday', member: false });
+  assert.deepEqual((await huang.get()).get('zoneTypes'), []);
+});
+
+test("a service's 負責人 adds someone who does not use the app, by name, as one of its 同工", async () => {
+  await church();
+  const { id } = await addByName(deps, caller('sundayLead'), { churchId: 'C1', name: ' 黃鎮台 ', service: 'sunday' });
+  const huang = await db.doc(`churches/C1/pendingMembers/${id}`).get();
+  assert.equal(huang.get('name'), '黃鎮台');
+  assert.equal(huang.get('emailHash'), null, 'claimed by name, if ever');
+  assert.deepEqual(huang.get('zones'), [{ serviceType: 'sunday', duties: [], smallGroups: [] }]);
+  await rejectsWith(
+    addByName(deps, caller('sundayLead'), { churchId: 'C1', name: '黃鎮台', service: 'sunday' }),
+    'duplicateName',
+  );
+  await rejectsWith(addByName(deps, caller('sundayLead'), { churchId: 'C1', name: '王小明', service: 'youth' }), 'permissionDenied');
+  await rejectsWith(addByName(deps, caller('mei'), { churchId: 'C1', name: '王小明', service: 'sunday' }), 'permissionDenied');
+  await rejectsWith(addByName(deps, caller('sundayLead'), { churchId: 'C1', name: ' ', service: 'sunday' }), 'unknown');
 });
 
 test("a 事工's 負責人 puts anyone on its duty's list, who becomes a 同工 of the service, and takes them off again", async () => {

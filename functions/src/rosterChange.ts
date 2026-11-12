@@ -385,6 +385,11 @@ export async function sendHeldPushes(deps: PushDeps & Pick<Deps, 'now'>) {
  */
 async function planRosterChange(deps: PushDeps, c: RosterChange) {
   const uids = new Set([...c.added.keys(), ...c.removed.keys()]);
+  // One of the 同工 without an account yet has no member to tell.
+  if (uids.size) {
+    const them = await deps.db.getAll(...[...uids].map((uid) => deps.db.doc(`churches/${c.church.id}/members/${uid}`)));
+    for (const m of them) if (!m.exists) uids.delete(m.id);
+  }
   for (const [uid, h] of await waitingFor(deps, 'heldPushes', c)) if (uids.has(uid)) await absorb(h, c, uid);
   const planned = await waitingFor(deps, 'plannedPushes', c);
   if (c.editor) {

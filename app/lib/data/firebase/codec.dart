@@ -302,6 +302,7 @@ PendingMember pendingMemberFromJson(String id, Json data) {
     role: m.role,
     groups: m.groups,
     zones: m.zones,
+    smallGroups: m.smallGroups,
     mutedNotifications: m.mutedNotifications,
   );
 }

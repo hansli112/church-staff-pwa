@@ -3568,17 +3568,17 @@ abstract class L10n {
   /// **'已建立〈{church}〉'**
   String moveDone(String church);
 
-  /// No description provided for @notSignedInYet.
+  /// Under one of the 同工 without an account (moved, or added by name): nobody to notify, so whoever arranges tells them
   ///
   /// In zh, this message translates to:
-  /// **'還沒登入'**
-  String get notSignedInYet;
+  /// **'收不到通知'**
+  String get getsNoNotice;
 
-  /// No description provided for @pendingCount.
+  /// No description provided for @noNoticeCount.
   ///
   /// In zh, this message translates to:
-  /// **'{count} 位還沒登入'**
-  String pendingCount(int count);
+  /// **'{count} 位收不到通知'**
+  String noNoticeCount(int count);
 
   /// No description provided for @claimTitle.
   ///

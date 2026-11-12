@@ -1144,9 +1144,10 @@
       }
     }
   },
-  "notSignedInYet": "還沒登入",
-  "pendingCount": "{count} 位還沒登入",
-  "@pendingCount": {
+  "getsNoNotice": "收不到通知",
+  "@getsNoNotice": {"description": "Under one of the 同工 without an account (moved, or added by name): nobody to notify, so whoever arranges tells them"},
+  "noNoticeCount": "{count} 位收不到通知",
+  "@noNoticeCount": {
     "placeholders": {
       "count": {
         "type": "int"

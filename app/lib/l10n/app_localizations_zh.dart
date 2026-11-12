@@ -1930,11 +1930,11 @@ class L10nZh extends L10n {
   }
 
   @override
-  String get notSignedInYet => '還沒登入';
+  String get getsNoNotice => '收不到通知';
 
   @override
-  String pendingCount(int count) {
-    return '$count 位還沒登入';
+  String noNoticeCount(int count) {
+    return '$count 位收不到通知';
   }
 
   @override
@@ -5387,11 +5387,11 @@ class L10nZhHans extends L10nZh {
   }
 
   @override
-  String get notSignedInYet => '还没登录';
+  String get getsNoNotice => '收不到通知';
 
   @override
-  String pendingCount(int count) {
-    return '$count 位还没登录';
+  String noNoticeCount(int count) {
+    return '$count 位收不到通知';
   }
 
   @override

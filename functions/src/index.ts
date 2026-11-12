@@ -228,6 +228,7 @@ export const undoSwap = callable(swaps.undoSwap, pushDeps);
 export const withdrawSwap = callable(swaps.withdrawSwap);
 export const setGroupMember = callable(groupMembers.setGroupMember);
 export const setDuty = callable(groupMembers.setDuty);
+export const addByName = callable(groupMembers.addByName);
 export const editSmallGroup = callable(smallGroups.editSmallGroup);
 
 // Invites, and requests to join without one (#88)
