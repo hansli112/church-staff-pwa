@@ -100,7 +100,7 @@ xcrun altool --upload-app -t ios -f build/ios/ipa/*.ipa --apiKey <金鑰 ID> --a
 
 API 金鑰放在 `~/.appstoreconnect/private_keys/AuthKey_<金鑰 ID>.p8`，altool 會自己找到。`Info.plist` 寫了 `ITSAppUsesNonExemptEncryption = false`（只用 HTTPS），上傳後不用每次回答出口合規。
 
-**商店截圖**：App Store、Google Play 和官網首頁用同一套畫面、同一個順序：首頁、主日崇拜服事表、行事曆、安排服事。都是網站影片那間示範教會（`DEMO_SHOWCASE=true`），服事表從今天算起，所以三邊要同一天拍。
+**商店截圖**：App Store、Google Play 和官網首頁用同一套畫面、同一個順序：首頁、主日崇拜服事表、行事曆、安排服事。都是網站影片那間示範教會（`DEMO_SHOWCASE=true`），服事表從今天算起，所以三邊要同一天拍。示範教會的 logo 是 `app/web/demo-church-logo.png`：網頁版從自己的網址讀，模擬器上的 App 從 marthasit-dev.web.app 讀，所以拍 App Store 前 dev 要已經部署過。
 
 - **App Store**（`store/ios/<語言>-<iphone|ipad>-<n>.png`）：示範模式加 `--dart-define=DEMO_ROUTE=<頁面>` 會直接開在那一頁，不用點。`flutter run -d <iPhone 模擬器> --debug --dart-define=MARTHA_ENV=demo --dart-define=DEMO_SHOWCASE=true --dart-define=DEMO_ROUTE=<頁面>`，裝好就可以停，再把 `app/build/ios/iphonesimulator/Runner.app` 用 `xcrun simctl install` 裝到 iPad。`flutter build ios --simulator` 在 Xcode 27 會說 Flutter.framework「does not contain architectures」而失敗，`flutter run` 只建一個架構就沒事。iPhone 6.9 吋（1320×2868）、iPad 13 吋（2064×2752），`xcrun simctl status_bar <裝置> override --time 9:41 …`，每種語言先 `xcrun simctl spawn <裝置> defaults write app.marthasit AppleLanguages -array <語言>` 再重開 App，等十幾秒（剛裝好的第一次開比較久）再 `xcrun simctl io <裝置> screenshot`。四頁是 `/home`、`/rosters/sunday/<下一個主日>`、`/calendar`、`/rosters/plan/sunday`。用 API 的 `appScreenshotSets`（`APP_IPHONE_67`、`APP_IPAD_PRO_3GEN_129`）上傳；已經上架的版本不能換截圖，要跟下一個版本一起送審。
 - **官網首頁**最上面的兩支手機是 iPhone 的第 2、1 張，縮成 660 寬的 jpg：`landing/media/<語言>/phone-service.jpg`、`phone-home.jpg`。

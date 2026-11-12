@@ -2,11 +2,13 @@ import '../../core/languages.dart';
 import '../../domain/day.dart';
 import '../../domain/models.dart';
 import '../../domain/staff_order.dart';
+import '../../env.dart';
 import 'memory_backend.dart';
 
 /// What the church typed: names, services, duties, its calendar.
 Set<String> churchText(MemoryBackend b) => {
   for (final c in b.churches.values) c.name,
+  for (final l in b.churchLinks.values) ...[l.title, l.body],
   for (final members in b.members.values)
     for (final m in members.values) m.name,
   for (final s in b.services.values)
@@ -33,7 +35,9 @@ Set<String> churchText(MemoryBackend b) => {
 ///
 /// [showcase] is the church the website's videos show (tools/e2e/record.mjs):
 /// settled in, with nothing on 首頁 asking to be dealt with first, and its
-/// 小組 reporting 人數.
+/// 小組 reporting 人數. It has a logo (app/web/demo-church-logo.png, on the
+/// web build's own origin) and links to a daily devotional, the way a
+/// church sets it by hand.
 MemoryBackend demoBackend({
   int memberCount = 150,
   DateTime Function()? clock,
@@ -48,7 +52,10 @@ MemoryBackend demoBackend({
   final start = b.churches[cid]!.timeZone.today(b.clock());
   // The features an admin sets up: a church link with a daily source, a
   // webhook, and two people moved from self-host who have not signed in.
-  if (!showcase) {
+  if (showcase) {
+    b.churches[cid] = b.churches[cid]!.copyWith(logoUrl: '${Env.current.webOrigin}/demo-church-logo.png');
+    b.churchLinks[cid] = ChurchLink(title: w.dailyTitle, body: w.dailyBody, url: 'https://example.org/daily');
+  } else {
     b.churchLinks[cid] = ChurchLink(
       title: w.linkTitle,
       body: w.linkBody,
@@ -326,6 +333,8 @@ class _DemoWords {
     required this.linkBody,
     required this.verseTitle,
     required this.verse,
+    required this.dailyTitle,
+    required this.dailyBody,
     required this.moved,
     required this.demoPerson,
     required this.newcomer,
@@ -346,6 +355,10 @@ class _DemoWords {
   final String linkBody;
   final String verseTitle;
   final String verse;
+
+  /// The [showcase] church's link: a daily devotional.
+  final String dailyTitle;
+  final String dailyBody;
 
   /// People moved from self-host who have not signed in yet.
   final List<String> moved;
@@ -395,6 +408,8 @@ final _zhHant = _DemoWords(
   linkBody: '線上奉獻、索取收據',
   verseTitle: '今日經文　詩篇 23:1',
   verse: '耶和華是我的牧者，我必不至缺乏。',
+  dailyTitle: '每日靈糧',
+  dailyBody: '願神的話成為你每日的力量',
   moved: ['林佳穎', '黃俊傑', '陳志明', '林雅婷'],
   demoPerson: '示範同工',
   newcomer: '新同工',
@@ -419,6 +434,8 @@ final _zhHans = _DemoWords(
   linkBody: '线上奉献、索取收据',
   verseTitle: '今日经文　诗篇 23:1',
   verse: '耶和华是我的牧者，我必不致缺乏。',
+  dailyTitle: '每日灵粮',
+  dailyBody: '愿神的话成为你每日的力量',
   moved: ['林佳颖', '黄俊杰', '陈志明', '林雅婷'],
   demoPerson: '示范同工',
   newcomer: '新同工',
@@ -460,6 +477,8 @@ final _en = _DemoWords(
   linkBody: 'Give online, get a receipt',
   verseTitle: 'Verse of the day: Psalm 23:1',
   verse: 'The Lord is my shepherd, I lack nothing.',
+  dailyTitle: 'Daily Bread',
+  dailyBody: 'God’s word for each day',
   moved: ['Joy Lin', 'Kevin Huang', 'Michael Chen', 'Emily Lin'],
   demoPerson: 'Demo Member',
   newcomer: 'New Member',
@@ -497,6 +516,8 @@ final _ja = _DemoWords(
   linkBody: 'オンライン献金・領収書の発行',
   verseTitle: '今日のみことば　詩編 23:1',
   verse: '主は羊飼い、わたしには何も欠けることがない。',
+  dailyTitle: '日々の糧',
+  dailyBody: '毎日、神のことばを力に',
   moved: ['山田 花子', '佐藤 健', '鈴木 一郎', '高橋 葵'],
   demoPerson: 'デモ用メンバー',
   newcomer: '新しいメンバー',
@@ -530,6 +551,8 @@ final _ko = _DemoWords(
   linkBody: '온라인 헌금, 기부금 영수증 신청',
   verseTitle: '오늘의 말씀　시편 23:1',
   verse: '여호와는 나의 목자시니 내게 부족함이 없으리로다',
+  dailyTitle: '매일의 양식',
+  dailyBody: '날마다 말씀으로 힘을 얻어요',
   moved: ['김지영', '이준호', '박성민', '최유나'],
   demoPerson: '데모 멤버',
   newcomer: '새 멤버',
