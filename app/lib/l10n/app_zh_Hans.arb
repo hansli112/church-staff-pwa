@@ -360,6 +360,8 @@
   "notifNotAllowed": "通知还没开启。弹出询问时，请点“允许”。",
   "notifRegisterFailed": "通知还没设置好，下次打开 App 时会再试",
   "pushView": "查看",
+  "nameTaken": "教会里已经有人叫「{name}」",
+  "@nameTaken": {"placeholders": {"name": {"type": "String"}}},
   "staffDuties": "事奉项目",
   "joinService": "加入聚会",
   "leaveService": "移出{service}",

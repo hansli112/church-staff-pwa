@@ -360,6 +360,8 @@
   "notifNotAllowed": "通知がまだオンになっていません。確認が表示されたら「許可」をタップしてください。",
   "notifRegisterFailed": "通知の設定が完了していません。次にアプリを開いたときにもう一度試します。",
   "pushView": "表示",
+  "nameTaken": "「{name}」という人がもういます",
+  "@nameTaken": {"placeholders": {"name": {"type": "String"}}},
   "staffDuties": "担当",
   "joinService": "集会に加える",
   "leaveService": "{service}から外す",

@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../../core/design/components.dart';
 import '../../domain/models.dart';
 import '../../l10n/app_localizations.dart';
+import '../common/errors.dart';
 
 /// One person as one of [service]'s 同工 (#94): the duties they serve
 /// there and their 小組 in it, each ticked in a menu, and, with [onLeave],
@@ -61,5 +62,18 @@ class ServiceStaffSection extends StatelessWidget {
         if (onLeave != null) ListRow(title: l10n.leaveService(service.name), destructive: true, onTap: onLeave),
       ],
     );
+  }
+}
+
+/// Whether [write] saved; one that did not says why, and a menu tick goes
+/// back.
+Future<bool> savedOrSaid(BuildContext context, Future<void> write) async {
+  final l10n = L10n.of(context);
+  try {
+    await write;
+    return true;
+  } catch (e) {
+    if (context.mounted) showToast(context, saveErrorText(l10n, e));
+    return false;
   }
 }

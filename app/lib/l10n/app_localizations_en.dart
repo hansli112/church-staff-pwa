@@ -1172,6 +1172,11 @@ class L10nEn extends L10n {
   String get pushView => 'View';
 
   @override
+  String nameTaken(String name) {
+    return 'Someone here is already called $name';
+  }
+
+  @override
   String get staffDuties => 'Roles';
 
   @override

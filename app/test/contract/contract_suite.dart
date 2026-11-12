@@ -886,9 +886,11 @@ void contractTests(Future<ContractWorld> Function() open) {
       expect((await g.church.smallGroups().first).single.weekday, DateTime.friday);
       await expectLater(g.church.saveSmallGroup(joy.copyWith(name: '大喜樂')), denied());
       await expectLater(g.church.deleteSmallGroup(id), denied());
+      await w.addPending(g.cid, PendingMember(id: 'old-huang', name: '黃鎮台', smallGroups: {id}));
       await w.signIn(Grace.editorEmail);
       await g.church.deleteSmallGroup(id);
       expect(await g.church.smallGroups().first, isEmpty);
+      expect((await g.church.pendingMembers().first).single.smallGroups, isEmpty, reason: 'one without an account too');
       await w.signIn(Grace.meiEmail);
       expect((await g.church.member(g.mei).first)!.leadSmallGroups, isEmpty);
     });

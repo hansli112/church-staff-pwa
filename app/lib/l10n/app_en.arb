@@ -360,6 +360,8 @@
   "notifNotAllowed": "Notifications aren’t on yet. When asked, tap “Allow.”",
   "notifRegisterFailed": "Notifications aren’t set up yet. The app will try again next time you open it.",
   "pushView": "View",
+  "nameTaken": "Someone here is already called {name}",
+  "@nameTaken": {"placeholders": {"name": {"type": "String"}}},
   "staffDuties": "Roles",
   "joinService": "Add to a service",
   "leaveService": "Remove from {service}",

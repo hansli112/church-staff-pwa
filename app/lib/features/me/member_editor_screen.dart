@@ -210,15 +210,7 @@ class _NoAccountScreen extends ConsumerWidget {
     final person = pending.asMember(smallGroups);
     final name = pending.name.isEmpty ? pending.email : pending.name;
     final writes = ref.read(churchWritesProvider);
-    Future<bool> saved(Future<void> write) async {
-      try {
-        await write;
-        return true;
-      } catch (e) {
-        if (context.mounted) showToast(context, saveErrorText(l10n, e));
-        return false;
-      }
-    }
+    Future<bool> saved(Future<void> write) => savedOrSaid(context, write);
 
     final zoneTypes = person.zoneTypes.toSet();
     final joinable = [

@@ -8,6 +8,7 @@ import 'package:go_router/go_router.dart';
 import 'package:material_symbols_icons/symbols.dart';
 
 import '../../core/design/components.dart';
+import '../../data/backend.dart';
 import '../../core/design/tokens.dart';
 import '../../domain/limits.dart';
 import '../../domain/models.dart';
@@ -272,7 +273,7 @@ class GroupStaffSections extends ConsumerWidget {
     String? lineOf(List<String> parts) => parts.isEmpty ? null : parts.join(l10n.dotSeparator);
     final (:staff, :addable, :candidates) = groupPeople(ref, me, members, group);
     // A service's takes someone new by name too, who may add a plain 同工.
-    final byName = group is ServiceGroup && me.mayMove(const Member(uid: '', name: ''), group);
+    final byName = group is ServiceGroup && me.addsStaffTo(group);
     final add = addable.isEmpty && !byName
         ? null
         : ListRow(
@@ -395,7 +396,10 @@ class GroupStaffSections extends ConsumerWidget {
           showToast(context, l10n.addedToGroup(typed, name));
           await _edit(context, Member(uid: id, name: typed));
         } catch (e) {
-          if (context.mounted) showToast(context, saveErrorText(l10n, e));
+          if (!context.mounted) return;
+          // Someone added them meanwhile, or the list was not up to date.
+          final taken = e is CloudException && e.code == CloudErrorCode.duplicateName;
+          showToast(context, taken ? l10n.nameTaken(typed) : saveErrorText(l10n, e));
         }
     }
   }
@@ -407,20 +411,11 @@ class GroupStaffSections extends ConsumerWidget {
     builder: (context) => SafeArea(
       child: Consumer(
         builder: (context, ref, _) {
-          final l10n = L10n.of(context);
           final now = ref.watch(staffProvider.select((v) => v.value?.where((m) => m.uid == person.uid).firstOrNull));
           final service = ref.watch(servicesProvider.select((v) => v.value?.byId(group.id)));
           final smallGroups = ref.watch(smallGroupsProvider).value ?? const <SmallGroupDetails>[];
           if (now == null || service == null) return const SizedBox.shrink();
-          Future<bool> saved(Future<void> write) async {
-            try {
-              await write;
-              return true;
-            } catch (e) {
-              if (context.mounted) showToast(context, saveErrorText(l10n, e));
-              return false;
-            }
-          }
+          Future<bool> saved(Future<void> write) => savedOrSaid(context, write);
 
           return SingleChildScrollView(
             child: ServiceStaffSection(

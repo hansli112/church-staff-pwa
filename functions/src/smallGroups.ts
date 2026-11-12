@@ -75,9 +75,11 @@ export async function editSmallGroup(deps: Deps, caller: Caller | null, data: un
       fail('invalid-argument', 'unknown');
     }
     // Who leads it now, and who is one of it: changed with it.
-    const [nowLeads, staff] = await Promise.all([
+    const [nowLeads, staff, staffWithout] = await Promise.all([
       tx.get(root.collection('members').where('leadSmallGroups', 'array-contains', at.id)),
       saving ? null : tx.get(root.collection('members').where('smallGroups', 'array-contains', at.id)),
+      // The 同工 without an account put in it too.
+      saving ? null : tx.get(root.collection('pendingMembers').where('smallGroups', 'array-contains', at.id)),
     ]);
     if (leadsBefore && !isDeepStrictEqual(new Set(leadsBefore), new Set(nowLeads.docs.map((m) => m.id)))) {
       fail('aborted', 'conflict');
@@ -90,6 +92,7 @@ export async function editSmallGroup(deps: Deps, caller: Caller | null, data: un
       const out = { smallGroups: FieldValue.arrayRemove(at.id) };
       for (const m of nowLeads.docs) setLead(tx, m, at.id, false, out);
       for (const m of staff!.docs) if (!nowLeads.docs.some((l) => l.id === m.id)) tx.update(m.ref, out);
+      for (const p of staffWithout!.docs) tx.update(p.ref, out);
       return;
     }
     tx.set(at, fields!);

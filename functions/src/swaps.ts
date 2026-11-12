@@ -281,8 +281,13 @@ export async function askSwap(deps: Deps & PushDeps, caller: Caller | null, data
       || Object.keys(a.input).some((k) => !['churchId', 'serviceId', 'dateKey', 'duty', 'with', 'withDateKey'].includes(k))) {
     fail('invalid-argument', 'unknown');
   }
-  const other = await rosterOf(deps, a.cid, `${withDateKey}_${a.serviceId}`).get();
+  const [other, them] = await Promise.all([
+    rosterOf(deps, a.cid, `${withDateKey}_${a.serviceId}`).get(),
+    deps.db.doc(`churches/${a.cid}/members/${to}`).get(),
+  ]);
   if (!stillHolds('swap', a.duty, a.caller.uid, to, a.roster.get('duties'), other.get('duties'))) fail('failed-precondition', 'unknown');
+  // One of the 同工 without an account could never answer.
+  if (!them.exists) fail('not-found', 'notFound');
   const ref = await a.create({
     kind: 'swap',
     to,

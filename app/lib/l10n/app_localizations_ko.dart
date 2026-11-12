@@ -1135,6 +1135,11 @@ class L10nKo extends L10n {
   String get pushView => '보기';
 
   @override
+  String nameTaken(String name) {
+    return '‘$name’이라는 사람이 이미 있어요';
+  }
+
+  @override
   String get staffDuties => '담당';
 
   @override

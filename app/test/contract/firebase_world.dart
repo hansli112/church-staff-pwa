@@ -70,7 +70,14 @@ class FirebaseWorld implements ContractWorld {
   Future<void> addPending(String churchId, PendingMember pending, {List<String> rosterIds = const []}) async {
     final hash = pending.email.isEmpty ? null : await _sha256(pending.email.trim().toLowerCase());
     final member = memberToJson(
-      Member(uid: pending.id, name: pending.name, role: pending.role, groups: pending.groups, zones: pending.zones),
+      Member(
+        uid: pending.id,
+        name: pending.name,
+        role: pending.role,
+        groups: pending.groups,
+        zones: pending.zones,
+        smallGroups: pending.smallGroups,
+      ),
     )..remove('uid');
     await _write('churches/$churchId/pendingMembers/${pending.id}', {
       ...member,

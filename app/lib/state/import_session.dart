@@ -198,7 +198,8 @@ class ImportSession extends Notifier<ImportDraft> {
 
   /// The members [name] could be: same name, or what it may shorten.
   List<Member> candidates(String name) {
-    final members = ref.read(membersProvider).value ?? const <Member>[];
+    // The 同工 without an account too, as the plan matches them.
+    final members = ref.read(staffProvider).value ?? const <Member>[];
     final hints = ImportReport();
     NameMatcher(members).resolve(name, hints);
     return [
@@ -291,7 +292,7 @@ final importPlanProvider = Provider.autoDispose.family<ImportPlan?, String>((ref
   ref
     ..watch(savedRostersProvider)
     ..watch(servicesProvider)
-    ..watch(membersProvider)
+    ..watch(staffProvider)
     ..watch(staffOrderProvider(serviceType))
     ..watch(todayProvider);
   if (!draft.loaded || !ready) return null;

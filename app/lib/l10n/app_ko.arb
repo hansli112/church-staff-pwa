@@ -360,6 +360,8 @@
   "notifNotAllowed": "알림이 아직 꺼져 있어요. 권한을 물으면 ‘허용’을 눌러 주세요.",
   "notifRegisterFailed": "알림 설정을 아직 마치지 못했어요. 다음에 앱을 열 때 다시 시도할게요.",
   "pushView": "보기",
+  "nameTaken": "‘{name}’이라는 사람이 이미 있어요",
+  "@nameTaken": {"placeholders": {"name": {"type": "String"}}},
   "staffDuties": "담당",
   "joinService": "예배에 추가",
   "leaveService": "{service}에서 빼기",

@@ -1045,6 +1045,11 @@ class MemoryChurchData implements ChurchData {
         if (!m.leadSmallGroups.contains(id) && !m.smallGroups.contains(id)) continue;
         members[m.uid] = m.withSmallGroupLead(id, lead: false).copyWith(smallGroups: {...m.smallGroups}..remove(id));
       }
+      // The 同工 without an account put in it too.
+      final pending = _b.pendingMembers[churchId] ?? {};
+      for (final p in [...pending.values]) {
+        if (p.smallGroups.contains(id)) pending[p.id] = p.copyWith(smallGroups: {...p.smallGroups}..remove(id));
+      }
     });
   }
 
@@ -1214,7 +1219,8 @@ class MemoryChurchData implements ChurchData {
           for (final d in r.duties) ...d.uids.values,
       };
       for (final uid in uids) {
-        // One of the 同工 without an account yet has no member to tell.
+        // As functions/src/rosterChange.ts planRosterChange: one of the 同工
+        // without an account yet has no member to tell.
         if (!_b.members[churchId]!.containsKey(uid)) continue;
         final before = was?.dutiesOf(uid: uid) ?? const <String>[];
         final after = now?.dutiesOf(uid: uid) ?? const <String>[];
@@ -1394,6 +1400,9 @@ class MemoryChurchData implements ChurchData {
         toDay: theirs.day,
       );
       if (!swapStillHolds(request, saved, theirs)) throw const CloudException(CloudErrorCode.unknown);
+      // As functions/src/swaps.ts askSwap: one of the 同工 without an
+      // account could never answer.
+      if (!_b.members[churchId]!.containsKey(uid)) throw const CloudException(CloudErrorCode.notFound);
       (_b.swapRequests[churchId] ??= {})[id] = request;
     });
   }
@@ -1705,8 +1714,7 @@ class MemoryChurchData implements ChurchData {
       // As functions/src/groupMembers.ts addByName.
       final me = _b.requireMember(churchId);
       final named = _text(name, TextLimits.profileName);
-      if (_b.services[churchId]!.byId(serviceType) == null ||
-          !me.mayMove(const Member(uid: '', name: ''), ServiceGroup(serviceType))) {
+      if (_b.services[churchId]!.byId(serviceType) == null || !me.addsStaffTo(ServiceGroup(serviceType))) {
         throw const CloudException(CloudErrorCode.permissionDenied);
       }
       final key = nameKey(named);

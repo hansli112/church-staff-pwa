@@ -2116,6 +2116,12 @@ abstract class L10n {
   /// **'查看'**
   String get pushView;
 
+  /// 加入同工 by a name someone in the church already has
+  ///
+  /// In zh, this message translates to:
+  /// **'教會裡已經有人叫「{name}」'**
+  String nameTaken(String name);
+
   /// Row on a member's page, under a service: the duties they serve there, ticked in a menu
   ///
   /// In zh, this message translates to:
@@ -2128,7 +2134,7 @@ abstract class L10n {
   /// **'加入聚會'**
   String get joinService;
 
-  /// No description provided for @leaveService.
+  /// Last row of a service on a member's page: no longer one of its 同工
   ///
   /// In zh, this message translates to:
   /// **'移出{service}'**
@@ -5026,7 +5032,7 @@ abstract class L10n {
   /// **'選小組'**
   String get pickSmallGroup;
 
-  /// Section on a service's page: its 小組 (#85)
+  /// Section on a service's page: its 小組 (#85); on a member's page, the row whose menu ticks theirs
   ///
   /// In zh, this message translates to:
   /// **'小組'**

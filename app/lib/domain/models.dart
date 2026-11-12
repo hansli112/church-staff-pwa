@@ -411,6 +411,10 @@ class Member {
   /// are the admin's to give.
   bool mayMove(Member target, ChurchGroup group) => isAdmin || (managesGroup(group) && target.identities.isEmpty);
 
+  /// Whether this member may add a plain 同工 to [group], someone new by
+  /// name too (addByName): [mayMove] for one holding no 身分.
+  bool addsStaffTo(ChurchGroup group) => isAdmin || managesGroup(group);
+
   /// Whether this member may put anyone on the list of [duty] in
   /// [serviceType], or take them off it (testdata/church_rules.json,
   /// dutyListEditing, #94): admins any; a service's 負責人 and 牧者 its

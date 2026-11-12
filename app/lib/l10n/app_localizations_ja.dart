@@ -1134,6 +1134,11 @@ class L10nJa extends L10n {
   String get pushView => '表示';
 
   @override
+  String nameTaken(String name) {
+    return '「$name」という人がもういます';
+  }
+
+  @override
   String get staffDuties => '担当';
 
   @override

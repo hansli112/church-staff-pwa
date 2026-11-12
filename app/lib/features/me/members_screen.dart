@@ -57,13 +57,19 @@ class _MembersScreenState extends ConsumerState<MembersScreen> {
       for (final g in smallGroups)
         if (m.smallGroups.contains(g.id)) g.name,
     ].join(l10n.listSeparator).ifEmpty(null);
-    // A pending member's: the names they had (zones[].smallGroups).
-    List<String> smallGroupLabels(List<Zone> zones) => [
-      for (final zone in zones)
-        if (zone.smallGroups.isNotEmpty)
+    // One without an account's: the names their move kept
+    // (zones[].smallGroups), and those they were put in here.
+    List<String> smallGroupLabels(PendingMember p) => [
+      for (final zone in p.zones)
+        if ({
+              ...zone.smallGroups,
+              for (final g in smallGroups)
+                if (g.service == zone.serviceType && p.smallGroups.contains(g.id)) g.name,
+            }
+            case final names when names.isNotEmpty)
           l10n.labelValue(
             services?.byId(zone.serviceType)?.name ?? zone.serviceType,
-            zone.smallGroups.join(l10n.listSeparator),
+            names.join(l10n.listSeparator),
           ),
     ];
     final hidden = ref.watch(pendingRemovalsProvider);
@@ -236,7 +242,7 @@ class _MembersScreenState extends ConsumerState<MembersScreen> {
                               subtitle: [
                                 l10n.getsNoNotice,
                                 if (p.email.isNotEmpty && p.name.isNotEmpty) p.email,
-                                ...smallGroupLabels(p.zones),
+                                ...smallGroupLabels(p),
                               ].join(l10n.dotSeparator),
                               value: p.role == Role.admin ? l10n.roleAdmin : null,
                               onTap: isAdmin ? () => context.push('/me/members/${p.id}') : null,

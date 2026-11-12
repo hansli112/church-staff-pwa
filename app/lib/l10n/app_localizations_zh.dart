@@ -1134,6 +1134,11 @@ class L10nZh extends L10n {
   String get pushView => '查看';
 
   @override
+  String nameTaken(String name) {
+    return '教會裡已經有人叫「$name」';
+  }
+
+  @override
   String get staffDuties => '服事項目';
 
   @override
@@ -4589,6 +4594,11 @@ class L10nZhHans extends L10nZh {
 
   @override
   String get pushView => '查看';
+
+  @override
+  String nameTaken(String name) {
+    return '教会里已经有人叫「$name」';
+  }
 
   @override
   String get staffDuties => '事奉项目';

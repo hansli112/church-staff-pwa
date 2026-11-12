@@ -221,6 +221,13 @@ describe('請人代 (askCover)', () => {
 });
 
 describe('和別週交換 (askSwap)', () => {
+  test('not with one of the 同工 without an account, who could never answer', async () => {
+    await church();
+    await day('2026-11-22', [{ role: '司琴', people: ['黃鎮台'], uids: { 黃鎮台: 'old-huang' } }]);
+    await rejectsWith(swap('wang', { with: 'old-huang' }), 'notFound');
+    assert.deepEqual(said(), []);
+  });
+
   test('asks the one person; 接受 trades the two days, and who asked and the lead hear', async () => {
     await church();
     const { id } = await swap();

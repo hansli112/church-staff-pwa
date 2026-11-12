@@ -115,6 +115,8 @@ Future<void> _askSwap(BuildContext context, WidgetRef ref, Roster roster, String
   final l10n = L10n.of(context);
   final today = ref.read(todayProvider);
   final me = ref.read(uidProvider)!;
+  // One without an account could never answer.
+  final noAccount = ref.read(noAccountProvider);
   final days = [
     for (final r in ref.read(savedRostersProvider).value ?? const <Roster>[])
       if (!r.isEvent && r.type == roster.type && r.day.isAfter(today) && r.id != roster.id && !isOnDuty(r, duty, me)) r,
@@ -123,7 +125,7 @@ Future<void> _askSwap(BuildContext context, WidgetRef ref, Roster roster, String
     for (final r in days)
       if (r.duties.where((d) => d.role == duty).firstOrNull case final d?)
         for (final name in d.people)
-          if (d.uids[name] case final uid? when uid != me && !isOnDuty(roster, duty, uid))
+          if (d.uids[name] case final uid? when uid != me && !noAccount.contains(uid) && !isOnDuty(roster, duty, uid))
             (day: r, name: name, uid: uid),
   ];
   final picked = await showAppSheet<({Roster day, String name, String uid})>(
