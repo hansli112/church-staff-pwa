@@ -49,8 +49,8 @@ class MonthGridShown extends Notifier<bool> {
 
 final monthGridShownProvider = NotifierProvider<MonthGridShown, bool>(MonthGridShown.new);
 
-/// Which events the calendar shows (#84): `mine` (跟我有關的), `all`,
-/// `church` (全教會) or one service's or 事工's ([ChurchGroup.key]).
+/// Which events the calendar shows (#84): `mine` (跟我有關的), `all` or one
+/// service's or 事工's ([ChurchGroup.key]).
 /// Remembered per church on this device; at first `all` for admins and 行政,
 /// who look after the whole church, and `mine` for everyone else.
 class CalendarFilter extends Notifier<String> {
@@ -74,24 +74,24 @@ class CalendarFilter extends Notifier<String> {
 
 final calendarFilterProvider = NotifierProvider<CalendarFilter, String>(CalendarFilter.new);
 
-/// The filters to pick from, with their names: 跟我有關的, 全部, 全教會 and
-/// each service's and 事工's. Not each 小組's: a church may have twenty,
-/// and theirs are under 全部 and, for their people, 跟我有關的.
+/// The filters to pick from, with their names: 跟我有關的, 全部 and each
+/// service's and 事工's. Not each 小組's: a church may have twenty, and
+/// theirs are under 全部 and, for their people, 跟我有關的. Not 全教會 alone:
+/// 跟我有關的 has the church's, and it read the same as 全部.
 final _calendarFiltersProvider = Provider<List<(String, String)>?>((ref) {
   final groups = ref.watch(churchGroupsProvider);
   if (groups == null) return null;
   return [
     ('mine', ''),
     ('all', ''),
-    ('church', ''),
     for (final g in groups.all)
       if (g.group is! SmallGroup) (g.group.key, g.name),
   ];
 });
 
 /// The filter in effect: the one picked, unless it is no longer offered (a
-/// group gone, or a 小組 picked before they left the menu), which shows
-/// what this member starts on instead.
+/// group gone, or a 小組 or 全教會 picked before they left the menu), which
+/// shows what this member starts on instead.
 final shownCalendarFilterProvider = Provider<String>((ref) {
   final filter = ref.watch(calendarFilterProvider);
   final filters = ref.watch(_calendarFiltersProvider);
@@ -111,7 +111,6 @@ bool calendarShows(
   List<Ministry> ministries = const [],
 }) => switch (filter) {
   'all' => true,
-  'church' => e.group == null,
   'mine' =>
     e.group == null ||
         servedAt.contains(e.id) ||
@@ -166,7 +165,6 @@ class CalendarScreen extends ConsumerWidget {
           switch (key) {
             'mine' => l10n.calFilterMine,
             'all' => l10n.calFilterAll,
-            'church' => l10n.wholeChurch,
             _ => name,
           },
         ),
