@@ -286,7 +286,7 @@
   "inviteRevoked": "사용 중지했어요. 이 링크로는 더 이상 가입할 수 없어요",
   "inviteExpiresOn": "{date} 만료",
   "inviteNone": "아직 초대 링크가 없어요",
-  "inviteMessage": "{church} 봉사표에 초대합니다: {link}",
+  "inviteMessage": "{church}에 초대합니다: {link}",
   "servicesTitle": "예배",
   "serviceAdd": "예배 추가",
   "serviceName": "예배 이름",

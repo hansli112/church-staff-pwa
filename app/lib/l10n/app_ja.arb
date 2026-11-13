@@ -286,7 +286,7 @@
   "inviteRevoked": "無効にしました。このリンクではもう参加できません",
   "inviteExpiresOn": "{date}まで有効",
   "inviteNone": "招待リンクはまだありません",
-  "inviteMessage": "「{church}」の奉仕表へのご招待です：{link}",
+  "inviteMessage": "「{church}」へのご招待です：{link}",
   "servicesTitle": "集会",
   "serviceAdd": "集会を追加",
   "serviceName": "集会名",

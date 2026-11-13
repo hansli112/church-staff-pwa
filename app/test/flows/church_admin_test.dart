@@ -405,7 +405,11 @@ void main() {
       await go(tester, '/me/invites');
       await tapText(tester, '建立邀請連結');
       final code = b.invites.keys.single;
-      expect(out.sharedTexts.single, contains('https://marthasit-dev.web.app/c/grace/join/$code'));
+      final church = b.churches.values.single.name;
+      expect(
+        out.sharedTexts.single,
+        '邀請你加入〈$church〉：https://marthasit-dev.web.app/c/grace/join/$code?openExternalBrowser=1',
+      );
       await tapText(tester, code);
       await tapText(tester, '複製連結');
       expect(out.copied.single, 'https://marthasit-dev.web.app/c/grace/join/$code?openExternalBrowser=1');

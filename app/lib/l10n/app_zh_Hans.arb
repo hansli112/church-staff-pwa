@@ -286,7 +286,7 @@
   "inviteRevoked": "已停用，这个链接不能再用来加入",
   "inviteExpiresOn": "{date} 到期",
   "inviteNone": "还没有邀请链接",
-  "inviteMessage": "邀请你加入“{church}”的事奉表：{link}",
+  "inviteMessage": "邀请你加入“{church}”：{link}",
   "servicesTitle": "聚会",
   "serviceAdd": "添加聚会",
   "serviceName": "聚会名称",

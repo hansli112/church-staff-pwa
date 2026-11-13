@@ -895,7 +895,7 @@ class L10nKo extends L10n {
 
   @override
   String inviteMessage(String church, String link) {
-    return '$church 봉사표에 초대합니다: $link';
+    return '$church에 초대합니다: $link';
   }
 
   @override

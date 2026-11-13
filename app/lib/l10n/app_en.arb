@@ -286,7 +286,7 @@
   "inviteRevoked": "Revoked. This link no longer works",
   "inviteExpiresOn": "Expires {date}",
   "inviteNone": "No invite links yet",
-  "inviteMessage": "You’re invited to join the {church} serving schedule: {link}",
+  "inviteMessage": "You’re invited to join {church}: {link}",
   "servicesTitle": "Services",
   "serviceAdd": "Add service",
   "serviceName": "Service name",

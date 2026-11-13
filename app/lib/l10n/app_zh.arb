@@ -567,7 +567,7 @@
     }
   },
   "inviteNone": "還沒有邀請連結",
-  "inviteMessage": "邀請你加入〈{church}〉的服事表：{link}",
+  "inviteMessage": "邀請你加入〈{church}〉：{link}",
   "@inviteMessage": {
     "placeholders": {
       "church": {
