@@ -116,6 +116,9 @@ class L10nKo extends L10n {
   String get yourName => '이름';
 
   @override
+  String get yourFullName => '성명';
+
+  @override
   String get yourNameFooter => '봉사표에 표시돼요. 성과 이름을 모두 쓰는 걸 권해요';
 
   @override

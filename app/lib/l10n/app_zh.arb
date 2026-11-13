@@ -51,6 +51,8 @@
   "email": "Email",
   "password": "密碼",
   "yourName": "你的名字",
+  "yourFullName": "你的全名",
+  "@yourFullName": {"description": "Sign-up with email: the name field, asking for the full name the rosters will show"},
   "yourNameFooter": "顯示在服事表上，建議用全名",
   "signIn": "登入",
   "register": "註冊",

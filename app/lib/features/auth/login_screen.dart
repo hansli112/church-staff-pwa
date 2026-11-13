@@ -268,7 +268,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                 textInputAction: TextInputAction.next,
                 autofillHints: const [AutofillHints.name],
                 maxLength: TextLimits.profileName,
-                decoration: InputDecoration(labelText: l10n.yourName),
+                decoration: InputDecoration(labelText: l10n.yourFullName),
                 validator: (v) => (v ?? '').trim().isEmpty ? l10n.nameRequired : null,
               ),
               const SizedBox(height: Space.s),

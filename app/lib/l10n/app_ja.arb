@@ -34,6 +34,7 @@
   "email": "メールアドレス",
   "password": "パスワード",
   "yourName": "お名前",
+  "yourFullName": "氏名",
   "yourNameFooter": "奉仕表に表示されます。フルネームがおすすめです",
   "signIn": "ログイン",
   "register": "新規登録",

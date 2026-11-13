@@ -34,6 +34,7 @@
   "email": "이메일",
   "password": "비밀번호",
   "yourName": "이름",
+  "yourFullName": "성명",
   "yourNameFooter": "봉사표에 표시돼요. 성과 이름을 모두 쓰는 걸 권해요",
   "signIn": "로그인",
   "register": "회원가입",

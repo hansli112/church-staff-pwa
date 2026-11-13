@@ -115,6 +115,9 @@ class L10nJa extends L10n {
   String get yourName => 'お名前';
 
   @override
+  String get yourFullName => '氏名';
+
+  @override
   String get yourNameFooter => '奉仕表に表示されます。フルネームがおすすめです';
 
   @override

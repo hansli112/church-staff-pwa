@@ -304,6 +304,12 @@ abstract class L10n {
   /// **'你的名字'**
   String get yourName;
 
+  /// Sign-up with email: the name field, asking for the full name the rosters will show
+  ///
+  /// In zh, this message translates to:
+  /// **'你的全名'**
+  String get yourFullName;
+
   /// No description provided for @yourNameFooter.
   ///
   /// In zh, this message translates to:

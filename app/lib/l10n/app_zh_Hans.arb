@@ -34,6 +34,7 @@
   "email": "邮箱",
   "password": "密码",
   "yourName": "你的名字",
+  "yourFullName": "你的全名",
   "yourNameFooter": "显示在事奉表上，建议用全名",
   "signIn": "登录",
   "register": "注册",

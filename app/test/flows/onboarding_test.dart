@@ -196,6 +196,13 @@ void main() {
     await expectLater(b.auth.signInWithEmail('ming@example.com', 'secret123'), throwsA(isA<AuthException>()));
   });
 
+  testWidgets('signing up with email asks for the full name, the one the rosters show', (tester) async {
+    await pumpApp(tester, MemoryBackend(clock: testClock));
+    await tapText(tester, '用 email 登入');
+    await tapText(tester, '註冊新帳號');
+    expect(find.widgetWithText(TextFormField, '你的全名'), findsOneWidget);
+  });
+
   testWidgets('a sign-up error goes away once the field is filled', (tester) async {
     await pumpApp(tester, MemoryBackend(clock: testClock));
     await tapText(tester, '用 email 登入');

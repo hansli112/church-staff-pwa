@@ -116,6 +116,9 @@ class L10nEn extends L10n {
   String get yourName => 'Your name';
 
   @override
+  String get yourFullName => 'Full name';
+
+  @override
   String get yourNameFooter => 'Shown on the schedule. Your full name is best.';
 
   @override

@@ -58,7 +58,7 @@ class _YourNameFieldState extends ConsumerState<YourNameField> {
       autofillHints: const [AutofillHints.name],
       decoration: InputDecoration(
         labelText: l10n.yourName,
-        // Broken where a reader would: 「…用教會裡大家怎麼叫你」, not 「…怎麼／叫你」.
+        // Broken where a reader would: 「…服事表上，／建議用全名」, not mid-word.
         helper: BalancedText(
           l10n.yourNameFooter,
           textAlign: TextAlign.start,
