@@ -51,7 +51,7 @@ void main() {
   });
 
   testWidgets('a church link shows even with no upcoming services', (tester) async {
-    await pumpApp(tester, seededChurch(as: john)..churchLinks['grace'] = link);
+    await pumpApp(tester, seededChurch(as: johnOnSunday, extra: const [johnOnSunday])..churchLinks['grace'] = link);
     expect(find.text('主日奉獻'), findsOneWidget);
     expect(find.text('看服事表'), findsOneWidget);
   });

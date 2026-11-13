@@ -238,6 +238,11 @@ abstract interface class ChurchData {
   /// Drops a pending member (admins). Their names stay on the rosters.
   Future<void> deletePendingMember(String id);
 
+  /// Renames pending member [id] (admins), on the rosters they are on too:
+  /// a typo fixed. [CloudErrorCode.duplicateName] for a name someone in the
+  /// church has.
+  Future<void> renamePending(String id, String name);
+
   /// Requests to join (申請加入, #88), answered or not; ones
   /// [JoinRequest.days] old may linger a day. Admins only.
   Stream<List<JoinRequest>> joinRequests();

@@ -29,6 +29,26 @@ void main() {
     }
   });
 
+  // Only the app ranks people by it, so its rows live here.
+  group('nameMatch', () {
+    test('the same name, spaces, width and case aside, is exact', () {
+      expect(nameMatch('王小明', '王 小明'), NameMatch.exact);
+      expect(nameMatch('Hans Lee', 'hans lee'), NameMatch.exact);
+    });
+    test('one name inside the other is partial: a given name, a first name', () {
+      expect(nameMatch('小明', '王小明'), NameMatch.partial);
+      expect(nameMatch('王小明', '小明'), NameMatch.partial);
+      expect(nameMatch('Hans', 'Hans Lee'), NameMatch.partial);
+    });
+    test('one character is too little to go by', () {
+      expect(nameMatch('明', '王小明'), NameMatch.none);
+      expect(nameMatch('', '王小明'), NameMatch.none);
+    });
+    test('different names are none', () {
+      expect(nameMatch('陳志明', '林志明'), NameMatch.none);
+    });
+  });
+
   group('characterCount', () {
     for (final r in _rows('characterCount')) {
       test(r['why'] as String, () => expect(characterCount(r['in'] as String), r['count']));

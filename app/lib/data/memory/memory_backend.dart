@@ -1935,6 +1935,41 @@ class MemoryChurchData implements ChurchData {
   }
 
   @override
+  Future<void> renamePending(String id, String name) async {
+    // As functions/src/pendingMembers.ts renamePending.
+    _functionAdmin();
+    final named = _text(name, TextLimits.profileName);
+    final pending = _b.pendingMembers[churchId] ?? {};
+    final p = pending[id];
+    if (p == null) throw const CloudException(CloudErrorCode.notFound);
+    final key = nameKey(named);
+    if ([
+      ..._b.members[churchId]!.values.map((m) => m.name),
+      for (final o in pending.values)
+        if (o.id != id) o.name,
+    ].any((n) => nameKey(n) == key)) {
+      throw const CloudException(CloudErrorCode.duplicateName);
+    }
+    pending[id] = PendingMember(
+      id: p.id,
+      name: named,
+      email: p.email,
+      role: p.role,
+      groups: p.groups,
+      zones: p.zones,
+      smallGroups: p.smallGroups,
+      mutedNotifications: p.mutedNotifications,
+    );
+    final rosters = _b.rosters[churchId]!;
+    for (final key in [...rosters.keys]) {
+      final value = rosters[key]!;
+      if (!value.duties.any((d) => d.uids.containsValue(id))) continue;
+      rosters[key] = value.copyWith(duties: [for (final d in value.duties) d.renamed(id, named)]);
+    }
+    _b.notify();
+  }
+
+  @override
   Future<void> mergePending(String pendingId, String uid) async {
     _functionAdmin();
     final p = _b.pendingMembers[churchId]?[pendingId];

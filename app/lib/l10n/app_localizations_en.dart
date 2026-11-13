@@ -116,7 +116,7 @@ class L10nEn extends L10n {
   String get yourName => 'Your name';
 
   @override
-  String get yourNameFooter => 'The name your church knows you by';
+  String get yourNameFooter => 'Shown on the schedule. Your full name is best.';
 
   @override
   String get signIn => 'Sign in';
@@ -1256,6 +1256,15 @@ class L10nEn extends L10n {
   String get noZoneYet => 'You’re not in any services yet. Ask an admin to add you.';
 
   @override
+  String welcomeWaitTitle(String church) {
+    return 'Welcome to $church';
+  }
+
+  @override
+  String get welcomeWaitBody =>
+      'Once an admin adds you to a service, you’ll see the schedule here. In a hurry? Just let an admin know.';
+
+  @override
   String get waitsForZone => 'No services yet';
 
   @override
@@ -1270,10 +1279,10 @@ class L10nEn extends L10n {
   }
 
   @override
-  String get inviteZones => 'Team member of these services (optional)';
+  String get inviteZones => 'Team member of these services';
 
   @override
-  String get inviteZonesFooter => 'Or leave them unchecked and add people to services later in Team members.';
+  String get inviteZonesFooter => 'With none checked, they won’t see any schedules until you add them to a service.';
 
   @override
   String get photoImport => 'Import from photo';
@@ -2119,22 +2128,25 @@ class L10nEn extends L10n {
   String get pendingDeleted => 'Deleted';
 
   @override
-  String get mergePending => 'Merge a pending record';
+  String get pendingRenamed => 'Renamed';
 
   @override
-  String get mergePendingFooter => 'For a team member with no email, or a different one';
+  String get mergePending => 'Merge with a team member without an account';
 
   @override
-  String get mergePendingPick => 'Choose a pending record';
+  String get mergePendingFooter => 'If they were already on the schedule, merging brings back what they serve';
+
+  @override
+  String get mergePendingPick => 'Choose a team member without an account';
 
   @override
   String mergePendingTitle(String pending) {
-    return 'Merge the pending “$pending”?';
+    return 'Merge “$pending”?';
   }
 
   @override
   String mergePendingBody(String pending, String member) {
-    return 'The pending “$pending” is merged into “$member”';
+    return 'What “$pending” serves, their services and small groups move to “$member”';
   }
 
   @override
@@ -2145,7 +2157,7 @@ class L10nEn extends L10n {
 
   @override
   String mergeSuggestion(String name) {
-    return '“$name” also has a pending record';
+    return '“$name” is also listed without an account';
   }
 
   @override

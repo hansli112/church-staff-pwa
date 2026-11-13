@@ -4,6 +4,8 @@ import 'package:material_symbols_icons/symbols.dart';
 
 import '../../core/design/components.dart';
 import '../../core/design/tokens.dart';
+import '../../data/backend.dart';
+import '../../domain/limits.dart';
 import '../../domain/models.dart';
 import '../../domain/text.dart';
 import '../../l10n/app_localizations.dart';
@@ -56,31 +58,18 @@ class MemberEditorScreen extends ConsumerWidget {
     if (context.mounted) showToast(context, l10n.zoneLeft(service.name), onUndo: write.undo);
   }
 
-  /// Picks a pending member, the same name first, and merges it into
-  /// [member] once confirmed.
+  /// Picks one of the 同工 without an account, those named like [member]
+  /// first, and merges them into [member] once confirmed.
   Future<void> _mergePending(BuildContext context, WidgetRef ref, Member member, List<PendingMember> pending) async {
-    final l10n = L10n.of(context);
-    final same = nameKey(member.name);
-    final ordered = [
-      ...pending.where((p) => nameKey(p.name) == same),
-      ...pending.where((p) => nameKey(p.name) != same),
-    ];
+    final services = ref.read(servicesProvider).value;
+    final smallGroups = ref.read(smallGroupsProvider).value ?? const <SmallGroupDetails>[];
     final picked = await showAppSheet<PendingMember>(
       context,
-      builder: (context) => SafeArea(
-        child: SingleChildScrollView(
-          child: ListSection(
-            header: l10n.mergePendingPick,
-            children: [
-              for (final p in ordered)
-                ListRow(
-                  title: p.name.isEmpty ? p.email : p.name,
-                  subtitle: p.name.isEmpty || p.email.isEmpty ? null : p.email,
-                  onTap: () => Navigator.pop(context, p),
-                ),
-            ],
-          ),
-        ),
+      expand: pending.length > 6,
+      builder: (context) => NoAccountPicker(
+        name: member.name,
+        people: pending,
+        details: (p) => noAccountDetails(L10n.of(context), p, services, smallGroups),
       ),
     );
     if (picked == null || !context.mounted) return;
@@ -108,11 +97,22 @@ class MemberEditorScreen extends ConsumerWidget {
         if (s.enabled && !zoneTypes.contains(s.id)) s,
     ];
     Future<bool> save(Member next) => _save(context, ref, member, next);
+    // Just joined, in no service: likely someone the rosters already have.
+    final merge = pending.isEmpty
+        ? null
+        : ListSection(
+            footer: l10n.mergePendingFooter,
+            children: [
+              ListRow(title: l10n.mergePending, onTap: () => _mergePending(context, ref, member, pending)),
+            ],
+          );
+    final mergeFirst = member.waitsForZone(services.enabled);
 
     return Scaffold(
       appBar: AppBar(title: Text(member.name), actions: const [SavingIndicator()]),
       body: ListView(
         children: [
+          if (mergeFirst) ?merge,
           IdentitySection(member: member, self: self),
           for (final s in services.services)
             if (zoneTypes.contains(s.id))
@@ -144,13 +144,7 @@ class MemberEditorScreen extends ConsumerWidget {
                 ),
               ],
             ),
-          if (pending.isNotEmpty)
-            ListSection(
-              footer: l10n.mergePendingFooter,
-              children: [
-                ListRow(title: l10n.mergePending, onTap: () => _mergePending(context, ref, member, pending)),
-              ],
-            ),
+          if (!mergeFirst) ?merge,
           if (!self)
             ListSection(
               children: [
@@ -168,15 +162,21 @@ class MemberEditorScreen extends ConsumerWidget {
   }
 }
 
-/// Merges [pending] into [member] once the admin says so: 「合併還沒登入的
-/// 「黃鎮台」？」, which reads the same when both have one name.
+/// Merges [pending] into [member] once the admin says so: 「合併「黃鎮台」？」,
+/// with their 小組 and what they serve to be sure it is them.
 Future<void> mergePendingInto(BuildContext context, WidgetRef ref, PendingMember pending, Member member) async {
   final l10n = L10n.of(context);
   final name = pending.name.isEmpty ? pending.email : pending.name;
+  final details = noAccountDetails(
+    l10n,
+    pending,
+    ref.read(servicesProvider).value,
+    ref.read(smallGroupsProvider).value ?? const [],
+  );
   final ok = await askChoice(
     context,
     title: l10n.mergePendingTitle(name),
-    message: l10n.mergePendingBody(name, member.name),
+    message: [if (details.isNotEmpty) details, l10n.mergePendingBody(name, member.name)].join('\n\n'),
     yes: l10n.mergePendingAction,
     no: l10n.cancel,
   );
@@ -188,6 +188,92 @@ Future<void> mergePendingInto(BuildContext context, WidgetRef ref, PendingMember
   } catch (e) {
     if (context.mounted) showToast(context, errorText(l10n, e));
   }
+}
+
+/// What one of the 同工 without an account is known by: their 小組, then
+/// what they serve, 「喜樂小組 · 主日崇拜・招待、司琴」.
+String noAccountDetails(L10n l10n, PendingMember p, ServiceSettings? services, List<SmallGroupDetails> smallGroups) {
+  final groups = p.asMember(smallGroups).smallGroups;
+  return [
+    for (final g in smallGroups)
+      if (groups.contains(g.id)) g.name,
+    for (final z in p.zones)
+      if (services?.byId(z.serviceType)?.name case final service?)
+        z.duties.isEmpty ? service : l10n.claimServe(service, z.duties.join(l10n.listSeparator)),
+  ].join(l10n.dotSeparator);
+}
+
+/// A sheet to pick one of [people] (同工 without an account): those named
+/// like [name] first (the same name, then one inside the other), each with
+/// its [details], and a search for the rest.
+class NoAccountPicker extends StatefulWidget {
+  const NoAccountPicker({super.key, required this.name, required this.people, required this.details});
+
+  final String name;
+  final List<PendingMember> people;
+  final String Function(PendingMember) details;
+
+  @override
+  State<NoAccountPicker> createState() => _NoAccountPickerState();
+}
+
+class _NoAccountPickerState extends State<NoAccountPicker> {
+  String _query = '';
+
+  late final List<PendingMember> _ordered = () {
+    String shown(PendingMember p) => p.name.isEmpty ? p.email : p.name;
+    int rank(PendingMember p) => nameMatch(p.name, widget.name).index;
+    return [...widget.people]..sort((a, b) {
+      final r = rank(a).compareTo(rank(b));
+      return r != 0 ? r : shown(a).compareTo(shown(b));
+    });
+  }();
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = L10n.of(context);
+    final shown = [
+      for (final p in _ordered)
+        if (matchesSearch(p.name, _query) || matchesSearch(p.email, _query)) p,
+    ];
+    return SafeArea(
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Padding(
+            padding: const EdgeInsets.fromLTRB(Space.l, 0, Space.l, Space.s),
+            child: Text(l10n.mergePendingPick, style: AppText.headline),
+          ),
+          Padding(
+            padding: const EdgeInsets.fromLTRB(Space.m, 0, Space.m, Space.s),
+            child: SearchField(hint: l10n.searchMembers, onChanged: (q) => setState(() => _query = q)),
+          ),
+          Flexible(
+            child: SingleChildScrollView(
+              child: ListSection(
+                children: [
+                  for (final p in shown)
+                    ListRow(
+                      title: p.name.isEmpty ? p.email : p.name,
+                      subtitle: [
+                        widget.details(p),
+                        if (p.name.isNotEmpty) p.email,
+                      ].where((t) => t.isNotEmpty).join('\n').ifEmpty,
+                      onTap: () => Navigator.pop(context, p),
+                    ),
+                ],
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+extension on String {
+  String? get ifEmpty => isEmpty ? null : this;
 }
 
 /// One of the 同工 without an account yet (moved, or added by name), for
@@ -229,6 +315,12 @@ class _NoAccountScreen extends ConsumerWidget {
               style: AppText.footnote.copyWith(color: AppColors.of(context).secondaryLabel),
             ),
           ),
+          if (pending.name.isNotEmpty)
+            ListSection(
+              children: [
+                ListRow(title: l10n.name, value: pending.name, onTap: () => _rename(context, ref, pending.name)),
+              ],
+            ),
           for (final s in services.services)
             if (zoneTypes.contains(s.id))
               ServiceStaffSection(
@@ -266,6 +358,28 @@ class _NoAccountScreen extends ConsumerWidget {
         ],
       ),
     );
+  }
+
+  /// A typo fixed: their name here and on the rosters they are on.
+  Future<void> _rename(BuildContext context, WidgetRef ref, String name) async {
+    final l10n = L10n.of(context);
+    final next = await promptText(
+      context,
+      title: l10n.rename,
+      label: l10n.name,
+      initial: name,
+      maxLength: TextLimits.profileName,
+    );
+    if (next == null || next == name || !context.mounted) return;
+    try {
+      await ref.churchData.renamePending(id, next);
+      Haptics.success();
+      if (context.mounted) showToast(context, l10n.pendingRenamed);
+    } catch (e) {
+      if (!context.mounted) return;
+      final taken = e is CloudException && e.code == CloudErrorCode.duplicateName;
+      showToast(context, taken ? l10n.nameTaken(next) : saveErrorText(l10n, e));
+    }
   }
 
   /// Deleted once confirmed; their name stays on the rosters.

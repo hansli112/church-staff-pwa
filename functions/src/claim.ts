@@ -1,7 +1,8 @@
 import { churchAccess, churchClosed, isChurchOpen } from './access.js';
-import { fail, id, requireCaller, serverTime, type Caller, type Deps } from './common.js';
+import { fail, id, record, requireCaller, serverTime, text, type Caller, type Deps } from './common.js';
 import { identitiesOf, withIdentities, type Identity } from './identities.js';
-import { personName } from './limits.js';
+import { personName, TEXT_LIMITS } from './limits.js';
+import { nameKey } from './text.js';
 import { dateKeyIn, timeZoneOf } from './timeZones.js';
 import { callerKeys, dropPending, waitingFor, waitsFor, type ClaimDeps } from './pendingMembers.js';
 import { claimedSmallGroups, smallGroupsByName } from './smallGroups.js';
@@ -105,16 +106,19 @@ async function servesOf(deps: Deps, church: FirebaseFirestore.DocumentSnapshot, 
 const takesByName = (member: FirebaseFirestore.DocumentSnapshot, pending: FirebaseFirestore.DocumentSnapshot) =>
   member.exists && !pending.get('emailHash') && !!personName(member.get('name')) && personName(member.get('name')) === personName(pending.get('name'));
 
+type DutyDoc = { people?: string[]; uids?: Record<string, string> };
+
 /**
- * Points every roster that names [pid] at [uid] instead: the days the move
- * recorded for [pid], and any they were put on since, as one without an
- * account can be. Every roster of the church is read for those, once a
- * person.
+ * Rewrites, with [change], each duty of every roster that names [pid]: the
+ * days the move recorded for [pid], and any they were put on since, as one
+ * without an account can be. Every roster of the church is read for those,
+ * once a person. [change] gives back the duty as it was when nothing is to
+ * change.
  */
-async function repoint(deps: Deps, cid: string, pid: string, uid: string, recorded: string[]) {
+async function rewriteDutiesOf(deps: Deps, cid: string, pid: string, recorded: string[], change: (d: DutyDoc) => DutyDoc) {
   const all = await deps.db.collection(`churches/${cid}/rosters`).get();
   const since = all.docs
-    .filter((r) => ((r.get('duties') as { uids?: Record<string, string> }[] | undefined) ?? [])
+    .filter((r) => ((r.get('duties') as DutyDoc[] | undefined) ?? [])
       .some((d) => Object.values(d?.uids ?? {}).includes(pid)))
     .map((r) => r.id);
   const rosterIds = [...new Set([...recorded, ...since])];
@@ -124,22 +128,61 @@ async function repoint(deps: Deps, cid: string, pid: string, uid: string, record
     deps.db.runTransaction(async (tx) => {
       const ref = deps.db.doc(`churches/${cid}/rosters/${id}`);
       const s = await tx.get(ref);
-      const duties = s.get('duties') as { uids?: Record<string, string> }[] | undefined;
+      const duties = s.get('duties') as DutyDoc[] | undefined;
       if (!s.exists || !Array.isArray(duties)) return;
-      let changed = false;
-      const next = duties.map((d) => ({
-        ...d,
-        uids: Object.fromEntries(
-          Object.entries(d.uids ?? {}).map(([name, u]) => {
-            if (u !== pid) return [name, u];
-            changed = true;
-            return [name, uid];
-          }),
-        ),
-      }));
-      if (changed) tx.update(ref, { duties: next });
+      const next = duties.map(change);
+      if (next.some((d, i) => d !== duties[i])) tx.update(ref, { duties: next });
     });
   for (let i = 0; i < rosterIds.length; i += 10) await Promise.all(rosterIds.slice(i, i + 10).map(one));
+}
+
+/** Points every roster that names [pid] at [uid] instead. */
+const repoint = (deps: Deps, cid: string, pid: string, uid: string, recorded: string[]) =>
+  rewriteDutiesOf(deps, cid, pid, recorded, (d) =>
+    Object.values(d.uids ?? {}).includes(pid)
+      ? { ...d, uids: Object.fromEntries(Object.entries(d.uids ?? {}).map(([name, u]) => [name, u === pid ? uid : u])) }
+      : d);
+
+/**
+ * [d] with [pid]'s name now [name], where it was in `people` and in `uids`
+ * (as Duty.renamed in the app).
+ */
+function renamedDuty(d: DutyDoc, pid: string, name: string): DutyDoc {
+  const old = new Set(Object.entries(d.uids ?? {}).filter(([, u]) => u === pid).map(([n]) => n));
+  if (old.size === 0) return d;
+  return {
+    ...d,
+    people: [...new Set((d.people ?? []).map((p) => (old.has(p) ? name : p)))],
+    uids: Object.fromEntries(Object.entries(d.uids ?? {}).map(([n, u]) => [old.has(n) ? name : n, u])),
+  };
+}
+
+/**
+ * Renames pending member [pendingId] (admins): a typo fixed, on the
+ * rosters they are on too. Refused for a name someone in the church has,
+ * as adding one by name is.
+ */
+export async function renamePending(deps: Deps, caller: Caller | null, data: unknown) {
+  const input = record(data);
+  if (Object.keys(input).some((k) => !['churchId', 'pendingId', 'name'].includes(k))) fail('invalid-argument', 'unknown');
+  const pid = id(input.pendingId);
+  const name = text(input.name, TEXT_LIMITS.profileName);
+  const { cid } = await churchAccess(deps, caller, data, 'admin');
+  const root = deps.db.doc(`churches/${cid}`);
+  const pending = await deps.db.runTransaction(async (tx) => {
+    const [church, pending] = await tx.getAll(root, root.collection('pendingMembers').doc(pid));
+    if (!isChurchOpen(church)) churchClosed();
+    if (!pending.exists) fail('not-found', 'notFound');
+    const [members, others] = await Promise.all([tx.get(root.collection('members')), tx.get(root.collection('pendingMembers'))]);
+    const key = nameKey(name);
+    if ([...members.docs, ...others.docs.filter((d) => d.id !== pid)].some((d) => nameKey(String(d.get('name') ?? '')) === key)) {
+      fail('already-exists', 'duplicateName');
+    }
+    tx.update(pending.ref, { name });
+    return pending;
+  });
+  await rewriteDutiesOf(deps, cid, pid, (pending.get('rosterIds') as string[] | undefined) ?? [], (d) => renamedDuty(d, pid, name));
+  return {};
 }
 
 const union = (a: unknown, b: unknown) => [

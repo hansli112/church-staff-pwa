@@ -42,6 +42,7 @@ void main() {
     await tester.enterText(find.widgetWithText(TextField, '教會名稱'), '恩典堂');
     final name = find.widgetWithText(TextField, '你的名字');
     expect(tester.widget<TextField>(name).controller!.text, 'alice');
+    expect(findShown('顯示在服事表上，建議用全名'), findsOneWidget);
     await tester.enterText(name, '');
     await tester.pump();
     expect(tester.widget<FilledButton>(find.widgetWithText(FilledButton, '建立')).onPressed, isNull);

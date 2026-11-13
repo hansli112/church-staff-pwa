@@ -101,6 +101,13 @@ class HomeScreen extends ConsumerWidget {
               )
               ? 0
               : ref.watch(_waitingForZoneProvider);
+          // Just joined, in no service yet: nothing of theirs to show until
+          // an admin puts them in one, so the page says that instead.
+          final welcome = ref.watch(
+            meProvider.select(
+              (m) => m.value != null && !m.value!.isAdmin && m.value!.waitsForZone(services?.enabled ?? const []),
+            ),
+          );
           final addToHome = AddToHomeCard.shown(ref);
           final notifications = TurnOnNotificationsCard.shown(ref);
           final attendance = AttendanceDueCard.shown(ref);
@@ -111,6 +118,7 @@ class HomeScreen extends ConsumerWidget {
             today,
           );
           if (list.isEmpty &&
+              !welcome &&
               asks.isEmpty &&
               !attendance &&
               link == null &&
@@ -133,6 +141,7 @@ class HomeScreen extends ConsumerWidget {
           return ListView(
             children: [
               const PendingClaimsCard(),
+              if (welcome) WelcomeWaitCard(churchName: church?.name ?? ''),
               if (addToHome) const AddToHomeCard(),
               if (notifications) const TurnOnNotificationsCard(),
               // 填寫人數 (#85): what a lead is asked, first among their own things.
@@ -168,7 +177,9 @@ class HomeScreen extends ConsumerWidget {
                 ),
               if (link != null) ChurchLinkCard(title: link.title, body: link.body, url: link.url),
               if (sourceMissing) ChurchLinkSourceStatus(key: ValueKey(ref.watch(churchDataProvider)?.churchId)),
-              if (list.isEmpty)
+              if (list.isEmpty && welcome)
+                const SizedBox.shrink()
+              else if (list.isEmpty)
                 EmptyState(
                   icon: Symbols.event_available_rounded,
                   message: l10n.noUpcomingServices,
@@ -244,6 +255,42 @@ class HomeScreen extends ConsumerWidget {
             ],
           );
         },
+      ),
+    );
+  }
+}
+
+/// 「歡迎加入〈恩典堂〉」 for someone in no service yet: an admin puts them
+/// in one, and they may ask for it.
+class WelcomeWaitCard extends StatelessWidget {
+  const WelcomeWaitCard({super.key, required this.churchName});
+
+  final String churchName;
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = L10n.of(context);
+    final c = AppColors.of(context);
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(Space.m, Space.s, Space.m, Space.s),
+      child: Material(
+        color: c.surface,
+        borderRadius: BorderRadius.circular(Radii.m),
+        child: Padding(
+          padding: const EdgeInsets.all(Space.m),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              BalancedText(l10n.welcomeWaitTitle(churchName), textAlign: TextAlign.start, style: AppText.headline),
+              const SizedBox(height: Space.s),
+              BalancedText(
+                l10n.welcomeWaitBody,
+                textAlign: TextAlign.start,
+                style: AppText.subheadline.copyWith(color: c.secondaryLabel),
+              ),
+            ],
+          ),
+        ),
       ),
     );
   }

@@ -50,3 +50,18 @@ bool matchesSearch(String name, String query) {
   if (q.isEmpty) return true;
   return nameKey(name).contains(q);
 }
+
+/// How closely two people's names agree, for whoever is picking someone by
+/// name: the same name (as [nameKey] has it), one inside the other (「小明」
+/// and 「王小明」, "Hans" and "Hans Lee"), or neither. One character is too
+/// little to go by. Only the app ranks by it; the server never decides by it.
+enum NameMatch { exact, partial, none }
+
+NameMatch nameMatch(String a, String b) {
+  final x = nameKey(a);
+  final y = nameKey(b);
+  if (x.isEmpty || y.isEmpty) return NameMatch.none;
+  if (x == y) return NameMatch.exact;
+  final (short, long) = x.length <= y.length ? (x, y) : (y, x);
+  return characterCount(short) >= 2 && long.contains(short) ? NameMatch.partial : NameMatch.none;
+}

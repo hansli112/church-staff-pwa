@@ -1671,6 +1671,18 @@ void contractTests(Future<ContractWorld> Function() open) {
       expect(await g.church.pendingMembers().first, isEmpty);
     });
 
+    test('an admin renames one, on their rosters too; not to a name taken, and nobody else', () async {
+      final g = await moved();
+      await expectLater(g.church.renamePending(pid, '李美玉'), fails(CloudErrorCode.duplicateName));
+      await g.church.renamePending(pid, ' 王美玉 ');
+      expect((await g.church.pendingMembers().first).single.name, '王美玉');
+      final duty = (await g.church.rosters(from: Day(2026, 10, 1)).first).single.duties.single;
+      expect(duty.people, ['王美玉']);
+      expect(duty.uids, {'王美玉': pid});
+      await w.signIn(Grace.editorEmail);
+      await expectLater(g.church.renamePending(pid, '陳美玉'), denied());
+    });
+
     test('only admins merge or delete them', () async {
       final g = await moved();
       await w.signIn(Grace.editorEmail);

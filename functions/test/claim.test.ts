@@ -3,7 +3,7 @@ import { beforeEach, describe, test } from 'node:test';
 
 import { getStorage } from 'firebase-admin/storage';
 
-import { claimPending, mergePending, pendingClaims } from '../src/claim.js';
+import { claimPending, mergePending, pendingClaims, renamePending } from '../src/claim.js';
 import { moveCommit, type MoveDeps } from '../src/move.js';
 import { callerKey, onPendingMemberDeleted, waitingFor } from '../src/pendingMembers.js';
 import { auth, caller, clearFirestore, db, deps, rejectsWith } from './support.js';
@@ -346,5 +346,32 @@ describe('merging', () => {
     await rejectsWith(mergePending(deps, caller('other'), { churchId: other, pendingId: 'old-hao', uid: 'hao-google' }), 'notFound');
     assert.ok((await db.doc(`churches/${cid}/pendingMembers/old-hao`).get()).exists);
     assert.ok((await db.doc(`churches/${other}/pendingMembers/old-hao`).get()).exists);
+  });
+});
+
+describe('renaming', () => {
+  const peopleOn = async (cid: string, day: string) =>
+    ((await db.doc(`churches/${cid}/rosters/${day}_sunday`).get()).get('duties') as { people: string[]; uids: Record<string, string> }[])
+      .map((x) => [x.people, x.uids]);
+
+  test('an admin fixes a name, on every roster it is on', async () => {
+    const cid = await moved();
+    assert.deepEqual(await renamePending(deps, caller('mover'), { churchId: cid, pendingId: 'old-mei', name: ' 李美鈺 ' }), {});
+    assert.equal((await db.doc(`churches/${cid}/pendingMembers/old-mei`).get()).get('name'), '李美鈺');
+    assert.deepEqual(await peopleOn(cid, '2026-10-04'), [
+      [['李美鈺'], { 李美鈺: 'old-mei' }],
+      [['陳志豪'], { 陳志豪: 'old-hao' }],
+    ]);
+    assert.deepEqual(await peopleOn(cid, '2026-10-11'), [[['李美鈺'], { 李美鈺: 'old-mei' }]]);
+  });
+
+  test("not to a name someone in the church has; only that church's admin", async () => {
+    const cid = await moved();
+    await rejectsWith(renamePending(deps, caller('mover'), { churchId: cid, pendingId: 'old-mei', name: '陳 志豪' }), 'duplicateName');
+    await db.doc(`churches/${cid}/members/staffer`).set({ uid: 'staffer', name: '同工', role: 'staff' });
+    await rejectsWith(renamePending(deps, caller('mover'), { churchId: cid, pendingId: 'old-mei', name: '同工' }), 'duplicateName');
+    await rejectsWith(renamePending(deps, caller('staffer'), { churchId: cid, pendingId: 'old-mei', name: '李美鈺' }), 'permissionDenied');
+    await rejectsWith(renamePending(deps, caller('mover'), { churchId: cid, pendingId: 'nobody', name: '李美鈺' }), 'notFound');
+    assert.equal((await db.doc(`churches/${cid}/pendingMembers/old-mei`).get()).get('name'), '李美玉');
   });
 });

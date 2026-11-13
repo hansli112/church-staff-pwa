@@ -307,7 +307,7 @@ abstract class L10n {
   /// No description provided for @yourNameFooter.
   ///
   /// In zh, this message translates to:
-  /// **'教會裡大家怎麼叫你'**
+  /// **'顯示在服事表上，建議用全名'**
   String get yourNameFooter;
 
   /// No description provided for @signIn.
@@ -2236,6 +2236,18 @@ abstract class L10n {
   /// **'你還沒加入任何聚會，請找管理員設定'**
   String get noZoneYet;
 
+  /// Home, for someone who joined and is in no service yet
+  ///
+  /// In zh, this message translates to:
+  /// **'歡迎加入〈{church}〉'**
+  String welcomeWaitTitle(String church);
+
+  /// No description provided for @welcomeWaitBody.
+  ///
+  /// In zh, this message translates to:
+  /// **'管理員把你加進聚會後，就看得到服事表了。等不及的話，可以直接跟管理員說一聲。'**
+  String get welcomeWaitBody;
+
   /// No description provided for @waitsForZone.
   ///
   /// In zh, this message translates to:
@@ -2251,13 +2263,13 @@ abstract class L10n {
   /// No description provided for @inviteZones.
   ///
   /// In zh, this message translates to:
-  /// **'加入後成為這些聚會的同工（選填）'**
+  /// **'加入後成為這些聚會的同工'**
   String get inviteZones;
 
   /// No description provided for @inviteZonesFooter.
   ///
   /// In zh, this message translates to:
-  /// **'不選的話，加入後再到「同工」把人加進聚會。'**
+  /// **'沒選的話，對方加入後看不到服事表，要等你把他加進聚會。'**
   String get inviteZonesFooter;
 
   /// No description provided for @photoImport.
@@ -3676,34 +3688,40 @@ abstract class L10n {
   /// **'已刪除'**
   String get pendingDeleted;
 
+  /// Toast after an admin renames one of the 同工 without an account
+  ///
+  /// In zh, this message translates to:
+  /// **'已改名'**
+  String get pendingRenamed;
+
   /// No description provided for @mergePending.
   ///
   /// In zh, this message translates to:
-  /// **'合併還沒登入的資料'**
+  /// **'合併沒有帳號的同工'**
   String get mergePending;
 
   /// No description provided for @mergePendingFooter.
   ///
   /// In zh, this message translates to:
-  /// **'同工沒有 email 或換了 email 時用'**
+  /// **'原本就在服事表上的話，合併後會接上原本的服事'**
   String get mergePendingFooter;
 
   /// No description provided for @mergePendingPick.
   ///
   /// In zh, this message translates to:
-  /// **'選一筆還沒登入的資料'**
+  /// **'選一位沒有帳號的同工'**
   String get mergePendingPick;
 
   /// No description provided for @mergePendingTitle.
   ///
   /// In zh, this message translates to:
-  /// **'合併還沒登入的「{pending}」？'**
+  /// **'合併「{pending}」？'**
   String mergePendingTitle(String pending);
 
   /// No description provided for @mergePendingBody.
   ///
   /// In zh, this message translates to:
-  /// **'還沒登入的「{pending}」會合併到「{member}」'**
+  /// **'「{pending}」的服事、聚會和小組會接到「{member}」'**
   String mergePendingBody(String pending, String member);
 
   /// No description provided for @mergePendingAction.
@@ -3721,7 +3739,7 @@ abstract class L10n {
   /// No description provided for @mergeSuggestion.
   ///
   /// In zh, this message translates to:
-  /// **'還沒登入的資料裡也有「{name}」'**
+  /// **'沒有帳號的同工裡也有「{name}」'**
   String mergeSuggestion(String name);
 
   /// No description provided for @mergeSuggestionLabel.

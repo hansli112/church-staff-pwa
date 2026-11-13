@@ -1198,6 +1198,9 @@ class FirestoreChurchData implements ChurchData {
   @override
   Future<void> mergePending(String pendingId, String uid) =>
       _call('mergePending', {'pendingId': pendingId, 'uid': uid});
+
+  @override
+  Future<void> renamePending(String id, String name) => _call('renamePending', {'pendingId': id, 'name': name});
 }
 
 /// [CalendarData] of a [FirestoreChurchData].

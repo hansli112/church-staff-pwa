@@ -115,7 +115,7 @@ class L10nZh extends L10n {
   String get yourName => '你的名字';
 
   @override
-  String get yourNameFooter => '教會裡大家怎麼叫你';
+  String get yourNameFooter => '顯示在服事表上，建議用全名';
 
   @override
   String get signIn => '登入';
@@ -1206,6 +1206,14 @@ class L10nZh extends L10n {
   String get noZoneYet => '你還沒加入任何聚會，請找管理員設定';
 
   @override
+  String welcomeWaitTitle(String church) {
+    return '歡迎加入〈$church〉';
+  }
+
+  @override
+  String get welcomeWaitBody => '管理員把你加進聚會後，就看得到服事表了。等不及的話，可以直接跟管理員說一聲。';
+
+  @override
   String get waitsForZone => '還沒加入任何聚會';
 
   @override
@@ -1214,10 +1222,10 @@ class L10nZh extends L10n {
   }
 
   @override
-  String get inviteZones => '加入後成為這些聚會的同工（選填）';
+  String get inviteZones => '加入後成為這些聚會的同工';
 
   @override
-  String get inviteZonesFooter => '不選的話，加入後再到「同工」把人加進聚會。';
+  String get inviteZonesFooter => '沒選的話，對方加入後看不到服事表，要等你把他加進聚會。';
 
   @override
   String get photoImport => '照片匯入';
@@ -2000,22 +2008,25 @@ class L10nZh extends L10n {
   String get pendingDeleted => '已刪除';
 
   @override
-  String get mergePending => '合併還沒登入的資料';
+  String get pendingRenamed => '已改名';
 
   @override
-  String get mergePendingFooter => '同工沒有 email 或換了 email 時用';
+  String get mergePending => '合併沒有帳號的同工';
 
   @override
-  String get mergePendingPick => '選一筆還沒登入的資料';
+  String get mergePendingFooter => '原本就在服事表上的話，合併後會接上原本的服事';
+
+  @override
+  String get mergePendingPick => '選一位沒有帳號的同工';
 
   @override
   String mergePendingTitle(String pending) {
-    return '合併還沒登入的「$pending」？';
+    return '合併「$pending」？';
   }
 
   @override
   String mergePendingBody(String pending, String member) {
-    return '還沒登入的「$pending」會合併到「$member」';
+    return '「$pending」的服事、聚會和小組會接到「$member」';
   }
 
   @override
@@ -2026,7 +2037,7 @@ class L10nZh extends L10n {
 
   @override
   String mergeSuggestion(String name) {
-    return '還沒登入的資料裡也有「$name」';
+    return '沒有帳號的同工裡也有「$name」';
   }
 
   @override
@@ -3587,7 +3598,7 @@ class L10nZhHans extends L10nZh {
   String get yourName => '你的名字';
 
   @override
-  String get yourNameFooter => '教会里大家怎么叫你';
+  String get yourNameFooter => '显示在事奉表上，建议用全名';
 
   @override
   String get signIn => '登录';
@@ -4678,6 +4689,14 @@ class L10nZhHans extends L10nZh {
   String get noZoneYet => '你还没有所属聚会，请找管理员设置';
 
   @override
+  String welcomeWaitTitle(String church) {
+    return '欢迎加入“$church”';
+  }
+
+  @override
+  String get welcomeWaitBody => '管理员把你加进聚会后，就能看到事奉表了。等不及的话，可以直接跟管理员说一声。';
+
+  @override
   String get waitsForZone => '还没设置所属聚会';
 
   @override
@@ -4686,10 +4705,10 @@ class L10nZhHans extends L10nZh {
   }
 
   @override
-  String get inviteZones => '加入后成为这些聚会的同工（选填）';
+  String get inviteZones => '加入后成为这些聚会的同工';
 
   @override
-  String get inviteZonesFooter => '不选的话，加入后再到“同工”把人加进聚会。';
+  String get inviteZonesFooter => '不选的话，对方加入后看不到事奉表，要等你把他加进聚会。';
 
   @override
   String get photoImport => '照片导入';
@@ -5472,22 +5491,25 @@ class L10nZhHans extends L10nZh {
   String get pendingDeleted => '已删除';
 
   @override
-  String get mergePending => '合并未登录的记录';
+  String get pendingRenamed => '已改名';
 
   @override
-  String get mergePendingFooter => '同工没有邮箱或换了邮箱时用';
+  String get mergePending => '合并没有账号的同工';
 
   @override
-  String get mergePendingPick => '选一条未登录的记录';
+  String get mergePendingFooter => '原本就在事奉表上的话，合并后会接上原本的事奉';
+
+  @override
+  String get mergePendingPick => '选一位没有账号的同工';
 
   @override
   String mergePendingTitle(String pending) {
-    return '合并未登录的“$pending”？';
+    return '合并“$pending”？';
   }
 
   @override
   String mergePendingBody(String pending, String member) {
-    return '未登录的“$pending”会合并到“$member”';
+    return '“$pending”的事奉、聚会和小组会接到“$member”';
   }
 
   @override
@@ -5498,7 +5520,7 @@ class L10nZhHans extends L10nZh {
 
   @override
   String mergeSuggestion(String name) {
-    return '未登录的记录里也有“$name”';
+    return '没有账号的同工里也有“$name”';
   }
 
   @override

@@ -116,7 +116,7 @@ class L10nKo extends L10n {
   String get yourName => '이름';
 
   @override
-  String get yourNameFooter => '교회에서 불리는 이름';
+  String get yourNameFooter => '봉사표에 표시돼요. 성과 이름을 모두 쓰는 걸 권해요';
 
   @override
   String get signIn => '로그인';
@@ -1207,6 +1207,14 @@ class L10nKo extends L10n {
   String get noZoneYet => '아직 소속 예배가 없어요. 관리자에게 설정을 요청해 주세요.';
 
   @override
+  String welcomeWaitTitle(String church) {
+    return '$church에 오신 걸 환영해요';
+  }
+
+  @override
+  String get welcomeWaitBody => '관리자가 예배에 추가하면 봉사표를 볼 수 있어요. 급하면 관리자에게 직접 말해 주세요.';
+
+  @override
   String get waitsForZone => '소속 예배 미설정';
 
   @override
@@ -1215,10 +1223,10 @@ class L10nKo extends L10n {
   }
 
   @override
-  String get inviteZones => '가입 후 멤버가 될 예배(선택)';
+  String get inviteZones => '가입 후 멤버가 될 예배';
 
   @override
-  String get inviteZonesFooter => '체크하지 않으면 가입 후 ‘멤버’에서 예배에 추가하면 돼요.';
+  String get inviteZonesFooter => '선택하지 않으면 예배에 추가하기 전까지 봉사표를 볼 수 없어요.';
 
   @override
   String get photoImport => '사진으로 가져오기';
@@ -2004,22 +2012,25 @@ class L10nKo extends L10n {
   String get pendingDeleted => '삭제했어요';
 
   @override
-  String get mergePending => '로그인 전 정보 합치기';
+  String get pendingRenamed => '이름을 변경했어요';
 
   @override
-  String get mergePendingFooter => '이메일이 없거나 다른 이메일로 가입한 멤버에게 써요';
+  String get mergePending => '계정 없는 멤버와 합치기';
 
   @override
-  String get mergePendingPick => '로그인 전 정보 선택';
+  String get mergePendingFooter => '원래 봉사표에 있던 분이면, 합치면 원래 봉사를 이어받아요';
+
+  @override
+  String get mergePendingPick => '계정 없는 멤버 선택';
 
   @override
   String mergePendingTitle(String pending) {
-    return '로그인 전 ‘$pending’ 정보를 합칠까요?';
+    return '‘$pending’ 님을 합칠까요?';
   }
 
   @override
   String mergePendingBody(String pending, String member) {
-    return '로그인 전 ‘$pending’ 정보가 ‘$member’ 님에게 합쳐져요';
+    return '‘$pending’ 님의 봉사, 예배, 소그룹이 ‘$member’ 님에게 옮겨져요';
   }
 
   @override
@@ -2030,7 +2041,7 @@ class L10nKo extends L10n {
 
   @override
   String mergeSuggestion(String name) {
-    return '로그인 전 정보에도 ‘$name’ 님이 있어요';
+    return '계정 없는 멤버 중에도 ‘$name’ 님이 있어요';
   }
 
   @override

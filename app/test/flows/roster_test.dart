@@ -64,8 +64,20 @@ void main() {
     });
 
     testWidgets('home with nothing ahead says one sentence', (tester) async {
-      await pumpApp(tester, seededChurch(as: john));
+      await pumpApp(tester, seededChurch(as: johnOnSunday, extra: const [johnOnSunday]));
       expect(findShown('接下來沒有你的服事'), findsOneWidget);
+    });
+
+    testWidgets('one in no service yet is welcomed and told who puts them in one', (tester) async {
+      await pumpApp(tester, seededChurch(as: john));
+      expect(findShown('歡迎加入〈恩典堂〉'), findsOneWidget);
+      expect(findShown('管理員把你加進聚會後，就看得到服事表了。等不及的話，可以直接跟管理員說一聲。'), findsOneWidget);
+      expect(findShown('接下來沒有你的服事'), findsNothing, reason: 'not yet: there is no schedule to be on');
+    });
+
+    testWidgets('an admin in no service is not told to wait for one', (tester) async {
+      await pumpApp(tester, seededChurch());
+      expect(find.textContaining('歡迎加入'), findsNothing);
     });
 
     testWidgets('roster tab shows saved days and template drafts', (tester) async {

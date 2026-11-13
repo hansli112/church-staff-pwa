@@ -115,7 +115,7 @@ class L10nJa extends L10n {
   String get yourName => 'お名前';
 
   @override
-  String get yourNameFooter => '教会で呼ばれている名前';
+  String get yourNameFooter => '奉仕表に表示されます。フルネームがおすすめです';
 
   @override
   String get signIn => 'ログイン';
@@ -1206,6 +1206,14 @@ class L10nJa extends L10n {
   String get noZoneYet => 'まだどの集会にも所属していません。管理者に設定を依頼してください。';
 
   @override
+  String welcomeWaitTitle(String church) {
+    return '「$church」へようこそ';
+  }
+
+  @override
+  String get welcomeWaitBody => '管理者が集会に加えると、奉仕表が見られるようになります。急ぐ場合は、管理者に直接声をかけてください。';
+
+  @override
   String get waitsForZone => '所属集会が未設定';
 
   @override
@@ -1214,10 +1222,10 @@ class L10nJa extends L10n {
   }
 
   @override
-  String get inviteZones => '参加後にメンバーになる集会（任意）';
+  String get inviteZones => '参加後にメンバーになる集会';
 
   @override
-  String get inviteZonesFooter => 'チェックしない場合は、参加後に「メンバー」で集会に加えます。';
+  String get inviteZonesFooter => '選ばない場合、集会に加えるまで相手は奉仕表を見られません。';
 
   @override
   String get photoImport => '写真から読み込み';
@@ -2004,22 +2012,25 @@ class L10nJa extends L10n {
   String get pendingDeleted => '削除しました';
 
   @override
-  String get mergePending => '未ログインのデータを統合';
+  String get pendingRenamed => '名前を変更しました';
 
   @override
-  String get mergePendingFooter => 'メールアドレスがない、または別のメールアドレスで参加したメンバーに使います';
+  String get mergePending => 'アカウントのないメンバーと統合';
 
   @override
-  String get mergePendingPick => '未ログインのデータを選択';
+  String get mergePendingFooter => 'もともと奉仕表に載っていた人なら、統合すると元の奉仕が引き継がれます';
+
+  @override
+  String get mergePendingPick => 'アカウントのないメンバーを選択';
 
   @override
   String mergePendingTitle(String pending) {
-    return '未ログインの「$pending」を統合しますか？';
+    return '「$pending」を統合しますか？';
   }
 
   @override
   String mergePendingBody(String pending, String member) {
-    return '未ログインの「$pending」が「$member」に統合されます';
+    return '「$pending」の奉仕・集会・小グループが「$member」に引き継がれます';
   }
 
   @override
@@ -2030,7 +2041,7 @@ class L10nJa extends L10n {
 
   @override
   String mergeSuggestion(String name) {
-    return '未ログインのデータにも「$name」があります';
+    return 'アカウントのないメンバーにも「$name」がいます';
   }
 
   @override

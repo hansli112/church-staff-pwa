@@ -728,6 +728,20 @@ class Duty {
     uids: uids ?? this.uids,
   );
 
+  /// With [uid]'s name here now [name], where it was in [people] and in
+  /// [uids]: one renamed (functions/src/pendingMembers.ts renamePending).
+  Duty renamed(String uid, String name) {
+    final old = {
+      for (final e in uids.entries)
+        if (e.value == uid) e.key,
+    };
+    if (old.isEmpty) return this;
+    return copyWith(
+      people: {for (final p in people) old.contains(p) ? name : p}.toList(),
+      uids: {for (final e in uids.entries) old.contains(e.key) ? name : e.key: e.value},
+    );
+  }
+
   @override
   bool operator ==(Object other) =>
       other is Duty && other.role == role && listEquals(other.people, people) && mapEquals(other.uids, uids);

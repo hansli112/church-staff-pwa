@@ -44,8 +44,13 @@ class InvitesScreen extends ConsumerStatefulWidget {
 class _InvitesScreenState extends ConsumerState<InvitesScreen> {
   bool _busy = false;
 
-  /// The 牧區 the next invite joins, as service IDs.
-  final _zones = <String>{};
+  /// The 牧區 the next invite joins, as service IDs, once the admin has
+  /// ticked or unticked one; until then [_zonesOf] decides.
+  Set<String>? _picked;
+
+  /// The 牧區 the next invite joins: what was picked, or with nothing
+  /// picked, a church's only service, which nearly every invite wants.
+  Set<String> _zonesOf(List<Service> enabled) => _picked ?? {if (enabled.length == 1) enabled.single.id};
 
   /// How long the next invite works.
   int _days = 7;
@@ -56,11 +61,12 @@ class _InvitesScreenState extends ConsumerState<InvitesScreen> {
     final Invite invite;
     try {
       final services = ref.read(servicesProvider).value?.enabled ?? const <Service>[];
+      final zones = _zonesOf(services);
       invite = await ref.churchData.createInvite(
         validFor: Duration(days: days),
         zoneTypes: [
           for (final s in services)
-            if (_zones.contains(s.id)) s.id,
+            if (zones.contains(s.id)) s.id,
         ],
       );
     } catch (_) {
@@ -70,7 +76,7 @@ class _InvitesScreenState extends ConsumerState<InvitesScreen> {
       if (mounted) setState(() => _busy = false);
     }
     // Each invite picks its own 牧區.
-    if (mounted) setState(_zones.clear);
+    if (mounted) setState(() => _picked = null);
     // Saved: whatever happens to the share sheet, the invite is in the list.
     if (mounted) await _share(invite);
   }
@@ -162,6 +168,7 @@ class _InvitesScreenState extends ConsumerState<InvitesScreen> {
     final live = ref.watch(_liveInvitesProvider);
     final services = ref.watch(servicesProvider).value;
     final enabled = services?.enabled ?? const <Service>[];
+    final zones = _zonesOf(enabled);
     final clock = ChurchClock.of(context, ref);
     String? zonesOf(Invite i) {
       final names = [for (final t in i.zoneTypes) ?services?.byId(t)?.name];
@@ -180,16 +187,16 @@ class _InvitesScreenState extends ConsumerState<InvitesScreen> {
               children: [
                 for (final s in enabled)
                   Semantics(
-                    selected: _zones.contains(s.id),
+                    selected: zones.contains(s.id),
                     child: ListRow(
                       title: s.name,
-                      leading: _zones.contains(s.id)
+                      leading: zones.contains(s.id)
                           ? Icon(Symbols.check_circle_rounded, fill: 1, color: c.accent)
                           : const Icon(Symbols.circle_rounded),
                       chevron: false,
                       onTap: () {
                         Haptics.selection();
-                        setState(() => _zones.contains(s.id) ? _zones.remove(s.id) : _zones.add(s.id));
+                        setState(() => _picked = {...zones}..toggle(s.id));
                       },
                     ),
                   ),
@@ -263,4 +270,9 @@ class _InvitesScreenState extends ConsumerState<InvitesScreen> {
       ),
     );
   }
+}
+
+extension on Set<String> {
+  /// Adds [id], or takes it out if in.
+  void toggle(String id) => remove(id) || add(id);
 }

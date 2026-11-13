@@ -51,7 +51,7 @@
   "email": "Email",
   "password": "密碼",
   "yourName": "你的名字",
-  "yourNameFooter": "教會裡大家怎麼叫你",
+  "yourNameFooter": "顯示在服事表上，建議用全名",
   "signIn": "登入",
   "register": "註冊",
   "createAccount": "註冊新帳號",
@@ -739,6 +739,9 @@
     }
   },
   "noZoneYet": "你還沒加入任何聚會，請找管理員設定",
+  "welcomeWaitTitle": "歡迎加入〈{church}〉",
+  "@welcomeWaitTitle": {"description": "Home, for someone who joined and is in no service yet", "placeholders": {"church": {"type": "String", "example": "恩典堂"}}},
+  "welcomeWaitBody": "管理員把你加進聚會後，就看得到服事表了。等不及的話，可以直接跟管理員說一聲。",
   "waitsForZone": "還沒加入任何聚會",
   "waitingForZone": "{count} 位同工還沒加入任何聚會",
   "@waitingForZone": {
@@ -748,8 +751,8 @@
       }
     }
   },
-  "inviteZones": "加入後成為這些聚會的同工（選填）",
-  "inviteZonesFooter": "不選的話，加入後再到「同工」把人加進聚會。",
+  "inviteZones": "加入後成為這些聚會的同工",
+  "inviteZonesFooter": "沒選的話，對方加入後看不到服事表，要等你把他加進聚會。",
   "photoImport": "照片匯入",
   "photoImportAction": "從照片匯入服事表",
   "@photoImportAction": { "description": "Item in 安排服事's menu (⋯) that opens photo import: says what it makes, a roster from a photo" },
@@ -1217,10 +1220,12 @@
   },
   "pendingDeleteBody": "對方就不能用 email 認領了。服事表上的名字會保留。",
   "pendingDeleted": "已刪除",
-  "mergePending": "合併還沒登入的資料",
-  "mergePendingFooter": "同工沒有 email 或換了 email 時用",
-  "mergePendingPick": "選一筆還沒登入的資料",
-  "mergePendingTitle": "合併還沒登入的「{pending}」？",
+  "pendingRenamed": "已改名",
+  "@pendingRenamed": {"description": "Toast after an admin renames one of the 同工 without an account"},
+  "mergePending": "合併沒有帳號的同工",
+  "mergePendingFooter": "原本就在服事表上的話，合併後會接上原本的服事",
+  "mergePendingPick": "選一位沒有帳號的同工",
+  "mergePendingTitle": "合併「{pending}」？",
   "@mergePendingTitle": {
     "placeholders": {
       "pending": {
@@ -1228,7 +1233,7 @@
       }
     }
   },
-  "mergePendingBody": "還沒登入的「{pending}」會合併到「{member}」",
+  "mergePendingBody": "「{pending}」的服事、聚會和小組會接到「{member}」",
   "@mergePendingBody": {
     "placeholders": {
       "pending": {
@@ -1241,7 +1246,7 @@
   },
   "mergePendingAction": "合併",
   "merged": "已合併",
-  "mergeSuggestion": "還沒登入的資料裡也有「{name}」",
+  "mergeSuggestion": "沒有帳號的同工裡也有「{name}」",
   "@mergeSuggestion": {
     "placeholders": {
       "name": {

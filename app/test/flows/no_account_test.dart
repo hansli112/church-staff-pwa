@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
 import 'package:martha/data/memory/memory_backend.dart';
+import 'package:martha/domain/day.dart';
 import 'package:martha/domain/models.dart';
 
 import '../support/harness.dart';
@@ -102,5 +103,38 @@ void main() {
     await tester.enterText(find.byType(TextField).last, '張講員');
     await settle(tester);
     expect(find.text('只排這一次'), findsOneWidget);
+  });
+
+  testWidgets('an admin fixes his name, on the rosters too', (tester) async {
+    final b = church();
+    b.rosters['grace']![Roster.idFor('sunday', Day(2026, 10, 11))] = Roster(
+      type: 'sunday',
+      day: Day(2026, 10, 11),
+      duties: const [
+        Duty(role: '招待', people: ['李美玉', '黃鎮台'], uids: {'李美玉': 'mei', '黃鎮台': 'old-huang'}),
+      ],
+    );
+    await pumpApp(tester, b);
+    await go(tester, '/me/members/old-huang');
+    await tapText(tester, '名字');
+    await tester.enterText(find.byType(TextField).last, '李美玉');
+    await tapText(tester, '儲存');
+    expect(find.text('教會裡已經有人叫「李美玉」'), findsOneWidget);
+    expect(b.pendingMembers['grace']!['old-huang']!.name, '黃鎮台');
+
+    await tapText(tester, '名字');
+    await tester.enterText(find.byType(TextField).last, '黃振台');
+    await tapText(tester, '儲存');
+    expect(find.text('已改名'), findsOneWidget);
+    expect(b.pendingMembers['grace']!['old-huang']!.name, '黃振台');
+    final duty = savedDay(b, 11).duties.single;
+    expect(duty.people, ['李美玉', '黃振台'], reason: 'where he was');
+    expect(duty.uids, {'李美玉': 'mei', '黃振台': 'old-huang'});
+  });
+
+  testWidgets('only admins rename them', (tester) async {
+    final b = church(as: editor);
+    await expectLater(b.church('grace').renamePending('old-huang', '黃振台'), throwsA(isA<Object>()));
+    expect(b.pendingMembers['grace']!['old-huang']!.name, '黃鎮台');
   });
 }

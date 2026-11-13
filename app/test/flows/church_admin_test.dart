@@ -336,15 +336,40 @@ void main() {
       expect(find.text('青年崇拜'), findsNWidgets(2), reason: 'the picker, and under the code');
     });
 
-    testWidgets('ticking no service is fine: the screen says so, and they are put in one later', (tester) async {
+    testWidgets('ticking no service is allowed; the screen says they see no rosters until put in one', (tester) async {
       final b = seededChurch();
       await pumpApp(tester, b);
       captureOutbox(tester);
       await go(tester, '/me/invites');
-      expect(find.text('加入後成為這些聚會的同工（選填）'), findsOneWidget);
-      expect(find.text('不選的話，加入後再到「同工」把人加進聚會。'), findsOneWidget);
+      expect(find.text('加入後成為這些聚會的同工'), findsOneWidget);
+      expect(findShown('沒選的話，對方加入後看不到服事表，要等你把他加進聚會。'), findsOneWidget);
       await tapText(tester, '建立邀請連結');
       expect(b.invites.values.single.zoneTypes, isEmpty);
+    });
+
+    testWidgets('with one service, the invite has it ticked already; it can be unticked', (tester) async {
+      final b = seededChurch();
+      b.setServices('grace', const [sundayService]);
+      await pumpApp(tester, b);
+      captureOutbox(tester);
+      await go(tester, '/me/invites');
+      expect(find.byIcon(Symbols.check_circle_rounded), findsOneWidget);
+      await tapText(tester, '建立邀請連結');
+      expect(b.invites.values.single.zoneTypes, ['sunday']);
+      expect(find.byIcon(Symbols.check_circle_rounded), findsOneWidget, reason: 'ticked again for the next');
+
+      // The first 主日崇拜 is the picker's; the other names the invite made.
+      await tester.tap(find.text('主日崇拜').first);
+      await settle(tester);
+      expect(find.byIcon(Symbols.check_circle_rounded), findsNothing);
+      await tapText(tester, '建立邀請連結');
+      expect(
+        b.invites.values.map((i) => i.zoneTypes),
+        containsAll([
+          ['sunday'],
+          isEmpty,
+        ]),
+      );
     });
 
     testWidgets('an invite leaves the list when it expires, and stops working', (tester) async {

@@ -418,6 +418,9 @@ class EchoingChurchData implements ChurchData {
   Future<void> deletePendingMember(String id) => _inner.deletePendingMember(id);
 
   @override
+  Future<void> renamePending(String id, String name) => _inner.renamePending(id, name);
+
+  @override
   Stream<List<JoinRequest>> joinRequests() => _inner.joinRequests();
 
   @override

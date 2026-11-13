@@ -202,6 +202,7 @@ const claimDeps = () => ({ ...deps(), auth: getAuth() });
 export const pendingClaims = callable(claim.pendingClaims, claimDeps);
 export const claimPending = callable(claim.claimPending, claimDeps);
 export const mergePending = callable(claim.mergePending);
+export const renamePending = callable(claim.renamePending);
 export const onPendingMemberDeleted = onDocumentDeleted(
   { region: REGION, document: 'churches/{cid}/pendingMembers/{pid}', retry: true },
   async (event) => {

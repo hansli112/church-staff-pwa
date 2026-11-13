@@ -208,11 +208,12 @@ void main() {
     );
     await pumpApp(tester, b);
     await go(tester, '/me/members/mei-google');
-    await tester.scrollUntilVisible(find.text('合併還沒登入的資料'), 200, scrollable: find.byType(Scrollable).last);
-    await tapText(tester, '合併還沒登入的資料');
+    await tester.scrollUntilVisible(find.text('合併沒有帳號的同工'), 200, scrollable: find.byType(Scrollable).last);
+    await tapText(tester, '合併沒有帳號的同工');
     await tapText(tester, '李美玉');
-    expect(find.text('合併還沒登入的「李美玉」？'), findsOneWidget);
-    expect(findShown('還沒登入的「李美玉」會合併到「美玉」'), findsOneWidget);
+    expect(find.text('合併「李美玉」？'), findsOneWidget);
+    expect(findShownContaining('「李美玉」的服事、聚會和小組會接到「美玉」'), findsOneWidget);
+    expect(findShownContaining('主日崇拜・司琴'), findsOneWidget, reason: 'what they serve, to be sure of them');
     await tapText(tester, '合併');
 
     final m = b.members['grace']!['mei-google']!;
@@ -222,7 +223,7 @@ void main() {
     expect(b.rosters['grace']![Roster.idFor('sunday', Day(2026, 10, 18))]!.duties.single.uids, {'李美玉': 'mei-google'});
     expect(b.pendingMembers['grace'], isEmpty);
     expect(find.text('已合併'), findsOneWidget);
-    expect(find.text('合併還沒登入的資料'), findsNothing, reason: 'nothing left to merge');
+    expect(find.text('合併沒有帳號的同工'), findsNothing, reason: 'nothing left to merge');
   });
 
   testWidgets('someone without an email who joined by invite is offered to merge on 同工, by the same name', (
@@ -248,17 +249,17 @@ void main() {
     );
     await pumpApp(tester, b);
     await go(tester, '/me/members');
-    expect(findShownContaining('還沒登入的資料裡也有「黃鎮台」'), findsOneWidget);
+    expect(findShownContaining('沒有帳號的同工裡也有「黃鎮台」'), findsOneWidget);
     await tester.tap(find.bySemanticsLabel('合併黃鎮台'));
     await settle(tester);
-    expect(find.text('合併還沒登入的「黃鎮台」？'), findsOneWidget);
-    expect(findShown('還沒登入的「黃鎮台」會合併到「黃鎮台」'), findsOneWidget);
+    expect(find.text('合併「黃鎮台」？'), findsOneWidget);
+    expect(findShownContaining('「黃鎮台」的服事、聚會和小組會接到「黃鎮台」'), findsOneWidget);
     await tapText(tester, '合併');
 
     expect(b.pendingMembers['grace'], isEmpty);
     expect(b.members['grace']!['huang']!.serves('sunday', '招待'), isTrue);
     expect(b.rosters['grace']![Roster.idFor('sunday', Day(2026, 10, 18))]!.duties.single.uids, {'黃鎮台': 'huang'});
-    expect(find.textContaining('還沒登入的資料裡也有'), findsNothing);
+    expect(find.textContaining('沒有帳號的同工裡也有'), findsNothing);
   });
 
   testWidgets('only admins are offered a merge on 同工', (tester) async {
@@ -269,7 +270,7 @@ void main() {
     b.pendingMembers['grace'] = {'old-huang': const PendingMember(id: 'old-huang', name: '黃鎮台')};
     await pumpApp(tester, b);
     await go(tester, '/me/members');
-    expect(find.textContaining('還沒登入的資料裡也有'), findsNothing);
+    expect(find.textContaining('沒有帳號的同工裡也有'), findsNothing);
   });
 
   testWidgets('picking pending data to merge lists the same name first', (tester) async {
@@ -282,9 +283,9 @@ void main() {
     };
     await pumpApp(tester, b);
     await go(tester, '/me/members/huang');
-    await tester.scrollUntilVisible(find.text('合併還沒登入的資料'), 200, scrollable: find.byType(Scrollable).last);
-    expect(findShown('同工沒有 email 或換了 email 時用'), findsOneWidget);
-    await tapText(tester, '合併還沒登入的資料');
+    await tester.scrollUntilVisible(find.text('合併沒有帳號的同工'), 200, scrollable: find.byType(Scrollable).last);
+    expect(findShown('原本就在服事表上的話，合併後會接上原本的服事'), findsOneWidget);
+    await tapText(tester, '合併沒有帳號的同工');
     final huang = tester.getTopLeft(findShown('黃鎮台').last).dy;
     final other = tester.getTopLeft(findShown('王大明')).dy;
     expect(huang, lessThan(other));
@@ -293,10 +294,58 @@ void main() {
   testWidgets('without pending data there is nothing to merge; non-admins cannot merge', (tester) async {
     await pumpApp(tester, seededChurch());
     await go(tester, '/me/members/mei');
-    expect(find.text('合併還沒登入的資料'), findsNothing);
+    expect(find.text('合併沒有帳號的同工'), findsNothing);
     final b = seededChurch(as: editor);
     b.pendingMembers['grace'] = {'old-mei': meiPending};
     await expectLater(b.church('grace').mergePending('old-mei', 'mei'), throwsA(isA<Object>()));
     expect(b.pendingMembers['grace']!.length, 1);
+  });
+
+  group('picking whom to merge', () {
+    const ming = Member(uid: 'ming', name: '小明');
+    const wang = PendingMember(
+      id: 'old-wang',
+      name: '王小明',
+      zones: [
+        Zone(serviceType: 'sunday', duties: ['招待']),
+      ],
+      smallGroups: {'joy'},
+    );
+    const chen = PendingMember(id: 'old-chen', name: '陳大華');
+
+    MemoryBackend church() {
+      final b = seededChurch(extra: const [ming]);
+      b.smallGroups['grace'] = {'joy': const SmallGroupDetails(id: 'joy', name: '喜樂小組', service: 'sunday')};
+      b.pendingMembers['grace'] = {'old-chen': chen, 'old-wang': wang};
+      return b;
+    }
+
+    testWidgets('one in no service yet is offered it first, above 加入聚會', (tester) async {
+      await pumpApp(tester, church());
+      await go(tester, '/me/members/ming');
+      final merge = tester.getTopLeft(find.text('合併沒有帳號的同工')).dy;
+      expect(merge, lessThan(tester.getTopLeft(find.text('加入聚會')).dy));
+    });
+
+    testWidgets('a name inside theirs comes first; each says their 小組 and what they serve', (tester) async {
+      await pumpApp(tester, church());
+      await go(tester, '/me/members/ming');
+      await tapText(tester, '合併沒有帳號的同工');
+      expect(find.text('選一位沒有帳號的同工'), findsOneWidget);
+      expect(tester.getTopLeft(findShown('王小明')).dy, lessThan(tester.getTopLeft(findShown('陳大華')).dy));
+      expect(findShownContaining('喜樂小組'), findsOneWidget);
+      expect(findShownContaining('主日崇拜・招待'), findsOneWidget);
+    });
+
+    testWidgets('the list can be searched', (tester) async {
+      await pumpApp(tester, church());
+      await go(tester, '/me/members/ming');
+      await tapText(tester, '合併沒有帳號的同工');
+      await tester.enterText(find.byType(TextField).last, '大華');
+      await settle(tester);
+      expect(findShown('王小明'), findsNothing);
+      await tapText(tester, '陳大華');
+      expect(find.text('合併「陳大華」？'), findsOneWidget);
+    });
   });
 }
