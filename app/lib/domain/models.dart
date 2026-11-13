@@ -729,11 +729,11 @@ class Duty {
   );
 
   /// With [uid]'s name here now [name], where it was in [people] and in
-  /// [uids]: one renamed (functions/src/pendingMembers.ts renamePending).
+  /// [uids]: one renamed (renamedDuty in functions/src/renames.ts).
   Duty renamed(String uid, String name) {
     final old = {
       for (final e in uids.entries)
-        if (e.value == uid) e.key,
+        if (e.value == uid && e.key != name) e.key,
     };
     if (old.isEmpty) return this;
     return copyWith(

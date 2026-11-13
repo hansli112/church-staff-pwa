@@ -1936,7 +1936,7 @@ class MemoryChurchData implements ChurchData {
 
   @override
   Future<void> renamePending(String id, String name) async {
-    // As functions/src/pendingMembers.ts renamePending.
+    // As functions/src/claim.ts renamePending.
     _functionAdmin();
     final named = _text(name, TextLimits.profileName);
     final pending = _b.pendingMembers[churchId] ?? {};
@@ -1949,6 +1949,12 @@ class MemoryChurchData implements ChurchData {
         if (o.id != id) o.name,
     ].any((n) => nameKey(n) == key)) {
       throw const CloudException(CloudErrorCode.duplicateName);
+    }
+    final staffOrders = _b.staffOrders[churchId] ?? {};
+    for (final e in [...staffOrders.entries]) {
+      staffOrders[e.key] = StaffOrder({
+        for (final r in e.value.rankingsByRole.entries) r.key: [for (final n in r.value) n == p.name ? named : n],
+      });
     }
     pending[id] = PendingMember(
       id: p.id,

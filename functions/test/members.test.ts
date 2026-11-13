@@ -192,6 +192,30 @@ describe('triggers', () => {
     assert.equal((await db.doc('churches/C2/members/bob').get()).get('name'), 'bob');
   });
 
+  test('the rosters and staff orders that name them say the new name', async () => {
+    await seedChurch('C1', { alice: 'staff', bob: 'admin' });
+    await db.doc('churches/C1/members/alice').update({ name: '愛麗' });
+    await db.doc('churches/C1/rosters/2026-10-04_sunday').set({
+      type: 'sunday',
+      duties: [
+        { role: '司琴', people: ['愛麗'], uids: { 愛麗: 'alice' } },
+        { role: '招待', people: ['bob', '愛麗'], uids: { bob: 'bob', 愛麗: 'alice' } },
+      ],
+    });
+    await db.doc('churches/C1/staff_orders/sunday').set({ roles: { 招待: ['bob', '愛麗'], 司琴: ['愛麗'] } });
+    const before = await db.doc('users/alice').get();
+    await db.doc('users/alice').set({ name: '林愛麗' });
+    const after = await db.doc('users/alice').get();
+
+    assert.equal(await syncProfileName(deps, 'alice', before, after), 1);
+    assert.deepEqual((await db.doc('churches/C1/rosters/2026-10-04_sunday').get()).get('duties'), [
+      { role: '司琴', people: ['林愛麗'], uids: { 林愛麗: 'alice' } },
+      { role: '招待', people: ['bob', '林愛麗'], uids: { bob: 'bob', 林愛麗: 'alice' } },
+    ]);
+    assert.deepEqual((await db.doc('churches/C1/staff_orders/sunday').get()).get('roles'), { 招待: ['bob', '林愛麗'], 司琴: ['林愛麗'] });
+    assert.equal((await db.doc('churches/C1/members/alice').get()).get('name'), '林愛麗');
+  });
+
   test('a profile name past 40 characters reaches the church cut to 40', async () => {
     await seedChurch('C1', { alice: 'staff' });
     const before = await db.doc('users/alice').get();

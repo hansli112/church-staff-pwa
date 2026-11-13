@@ -12,6 +12,7 @@ import { ICON_FILES, iconStoragePath, makeIcons } from './icons.js';
 import { personName } from './limits.js';
 import { adminUids, notifyMembers, type PushDeps } from './push.js';
 import { loggable } from './redact.js';
+import { renameInChurch } from './renames.js';
 
 /**
  * Who made a Firestore write, from a trigger's auth context: the uid of a
@@ -53,7 +54,8 @@ export async function onMemberUpdated(deps: CalDeps, cid: string, before: Docume
 /**
  * A member's name lives on each member doc (what the church sees) and on
  * users/{uid} (what they edit). Rules let them write only the latter, so
- * this copies a changed name to every church they belong to.
+ * this copies a changed name to every church they belong to, and to the
+ * rosters and staff orders there, which hold names.
  */
 export async function syncProfileName(
   deps: Deps,
@@ -67,7 +69,15 @@ export async function syncProfileName(
   if (before?.get('name') === raw) return 0;
   const memberships = await deps.db.collectionGroup('members').where('uid', '==', uid).get();
   const stale = memberships.docs.filter((m) => m.get('name') !== name);
-  await Promise.all(stale.map((m) => m.ref.update({ name })));
+  // Each church's rosters and staff orders first, the member doc last: tried
+  // again, the member still has the old name to find them by.
+  await Promise.all(
+    stale.map(async (m) => {
+      const cid = m.ref.parent.parent!.id;
+      await renameInChurch(deps, cid, uid, String(m.get('name') ?? ''), name);
+      await m.ref.update({ name });
+    }),
+  );
   return stale.length;
 }
 

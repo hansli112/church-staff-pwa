@@ -3,6 +3,7 @@ import { fail, id, record, requireCaller, serverTime, text, type Caller, type De
 import { identitiesOf, withIdentities, type Identity } from './identities.js';
 import { personName, TEXT_LIMITS } from './limits.js';
 import { nameKey } from './text.js';
+import { renameInChurch, rewriteDutiesOf } from './renames.js';
 import { dateKeyIn, timeZoneOf } from './timeZones.js';
 import { callerKeys, dropPending, waitingFor, waitsFor, type ClaimDeps } from './pendingMembers.js';
 import { claimedSmallGroups, smallGroupsByName } from './smallGroups.js';
@@ -106,56 +107,12 @@ async function servesOf(deps: Deps, church: FirebaseFirestore.DocumentSnapshot, 
 const takesByName = (member: FirebaseFirestore.DocumentSnapshot, pending: FirebaseFirestore.DocumentSnapshot) =>
   member.exists && !pending.get('emailHash') && !!personName(member.get('name')) && personName(member.get('name')) === personName(pending.get('name'));
 
-type DutyDoc = { people?: string[]; uids?: Record<string, string> };
-
-/**
- * Rewrites, with [change], each duty of every roster that names [pid]: the
- * days the move recorded for [pid], and any they were put on since, as one
- * without an account can be. Every roster of the church is read for those,
- * once a person. [change] gives back the duty as it was when nothing is to
- * change.
- */
-async function rewriteDutiesOf(deps: Deps, cid: string, pid: string, recorded: string[], change: (d: DutyDoc) => DutyDoc) {
-  const all = await deps.db.collection(`churches/${cid}/rosters`).get();
-  const since = all.docs
-    .filter((r) => ((r.get('duties') as DutyDoc[] | undefined) ?? [])
-      .some((d) => Object.values(d?.uids ?? {}).includes(pid)))
-    .map((r) => r.id);
-  const rosterIds = [...new Set([...recorded, ...since])];
-  // One transaction per day, a few at a time: an editor changing the same
-  // day meanwhile is never overwritten.
-  const one = (id: string) =>
-    deps.db.runTransaction(async (tx) => {
-      const ref = deps.db.doc(`churches/${cid}/rosters/${id}`);
-      const s = await tx.get(ref);
-      const duties = s.get('duties') as DutyDoc[] | undefined;
-      if (!s.exists || !Array.isArray(duties)) return;
-      const next = duties.map(change);
-      if (next.some((d, i) => d !== duties[i])) tx.update(ref, { duties: next });
-    });
-  for (let i = 0; i < rosterIds.length; i += 10) await Promise.all(rosterIds.slice(i, i + 10).map(one));
-}
-
 /** Points every roster that names [pid] at [uid] instead. */
 const repoint = (deps: Deps, cid: string, pid: string, uid: string, recorded: string[]) =>
   rewriteDutiesOf(deps, cid, pid, recorded, (d) =>
     Object.values(d.uids ?? {}).includes(pid)
       ? { ...d, uids: Object.fromEntries(Object.entries(d.uids ?? {}).map(([name, u]) => [name, u === pid ? uid : u])) }
       : d);
-
-/**
- * [d] with [pid]'s name now [name], where it was in `people` and in `uids`
- * (as Duty.renamed in the app).
- */
-function renamedDuty(d: DutyDoc, pid: string, name: string): DutyDoc {
-  const old = new Set(Object.entries(d.uids ?? {}).filter(([, u]) => u === pid).map(([n]) => n));
-  if (old.size === 0) return d;
-  return {
-    ...d,
-    people: [...new Set((d.people ?? []).map((p) => (old.has(p) ? name : p)))],
-    uids: Object.fromEntries(Object.entries(d.uids ?? {}).map(([n, u]) => [old.has(n) ? name : n, u])),
-  };
-}
 
 /**
  * Renames pending member [pendingId] (admins): a typo fixed, on the
@@ -178,10 +135,11 @@ export async function renamePending(deps: Deps, caller: Caller | null, data: unk
     if ([...members.docs, ...others.docs.filter((d) => d.id !== pid)].some((d) => nameKey(String(d.get('name') ?? '')) === key)) {
       fail('already-exists', 'duplicateName');
     }
-    tx.update(pending.ref, { name });
     return pending;
   });
-  await rewriteDutiesOf(deps, cid, pid, (pending.get('rosterIds') as string[] | undefined) ?? [], (d) => renamedDuty(d, pid, name));
+  // The rosters first: tried again, the old name is still there to find.
+  await renameInChurch(deps, cid, pid, String(pending.get('name') ?? ''), name, (pending.get('rosterIds') as string[] | undefined) ?? []);
+  await pending.ref.update({ name });
   return {};
 }
 

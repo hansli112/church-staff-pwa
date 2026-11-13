@@ -365,6 +365,13 @@ describe('renaming', () => {
     assert.deepEqual(await peopleOn(cid, '2026-10-11'), [[['李美鈺'], { 李美鈺: 'old-mei' }]]);
   });
 
+  test('the staff orders ranking them rank the new name', async () => {
+    const cid = await moved();
+    await db.doc(`churches/${cid}/staff_orders/sunday`).set({ roles: { 司琴: ['陳志豪', '李美玉'] } });
+    await renamePending(deps, caller('mover'), { churchId: cid, pendingId: 'old-mei', name: '李美鈺' });
+    assert.deepEqual((await db.doc(`churches/${cid}/staff_orders/sunday`).get()).get('roles'), { 司琴: ['陳志豪', '李美鈺'] });
+  });
+
   test("not to a name someone in the church has; only that church's admin", async () => {
     const cid = await moved();
     await rejectsWith(renamePending(deps, caller('mover'), { churchId: cid, pendingId: 'old-mei', name: '陳 志豪' }), 'duplicateName');

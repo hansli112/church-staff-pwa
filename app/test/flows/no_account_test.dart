@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 import 'package:martha/data/memory/memory_backend.dart';
 import 'package:martha/domain/day.dart';
 import 'package:martha/domain/models.dart';
+import 'package:martha/domain/staff_order.dart';
 
 import '../support/harness.dart';
 import '../support/seed.dart';
@@ -114,6 +115,9 @@ void main() {
         Duty(role: '招待', people: ['李美玉', '黃鎮台'], uids: {'李美玉': 'mei', '黃鎮台': 'old-huang'}),
       ],
     );
+    b.staffOrders['grace']!['sunday'] = StaffOrder({
+      '招待': ['黃鎮台', '陳志豪'],
+    });
     await pumpApp(tester, b);
     await go(tester, '/me/members/old-huang');
     await tapText(tester, '名字');
@@ -130,6 +134,7 @@ void main() {
     final duty = savedDay(b, 11).duties.single;
     expect(duty.people, ['李美玉', '黃振台'], reason: 'where he was');
     expect(duty.uids, {'李美玉': 'mei', '黃振台': 'old-huang'});
+    expect(b.staffOrders['grace']!['sunday']!.rankingOf('招待'), ['黃振台', '陳志豪'], reason: 'still first');
   });
 
   testWidgets('only admins rename them', (tester) async {
