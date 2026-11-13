@@ -146,6 +146,9 @@ class MemoryBackend implements Backend {
   /// Requests to join (申請加入, #88) per church, by uid.
   final joinRequests = <String, Map<String, JoinRequest>>{};
 
+  /// 認領申請 per church, by the uid of who asked.
+  final claimAsks = <String, Map<String, ClaimAsk>>{};
+
   /// How [uid]'s request to church [cid] stands now.
   JoinRequestState? joinRequestState(String cid, String uid) => joinRequests[cid]?[uid]?.stateAt(clock());
 
@@ -896,6 +899,7 @@ class MemoryChurchData implements ChurchData {
     await _b.write(() {
       _b.pendingMembers[churchId]?.remove(id);
       _b.pendingRosterIds[churchId]?.remove(id);
+      _b.claimAsks[churchId]?.removeWhere((_, a) => a.pendingId == id);
     });
   }
 
@@ -1976,6 +1980,65 @@ class MemoryChurchData implements ChurchData {
   }
 
   @override
+  Stream<List<ClaimAsk>> claimAsks() => _b.watch(() {
+    _requireAdmin();
+    return (_b.claimAsks[churchId] ?? const <String, ClaimAsk>{}).values.toList();
+  }, equals: _sameList);
+
+  @override
+  Stream<ClaimAsk?> claimAskOf(String uid) => _b.watch(() {
+    // As firestore.rules: their own, or an admin.
+    final me = _b.requireMember(churchId);
+    if (me.uid != uid && !me.isAdmin) throw const CloudException(CloudErrorCode.permissionDenied);
+    return _b.claimAsks[churchId]?[uid];
+  });
+
+  @override
+  Future<List<ClaimCandidate>> claimCandidates() async {
+    // As functions/src/claimAsks.ts claimCandidates.
+    _b.functionAccess(churchId, allowed: (_) => true);
+    final groups = {for (final g in _b.smallGroups[churchId]?.values ?? const <SmallGroupDetails>[]) g.id: g.name};
+    return [
+      for (final p in (_b.pendingMembers[churchId] ?? const <String, PendingMember>{}).values)
+        if (p.name.trim().isNotEmpty)
+          ClaimCandidate(
+            pendingId: p.id,
+            name: p.name.trim(),
+            smallGroups: {
+              for (final id in p.smallGroups) ?groups[id],
+              for (final z in p.zones) ...z.smallGroups,
+            }.toList(),
+            serves: _servesOfPending(_b, churchId, p),
+          ),
+    ];
+  }
+
+  @override
+  Future<void> askClaim(String? pendingId) async {
+    // As functions/src/claimAsks.ts askClaim (the admins' push aside).
+    final me = _b.functionAccess(churchId, allowed: (_) => true)!;
+    final asks = _b.claimAsks[churchId] ??= {};
+    if (pendingId == null) {
+      asks.remove(me.uid);
+    } else {
+      final p = _b.pendingMembers[churchId]?[pendingId];
+      if (p == null) throw const CloudException(CloudErrorCode.notFound);
+      asks[me.uid] = ClaimAsk(uid: me.uid, name: me.name, pendingId: pendingId, pendingName: p.name);
+    }
+    _b.notify();
+  }
+
+  @override
+  Future<void> answerClaim(String uid, {required bool allow}) async {
+    _functionAdmin();
+    final ask = _b.claimAsks[churchId]?[uid];
+    if (ask == null) throw const CloudException(CloudErrorCode.notFound);
+    if (allow) await mergePending(ask.pendingId, uid);
+    _b.claimAsks[churchId]?.remove(uid);
+    _b.notify();
+  }
+
+  @override
   Future<void> mergePending(String pendingId, String uid) async {
     _functionAdmin();
     final p = _b.pendingMembers[churchId]?[pendingId];
@@ -2866,26 +2929,7 @@ class MemoryCloud implements CloudApi {
   }
 
   /// A few of [p]'s duties, as functions/src/claim.ts finds them.
-  List<ClaimServe> _servesOf(String cid, PendingMember p) {
-    final names = {for (final s in _b.services[cid]?.services ?? const <Service>[]) s.id: s.name};
-    final today = _b.churches[cid]!.timeZone.today(_b.clock());
-    final days = [
-      for (final key in _b.pendingRosterIds[cid]?[p.id] ?? const <String>[])
-        if (_b.rosters[cid]?[key] case final r? when r.forEvent == null)
-          if (r.duties.where((d) => d.uids.values.contains(p.id)).firstOrNull case final d?)
-            ClaimServe(day: r.day, service: names[r.type] ?? '', duty: d.role),
-    ]..sort((a, b) => a.day!.compareTo(b.day!));
-    final ahead = [
-      for (final s in days)
-        if (!s.day!.isBefore(today)) s,
-    ];
-    final shown = ahead.isNotEmpty ? ahead : days.reversed.toList();
-    if (shown.isNotEmpty) return shown.take(3).toList();
-    return [
-      for (final z in p.zones)
-        for (final duty in z.duties) ClaimServe(service: names[z.serviceType] ?? '', duty: duty),
-    ].take(3).toList();
-  }
+  List<ClaimServe> _servesOf(String cid, PendingMember p) => _servesOfPending(_b, cid, p);
 
   /// The one pending member with no email named [name], if just one.
   PendingMember? _unclaimedNamed(Iterable<PendingMember> pending, String name) => switch ([
@@ -3128,6 +3172,7 @@ class MemoryCloud implements CloudApi {
 void _settlePending(MemoryBackend b, String cid, String pid, String uid) {
   b.pendingMembers[cid]!.remove(pid);
   b.pendingRosterIds[cid]?.remove(pid);
+  b.claimAsks[cid]?.removeWhere((_, a) => a.pendingId == pid);
   final rosters = b.rosters[cid]!;
   // The days the move recorded, and any they were put on since.
   for (final key in [...rosters.keys]) {
@@ -3312,3 +3357,25 @@ Church _deleted(Church c, DateTime at) => Church(
   timeZone: c.timeZone,
   attendanceSince: c.attendanceSince,
 );
+
+/// A few of [p]'s duties, as functions/src/claim.ts finds them.
+List<ClaimServe> _servesOfPending(MemoryBackend b, String cid, PendingMember p) {
+  final names = {for (final s in b.services[cid]?.services ?? const <Service>[]) s.id: s.name};
+  final today = b.churches[cid]!.timeZone.today(b.clock());
+  final days = [
+    for (final key in b.pendingRosterIds[cid]?[p.id] ?? const <String>[])
+      if (b.rosters[cid]?[key] case final r? when r.forEvent == null)
+        if (r.duties.where((d) => d.uids.values.contains(p.id)).firstOrNull case final d?)
+          ClaimServe(day: r.day, service: names[r.type] ?? '', duty: d.role),
+  ]..sort((a, b) => a.day!.compareTo(b.day!));
+  final ahead = [
+    for (final s in days)
+      if (!s.day!.isBefore(today)) s,
+  ];
+  final shown = ahead.isNotEmpty ? ahead : days.reversed.toList();
+  if (shown.isNotEmpty) return shown.take(3).toList();
+  return [
+    for (final z in p.zones)
+      for (final duty in z.duties) ClaimServe(service: names[z.serviceType] ?? '', duty: duty),
+  ].take(3).toList();
+}

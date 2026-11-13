@@ -238,6 +238,24 @@ abstract interface class ChurchData {
   /// Drops a pending member (admins). Their names stay on the rosters.
   Future<void> deletePendingMember(String id);
 
+  /// 認領申請 waiting for an answer (admins): who says they are which of
+  /// the pending members.
+  Stream<List<ClaimAsk>> claimAsks();
+
+  /// What member [uid] (only themself, or an admin) asked, if anything.
+  Stream<ClaimAsk?> claimAskOf(String uid);
+
+  /// The pending members with a name, for a member to find themself among.
+  Future<List<ClaimCandidate>> claimCandidates();
+
+  /// The caller says they are pending member [pendingId]; null takes it
+  /// back. The admins are told.
+  Future<void> askClaim(String? pendingId);
+
+  /// An admin answers member [uid]'s ask: [allow] merges the pending member
+  /// they named into them. Either way the ask goes.
+  Future<void> answerClaim(String uid, {required bool allow});
+
   /// Renames pending member [id] (admins), on the rosters they are on too:
   /// a typo fixed. [CloudErrorCode.duplicateName] for a name someone in the
   /// church has.

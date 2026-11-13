@@ -7,13 +7,13 @@ import '../../core/design/tokens.dart';
 import '../../data/backend.dart';
 import '../../domain/limits.dart';
 import '../../domain/models.dart';
-import '../../domain/text.dart';
 import '../../l10n/app_localizations.dart';
 import '../../state/church_writes.dart';
 import '../../state/providers.dart';
 import '../common/errors.dart';
 import '../common/saving_indicator.dart';
 import 'identity_section.dart';
+import 'no_account_picker.dart';
 import 'service_staff.dart';
 import '../rosters/future_changes.dart';
 
@@ -66,10 +66,16 @@ class MemberEditorScreen extends ConsumerWidget {
     final picked = await showAppSheet<PendingMember>(
       context,
       expand: pending.length > 6,
-      builder: (context) => NoAccountPicker(
+      builder: (context) => NoAccountPicker<PendingMember>(
+        title: L10n.of(context).mergePendingPick,
         name: member.name,
         people: pending,
-        details: (p) => noAccountDetails(L10n.of(context), p, services, smallGroups),
+        nameOf: (p) => p.name.isEmpty ? p.email : p.name,
+        details: (p) => [
+          noAccountDetails(L10n.of(context), p, services, smallGroups),
+          if (p.name.isNotEmpty) p.email,
+        ].where((t) => t.isNotEmpty).join('\n'),
+        searched: (p) => [p.name, p.email],
       ),
     );
     if (picked == null || !context.mounted) return;
@@ -162,9 +168,22 @@ class MemberEditorScreen extends ConsumerWidget {
   }
 }
 
-/// Merges [pending] into [member] once the admin says so: 「合併「黃鎮台」？」,
-/// with their 小組 and what they serve to be sure it is them.
+/// Merges [pending] into [member] once the admin says so.
 Future<void> mergePendingInto(BuildContext context, WidgetRef ref, PendingMember pending, Member member) async {
+  if (!await confirmMerge(context, ref, pending, member.name) || !context.mounted) return;
+  final l10n = L10n.of(context);
+  try {
+    await ref.churchData.mergePending(pending.id, member.uid);
+    Haptics.success();
+    if (context.mounted) showToast(context, l10n.merged);
+  } catch (e) {
+    if (context.mounted) showToast(context, errorText(l10n, e));
+  }
+}
+
+/// 「合併「黃鎮台」？」, with their 小組 and what they serve to be sure it
+/// is them; true for 合併.
+Future<bool> confirmMerge(BuildContext context, WidgetRef ref, PendingMember pending, String memberName) async {
   final l10n = L10n.of(context);
   final name = pending.name.isEmpty ? pending.email : pending.name;
   final details = noAccountDetails(
@@ -176,104 +195,11 @@ Future<void> mergePendingInto(BuildContext context, WidgetRef ref, PendingMember
   final ok = await askChoice(
     context,
     title: l10n.mergePendingTitle(name),
-    message: [if (details.isNotEmpty) details, l10n.mergePendingBody(name, member.name)].join('\n\n'),
+    message: [if (details.isNotEmpty) details, l10n.mergePendingBody(name, memberName)].join('\n\n'),
     yes: l10n.mergePendingAction,
     no: l10n.cancel,
   );
-  if (ok != true || !context.mounted) return;
-  try {
-    await ref.churchData.mergePending(pending.id, member.uid);
-    Haptics.success();
-    if (context.mounted) showToast(context, l10n.merged);
-  } catch (e) {
-    if (context.mounted) showToast(context, errorText(l10n, e));
-  }
-}
-
-/// What one of the 同工 without an account is known by: their 小組, then
-/// what they serve, 「喜樂小組 · 主日崇拜・招待、司琴」.
-String noAccountDetails(L10n l10n, PendingMember p, ServiceSettings? services, List<SmallGroupDetails> smallGroups) {
-  final groups = p.asMember(smallGroups).smallGroups;
-  return [
-    for (final g in smallGroups)
-      if (groups.contains(g.id)) g.name,
-    for (final z in p.zones)
-      if (services?.byId(z.serviceType)?.name case final service?)
-        z.duties.isEmpty ? service : l10n.claimServe(service, z.duties.join(l10n.listSeparator)),
-  ].join(l10n.dotSeparator);
-}
-
-/// A sheet to pick one of [people] (同工 without an account): those named
-/// like [name] first (the same name, then one inside the other), each with
-/// its [details], and a search for the rest.
-class NoAccountPicker extends StatefulWidget {
-  const NoAccountPicker({super.key, required this.name, required this.people, required this.details});
-
-  final String name;
-  final List<PendingMember> people;
-  final String Function(PendingMember) details;
-
-  @override
-  State<NoAccountPicker> createState() => _NoAccountPickerState();
-}
-
-class _NoAccountPickerState extends State<NoAccountPicker> {
-  String _query = '';
-
-  late final List<PendingMember> _ordered = () {
-    String shown(PendingMember p) => p.name.isEmpty ? p.email : p.name;
-    int rank(PendingMember p) => nameMatch(p.name, widget.name).index;
-    return [...widget.people]..sort((a, b) {
-      final r = rank(a).compareTo(rank(b));
-      return r != 0 ? r : shown(a).compareTo(shown(b));
-    });
-  }();
-
-  @override
-  Widget build(BuildContext context) {
-    final l10n = L10n.of(context);
-    final shown = [
-      for (final p in _ordered)
-        if (matchesSearch(p.name, _query) || matchesSearch(p.email, _query)) p,
-    ];
-    return SafeArea(
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          Padding(
-            padding: const EdgeInsets.fromLTRB(Space.l, 0, Space.l, Space.s),
-            child: Text(l10n.mergePendingPick, style: AppText.headline),
-          ),
-          Padding(
-            padding: const EdgeInsets.fromLTRB(Space.m, 0, Space.m, Space.s),
-            child: SearchField(hint: l10n.searchMembers, onChanged: (q) => setState(() => _query = q)),
-          ),
-          Flexible(
-            child: SingleChildScrollView(
-              child: ListSection(
-                children: [
-                  for (final p in shown)
-                    ListRow(
-                      title: p.name.isEmpty ? p.email : p.name,
-                      subtitle: [
-                        widget.details(p),
-                        if (p.name.isNotEmpty) p.email,
-                      ].where((t) => t.isNotEmpty).join('\n').ifEmpty,
-                      onTap: () => Navigator.pop(context, p),
-                    ),
-                ],
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-extension on String {
-  String? get ifEmpty => isEmpty ? null : this;
+  return ok == true;
 }
 
 /// One of the 同工 without an account yet (moved, or added by name), for

@@ -113,6 +113,8 @@ export interface Words {
   memberJoined(name: string | null, count: number): string;
   /** A member left (triggers.ts); [name] is theirs, null when they had none. */
   memberLeft(name: string | null): string;
+  /** To admins (claimAsks.ts): [name] says they are [pending], one of the 同工 without an account. */
+  claimAsked(name: string, pending: string): string;
 
   /** To someone given [given] (triggers.ts): what they are now, one or several. */
   identityGiven(given: NamedIdentity[]): string;
@@ -206,6 +208,7 @@ const zhHant: Words = {
   memberJoined: (name, n) =>
     n > 1 ? (name ? `「${name}」等 ${n} 人加入了教會` : `${n} 人加入了教會`) : name ? `「${name}」加入了教會` : '有人加入了教會',
   memberLeft: (name) => (name ? `「${name}」退出了教會` : '有人退出了教會'),
+  claimAsked: (name, pending) => `「${name}」說自己是服事表上的「${pending}」`,
   identityGiven: (given) =>
     `你現在是${given
       .map(
@@ -261,6 +264,7 @@ const zhHans: Words = {
   memberJoined: (name, n) =>
     n > 1 ? (name ? `“${name}”等 ${n} 人加入了教会` : `${n} 人加入了教会`) : name ? `“${name}”加入了教会` : '有人加入了教会',
   memberLeft: (name) => (name ? `“${name}”退出了教会` : '有人退出了教会'),
+  claimAsked: (name, pending) => `“${name}”说自己是事奉表上的“${pending}”`,
   identityGiven: (given) =>
     `你现在是${given
       .map(
@@ -320,6 +324,7 @@ const en: Words = {
         : `${n} people joined the church`
       : `${name ?? 'Someone'} joined the church`,
   memberLeft: (name) => `${name ?? 'Someone'} left the church`,
+  claimAsked: (name, pending) => `${name} says they are “${pending}” on the schedule`,
   // As the app labels each 身分 (identityLabel).
   identityGiven: (given) =>
     `${given.length > 1 ? 'New roles' : 'New role'}: ${given
@@ -377,6 +382,7 @@ const ja: Words = {
   memberJoined: (name, n) =>
     n > 1 ? (name ? `${name}ほか${n - 1}人が教会に参加しました` : `${n}人が教会に参加しました`) : `${name ?? 'メンバー'}が教会に参加しました`,
   memberLeft: (name) => `${name ?? 'メンバー'}が教会を退出しました`,
+  claimAsked: (name, pending) => `${name}さんが、奉仕表の「${pending}」は自分だと言っています`,
   identityGiven: (given) =>
     `${given
       .map(
@@ -437,6 +443,7 @@ const ko: Words = {
         ? `${name} 님이 교회에 들어왔어요`
         : '멤버 한 명이 교회에 들어왔어요',
   memberLeft: (name) => (name ? `${name} 님이 교회를 나갔어요` : '멤버 한 명이 교회를 나갔어요'),
+  claimAsked: (name, pending) => `${name} 님이 봉사표의 ‘${pending}’ 님이 본인이라고 해요`,
   identityGiven: (given) =>
     `이제 ${given
       .map(

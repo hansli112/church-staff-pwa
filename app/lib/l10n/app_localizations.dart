@@ -3694,6 +3694,78 @@ abstract class L10n {
   /// **'已改名'**
   String get pendingRenamed;
 
+  /// 認領申請 (claimAsks)
+  ///
+  /// In zh, this message translates to:
+  /// **'服事表上已經有你了嗎？'**
+  String get claimAskEntry;
+
+  /// 認領申請 (claimAsks)
+  ///
+  /// In zh, this message translates to:
+  /// **'服事表上哪一位是你？'**
+  String get claimAskPick;
+
+  /// 認領申請 (claimAsks)
+  ///
+  /// In zh, this message translates to:
+  /// **'你是「{name}」嗎？'**
+  String claimAskTitle(String name);
+
+  /// 認領申請 (claimAsks)
+  ///
+  /// In zh, this message translates to:
+  /// **'管理員確認後，「{name}」的服事和所屬聚會就會接過來'**
+  String claimAskBody(String name);
+
+  /// 認領申請 (claimAsks)
+  ///
+  /// In zh, this message translates to:
+  /// **'送出'**
+  String get claimAskSend;
+
+  /// 認領申請 (claimAsks)
+  ///
+  /// In zh, this message translates to:
+  /// **'等管理員確認你是「{name}」'**
+  String claimAskWaiting(String name);
+
+  /// 認領申請 (claimAsks)
+  ///
+  /// In zh, this message translates to:
+  /// **'{count} 位說自己在服事表上'**
+  String claimAsksCount(int count);
+
+  /// 認領申請 (claimAsks)
+  ///
+  /// In zh, this message translates to:
+  /// **'說自己是「{name}」'**
+  String claimAskSays(String name);
+
+  /// 認領申請 (claimAsks)
+  ///
+  /// In zh, this message translates to:
+  /// **'確認'**
+  String get claimAskConfirm;
+
+  /// 認領申請 (claimAsks)
+  ///
+  /// In zh, this message translates to:
+  /// **'確認{name}'**
+  String claimAskConfirmLabel(String name);
+
+  /// 認領申請 (claimAsks)
+  ///
+  /// In zh, this message translates to:
+  /// **'{name}不是'**
+  String claimAskDenyLabel(String name);
+
+  /// 認領申請 (claimAsks)
+  ///
+  /// In zh, this message translates to:
+  /// **'已退回'**
+  String get claimAskDenied;
+
   /// No description provided for @mergePending.
   ///
   /// In zh, this message translates to:

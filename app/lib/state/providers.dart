@@ -245,6 +245,27 @@ final joinRequestsProvider = StreamProvider<List<JoinRequest>>((ref) {
   );
 });
 
+/// 認領申請 waiting for an answer, of members still in the church. Only
+/// for admins.
+final claimAsksProvider = StreamProvider<List<ClaimAsk>>((ref) {
+  final isAdmin = ref.watch(meProvider.select((m) => m.value?.isAdmin ?? false));
+  if (!isAdmin) return Stream.value(const []);
+  return openChurch(ref).claimAsks();
+});
+
+/// What I asked: which of the 同工 without an account I say I am.
+final myClaimAskProvider = StreamProvider<ClaimAsk?>((ref) {
+  final uid = ref.watch(uidProvider);
+  if (uid == null) return Stream.value(null);
+  return openChurch(ref).claimAskOf(uid);
+});
+
+/// The 同工 without an account, for me to find myself among; asked of the
+/// backend once wanted.
+final claimCandidatesProvider = FutureProvider.autoDispose<List<ClaimCandidate>>(
+  (ref) => openChurch(ref).claimCandidates(),
+);
+
 final staffOrderProvider = StreamProvider.family<StaffOrder, String>(
   (ref, serviceType) => openChurch(ref).staffOrder(serviceType),
 );

@@ -965,6 +965,25 @@ describe('申請加入 (joinRequests)', () => {
   });
 });
 
+describe('認領申請 (claimAsks)', () => {
+  it('那間教會的管理員和申請的人自己讀得到；沒有人能直接寫', async () => {
+    const path = `churches/${A}/claimAsks/${MEMBER_A}`;
+    await seed(path, { uid: MEMBER_A, name: '小明', pendingId: 'old-ming', pendingName: '王小明', at: Timestamp.now() });
+    await assertSucceeds(getDoc(doc(as(ADMIN_A), path)));
+    await assertSucceeds(getDocs(collection(as(ADMIN_A), `churches/${A}/claimAsks`)));
+    await assertSucceeds(getDoc(doc(as(MEMBER_A), path)));
+    for (const uid of [EDITOR_A, OFFICE_A, ADMIN_B, STRANGER]) {
+      await assertFails(getDoc(doc(as(uid), path)), uid);
+    }
+    await assertFails(getDocs(collection(as(MEMBER_A), `churches/${A}/claimAsks`)), 'only their own');
+    for (const uid of [ADMIN_A, MEMBER_A]) {
+      await assertFails(setDoc(doc(as(uid), `churches/${A}/claimAsks/${uid}`), { uid, pendingId: 'x' }), uid);
+      await assertFails(updateDoc(doc(as(uid), path), { pendingId: 'y' }), uid);
+      await assertFails(deleteDoc(doc(as(uid), path)), uid);
+    }
+  });
+});
+
 describe('全域個資 (users)', () => {
   it('只有本人讀得到', async () => {
     await assertSucceeds(getDoc(doc(as(MEMBER_A), `users/${MEMBER_A}`)));

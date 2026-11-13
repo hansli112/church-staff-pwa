@@ -12,6 +12,7 @@ import '../common/errors.dart';
 import '../common/time_zones.dart';
 import '../common/labels.dart';
 import 'member_editor_screen.dart';
+import 'no_account_picker.dart';
 import '../../state/session.dart';
 
 /// Members, and requests to join turned down, hidden while it can still be
@@ -130,6 +131,20 @@ class _MembersScreenState extends ConsumerState<MembersScreen> {
                 r,
           ];
           final head = requests.isEmpty ? 0 : requests.length + 1;
+          // 認領申請, under them: someone in says they are one without an
+          // account. Only while both still are.
+          final pendingNow = {
+            for (final p in ref.watch(pendingMembersProvider).value ?? const <PendingMember>[]) p.id: p,
+          };
+          final asks = [
+            for (final a in ref.watch(claimAsksProvider).value ?? const <ClaimAsk>[])
+              if (joined.contains(a.uid) &&
+                  !hidden.contains(a.uid) &&
+                  pendingNow.containsKey(a.pendingId) &&
+                  (matchesSearch(a.name, _query) || matchesSearch(a.pendingName, _query)))
+                a,
+          ];
+          final askHead = asks.isEmpty ? 0 : asks.length + 1;
           final clock = ChurchClock.of(context, ref);
           final takesRequests = ref.watch(churchProvider.select((c) => c.value?.takesJoinRequests ?? true));
           // Nobody else has joined: the next step is inviting them.
@@ -151,14 +166,18 @@ class _MembersScreenState extends ConsumerState<MembersScreen> {
                 ),
               ),
               Expanded(
-                child: list.isEmpty && pending.isEmpty && requests.isEmpty
+                child: list.isEmpty && pending.isEmpty && requests.isEmpty && asks.isEmpty
                     ? EmptyState(message: l10n.noMembersFound)
                     : ListView.builder(
-                        itemCount: head + count + list.length + extra,
+                        itemCount: head + askHead + count + list.length + extra,
                         itemExtent: null,
                         itemBuilder: (context, i) {
                           if (i < head) return _request(c, clock, requests, i, takesRequests: takesRequests);
                           i -= head;
+                          if (i < askHead) {
+                            return _ask(c, asks, i, pending: pendingNow, members: {for (final m in all) m.uid: m});
+                          }
+                          i -= askHead;
                           // Under the requests, so it heads the members it counts.
                           if (count == 1 && i == 0) {
                             return Padding(
@@ -310,6 +329,79 @@ class _MembersScreenState extends ConsumerState<MembersScreen> {
         ),
       ),
     );
+  }
+
+  /// Row [i] of the 認領申請: their count, then each with 不是 and 確認.
+  Widget _ask(
+    AppColors c,
+    List<ClaimAsk> asks,
+    int i, {
+    required Map<String, PendingMember> pending,
+    required Map<String, Member> members,
+  }) {
+    final l10n = L10n.of(context);
+    if (i == 0) {
+      return Padding(
+        padding: const EdgeInsets.fromLTRB(Space.l, Space.s, Space.l, Space.s),
+        child: Text(l10n.claimAsksCount(asks.length), style: AppText.footnote.copyWith(color: c.secondaryLabel)),
+      );
+    }
+    final a = asks[i - 1];
+    final p = pending[a.pendingId]!;
+    final details = noAccountDetails(
+      l10n,
+      p,
+      ref.watch(servicesProvider).value,
+      ref.watch(smallGroupsProvider).value ?? const [],
+    );
+    final busy = _answering.contains(a.uid);
+    return Padding(
+      padding: EdgeInsets.only(bottom: i == asks.length ? Space.l : 0),
+      child: _grouped(
+        c,
+        first: i == 1,
+        last: i == asks.length,
+        child: ListRow(
+          title: a.name,
+          subtitle: [l10n.claimAskSays(p.name), if (details.isNotEmpty) details].join('\n'),
+          trailing: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              RowButton(
+                label: l10n.claimByNameNo,
+                semanticsLabel: l10n.claimAskDenyLabel(a.name),
+                onPressed: busy ? null : () => _answerAsk(a, allow: false),
+              ),
+              const SizedBox(width: Space.xs),
+              RowButton(
+                label: l10n.claimAskConfirm,
+                semanticsLabel: l10n.claimAskConfirmLabel(a.name),
+                onPressed: busy ? null : () => _confirmAsk(a, p, members[a.uid]!),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Future<void> _confirmAsk(ClaimAsk a, PendingMember p, Member m) async {
+    if (!await confirmMerge(context, ref, p, m.name) || !mounted) return;
+    await _answerAsk(a, allow: true);
+  }
+
+  Future<void> _answerAsk(ClaimAsk a, {required bool allow}) async {
+    final l10n = L10n.of(context);
+    setState(() => _answering.add(a.uid));
+    try {
+      await ref.churchData.answerClaim(a.uid, allow: allow);
+      if (allow) Haptics.success();
+      if (mounted) showToast(context, allow ? l10n.merged : l10n.claimAskDenied);
+    } catch (e) {
+      if (mounted) showToast(context, errorText(l10n, e));
+    } finally {
+      if (mounted) setState(() => _answering.remove(a.uid));
+    }
   }
 
   Future<void> _allow(JoinRequest r, String name) async {

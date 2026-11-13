@@ -1683,6 +1683,41 @@ void contractTests(Future<ContractWorld> Function() open) {
       await expectLater(g.church.renamePending(pid, '陳美玉'), denied());
     });
 
+    test('one who joined says which of them they are; an admin says yes', () async {
+      final g = await moved();
+      final invite = await g.church.createInvite(validFor: const Duration(days: 7));
+      final uid = await w.signUp('ming@example.com', name: '小明');
+      await g.cloud.redeemInvite(invite.code);
+      expect((await g.church.claimCandidates()).map((c) => (c.pendingId, c.name)), [(pid, '美玉')]);
+      await expectLater(g.church.answerClaim(uid, allow: true), denied());
+      await g.church.askClaim(pid);
+      expect((await g.church.claimAskOf(uid).firstWhere((a) => a != null))!.pendingName, '美玉');
+      await g.church.askClaim(null);
+      expect(await g.church.claimAskOf(uid).firstWhere((a) => a == null), isNull);
+      await g.church.askClaim(pid);
+
+      await w.signIn(Grace.pastorEmail);
+      expect((await g.church.claimAsks().firstWhere((l) => l.isNotEmpty)).single.uid, uid);
+      await g.church.answerClaim(uid, allow: true);
+      expect(await g.church.pendingMembers().first, isEmpty);
+      expect((await g.church.member(uid).first)!.serves('sunday', '司琴'), isTrue);
+      expect(await g.church.claimAsks().firstWhere((l) => l.isEmpty), isEmpty);
+    });
+
+    test('an admin says no: the ask goes, they stay apart', () async {
+      final g = await moved();
+      final invite = await g.church.createInvite(validFor: const Duration(days: 7));
+      final uid = await w.signUp('ming@example.com', name: '小明');
+      await g.cloud.redeemInvite(invite.code);
+      await g.church.askClaim(pid);
+      await w.signIn(Grace.pastorEmail);
+      await g.church.claimAsks().firstWhere((l) => l.isNotEmpty);
+      await g.church.answerClaim(uid, allow: false);
+      expect(await g.church.claimAsks().firstWhere((l) => l.isEmpty), isEmpty);
+      expect((await g.church.pendingMembers().first).single.id, pid);
+      await expectLater(g.church.answerClaim(uid, allow: false), fails(CloudErrorCode.notFound));
+    });
+
     test('only admins merge or delete them', () async {
       final g = await moved();
       await w.signIn(Grace.editorEmail);

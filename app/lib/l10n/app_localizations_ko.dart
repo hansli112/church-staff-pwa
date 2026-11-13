@@ -2015,6 +2015,56 @@ class L10nKo extends L10n {
   String get pendingRenamed => '이름을 변경했어요';
 
   @override
+  String get claimAskEntry => '봉사표에 이미 있나요?';
+
+  @override
+  String get claimAskPick => '봉사표에서 어느 분이 본인인가요?';
+
+  @override
+  String claimAskTitle(String name) {
+    return '‘$name’ 님이 본인인가요?';
+  }
+
+  @override
+  String claimAskBody(String name) {
+    return '관리자가 확인하면 ‘$name’ 님의 봉사와 소속 예배를 이어받아요';
+  }
+
+  @override
+  String get claimAskSend => '보내기';
+
+  @override
+  String claimAskWaiting(String name) {
+    return '관리자가 ‘$name’ 님이 본인인지 확인하고 있어요';
+  }
+
+  @override
+  String claimAsksCount(int count) {
+    return '$count명이 봉사표에 있다고 해요';
+  }
+
+  @override
+  String claimAskSays(String name) {
+    return '‘$name’ 님이 본인이라고 해요';
+  }
+
+  @override
+  String get claimAskConfirm => '확인';
+
+  @override
+  String claimAskConfirmLabel(String name) {
+    return '$name 확인';
+  }
+
+  @override
+  String claimAskDenyLabel(String name) {
+    return '$name 거절';
+  }
+
+  @override
+  String get claimAskDenied => '거절했어요';
+
+  @override
   String get mergePending => '계정 없는 멤버와 합치기';
 
   @override

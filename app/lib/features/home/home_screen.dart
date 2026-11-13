@@ -18,6 +18,8 @@ import '../church/church_logo.dart';
 import '../church/claims.dart';
 import '../calendar/event_sheet.dart';
 import '../me/attendance.dart';
+import '../me/no_account_picker.dart';
+import '../common/errors.dart';
 import '../me/turn_on_notifications.dart';
 import '../common/calendar_read_notice.dart';
 import 'church_link_card.dart';
@@ -261,16 +263,57 @@ class HomeScreen extends ConsumerWidget {
 }
 
 /// 「歡迎加入〈恩典堂〉」 for someone in no service yet: an admin puts them
-/// in one, and they may ask for it.
-class WelcomeWaitCard extends StatelessWidget {
+/// in one, and they may ask for it. Under it, 服事表上已經有你了嗎？ to say
+/// which of the 同工 without an account they are, or, said, that an admin
+/// is to confirm it.
+class WelcomeWaitCard extends ConsumerWidget {
   const WelcomeWaitCard({super.key, required this.churchName});
 
   final String churchName;
 
+  Future<void> _ask(BuildContext context, WidgetRef ref, List<ClaimCandidate> candidates) async {
+    final me = ref.read(meProvider).value;
+    final picked = await showAppSheet<ClaimCandidate>(
+      context,
+      expand: candidates.length > 6,
+      builder: (context) => NoAccountPicker<ClaimCandidate>(
+        title: L10n.of(context).claimAskPick,
+        name: me?.name ?? '',
+        people: candidates,
+        nameOf: (c) => c.name,
+        details: (c) => candidateDetails(L10n.of(context), c),
+        searched: (c) => [c.name],
+      ),
+    );
+    if (picked == null || !context.mounted) return;
+    final l10n = L10n.of(context);
+    final details = candidateDetails(l10n, picked);
+    final ok = await askChoice(
+      context,
+      title: l10n.claimAskTitle(picked.name),
+      message: [if (details.isNotEmpty) details, l10n.claimAskBody(picked.name)].join('\n\n'),
+      yes: l10n.claimAskSend,
+      no: l10n.cancel,
+    );
+    if (ok != true || !context.mounted) return;
+    await _send(context, ref, picked.pendingId);
+  }
+
+  Future<void> _send(BuildContext context, WidgetRef ref, String? pendingId) async {
+    try {
+      await ref.churchData.askClaim(pendingId);
+      if (pendingId != null) Haptics.success();
+    } catch (e) {
+      if (context.mounted) showToast(context, errorText(L10n.of(context), e));
+    }
+  }
+
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final l10n = L10n.of(context);
     final c = AppColors.of(context);
+    final ask = ref.watch(myClaimAskProvider).value;
+    final candidates = ask == null ? ref.watch(claimCandidatesProvider).value ?? const [] : const <ClaimCandidate>[];
     return Padding(
       padding: const EdgeInsets.fromLTRB(Space.m, Space.s, Space.m, Space.s),
       child: Material(
@@ -284,10 +327,21 @@ class WelcomeWaitCard extends StatelessWidget {
               BalancedText(l10n.welcomeWaitTitle(churchName), textAlign: TextAlign.start, style: AppText.headline),
               const SizedBox(height: Space.s),
               BalancedText(
-                l10n.welcomeWaitBody,
+                ask == null ? l10n.welcomeWaitBody : l10n.claimAskWaiting(ask.pendingName),
                 textAlign: TextAlign.start,
                 style: AppText.subheadline.copyWith(color: c.secondaryLabel),
               ),
+              if (ask != null) ...[
+                const SizedBox(height: Space.m),
+                SecondaryButton(label: l10n.cancel, expand: true, onPressed: () => _send(context, ref, null)),
+              ] else if (candidates.isNotEmpty) ...[
+                const SizedBox(height: Space.m),
+                SecondaryButton(
+                  label: l10n.claimAskEntry,
+                  expand: true,
+                  onPressed: () => _ask(context, ref, candidates),
+                ),
+              ],
             ],
           ),
         ),

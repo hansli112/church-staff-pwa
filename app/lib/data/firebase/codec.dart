@@ -317,6 +317,24 @@ JoinRequest joinRequestFromJson(String uid, Json data) => JoinRequest(
   rejectedAt: readTime(data['rejectedAt']),
 );
 
+ClaimAsk claimAskFromJson(String uid, Json data) => ClaimAsk(
+  uid: uid,
+  name: data['name'] as String? ?? '',
+  pendingId: data['pendingId'] as String? ?? '',
+  pendingName: data['pendingName'] as String? ?? '',
+);
+
+/// A pending member's duties as functions/src/claim.ts servesOf gives them.
+List<ClaimServe> claimServesFromJson(Object? serves) => [
+  for (final s in serves is List ? serves : const [])
+    if (s is Map)
+      ClaimServe(
+        day: Day.tryParse(s['dateKey'] as String?),
+        service: s['service'] as String? ?? '',
+        duty: s['duty'] as String? ?? '',
+      ),
+];
+
 Json notificationPrefsToJson(Set<NotificationKind> muted) => {'muted': mutedToJson(muted)};
 
 /// `notificationPrefs.muted`.

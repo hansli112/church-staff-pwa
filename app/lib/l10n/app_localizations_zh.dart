@@ -2011,6 +2011,56 @@ class L10nZh extends L10n {
   String get pendingRenamed => '已改名';
 
   @override
+  String get claimAskEntry => '服事表上已經有你了嗎？';
+
+  @override
+  String get claimAskPick => '服事表上哪一位是你？';
+
+  @override
+  String claimAskTitle(String name) {
+    return '你是「$name」嗎？';
+  }
+
+  @override
+  String claimAskBody(String name) {
+    return '管理員確認後，「$name」的服事和所屬聚會就會接過來';
+  }
+
+  @override
+  String get claimAskSend => '送出';
+
+  @override
+  String claimAskWaiting(String name) {
+    return '等管理員確認你是「$name」';
+  }
+
+  @override
+  String claimAsksCount(int count) {
+    return '$count 位說自己在服事表上';
+  }
+
+  @override
+  String claimAskSays(String name) {
+    return '說自己是「$name」';
+  }
+
+  @override
+  String get claimAskConfirm => '確認';
+
+  @override
+  String claimAskConfirmLabel(String name) {
+    return '確認$name';
+  }
+
+  @override
+  String claimAskDenyLabel(String name) {
+    return '$name不是';
+  }
+
+  @override
+  String get claimAskDenied => '已退回';
+
+  @override
   String get mergePending => '合併沒有帳號的同工';
 
   @override
@@ -5492,6 +5542,56 @@ class L10nZhHans extends L10nZh {
 
   @override
   String get pendingRenamed => '已改名';
+
+  @override
+  String get claimAskEntry => '事奉表上已经有你了吗？';
+
+  @override
+  String get claimAskPick => '事奉表上哪一位是你？';
+
+  @override
+  String claimAskTitle(String name) {
+    return '你是“$name”吗？';
+  }
+
+  @override
+  String claimAskBody(String name) {
+    return '管理员确认后，“$name”的事奉和所属聚会就会接过来';
+  }
+
+  @override
+  String get claimAskSend => '提交';
+
+  @override
+  String claimAskWaiting(String name) {
+    return '等管理员确认你是“$name”';
+  }
+
+  @override
+  String claimAsksCount(int count) {
+    return '$count 位说自己在事奉表上';
+  }
+
+  @override
+  String claimAskSays(String name) {
+    return '说自己是“$name”';
+  }
+
+  @override
+  String get claimAskConfirm => '确认';
+
+  @override
+  String claimAskConfirmLabel(String name) {
+    return '确认$name';
+  }
+
+  @override
+  String claimAskDenyLabel(String name) {
+    return '$name不是';
+  }
+
+  @override
+  String get claimAskDenied => '已退回';
 
   @override
   String get mergePending => '合并没有账号的同工';

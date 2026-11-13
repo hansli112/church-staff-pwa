@@ -421,6 +421,21 @@ class EchoingChurchData implements ChurchData {
   Future<void> renamePending(String id, String name) => _inner.renamePending(id, name);
 
   @override
+  Stream<List<ClaimAsk>> claimAsks() => _inner.claimAsks();
+
+  @override
+  Stream<ClaimAsk?> claimAskOf(String uid) => _inner.claimAskOf(uid);
+
+  @override
+  Future<List<ClaimCandidate>> claimCandidates() => _inner.claimCandidates();
+
+  @override
+  Future<void> askClaim(String? pendingId) => _inner.askClaim(pendingId);
+
+  @override
+  Future<void> answerClaim(String uid, {required bool allow}) => _inner.answerClaim(uid, allow: allow);
+
+  @override
   Stream<List<JoinRequest>> joinRequests() => _inner.joinRequests();
 
   @override

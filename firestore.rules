@@ -398,6 +398,14 @@ service cloud.firestore {
         allow read: if isAdmin(cid);
       }
 
+      // 認領申請: a member in no service yet saying which of the 同工
+      // without an account they are. The admins read them to say yes or
+      // no; the one asking reads their own. Only the backend writes
+      // (functions/src/claimAsks.ts).
+      match /claimAsks/{uid} {
+        allow read: if isAdmin(cid) || (isSelf(uid) && isMember(cid));
+      }
+
       match /rosters/{rosterId} {
         allow read: if isMember(cid);
 

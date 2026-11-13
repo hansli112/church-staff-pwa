@@ -1201,6 +1201,36 @@ class FirestoreChurchData implements ChurchData {
 
   @override
   Future<void> renamePending(String id, String name) => _call('renamePending', {'pendingId': id, 'name': name});
+
+  @override
+  Stream<List<ClaimAsk>> claimAsks() => _col(
+    'claimAsks',
+  ).live().map((snap) => [for (final d in snap.docs) claimAskFromJson(d.id, d.data())]).translated();
+
+  @override
+  Stream<ClaimAsk?> claimAskOf(String uid) =>
+      _col('claimAsks').doc(uid).live().map((s) => s.exists ? claimAskFromJson(uid, s.data()!) : null).translated();
+
+  @override
+  Future<List<ClaimCandidate>> claimCandidates() async {
+    final d = _asMap(await _call('claimCandidates'));
+    return [
+      for (final c in d['candidates'] as List<dynamic>? ?? const [])
+        if (c is Map)
+          ClaimCandidate(
+            pendingId: c['pendingId'] as String,
+            name: c['name'] as String? ?? '',
+            smallGroups: [for (final g in c['smallGroups'] as List<dynamic>? ?? const []) ?(g is String ? g : null)],
+            serves: claimServesFromJson(c['serves']),
+          ),
+    ];
+  }
+
+  @override
+  Future<void> askClaim(String? pendingId) => _call('askClaim', {'pendingId': pendingId});
+
+  @override
+  Future<void> answerClaim(String uid, {required bool allow}) => _call('answerClaim', {'uid': uid, 'allow': allow});
 }
 
 /// [CalendarData] of a [FirestoreChurchData].
@@ -1999,15 +2029,7 @@ class FirebaseCloudApi implements CloudApi {
             pendingId: c['pendingId'] as String,
             name: c['name'] as String? ?? '',
             byName: c['byName'] == true,
-            serves: [
-              for (final s in c['serves'] as List<dynamic>? ?? const [])
-                if (s is Map)
-                  ClaimServe(
-                    day: Day.tryParse(s['dateKey'] as String?),
-                    service: s['service'] as String? ?? '',
-                    duty: s['duty'] as String? ?? '',
-                  ),
-            ],
+            serves: claimServesFromJson(c['serves']),
           ),
     ];
   }

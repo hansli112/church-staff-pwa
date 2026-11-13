@@ -1617,6 +1617,47 @@ class PendingClaim {
   String get key => '$churchId/$pendingId';
 }
 
+/// 認領申請: member [uid] ([name]), in no service yet, says they are pending
+/// member [pendingId] ([pendingName]); an admin says yes or no
+/// (functions/src/claimAsks.ts).
+@immutable
+class ClaimAsk {
+  const ClaimAsk({required this.uid, required this.name, required this.pendingId, required this.pendingName});
+
+  final String uid;
+  final String name;
+  final String pendingId;
+  final String pendingName;
+
+  @override
+  bool operator ==(Object other) =>
+      other is ClaimAsk &&
+      other.uid == uid &&
+      other.name == name &&
+      other.pendingId == pendingId &&
+      other.pendingName == pendingName;
+
+  @override
+  int get hashCode => Object.hash(uid, name, pendingId, pendingName);
+}
+
+/// One of the church's 同工 without an account, as a member looking for
+/// themself sees them: their name, 小組 and a few duties, no email.
+@immutable
+class ClaimCandidate {
+  const ClaimCandidate({
+    required this.pendingId,
+    required this.name,
+    this.smallGroups = const [],
+    this.serves = const [],
+  });
+
+  final String pendingId;
+  final String name;
+  final List<String> smallGroups;
+  final List<ClaimServe> serves;
+}
+
 /// One of a pending member's duties: a day on a roster (their next three,
 /// or with none ahead the last three), or with no days at all, a duty of a
 /// service they are in (functions/src/claim.ts).

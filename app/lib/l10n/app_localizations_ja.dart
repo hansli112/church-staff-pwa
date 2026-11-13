@@ -2015,6 +2015,56 @@ class L10nJa extends L10n {
   String get pendingRenamed => '名前を変更しました';
 
   @override
+  String get claimAskEntry => '奉仕表にもう載っていますか？';
+
+  @override
+  String get claimAskPick => '奉仕表のどの人があなたですか？';
+
+  @override
+  String claimAskTitle(String name) {
+    return '「$name」はあなたですか？';
+  }
+
+  @override
+  String claimAskBody(String name) {
+    return '管理者が確認すると、「$name」の奉仕と所属集会が引き継がれます';
+  }
+
+  @override
+  String get claimAskSend => '送信';
+
+  @override
+  String claimAskWaiting(String name) {
+    return 'あなたが「$name」であることを管理者が確認中です';
+  }
+
+  @override
+  String claimAsksCount(int count) {
+    return '$count人が奉仕表に載っていると言っています';
+  }
+
+  @override
+  String claimAskSays(String name) {
+    return '「$name」は自分だと言っています';
+  }
+
+  @override
+  String get claimAskConfirm => '確認';
+
+  @override
+  String claimAskConfirmLabel(String name) {
+    return '$nameを確認';
+  }
+
+  @override
+  String claimAskDenyLabel(String name) {
+    return '$nameを却下';
+  }
+
+  @override
+  String get claimAskDenied => '却下しました';
+
+  @override
   String get mergePending => 'アカウントのないメンバーと統合';
 
   @override

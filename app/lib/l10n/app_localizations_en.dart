@@ -2131,6 +2131,62 @@ class L10nEn extends L10n {
   String get pendingRenamed => 'Renamed';
 
   @override
+  String get claimAskEntry => 'Already on the schedule?';
+
+  @override
+  String get claimAskPick => 'Which one is you?';
+
+  @override
+  String claimAskTitle(String name) {
+    return 'Are you “$name”?';
+  }
+
+  @override
+  String claimAskBody(String name) {
+    return 'Once an admin confirms, what “$name” serves, and their services, become yours';
+  }
+
+  @override
+  String get claimAskSend => 'Send';
+
+  @override
+  String claimAskWaiting(String name) {
+    return 'Waiting for an admin to confirm you’re “$name”';
+  }
+
+  @override
+  String claimAsksCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count people say they’re on the schedule',
+      one: '1 person says they’re on the schedule',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String claimAskSays(String name) {
+    return 'Says they’re “$name”';
+  }
+
+  @override
+  String get claimAskConfirm => 'Confirm';
+
+  @override
+  String claimAskConfirmLabel(String name) {
+    return 'Confirm $name';
+  }
+
+  @override
+  String claimAskDenyLabel(String name) {
+    return 'Decline $name';
+  }
+
+  @override
+  String get claimAskDenied => 'Declined';
+
+  @override
   String get mergePending => 'Merge with a team member without an account';
 
   @override

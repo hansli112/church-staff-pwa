@@ -62,14 +62,14 @@ export async function pendingClaims(deps: ClaimDeps, caller: Caller | null) {
 }
 
 /** One line of what a pending member serves: a day on a roster, or (no day) a duty they are down for. */
-type Serve = { dateKey?: string; service: string; duty: string };
+export type Serve = { dateKey?: string; service: string; duty: string };
 
 /**
  * A few of [pending]'s duties, for whoever is asked to know them by: their
  * next three days on the rosters, or with none ahead the last three; with no
  * days at all, the duties of the services they are in.
  */
-async function servesOf(deps: Deps, church: FirebaseFirestore.DocumentSnapshot, pending: FirebaseFirestore.DocumentSnapshot): Promise<Serve[]> {
+export async function servesOf(deps: Deps, church: FirebaseFirestore.DocumentSnapshot, pending: FirebaseFirestore.DocumentSnapshot): Promise<Serve[]> {
   const cid = church.id;
   const pid = pending.id;
   const settings = await deps.db.doc(`churches/${cid}/settings/services`).get();
@@ -260,23 +260,32 @@ export async function mergePending(deps: Deps, caller: Caller | null, data: unkn
   const pid = id(input.pendingId);
   const uid = id(input.uid);
   const { cid, caller: c } = await churchAccess(deps, caller, data, 'admin');
+  await mergeInto(deps, cid, c.uid, pid, uid);
+  return {};
+}
+
+/**
+ * Pending member [pid] merged into member [uid] of church [cid] by its
+ * admin [admin]: the member gains what the pending member had, the rosters
+ * point at them, and the pending member goes.
+ */
+export async function mergeInto(deps: Deps, cid: string, admin: string, pid: string, uid: string) {
   // Both looked up under this church only, so nothing crosses churches.
   const pending = await deps.db.runTransaction(async (tx) => {
-    const [church, admin, pending, member] = await tx.getAll(
+    const [church, me, pending, member] = await tx.getAll(
       deps.db.doc(`churches/${cid}`),
-      deps.db.doc(`churches/${cid}/members/${c.uid}`),
+      deps.db.doc(`churches/${cid}/members/${admin}`),
       deps.db.doc(`churches/${cid}/pendingMembers/${pid}`),
       deps.db.doc(`churches/${cid}/members/${uid}`),
     );
     const byName = smallGroupsByName((await tx.get(deps.db.collection(`churches/${cid}/smallGroups`))).docs);
-    if (!admin.exists) fail('permission-denied', 'permissionDenied');
+    if (!me.exists) fail('permission-denied', 'permissionDenied');
     if (!isChurchOpen(church)) churchClosed();
-    if (admin.get('role') !== 'admin') fail('permission-denied', 'permissionDenied');
+    if (me.get('role') !== 'admin') fail('permission-denied', 'permissionDenied');
     if (!pending.exists || !member.exists) fail('not-found', 'notFound');
     tx.update(member.ref, mergedMember(member, pending, byName));
     return pending;
   });
   await repoint(deps, cid, pid, uid, (pending.get('rosterIds') as string[] | undefined) ?? []);
   await dropPending(deps, cid, pending);
-  return {};
 }

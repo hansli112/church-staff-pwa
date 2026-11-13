@@ -30,6 +30,7 @@ import * as calendar from './calendar.js';
 import * as eventSync from './eventSync.js';
 import * as church from './church.js';
 import * as claim from './claim.js';
+import * as claimAsks from './claimAsks.js';
 import * as pendingMembers from './pendingMembers.js';
 import * as churchLink from './churchLink.js';
 import { askedLanguages, churchPage as churchPageHandler } from './churchPage.js';
@@ -203,6 +204,9 @@ export const pendingClaims = callable(claim.pendingClaims, claimDeps);
 export const claimPending = callable(claim.claimPending, claimDeps);
 export const mergePending = callable(claim.mergePending);
 export const renamePending = callable(claim.renamePending);
+export const claimCandidates = callable(claimAsks.claimCandidates);
+export const askClaim = callable(claimAsks.askClaim, pushDeps);
+export const answerClaim = callable(claimAsks.answerClaim);
 export const onPendingMemberDeleted = onDocumentDeleted(
   { region: REGION, document: 'churches/{cid}/pendingMembers/{pid}', retry: true },
   async (event) => {

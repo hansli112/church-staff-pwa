@@ -3,6 +3,7 @@ import { createHash } from 'node:crypto';
 import type { Auth } from 'firebase-admin/auth';
 import { FieldValue, type BulkWriter, type DocumentSnapshot } from 'firebase-admin/firestore';
 
+import { dropAsksFor } from './claimAsks.js';
 import type { Caller, Deps } from './common.js';
 
 /**
@@ -82,9 +83,11 @@ export async function forgetPending(deps: Pick<Deps, 'db'>, cid: string) {
 
 /**
  * After any pending member is deleted (an admin dropping it, too, which the
- * app does directly): its index entry goes, if it still points at it.
+ * app does directly): asks naming it go (claimAsks.ts), and its index
+ * entry, if it still points at it.
  */
 export async function onPendingMemberDeleted(deps: Pick<Deps, 'db'>, cid: string, pending: DocumentSnapshot) {
+  await dropAsksFor(deps, cid, pending.id);
   const hash = pending.get('emailHash') as string | null;
   if (!hash) return false;
   const ref = indexOf(deps, hash);
