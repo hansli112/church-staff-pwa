@@ -1439,6 +1439,9 @@ class L10nJa extends L10n {
   String get supportVerseSource => 'コリントの信徒への手紙二 8:14–15（新共同訳）';
 
   @override
+  String get supportInvite => 'どの教会も無料で使えるように、ゆとりのある方は、サーバー費用を一緒に分かち合ってください。';
+
+  @override
   String get supportTips => '1回の応援';
 
   @override

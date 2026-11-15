@@ -1438,6 +1438,9 @@ class L10nZh extends L10n {
   String get supportVerseSource => '哥林多後書 8:14–15（和合本）';
 
   @override
+  String get supportInvite => '讓每間教會都能免費使用，有餘力的話，歡迎一起分擔雲端費用。';
+
+  @override
   String get supportTips => '一次性支持';
 
   @override
@@ -4990,6 +4993,9 @@ class L10nZhHans extends L10nZh {
 
   @override
   String get supportVerseSource => '哥林多后书 8:14–15（和合本）';
+
+  @override
+  String get supportInvite => '让每间教会都能免费使用，有余力的话，欢迎一起分担云端费用。';
 
   @override
   String get supportTips => '一次性支持';

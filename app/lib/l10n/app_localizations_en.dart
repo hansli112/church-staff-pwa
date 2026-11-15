@@ -1526,6 +1526,10 @@ class L10nEn extends L10n {
   String get supportVerseSource => '2 Corinthians 8:14–15 (NIV)';
 
   @override
+  String get supportInvite =>
+      'Every church can use it for free. If you have some to spare, you’re welcome to help share the server costs.';
+
+  @override
   String get supportTips => 'One-time support';
 
   @override

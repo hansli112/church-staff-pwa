@@ -1440,6 +1440,9 @@ class L10nKo extends L10n {
   String get supportVerseSource => '고린도후서 8:14–15 (개역개정)';
 
   @override
+  String get supportInvite => '모든 교회가 무료로 쓸 수 있도록, 넉넉하시다면 서버 비용을 함께 나눠 주세요.';
+
+  @override
   String get supportTips => '일시 후원';
 
   @override

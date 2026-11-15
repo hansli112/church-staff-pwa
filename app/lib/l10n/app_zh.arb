@@ -889,6 +889,8 @@
   "support": "支持馬大別忙",
   "supportVerse": "乃要均平，就是要你們的富餘，現在可以補他們的不足，使他們的富餘，將來也可以補你們的不足，這就均平了。如經上所記：多收的也沒有餘；少收的也沒有缺。",
   "supportVerseSource": "哥林多後書 8:14–15（和合本）",
+  "supportInvite": "讓每間教會都能免費使用，有餘力的話，歡迎一起分擔雲端費用。",
+  "@supportInvite": { "description": "On the support page under the verse, above this month's support: every church uses it free, and who has some to spare is welcome to share the server costs. Spare echoes the verse's plenty; not about a church's size" },
   "supportTips": "一次性支持",
   "supportMonthly": "每月支持",
   "supportPerMonth": "{price}／月",

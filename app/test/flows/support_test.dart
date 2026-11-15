@@ -416,6 +416,17 @@ void main() {
     });
   }
 
+  testWidgets('under the verse, who has some to spare is asked to share the costs', (tester) async {
+    await pumpWithStore(tester, FakeStore(), FakeIcons());
+    GoRouter.of(tester.element(find.byType(Scaffold).first)).go('/me/support');
+    await settle(tester);
+    final verse = tester.getTopLeft(find.text('哥林多後書 8:14–15（和合本）'));
+    final ask = findShown('讓每間教會都能免費使用，有餘力的話，歡迎一起分擔雲端費用。');
+    expect(ask, findsOneWidget);
+    expect(tester.getTopLeft(ask).dy, greaterThan(verse.dy));
+    expect(tester.getTopLeft(ask).dy, lessThan(tester.getTopLeft(find.text('一次性支持')).dy));
+  });
+
   testWidgets('rating the app in its store is a way to support too', (tester) async {
     final launcher = captureLaunches();
     await pumpWithStore(tester, FakeStore(), FakeIcons());

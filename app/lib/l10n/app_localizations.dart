@@ -2656,6 +2656,12 @@ abstract class L10n {
   /// **'哥林多後書 8:14–15（和合本）'**
   String get supportVerseSource;
 
+  /// On the support page under the verse, above this month's support: every church uses it free, and who has some to spare is welcome to share the server costs. Spare echoes the verse's plenty; not about a church's size
+  ///
+  /// In zh, this message translates to:
+  /// **'讓每間教會都能免費使用，有餘力的話，歡迎一起分擔雲端費用。'**
+  String get supportInvite;
+
   /// No description provided for @supportTips.
   ///
   /// In zh, this message translates to:
