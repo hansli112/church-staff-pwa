@@ -273,7 +273,13 @@ void main() {
   ) async {
     final b = withJoy(withAttendance(seededChurch(as: staffHao, clock: eveningOf(Day(2026, 10, 16)))));
     b.attendance['grace'] = {
-      'small:joy': AttendanceRecord(pauses: [AttendancePause.off(Day(2026, 10, 9))]),
+      'small:joy': AttendanceRecord(
+        pauses: [
+          // Long over, before any page looks: dropped, so the list never fills.
+          AttendancePause(from: Day(2026, 1, 2), until: Day(2026, 2, 6)),
+          AttendancePause.off(Day(2026, 10, 9)),
+        ],
+      ),
     };
     await pumpApp(tester, b);
     await go(tester, '/home');

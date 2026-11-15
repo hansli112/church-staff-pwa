@@ -45,7 +45,6 @@ class GroupAttendanceRow extends ConsumerWidget {
     if (record == null) return const SizedBox.shrink();
     final today = ref.watch(todayProvider);
     final latest = latestAttendanceDay(group, since: since, record: record, today: today);
-    final time = attendanceTimeOf(ref, group.group);
     return ListSection(
       children: [
         ListRow(
@@ -55,7 +54,7 @@ class GroupAttendanceRow extends ConsumerWidget {
             final day? => dayLabel(l10n, day, today),
             // A 小組's page says its 聚會時間 a row above.
             null when group.group is SmallGroup => null,
-            null => attendanceNotYet(l10n, time.time, serviceWeekday: time.serviceWeekday),
+            null => attendanceNotYet(l10n, attendanceTimeOf(ref, group.group)),
           },
           onTap: () => context.push(attendancePage(group.group)),
         ),
@@ -65,11 +64,10 @@ class GroupAttendanceRow extends ConsumerWidget {
 }
 
 /// A group's 人數 page (#95), from its page, 人數總覽 or 填寫人數: its
-/// 聚會時間 and 負責回報, which who sets them changes here; when it next
-/// meets; its meetings from [attendanceWeeks] back, newest first, each
-/// with what was filled in or 未填 (never 0). Who fills them in taps one
-/// to fill it in or change it (補填), the next to mark the coming ones it
-/// will not meet (這次沒聚會 ahead, for a break), and fills in a day it
+/// 回報人數 switch (off for a break), 聚會時間 and 負責回報, which who sets
+/// them changes here; its meetings from [attendanceWeeks] back, newest
+/// first, each with what was filled in or 未填 (never 0). Who fills them
+/// in taps one to fill it in or change it (補填), and fills in a day it
 /// met off its 聚會時間. A 其他聚會's is all it has: its name, and 刪除.
 class GroupAttendanceScreen extends ConsumerWidget {
   const GroupAttendanceScreen({super.key, required this.group});
@@ -110,11 +108,7 @@ class GroupAttendanceScreen extends ConsumerWidget {
     final days = attendanceDays(group, since: since, record: record, today: today);
     final on = record.pauseOn(today) == null;
     final nameOf = attendanceGroupName(ref);
-    final time = switch ((small, gathering, service)) {
-      (final g?, _, _) => g.time,
-      (_, final g?, _) => g.time,
-      _ => record.time,
-    };
+    final time = attendanceTimeOf(ref, group.group).time;
     final fillers = [...attendanceLeads(ref, group.group), ...attendanceFillerMembers(ref, record.fillers)];
     return Scaffold(
       appBar: AppBar(title: Text(l10n.attendanceOf(group.name))),
@@ -303,12 +297,12 @@ class GroupAttendanceScreen extends ConsumerWidget {
   }
 }
 
-/// For a group with no meeting to fill in yet: its 聚會時間, or that it is
+/// For a group with no meeting to fill in yet: its 聚會時間 ([attendanceTimeOf]), or that it is
 /// not set.
-String attendanceNotYet(L10n l10n, MeetingTime? time, {int? serviceWeekday}) =>
-    serviceWeekday == null && time?.weekday == null
+String attendanceNotYet(L10n l10n, ({MeetingTime? time, int? serviceWeekday}) of) =>
+    of.serviceWeekday == null && of.time?.weekday == null
     ? l10n.attendanceNoMeets
-    : meetingTimeLabel(l10n, time, serviceWeekday: serviceWeekday);
+    : meetingTimeLabel(l10n, of.time, serviceWeekday: of.serviceWeekday);
 
 /// [group]'s 聚會時間 as the church has it: a 小組's or a 其他聚會's own, a
 /// service's on its 人數 (null: by its rosters), with the service's weekday.

@@ -118,13 +118,20 @@ Day? nextAttendanceDay(
 /// [record]'s pauses with its 回報人數 turned on ([on]) or off from
 /// [today]: off, a pause from today on; on, the one covering today ends
 /// today, or goes, begun today. The weeks it was off stay asked for
-/// nothing.
-List<AttendancePause> pausesTurned(AttendanceRecord record, {required bool on, required Day today}) => on
-    ? [
-        for (final p in record.pauses)
-          if (!p.covers(today)) p else if (p.from.isBefore(today)) AttendancePause(from: p.from, until: today),
-      ]
-    : [...record.pauses, AttendancePause.off(today)];
+/// nothing; those ended before any page looks ([attendanceWeeks]) go,
+/// so turning it off and on never fills the list.
+List<AttendancePause> pausesTurned(AttendanceRecord record, {required bool on, required Day today}) {
+  final kept = [
+    for (final p in record.pauses)
+      if (!p.until.isBefore(today.addDays(-7 * (attendanceWeeks + 1)))) p,
+  ];
+  return on
+      ? [
+          for (final p in kept)
+            if (!p.covers(today)) p else if (p.from.isBefore(today)) AttendancePause(from: p.from, until: today),
+        ]
+      : [...kept, AttendancePause.off(today)];
+}
 
 /// Whether [group] is a 小組 or a 其他聚會 whose 聚會時間 is not set yet.
 bool meetsUnset(AttendanceGroup group, Day today) =>
