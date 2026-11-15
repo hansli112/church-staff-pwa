@@ -648,6 +648,12 @@ describe('回報人數 (attendance) 與小組 (smallGroups)', () => {
     await assertFails(setDoc(g(ADMIN_A, 'x'), { ...kids, name: '' }));
     await assertFails(setDoc(g(ADMIN_A, 'x'), { ...kids, weekday: 8 }));
     await assertFails(setDoc(g(ADMIN_A, 'x'), { ...kids, extra: 1 }));
+    // Where it is in their order.
+    await assertSucceeds(updateDoc(g(OFFICE_A), { order: 1 }));
+    await assertFails(updateDoc(g(EDITOR_A), { order: 0 }));
+    await assertFails(updateDoc(g(ADMIN_A), { order: -1 }));
+    await assertFails(updateDoc(g(ADMIN_A), { order: 200 }));
+    await assertFails(updateDoc(g(ADMIN_A), { order: '1' }));
     await assertFails(deleteDoc(g(EDITOR_A)));
     await assertSucceeds(deleteDoc(g(OFFICE_A)));
   });

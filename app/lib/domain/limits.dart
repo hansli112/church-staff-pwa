@@ -83,6 +83,9 @@ abstract final class Limits {
 
   /// A member's stretches of 不能服事的日子 (#91).
   static const unavailableSpans = 100;
+
+  /// A service's 小組, or the 其他聚會, put in order by hand.
+  static const ordered = 200;
 }
 
 /// firestore.rules counts UTF-16 code units, not characters, so for a

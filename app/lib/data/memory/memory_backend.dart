@@ -996,7 +996,10 @@ class MemoryChurchData implements ChurchData {
     if (!scheduling && !me.mayEditSmallGroup(was?.service, group.service)) {
       throw const CloudException(CloudErrorCode.permissionDenied);
     }
-    if (before != null && was != null && _stored(before) != was) throw const CloudException(CloudErrorCode.conflict);
+    // Where it is was not the app's to change, nor is it a change made over the undo.
+    if (before != null && was != null && _stored(before.copyWith(order: () => was.order)) != was) {
+      throw const CloudException(CloudErrorCode.conflict);
+    }
     final members = _b.members[churchId]!;
     if (leadsBefore != null &&
         !setEquals(leadsBefore.toSet(), {
@@ -1031,6 +1034,8 @@ class MemoryChurchData implements ChurchData {
           every: group.every,
           startsOn: group.startsOn,
           monthWeeks: group.monthWeeks,
+          // Moved to another service: last there, till placed.
+          order: was?.service == group.service ? was?.order : null,
         ),
       );
       if (leads == null) return;
@@ -1050,7 +1055,26 @@ class MemoryChurchData implements ChurchData {
     every: g.weekday == null || g.monthWeeks.isNotEmpty ? 1 : g.every,
     startsOn: g.weekday == null ? null : g.startsOn,
     monthWeeks: g.weekday == null ? const [] : ([...g.monthWeeks]..sort()),
+    order: g.order,
   );
+
+  @override
+  Future<void> orderSmallGroups(String service, List<String> ids) async {
+    final me = _b.functionAccess(churchId)!;
+    if (!me.mayEditSmallGroup(service, service)) throw const CloudException(CloudErrorCode.permissionDenied);
+    if (ids.length > Limits.ordered) throw const CloudException(CloudErrorCode.unknown);
+    final groups = _b.smallGroups.putIfAbsent(churchId, () => {});
+    final now = {
+      for (final g in groups.values)
+        if (g.service == service) g.id,
+    };
+    if (ids.length != now.length || !setEquals(ids.toSet(), now)) throw const CloudException(CloudErrorCode.conflict);
+    await _b.write(() {
+      for (final (i, id) in ids.indexed) {
+        groups[id] = groups[id]!.copyWith(order: () => i);
+      }
+    });
+  }
 
   @override
   Future<void> deleteSmallGroup(String id) async {
@@ -2626,7 +2650,7 @@ class _MemoryAttendance implements AttendanceData {
   @override
   Stream<List<Gathering>> gatherings() => _c._b.watch(() {
     _c._b.requireMember(_c.churchId);
-    return [..._gatherings.values]..sort((a, b) => a.name.compareTo(b.name));
+    return [..._gatherings.values]..sort((a, b) => byOrder(a.place, b.place));
   }, equals: listEquals);
 
   @override
@@ -2640,8 +2664,27 @@ class _MemoryAttendance implements AttendanceData {
     }
     _requireValidTime(gathering.time);
     final id = gathering.id.isEmpty ? 'gathering${++_c._b._gatheringIds}' : gathering.id;
-    await _c._b.write(() => _gatherings[id] = Gathering(id: id, name: name, time: gathering.time));
+    await _c._b.write(
+      () => _gatherings[id] = Gathering(id: id, name: name, time: gathering.time, order: _gatherings[id]?.order),
+    );
     return id;
+  }
+
+  @override
+  Future<void> orderGatherings(List<String> ids) async {
+    if (!_c._b.requireMember(_c.churchId).overseesAttendance) {
+      throw const CloudException(CloudErrorCode.permissionDenied);
+    }
+    // The rules allow no further place.
+    if (ids.length > Limits.ordered) throw const CloudException(CloudErrorCode.permissionDenied);
+    if (ids.length != _gatherings.length || !setEquals(ids.toSet(), _gatherings.keys.toSet())) {
+      throw const CloudException(CloudErrorCode.conflict);
+    }
+    await _c._b.write(() {
+      for (final (i, id) in ids.indexed) {
+        _gatherings[id] = _gatherings[id]!.copyWith(order: () => i);
+      }
+    });
   }
 
   @override

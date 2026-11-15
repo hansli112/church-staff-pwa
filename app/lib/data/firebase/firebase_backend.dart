@@ -13,6 +13,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 import '../../core/languages.dart';
 import '../../domain/day.dart';
+import '../../domain/limits.dart';
 import '../../domain/models.dart';
 import '../../domain/staff_order.dart';
 import '../../domain/swap.dart';
@@ -822,6 +823,10 @@ class FirestoreChurchData implements ChurchData {
   Future<void> deleteSmallGroup(String id) => _call('editSmallGroup', {'op': 'delete', 'id': id});
 
   @override
+  Future<void> orderSmallGroups(String service, List<String> ids) =>
+      _call('editSmallGroup', {'op': 'order', 'service': service, 'ids': ids});
+
+  @override
   Stream<List<Roster>> rosters({required Day from}) {
     final merged = _MergedRosters();
     return _latestOfBoth(
@@ -1473,15 +1478,37 @@ class _FirestoreAttendance implements AttendanceData {
       .live()
       .map(
         (snap) =>
-            [for (final d in snap.docs) gatheringFromJson(d.id, d.data())]..sort((a, b) => a.name.compareTo(b.name)),
+            [for (final d in snap.docs) gatheringFromJson(d.id, d.data())]..sort((a, b) => byOrder(a.place, b.place)),
       )
       .translated();
 
   @override
   Future<String> saveGathering(Gathering gathering) async {
     final ref = gathering.id.isEmpty ? _c._col('gatherings').doc() : _c._col('gatherings').doc(gathering.id);
-    await _c._write(ref, (tx) => tx.set(ref, gatheringToJson(gathering.copyWith(name: gathering.name.trim()))));
+    await _c._transaction((tx) async {
+      // Where it is, as it is now: dragged meanwhile, it stays so.
+      final order = (await tx.get(ref)).data()?['order'];
+      tx.set(ref, {...gatheringToJson(gathering.copyWith(name: gathering.name.trim())), 'order': ?(order as int?)});
+    });
     return ref.id;
+  }
+
+  @override
+  Future<void> orderGatherings(List<String> ids) async {
+    // The rules allow no further place.
+    if (ids.length > Limits.ordered) throw const CloudException(CloudErrorCode.permissionDenied);
+    // Every one of them, as they are now: one added or gone meanwhile is a conflict.
+    final now = {for (final d in (await _c._col('gatherings').get()).docs) d.id};
+    if (ids.length != now.length || !setEquals(ids.toSet(), now)) throw const CloudException(CloudErrorCode.conflict);
+    await _c._transaction((tx) async {
+      final refs = [for (final id in ids) _c._col('gatherings').doc(id)];
+      for (final ref in refs) {
+        if (!(await tx.get(ref)).exists) throw const CloudException(CloudErrorCode.conflict);
+      }
+      for (final (i, ref) in refs.indexed) {
+        tx.update(ref, {'order': i});
+      }
+    });
   }
 
   @override

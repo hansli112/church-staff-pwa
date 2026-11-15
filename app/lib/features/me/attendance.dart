@@ -157,7 +157,7 @@ class GroupAttendanceScreen extends ConsumerWidget {
                 title: l10n.attendanceFillers,
                 value: fillers.isEmpty ? l10n.meetsNotSet : fillers.map((m) => m.name).join(l10n.listSeparator),
                 chevron: manages,
-                onTap: manages ? () => _pickFillers(context, ref, group.group, record.fillers) : null,
+                onTap: manages ? () => _pickFillers(context, ref, group, record.fillers) : null,
               ),
             ],
           ),
@@ -228,16 +228,16 @@ class GroupAttendanceScreen extends ConsumerWidget {
     });
   }
 
-  Future<void> _pickFillers(BuildContext context, WidgetRef ref, ChurchGroup group, List<String> was) async {
-    final leads = attendanceLeads(ref, group);
+  Future<void> _pickFillers(BuildContext context, WidgetRef ref, AttendanceGroup group, List<String> was) async {
+    final leads = attendanceLeads(ref, group.group);
     final picked = await showAppSheet<List<String>>(
       context,
       expand: true,
-      builder: (_) => _FillersSheet(leads: leads, picked: was),
+      builder: (_) => _FillersSheet(group: group, leads: leads, picked: was),
     );
     if (picked == null || listEquals(picked, was) || !context.mounted) return;
     final attendance = ref.churchData.attendance;
-    await _save(context, () => attendance.saveFillers(group.key, picked));
+    await _save(context, () => attendance.saveFillers(group.group.key, picked));
   }
 
   Future<void> _renameGathering(BuildContext context, WidgetRef ref, Gathering gathering) async {
@@ -626,9 +626,13 @@ List<Member> attendanceFillerMembers(WidgetRef ref, List<String> uids) {
 }
 
 /// 負責回報: anyone in the church ticked, besides [leads], who always are.
+/// Who is asked comes first, the leads fixed in; then the group's 同工,
+/// whom it asks most; anyone else by searching. With no 同工 to the group
+/// (a 其他聚會), or too few people to search, everyone else is listed after.
 class _FillersSheet extends ConsumerStatefulWidget {
-  const _FillersSheet({required this.leads, required this.picked});
+  const _FillersSheet({required this.group, required this.leads, required this.picked});
 
+  final AttendanceGroup group;
   final List<Member> leads;
   final List<String> picked;
 
@@ -640,6 +644,9 @@ class _FillersSheetState extends ConsumerState<_FillersSheet> {
   late final _picked = [...widget.picked];
   var _query = '';
 
+  /// More than this many to pick from, and there is a search field.
+  static const _searchFrom = 8;
+
   @override
   Widget build(BuildContext context) {
     final l10n = L10n.of(context);
@@ -648,11 +655,35 @@ class _FillersSheetState extends ConsumerState<_FillersSheet> {
       for (final m in ref.watch(membersProvider).value ?? const <Member>[])
         if (!leads.contains(m.uid)) m,
     ]..sort((a, b) => a.name.compareTo(b.name));
-    final shown = [
+    final searches = everyone.length > _searchFrom;
+    final staff = [
       for (final m in everyone)
-        if (_query.isEmpty || matchesSearch(m.name, _query)) m,
+        if (!widget.picked.contains(m.uid) && m.isIn(widget.group.group)) m,
+    ];
+    // Everyone else is listed too with too few to search, or no 同工 to list.
+    final others = searches && staff.isNotEmpty
+        ? const <Member>[]
+        : [
+            for (final m in everyone)
+              if (!widget.picked.contains(m.uid) && !staff.contains(m)) m,
+          ];
+    // Asked when it opened, or ticked from a search: they stay, ticked or not.
+    final asked = [
+      for (final m in everyone)
+        if (widget.picked.contains(m.uid) || _picked.contains(m.uid) && !staff.contains(m) && !others.contains(m)) m,
+    ];
+    final found = [
+      for (final m in everyone)
+        if (matchesSearch(m.name, _query)) m,
     ];
     final full = _picked.length >= Limits.attendanceFillers;
+    Widget row(Member m) => ListRow(
+      title: m.name,
+      selected: _picked.contains(m.uid),
+      onTap: !_picked.contains(m.uid) && full
+          ? null
+          : () => setState(() => _picked.contains(m.uid) ? _picked.remove(m.uid) : _picked.add(m.uid)),
+    );
     return UnsavedChanges(
       changed: () => !listEquals(_picked, widget.picked),
       child: SafeArea(
@@ -663,7 +694,7 @@ class _FillersSheetState extends ConsumerState<_FillersSheet> {
               title: l10n.attendanceFillers,
               actions: [SecondaryButton(label: l10n.done, onPressed: () => Navigator.pop(context, _picked))],
             ),
-            if (everyone.length > 8)
+            if (searches)
               Padding(
                 padding: const EdgeInsets.symmetric(horizontal: Space.m),
                 child: SearchField(hint: l10n.searchMembers, onChanged: (q) => setState(() => _query = q.trim())),
@@ -671,27 +702,30 @@ class _FillersSheetState extends ConsumerState<_FillersSheet> {
             Expanded(
               child: ListView(
                 children: [
-                  if (widget.leads.isNotEmpty && _query.isEmpty)
-                    ListSection(
-                      children: [
-                        for (final m in widget.leads)
-                          ListRow(title: m.name, value: _leadOf(l10n, m), selected: true, chevron: false),
-                      ],
-                    ),
-                  ListSection(
-                    children: [
-                      for (final m in shown)
-                        ListRow(
-                          title: m.name,
-                          selected: _picked.contains(m.uid),
-                          onTap: !_picked.contains(m.uid) && full
-                              ? null
-                              : () => setState(
-                                  () => _picked.contains(m.uid) ? _picked.remove(m.uid) : _picked.add(m.uid),
-                                ),
-                        ),
-                    ],
-                  ),
+                  if (_query.isNotEmpty)
+                    ListSection(children: [for (final m in found) row(m)])
+                  else ...[
+                    if (widget.leads.isNotEmpty || asked.isNotEmpty)
+                      ListSection(
+                        children: [
+                          for (final m in widget.leads)
+                            ListRow(
+                              title: m.name,
+                              value: _leadOf(l10n, m),
+                              selected: true,
+                              dimmed: true,
+                              chevron: false,
+                            ),
+                          for (final m in asked) row(m),
+                        ],
+                      ),
+                    if (staff.isNotEmpty)
+                      ListSection(
+                        header: l10n.groupStaffTitle(widget.group.name),
+                        children: [for (final m in staff) row(m)],
+                      ),
+                    if (others.isNotEmpty) ListSection(children: [for (final m in others) row(m)]),
+                  ],
                 ],
               ),
             ),

@@ -1,7 +1,7 @@
 import { FieldValue, type DocumentSnapshot, type Transaction } from 'firebase-admin/firestore';
 import { isDeepStrictEqual } from 'node:util';
 
-import { accessIn, churchAccess } from './access.js';
+import { accessIn, churchAccess, type ChurchAccess } from './access.js';
 import { fail, record, strings, text, type Caller, type Deps } from './common.js';
 import { weekdayOf } from './attendance.js';
 import { identitiesOf, withIdentities, type Identity } from './identities.js';
@@ -33,12 +33,16 @@ function setLead(tx: Transaction, m: DocumentSnapshot, id: string, lead: boolean
  * 'delete', id }` closes it, taking it off its 小組長 and 同工. Its 人數
  * stay. Returns its id. A change saying what it was made over, `before`
  * (the 小組 as `group`) or `leadsBefore` (its 小組長), is refused
- * (conflict) once that has changed: an undo overwrites no one.
+ * (conflict) once that has changed: an undo overwrites no one. `{
+ * churchId, op: 'order', service, ids }` puts the service's 小組 in that
+ * order (`order`, 0 on), refused (conflict) unless `ids` are all of them;
+ * saving one keeps its place, which `before` leaves out.
  */
 export async function editSmallGroup(deps: Deps, caller: Caller | null, data: unknown) {
   const access = await churchAccess(deps, caller, data, 'member');
   const { cid } = access;
   const input = record(data);
+  if (input.op === 'order') return orderSmallGroups(deps, access, input);
   if (input.op !== 'save' && input.op !== 'delete') fail('invalid-argument', 'unknown');
   const saving = input.op === 'save';
   const group = saving ? record(input.group) : {};
@@ -70,7 +74,8 @@ export async function editSmallGroup(deps: Deps, caller: Caller | null, data: un
       && fields.name === was.get('name') && fields.service === before
       && powers.schedulesSmallGroup({ kind: 'small', id: at.id, service: before });
     if (!scheduling && !powers.mayEditSmallGroup(before, after)) fail('permission-denied', 'permissionDenied');
-    if (seen && !isDeepStrictEqual(seen, was.data())) fail('aborted', 'conflict');
+    const { order, ...stored } = was.data() ?? {};
+    if (seen && !isDeepStrictEqual(seen, stored)) fail('aborted', 'conflict');
     if (after !== null && !((services.get('services') as { id: string }[] | undefined) ?? []).some((s) => s.id === after)) {
       fail('invalid-argument', 'unknown');
     }
@@ -95,7 +100,8 @@ export async function editSmallGroup(deps: Deps, caller: Caller | null, data: un
       for (const p of staffWithout!.docs) tx.update(p.ref, out);
       return;
     }
-    tx.set(at, fields!);
+    // Moved to another service: last there, till placed.
+    tx.set(at, order === undefined || after !== before ? fields! : { ...fields!, order });
     tx.set(root.collection('settings').doc('smallGroups'), { ids: FieldValue.arrayUnion(at.id) }, { merge: true });
     if (leads) {
       for (const m of nowLeads.docs) if (!leads.includes(m.id)) setLead(tx, m, at.id, false);
@@ -103,6 +109,27 @@ export async function editSmallGroup(deps: Deps, caller: Caller | null, data: un
     }
   });
   return { id: at.id };
+}
+
+/** editSmallGroup's `order`: [input].ids, every 小組 of [input].service, in that order. */
+async function orderSmallGroups(deps: Deps, access: ChurchAccess, input: Record<string, unknown>) {
+  const { service, ids } = input;
+  if (typeof service !== 'string' || !/^[A-Za-z0-9_-]{1,64}$/.test(service) || !Array.isArray(ids)
+      || ids.length > LIMITS.ordered || ids.some((id) => typeof id !== 'string' || !/^[A-Za-z0-9_-]{1,64}$/.test(id))) {
+    fail('invalid-argument', 'unknown');
+  }
+  const root = deps.db.doc(`churches/${access.cid}`);
+  await deps.db.runTransaction(async (tx) => {
+    const { powers } = await accessIn(tx, deps, access);
+    if (!powers.mayEditSmallGroup(service, service)) fail('permission-denied', 'permissionDenied');
+    const now = await tx.get(root.collection('smallGroups').where('service', '==', service));
+    const named = new Set(ids as string[]);
+    if (named.size !== ids.length || named.size !== now.size || now.docs.some((g) => !named.has(g.id))) {
+      fail('aborted', 'conflict');
+    }
+    (ids as string[]).forEach((id, i) => tx.update(root.collection('smallGroups').doc(id), { order: i }));
+  });
+  return {};
 }
 
 /** What a 小組 is, as the app sends it, checked. */

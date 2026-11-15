@@ -650,13 +650,11 @@ class GroupScreen extends ConsumerWidget {
             ),
           // Above the 同工, which may be many.
           if (serviceSmallGroups.isNotEmpty || opensSmall)
-            box(
-              _SmallGroupsSection(
-                service: group.id,
-                smallGroups: serviceSmallGroups,
-                opens: opensSmall,
-                attendanceOn: attendanceOn,
-              ),
+            _SmallGroupsSection(
+              service: group.id,
+              smallGroups: serviceSmallGroups,
+              opens: opensSmall,
+              attendanceOn: attendanceOn,
             ),
           if (attendance != null) box(GroupAttendanceRow(group: attendance)),
           // A service's 同工 may be a hundred: counted here, listed on
@@ -963,36 +961,49 @@ class _SmallGroupsSectionState extends ConsumerState<_SmallGroupsSection> {
   /// The names of the 小組 being made, until saved.
   final _adding = <String>[];
 
+  /// A sliver: who opens them drags them in order, as everywhere lists them.
   @override
   Widget build(BuildContext context) {
     final l10n = L10n.of(context);
-    return ListSection(
-      header: l10n.smallGroups,
-      children: [
-        for (final g in widget.smallGroups)
+    Widget row(SmallGroupDetails g, [Widget? handle]) => ListRow(
+      title: g.name,
+      subtitle: widget.attendanceOn ? smallGroupMeetsLabel(l10n, g) : null,
+      trailing: handle,
+      chevron: true,
+      onTap: () => context.push('/me/groups/small/${g.id}'),
+    );
+    final after = [
+      for (final name in _adding)
+        if (!widget.smallGroups.any((g) => g.name == name))
           ListRow(
-            title: g.name,
-            subtitle: widget.attendanceOn ? smallGroupMeetsLabel(l10n, g) : null,
-            onTap: () => context.push('/me/groups/small/${g.id}'),
-          ),
-        for (final name in _adding)
-          if (!widget.smallGroups.any((g) => g.name == name))
-            ListRow(
-              title: name,
-              chevron: false,
-              trailing: Semantics(
-                label: l10n.saving,
-                child: const SizedBox.square(dimension: 18, child: CircularProgressIndicator.adaptive(strokeWidth: 2)),
-              ),
-            ),
-        if (widget.opens)
-          ListRow(
-            title: l10n.addSmallGroup,
-            leading: const Icon(Symbols.add_rounded),
+            title: name,
             chevron: false,
-            onTap: _add,
+            trailing: Semantics(
+              label: l10n.saving,
+              child: const SizedBox.square(dimension: 18, child: CircularProgressIndicator.adaptive(strokeWidth: 2)),
+            ),
           ),
-      ],
+      if (widget.opens)
+        ListRow(title: l10n.addSmallGroup, leading: const Icon(Symbols.add_rounded), chevron: false, onTap: _add),
+    ];
+    if (!widget.opens) {
+      return SliverToBoxAdapter(
+        child: ListSection(header: l10n.smallGroups, children: [for (final g in widget.smallGroups) row(g), ...after]),
+      );
+    }
+    return ReorderableSection<SmallGroupDetails>(
+      header: l10n.smallGroups,
+      items: widget.smallGroups,
+      keyOf: (g) => g.id,
+      row: row,
+      onReorder: (next) async {
+        try {
+          await ref.churchData.orderSmallGroups(widget.service, [for (final g in next) g.id]);
+        } catch (e) {
+          if (mounted) showToast(this.context, saveErrorText(l10n, e));
+        }
+      },
+      after: after,
     );
   }
 

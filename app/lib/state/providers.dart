@@ -93,12 +93,17 @@ final servicesProvider = StreamProvider<ServiceSettings>(
 /// The church's 事工 (#82).
 final ministriesProvider = StreamProvider<MinistrySettings>((ref) => openChurch(ref).ministries());
 
-/// The church's 小組 (#85), by name.
-final smallGroupsProvider = StreamProvider<List<SmallGroupDetails>>(
-  (ref) => openChurch(ref).smallGroups().map((list) => [...list]..sort((a, b) => a.name.compareTo(b.name))),
-);
+/// The church's 小組 (#85), as it lists them (inChurchOrder): by service,
+/// then in the order dragged.
+final smallGroupsProvider = StreamProvider<List<SmallGroupDetails>>((ref) {
+  // The services' order, as text: a list read anew would be another each time.
+  final services = ref.watch(
+    servicesProvider.select((s) => [for (final x in s.value?.services ?? const <Service>[]) x.id].join('\u0000')),
+  );
+  return openChurch(ref).smallGroups().map((list) => list.inChurchOrder(services.split('\u0000')));
+});
 
-/// The church's 其他聚會 (回報人數), by name.
+/// The church's 其他聚會 (回報人數), in the order dragged (byOrder).
 final gatheringsProvider = StreamProvider<List<Gathering>>((ref) => openChurch(ref).attendance.gatherings());
 
 /// The church's groups by name (ChurchGroups); null until they are loaded.

@@ -220,9 +220,9 @@ Day weekOf(Day day) => day.addDays(DateTime.monday - day.weekday);
 /// [day], and its [next] meeting (null: a 小組 with no 聚會時間).
 typedef AttendanceRow = ({AttendanceGroup group, Day? day, AttendanceDay? value, Day? next});
 
-/// One week of 人數總覽 (#95), from [monday]: the meetings in it, by day, a
-/// day's services before its 小組, those 沒聚會 after; this week, the
-/// groups yet to meet in it, by when, and a 小組 with no 聚會時間, last.
+/// One week of 人數總覽 (#95), from [monday]: the meetings in it, and this
+/// week the groups yet to meet in it, each group in the church's order
+/// (attendanceGroupsProvider): a service before its 小組.
 @immutable
 class AttendanceWeek {
   const AttendanceWeek(this.monday, this.rows);
@@ -253,9 +253,8 @@ class AttendanceWeek {
     return counts.isEmpty ? null : counts.reduce((a, b) => a + b);
   }
 
-  /// Its rows by the service they are of, a service's and its 小組',
-  /// each in the order [rows] has them, as [groups] has the services;
-  /// the 其他聚會 last, with no service.
+  /// Its rows by the service they are of, the service's own first, then
+  /// its 小組', as [groups] has them; the 其他聚會 last, with no service.
   List<({String? service, List<AttendanceRow> rows})> sections(List<AttendanceGroup> groups) {
     String? serviceOf(AttendanceRow r) => switch (r.group.group) {
       ServiceGroup(:final id) => id,
@@ -333,50 +332,34 @@ final attendanceOverviewProvider = Provider.autoDispose.family<AttendanceWeek?, 
   return attendanceWeek(records, monday: monday, since: since, today: ref.watch(todayProvider));
 });
 
-/// The week of [records] from [monday]: what [AttendanceWeek] lists. A
-/// meeting today waits to be filled in before it is listed, else each
-/// morning would open on 未填; this week lists it as when it next meets.
-/// None for a service with no roster ahead, nor, but those filled in, for
-/// a group an older app paused.
+/// The week of [records] from [monday]: what [AttendanceWeek] lists, in
+/// the order of [records], so the same each week; a group's meetings by
+/// day. A meeting today is listed 未填 till filled in; this week, one yet
+/// to meet is listed as when it next meets. None for a service with no
+/// roster ahead, nor, but those filled in, for a group an older app paused.
 AttendanceWeek attendanceWeek(
   List<AttendanceOf> records, {
   required Day monday,
   required Day since,
   required Day today,
 }) {
-  final met = <AttendanceRow>[];
-  final none = <AttendanceRow>[];
-  final ahead = <AttendanceRow>[];
+  final rows = <AttendanceRow>[];
   for (final (group: g, :record) in records) {
     var listed = false;
     for (var d = monday; d.isBefore(monday.addDays(7)) && !d.isAfter(today); d = d.addDays(1)) {
       final value = record.days[d];
-      if (value == null && (d == today || !_due(g, since: since, record: record, day: d))) continue;
-      (value?.none ?? false ? none : met).add((group: g, day: d, value: value, next: null));
+      if (value == null && !_due(g, since: since, record: record, day: d)) continue;
+      rows.add((group: g, day: d, value: value, next: null));
       listed = true;
     }
     if (listed || monday != weekOf(today) || record.pauseOn(today) != null) continue;
     // Only what is still to meet this week: one that does not (隔週, no
     // roster, 這次沒聚會) is not listed.
     if (nextAttendanceDay(g, since: since, record: record, today: today) case final next?) {
-      if (next.isBefore(monday.addDays(7))) ahead.add((group: g, day: null, value: null, next: next));
+      if (next.isBefore(monday.addDays(7))) rows.add((group: g, day: null, value: null, next: next));
     } else if (meetsUnset(g, today)) {
-      ahead.add((group: g, day: null, value: null, next: null));
+      rows.add((group: g, day: null, value: null, next: null));
     }
   }
-  int kind(AttendanceRow r) => r.group.group is ServiceGroup ? 0 : 1;
-  int byDay(Day? a, Day? b) => switch ((a, b)) {
-    (final a?, final b?) => a.compareTo(b),
-    (null, null) => 0,
-    (null, _) => 1,
-    (_, null) => -1,
-  };
-  int order(AttendanceRow a, AttendanceRow b) => switch (byDay(a.day ?? a.next, b.day ?? b.next)) {
-    0 => switch (kind(a) - kind(b)) {
-      0 => a.group.name.compareTo(b.group.name),
-      final k => k,
-    },
-    final c => c,
-  };
-  return AttendanceWeek(monday, [...met..sort(order), ...none..sort(order), ...ahead..sort(order)]);
+  return AttendanceWeek(monday, rows);
 }

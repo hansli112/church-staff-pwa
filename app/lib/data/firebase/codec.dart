@@ -146,9 +146,10 @@ SmallGroupDetails smallGroupFromJson(String id, Json data) => SmallGroupDetails(
   every: data['every'] == 2 ? 2 : 1,
   startsOn: Day.tryParse(data['startsOn'] as String?),
   monthWeeks: _monthWeeks(data['monthWeeks']),
+  order: _order(data),
 );
 
-/// What editSmallGroup takes of [g].
+/// What editSmallGroup takes of [g]; where it is, it keeps.
 Json smallGroupToJson(SmallGroupDetails g) => {
   if (g.id.isNotEmpty) 'id': g.id,
   'name': g.name,
@@ -182,9 +183,20 @@ Json meetingTimeToJson(MeetingTime t) => {
 };
 
 /// churches/{cid}/gatherings/{id}: a 其他聚會.
-Gathering gatheringFromJson(String id, Json data) =>
-    Gathering(id: id, name: data['name'] as String? ?? '', time: meetingTimeFromJson(data));
+Gathering gatheringFromJson(String id, Json data) => Gathering(
+  id: id,
+  name: data['name'] as String? ?? '',
+  time: meetingTimeFromJson(data),
+  order: _order(data),
+);
 
+/// Where a 小組 or a 其他聚會 is in its list, as dragged; null for one never placed.
+int? _order(Json data) => switch (data['order']) {
+  final int o => o,
+  _ => null,
+};
+
+/// What saving [g] writes: not where it is, which only orderGatherings writes.
 Json gatheringToJson(Gathering g) => {'name': g.name, ...meetingTimeToJson(g.time)};
 
 /// attendance/{key} of a service: its 聚會時間 when not by its rosters;

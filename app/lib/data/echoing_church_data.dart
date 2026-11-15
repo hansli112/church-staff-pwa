@@ -506,6 +506,9 @@ class EchoingChurchData implements ChurchData {
   Future<void> deleteSmallGroup(String id) => _inner.deleteSmallGroup(id);
 
   @override
+  Future<void> orderSmallGroups(String service, List<String> ids) => _inner.orderSmallGroups(service, ids);
+
+  @override
   Future<void> setTimeZone(ChurchTimeZone timeZone) => _inner.setTimeZone(timeZone);
 
   @override

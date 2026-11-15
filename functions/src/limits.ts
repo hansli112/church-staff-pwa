@@ -53,6 +53,8 @@ export const LIMITS = {
   monthWeeks: 4,
   /** A member's stretches of 不能服事的日子 (#91). */
   unavailableSpans: 100,
+  /** A service's 小組, or the 其他聚會, put in order by hand. */
+  ordered: 200,
 } as const;
 
 /**

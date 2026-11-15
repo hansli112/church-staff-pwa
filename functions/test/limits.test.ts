@@ -86,6 +86,10 @@ describe('limits', () => {
     assert.ok(rules.includes(`request.resource.data.count <= ${LIMITS.attendanceCount}`));
   });
 
+  test("firestore.rules caps a 其他聚會's place at the limit", () => {
+    assert.ok(rules.includes(`request.resource.data.get('order', 0) < ${LIMITS.ordered}`));
+  });
+
   test('limits.dart has the same rules factor', () => {
     assert.equal(Number(dart.match(/^const rulesSizeFactor = (\d+);$/m)?.[1]), RULES_SIZE_FACTOR);
   });

@@ -506,13 +506,16 @@ service cloud.firestore {
       }
 
       // 其他聚會: a group whose 人數 are asked for and nothing else
-      // (禱告會, 長者共餐), its name and 聚會時間, as a 小組's. Everyone reads
-      // them, for their names; admins and 行政 make them.
+      // (禱告會, 長者共餐), its name and 聚會時間, as a 小組's, and where it is
+      // in their order (`order`, 0 on). Everyone reads them, for their
+      // names; admins and 行政 make and order them.
       match /gatherings/{id} {
         allow read: if isMember(cid);
         allow delete: if isMember(cid) && inGroup(cid, 'roster-editors');
         allow create, update: if isMember(cid) && inGroup(cid, 'roster-editors')
-          && request.resource.data.keys().hasOnly(['name', 'weekday', 'every', 'startsOn', 'monthWeeks'])
+          && request.resource.data.keys().hasOnly(['name', 'weekday', 'every', 'startsOn', 'monthWeeks', 'order'])
+          && request.resource.data.get('order', 0) is int
+          && request.resource.data.get('order', 0) >= 0 && request.resource.data.get('order', 0) < 200
           && request.resource.data.name is string
           && request.resource.data.name.size() >= 1 && request.resource.data.name.size() <= 160
           && (!('weekday' in request.resource.data)

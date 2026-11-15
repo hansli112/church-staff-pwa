@@ -918,6 +918,53 @@ void contractTests(Future<ContractWorld> Function() open) {
       expect((await g.church.smallGroups().first).single.name, '喜樂');
     });
 
+    test("a service's 負責人 puts its 小組 in order, kept through saves; never another's or a partial list", () async {
+      final g = await Grace.open(w);
+      await w.signIn(Grace.editorEmail);
+      final joy = await g.church.saveSmallGroup(const SmallGroupDetails(id: '', name: '喜樂小組', service: 'sunday'));
+      final peace = await g.church.saveSmallGroup(const SmallGroupDetails(id: '', name: '平安小組', service: 'sunday'));
+      await g.church.orderSmallGroups('sunday', [peace, joy]);
+      List<(String, int?)> placed(List<SmallGroupDetails> list) => [
+        for (final s in [...list]..sort((a, b) => byOrder(a.place, b.place))) (s.id, s.order),
+      ];
+      expect(placed(await g.church.smallGroups().first), [(peace, 0), (joy, 1)]);
+      final shown = (await g.church.smallGroups().first).firstWhere((s) => s.id == joy);
+      await g.church.saveSmallGroup(
+        shown.copyWith(name: '喜樂'),
+        before: shown.copyWith(order: () => null),
+      );
+      expect(placed(await g.church.smallGroups().first), [(peace, 0), (joy, 1)], reason: 'saving one keeps its place');
+      await expectLater(g.church.orderSmallGroups('sunday', [joy]), fails(CloudErrorCode.conflict));
+      await w.signIn(Grace.pastorEmail);
+      await g.church.saveSmallGroup(SmallGroupDetails(id: peace, name: '平安小組', service: 'youth'));
+      expect(
+        (await g.church.smallGroups().first).firstWhere((s) => s.id == peace).order,
+        isNull,
+        reason: 'moved to another service: last there',
+      );
+      await w.signIn(Grace.editorEmail);
+      await expectLater(g.church.orderSmallGroups('youth', const []), denied());
+      await w.signIn(Grace.meiEmail);
+      await expectLater(g.church.orderSmallGroups('sunday', [joy, peace]), denied());
+    });
+
+    test('admins put the 其他聚會 in order, kept through saves', () async {
+      final g = await Grace.open(w);
+      final meal = await g.church.attendance.saveGathering(const Gathering(id: '', name: '長者共餐'));
+      final kids = await g.church.attendance.saveGathering(const Gathering(id: '', name: '兒童學習天地'));
+      await g.church.attendance.orderGatherings([meal, kids]);
+      List<String> names(List<Gathering> list) => [for (final x in list) x.name];
+      expect(names(await g.church.attendance.gatherings().first), ['長者共餐', '兒童學習天地']);
+      await g.church.attendance.saveGathering(Gathering(id: meal, name: '共餐'));
+      final now = await g.church.attendance.gatherings().first;
+      expect([for (final x in now) (x.name, x.order)], [('共餐', 0), ('兒童學習天地', 1)]);
+      await expectLater(g.church.attendance.orderGatherings([kids]), fails(CloudErrorCode.conflict));
+      await g.church.attendance.deleteGathering(kids);
+      await expectLater(g.church.attendance.orderGatherings([kids, meal]), fails(CloudErrorCode.conflict));
+      await w.signIn(Grace.meiEmail);
+      await expectLater(g.church.attendance.orderGatherings([meal]), denied());
+    });
+
     test('who a group asks fills in its 人數 and finds it; 其他聚會 are made by admins, read by all', () async {
       final g = await Grace.open(w);
       await g.church.attendance.saveSince(Day(2026, 10, 1));

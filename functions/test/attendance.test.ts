@@ -112,6 +112,34 @@ describe('小組 (#85)', () => {
     );
   });
 
+  test("a service's 負責人 puts its 小組 in order; saving one keeps its place, and an older app's undo still works", async () => {
+    await church();
+    const id = await joy();
+    const { id: peace } = await editSmallGroup(deps, caller('sundayLead'), {
+      churchId: 'C1', op: 'save', group: { name: '平安小組', service: 'sunday' },
+    });
+    const order = (who: string, ids: string[], service = 'sunday') =>
+      editSmallGroup(deps, caller(who), { churchId: 'C1', op: 'order', service, ids });
+    await order('sundayLead', [peace, id]);
+    const at = async (g: string) => (await db.doc(`churches/C1/smallGroups/${g}`).get()).get('order');
+    assert.deepEqual([await at(peace), await at(id)], [0, 1]);
+
+    const shown = { id, name: '喜樂小組', service: 'sunday', weekday: 5, every: 2, startsOn: '2026-10-02' };
+    await editSmallGroup(deps, caller('sundayLead'), { churchId: 'C1', op: 'save', group: { ...shown, name: '喜樂' }, before: shown });
+    assert.equal(await at(id), 1, 'kept; and `before`, without it, is no conflict');
+    await editSmallGroup(deps, caller('joyLead'), { churchId: 'C1', op: 'save', group: { ...shown, name: '喜樂', weekday: 3, startsOn: null } });
+    assert.equal(await at(id), 1, 'its 小組長 setting when it meets keeps it too');
+
+    await rejectsWith(order('joyLead', [id, peace]), 'permissionDenied');
+    await rejectsWith(order('youthLead', [id, peace]), 'permissionDenied');
+    await rejectsWith(order('sundayLead', [id]), 'conflict');
+    await rejectsWith(order('sundayLead', [id, peace, 'gone']), 'conflict');
+    await rejectsWith(order('sundayLead', [id, id]), 'conflict');
+    await rejectsWith(order('sundayLead', 'nope' as unknown as string[]), 'unknown');
+    await editSmallGroup(deps, caller('pastor'), { churchId: 'C1', op: 'save', group: { id: peace, name: '平安小組', service: 'youth' } });
+    assert.equal(await at(peace), undefined, 'moved to another service: last there');
+  });
+
   test('its 小組長 sets when it meets, and nothing else', async () => {
     await church();
     const id = await joy();

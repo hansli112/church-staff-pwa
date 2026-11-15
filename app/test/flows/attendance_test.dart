@@ -55,6 +55,21 @@ Future<void> scrollToShow(WidgetTester tester, Finder finder) async {
   await settle(tester);
 }
 
+/// Drags [text]'s row by its handle [rows] rows down (up when negative).
+Future<void> dragRow(WidgetTester tester, String text, int rows) async {
+  final row = find.ancestor(of: find.text(text).last, matching: find.byType(ListRow)).first;
+  final handle = find.descendant(of: row, matching: find.byIcon(Symbols.drag_handle_rounded));
+  final height = tester.getSize(row).height;
+  final gesture = await tester.startGesture(tester.getCenter(handle));
+  await tester.pump(const Duration(milliseconds: 100));
+  await gesture.moveBy(Offset(0, rows.sign * 20.0));
+  await tester.pump(const Duration(milliseconds: 100));
+  await gesture.moveBy(Offset(0, height * (rows + rows.sign * 0.8)));
+  await tester.pump(const Duration(milliseconds: 500));
+  await gesture.up();
+  await settle(tester);
+}
+
 Future<void> go(WidgetTester tester, String path) async {
   GoRouter.of(tester.element(find.byType(Scaffold).first)).go(path);
   await settle(tester);
@@ -388,8 +403,8 @@ void main() {
       expect(inRow('青年崇拜', '未填'), findsOneWidget, reason: '每週都填人數, no roster');
       expect(find.text('平安小組'), findsNothing, reason: 'on a break');
       double at(Finder f) => tester.getTopLeft(f).dy;
-      final ys = [at(inRow('喜樂小組', '未填')), at(inRow('主日崇拜', '120 人')), at(inRow('青年崇拜', '未填'))];
-      expect(ys, orderedEquals([...ys]..sort()), reason: 'a service with its 小組, by day; then the next service');
+      final ys = [at(inRow('主日崇拜', '120 人')), at(inRow('喜樂小組', '未填')), at(inRow('青年崇拜', '未填'))];
+      expect(ys, orderedEquals([...ys]..sort()), reason: 'a service, then its 小組, whatever the day; then the next');
       IconButton arrow(IconData icon) => tester.widget<IconButton>(find.widgetWithIcon(IconButton, icon));
       expect(arrow(Symbols.chevron_left_rounded).onPressed, isNull, reason: '回報人數 came on that week');
 
@@ -397,11 +412,15 @@ void main() {
       await settle(tester);
       expect(find.text('10月5日 – 10月11日'), findsOneWidget);
       expect(inRow('喜樂小組', '未填'), findsOneWidget, reason: '10/9');
-      expect(find.text('還有 2 個未填'), findsOneWidget, reason: "today's 主日崇拜 waits to be filled in");
+      expect(inRow('主日崇拜', '未填'), findsOneWidget, reason: 'today, still to fill in');
+      expect(inRow('主日崇拜', '提醒'), findsNothing, reason: "today's reminder is still to come");
+      expect(inRow('喜樂小組', '提醒'), findsOneWidget);
+      expect(find.text('還有 3 個未填'), findsOneWidget);
+      expect(at(inRow('主日崇拜', '未填')), lessThan(at(inRow('喜樂小組', '未填'))), reason: 'the same order every week');
       expect(arrow(Symbols.chevron_right_rounded).onPressed, isNull, reason: 'this week is the last');
     });
 
-    testWidgets('a week adds up its services and its 小組 apart, a 聯合小組 once, and lists 沒聚會 last', (tester) async {
+    testWidgets('a week adds up its services and its 小組 apart, a 聯合小組 once, and greys 沒聚會', (tester) async {
       final b = church();
       b.attendance['grace'] = {
         'service:sunday': AttendanceRecord(days: {Day(2026, 10, 4): const AttendanceDay.count(120)}),
@@ -563,6 +582,80 @@ void main() {
       await tapText(tester, '完成');
       expect(b.attendance['grace']!['service:sunday']!.fillers, ['mei']);
       expect(inRow('負責回報', '林同工、李美玉'), findsOneWidget);
+    });
+
+    testWidgets('負責回報 lists who is asked first, then the service\'s 同工; anyone else by searching', (tester) async {
+      final others = [for (var i = 1; i <= 6; i++) Member(uid: 'p$i', name: '路人$i')];
+      final b = withAttendance(seededChurch(as: editor, extra: others, clock: eveningOf(Day(2026, 10, 4))));
+      b.attendance['grace'] = {
+        'service:sunday': const AttendanceRecord(fillers: ['hao']),
+      };
+      await pumpApp(tester, b);
+      await go(tester, '/me/groups/service/sunday/attendance');
+      await tapText(tester, '負責回報');
+      double at(String text) => tester.getTopLeft(find.text(text).last).dy;
+      expect(at('林同工'), lessThan(at('陳志豪')), reason: 'its 負責人, fixed in');
+      expect(at('陳志豪'), lessThan(at('主日崇拜的同工')), reason: 'asked already: first');
+      expect(at('主日崇拜的同工'), lessThan(at('李美玉')));
+      expect(find.text('路人1'), findsNothing, reason: 'not one of its 同工');
+      expect(find.text('王牧師'), findsNothing);
+
+      await tester.enterText(find.byType(TextField), '路人1');
+      await settle(tester);
+      await tapText(tester, '路人1');
+      await tester.enterText(find.byType(TextField), '');
+      await settle(tester);
+      expect(at('路人1'), lessThan(at('主日崇拜的同工')), reason: 'ticked from a search: with who is asked');
+      await tapText(tester, '李美玉');
+      expect(at('李美玉'), greaterThan(at('主日崇拜的同工')), reason: 'ticked where it is, not moved');
+      await tapText(tester, '完成');
+      expect(b.attendance['grace']!['service:sunday']!.fillers, ['hao', 'p1', 'mei']);
+    });
+
+    testWidgets("小組 are dragged in order on their service's page", (tester) async {
+      final b = withJoy(withAttendance(seededChurch(clock: eveningOf(Day(2026, 10, 11)))));
+      b.smallGroups['grace']!['peace'] = const SmallGroupDetails(id: 'peace', name: '平安小組', service: 'sunday');
+      await pumpApp(tester, b);
+      await go(tester, '/me/groups/service/sunday');
+      await scrollToShow(tester, find.text('喜樂小組'));
+      double at(String text) => tester.getTopLeft(find.text(text).first).dy;
+      expect(at('平安小組'), greaterThan(at('喜樂小組')), reason: 'by name, never placed');
+      await dragRow(tester, '平安小組', -1);
+      expect(b.smallGroups['grace']!['peace']!.order, 0);
+      expect(b.smallGroups['grace']!['joy']!.order, 1);
+      expect(at('平安小組'), lessThan(at('喜樂小組')));
+    });
+
+    testWidgets('其他聚會 are dragged in order on 回報人數, and listed so', (tester) async {
+      final b = withAttendance(seededChurch(clock: eveningOf(Day(2026, 10, 11))));
+      b.gatherings['grace'] = {
+        'kids': const Gathering(id: 'kids', name: '兒童學習天地'),
+        'meal': const Gathering(id: 'meal', name: '長者共餐'),
+      };
+      await pumpApp(tester, b);
+      await go(tester, '/me/attendance');
+      await tester.scrollUntilVisible(find.text('新增其他聚會'), 200, scrollable: find.byType(Scrollable).last);
+      double at(String text) => tester.getTopLeft(find.text(text).last).dy;
+      expect(at('兒童學習天地'), lessThan(at('長者共餐')));
+      await dragRow(tester, '長者共餐', -1);
+      expect([b.gatherings['grace']!['meal']!.order, b.gatherings['grace']!['kids']!.order], [0, 1]);
+      expect(at('長者共餐'), lessThan(at('兒童學習天地')));
+    });
+
+    testWidgets('who cannot open 小組 sees them in order, with nothing to drag', (tester) async {
+      final b = withJoy(withAttendance(seededChurch(as: office, extra: [office], clock: eveningOf(Day(2026, 10, 11)))));
+      b.smallGroups['grace']!['peace'] = const SmallGroupDetails(
+        id: 'peace',
+        name: '平安小組',
+        service: 'sunday',
+        order: 0,
+      );
+      b.smallGroups['grace']!['joy'] = joy.copyWith(order: () => 1);
+      await pumpApp(tester, b);
+      await go(tester, '/me/groups/service/sunday');
+      await scrollToShow(tester, find.text('喜樂小組'));
+      expect(tester.getTopLeft(find.text('平安小組')).dy, lessThan(tester.getTopLeft(find.text('喜樂小組')).dy));
+      expect(find.byIcon(Symbols.drag_handle_rounded), findsNothing);
     });
 
     testWidgets("a service's own 聚會時間 keeps the meetings it had by its rosters before", (tester) async {

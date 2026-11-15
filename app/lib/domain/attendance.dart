@@ -65,22 +65,47 @@ class MeetingTime {
 /// asked to fill them in are its [AttendanceRecord.fillers].
 @immutable
 class Gathering {
-  const Gathering({required this.id, required this.name, this.time = const MeetingTime()});
+  const Gathering({required this.id, required this.name, this.time = const MeetingTime(), this.order});
 
   /// Empty for one not made yet.
   final String id;
   final String name;
   final MeetingTime time;
 
-  Gathering copyWith({String? name, MeetingTime? time}) =>
-      Gathering(id: id, name: name ?? this.name, time: time ?? this.time);
+  /// Where it is among the 其他聚會, as dragged (orderGatherings); null for
+  /// one never placed, after them (byOrder). Saving one keeps it.
+  final int? order;
+
+  /// What [byOrder] sorts it by.
+  Place get place => (order: order, name: name);
+
+  Gathering copyWith({String? name, MeetingTime? time, int? Function()? order}) => Gathering(
+    id: id,
+    name: name ?? this.name,
+    time: time ?? this.time,
+    order: order == null ? this.order : order(),
+  );
 
   @override
-  bool operator ==(Object other) => other is Gathering && other.id == id && other.name == name && other.time == time;
+  bool operator ==(Object other) =>
+      other is Gathering && other.id == id && other.name == name && other.time == time && other.order == order;
 
   @override
-  int get hashCode => Object.hash(id, name, time);
+  int get hashCode => Object.hash(id, name, time, order);
 }
+
+/// Where a 小組 or a 其他聚會 is in its list: [order] as dragged, null for
+/// one never placed.
+typedef Place = ({int? order, String name});
+
+/// How the church lists its 小組 and its 其他聚會: in the order dragged,
+/// those never placed after them, by name.
+int byOrder(Place a, Place b) => switch ((a.order, b.order)) {
+  (final x?, final y?) when x != y => x.compareTo(y),
+  (_?, null) => -1,
+  (null, _?) => 1,
+  _ => a.name.compareTo(b.name),
+};
 
 /// One of a group's pauses: no meeting is asked for from [from] until,
 /// not including, [until]. Kept once over, so the weeks it covered never

@@ -286,8 +286,9 @@ abstract interface class ChurchData {
   /// The church's 小組 (#85), in no order.
   Stream<List<SmallGroupDetails>> smallGroups();
 
-  /// Opens [group] (one with no id) or changes it: admins, or its
-  /// service's 負責人 and 牧者 (Member.mayEditSmallGroup). With [leads]
+  /// Opens [group] (one with no id) or changes it, keeping where it is
+  /// ([SmallGroupDetails.order]): admins, or its service's 負責人 and 牧者
+  /// (Member.mayEditSmallGroup). With [leads]
   /// (uids), they and nobody else are its 小組長. Returns its id. Given
   /// what it was made over, [before] (the 小組 as shown) or [leadsBefore]
   /// (its 小組長 as shown), it is refused ([CloudErrorCode.conflict]) once
@@ -301,6 +302,11 @@ abstract interface class ChurchData {
 
   /// Closes 小組 [id], taking it off its 小組長 and 同工; its 人數 stay.
   Future<void> deleteSmallGroup(String id);
+
+  /// Puts [service]'s 小組 in the order of [ids], every one of them: who
+  /// opens them (Member.mayEditSmallGroup). Refused
+  /// ([CloudErrorCode.conflict]) once its 小組 are not [ids].
+  Future<void> orderSmallGroups(String service, List<String> ids);
 
   /// Saved rosters from [from] on, of every service, oldest first, and
   /// events' rosters still on at [from] (a retreat begun the day before).
@@ -586,12 +592,16 @@ abstract interface class AttendanceData {
   /// every week (每週都填人數, #93).
   Future<void> saveTime(String key, MeetingTime? time);
 
-  /// The church's 其他聚會, by name.
+  /// The church's 其他聚會, in the order dragged (byOrder).
   Stream<List<Gathering>> gatherings();
 
-  /// Makes [gathering] (its id empty) or changes it (admins and 行政).
-  /// Returns its id.
+  /// Makes [gathering] (its id empty) or changes it (admins and 行政),
+  /// keeping where it is ([Gathering.order]). Returns its id.
   Future<String> saveGathering(Gathering gathering);
+
+  /// Puts the 其他聚會 in the order of [ids], every one of them (admins
+  /// and 行政); refused ([CloudErrorCode.conflict]) once they are not [ids].
+  Future<void> orderGatherings(List<String> ids);
 
   /// Deletes 其他聚會 [id] (admins and 行政); its 人數 stay.
   Future<void> deleteGathering(String id);

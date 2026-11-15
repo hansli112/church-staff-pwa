@@ -371,6 +371,7 @@ class SmallGroupDetails {
     this.every = 1,
     this.startsOn,
     this.monthWeeks = const [],
+    this.order,
   });
 
   /// Empty for one not made yet; the backend gives it one.
@@ -382,7 +383,14 @@ class SmallGroupDetails {
   final Day? startsOn;
   final List<int> monthWeeks;
 
+  /// Where it is among its service's 小組, as dragged (orderSmallGroups);
+  /// null for one never placed, after them (byOrder).
+  final int? order;
+
   SmallGroup get group => SmallGroup(id, service: service);
+
+  /// What [byOrder] sorts it by.
+  Place get place => (order: order, name: name);
 
   /// Its 聚會時間.
   MeetingTime get time => MeetingTime(weekday: weekday, every: every, startsOn: startsOn, monthWeeks: monthWeeks);
@@ -396,6 +404,7 @@ class SmallGroupDetails {
     int? every,
     Day? Function()? startsOn,
     List<int>? monthWeeks,
+    int? Function()? order,
   }) => SmallGroupDetails(
     id: id,
     name: name ?? this.name,
@@ -404,6 +413,7 @@ class SmallGroupDetails {
     every: every ?? this.every,
     startsOn: startsOn == null ? this.startsOn : startsOn(),
     monthWeeks: monthWeeks ?? this.monthWeeks,
+    order: order == null ? this.order : order(),
   );
 
   /// With [time] as its 聚會時間.
@@ -423,13 +433,29 @@ class SmallGroupDetails {
       other.weekday == weekday &&
       other.every == every &&
       other.startsOn == startsOn &&
-      listEquals(other.monthWeeks, monthWeeks);
+      listEquals(other.monthWeeks, monthWeeks) &&
+      other.order == order;
 
   @override
-  int get hashCode => Object.hash(id, name, service, weekday, every, startsOn, Object.hashAll(monthWeeks));
+  int get hashCode => Object.hash(id, name, service, weekday, every, startsOn, Object.hashAll(monthWeeks), order);
 }
 
 /// The church's 小組 by ID.
 extension SmallGroupsById on List<SmallGroupDetails> {
   SmallGroupDetails? byId(String id) => where((g) => g.id == id).firstOrNull;
+
+  /// As the church lists them: by service, as [services] (their ids) has
+  /// them, then each service's in the order dragged (byOrder).
+  List<SmallGroupDetails> inChurchOrder(List<String> services) {
+    int at(String service) => switch (services.indexOf(service)) {
+      -1 => services.length,
+      final i => i,
+    };
+    return [...this]..sort(
+      (a, b) => switch (at(a.service).compareTo(at(b.service))) {
+        0 => byOrder(a.place, b.place),
+        final c => c,
+      },
+    );
+  }
 }
