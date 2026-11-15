@@ -87,6 +87,14 @@ void main() {
     expect(find.text('新增一次聚會'), findsOneWidget);
   });
 
+  testWidgets('首頁連結 (每日靈糧) stays at the top of 首頁, above 填寫人數', (tester) async {
+    final b = withAttendance(seededChurch(as: editor, clock: eveningOf(Day(2026, 10, 4))))
+      ..churchLinks['grace'] = const ChurchLink(title: '每日靈糧', url: 'https://grace.example/daily');
+    await pumpApp(tester, b);
+    await go(tester, '/home');
+    expect(tester.getTopLeft(find.text('每日靈糧')).dy, lessThan(tester.getTopLeft(find.text('填寫人數')).dy));
+  });
+
   testWidgets('with 回報人數 off a 小組 is only a name: no meeting time, 人數 or 填寫人數', (tester) async {
     final b = withJoy(seededChurch(as: editor, clock: eveningOf(Day(2026, 10, 4))));
     await pumpApp(tester, b);

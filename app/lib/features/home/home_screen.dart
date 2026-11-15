@@ -144,6 +144,9 @@ class HomeScreen extends ConsumerWidget {
           }
           return ListView(
             children: [
+              // 首頁連結 (每日靈糧): the top of the page, above what is mine to do.
+              if (link != null) ChurchLinkCard(title: link.title, body: link.body, url: link.url),
+              if (sourceMissing) ChurchLinkSourceStatus(key: ValueKey(ref.watch(churchDataProvider)?.churchId)),
               const PendingClaimsCard(),
               if (welcome) WelcomeWaitCard(churchName: church?.name ?? ''),
               if (addToHome) const AddToHomeCard(),
@@ -180,8 +183,6 @@ class HomeScreen extends ConsumerWidget {
                     ),
                   ],
                 ),
-              if (link != null) ChurchLinkCard(title: link.title, body: link.body, url: link.url),
-              if (sourceMissing) ChurchLinkSourceStatus(key: ValueKey(ref.watch(churchDataProvider)?.churchId)),
               if (list.isEmpty && welcome)
                 const SizedBox.shrink()
               else if (list.isEmpty)
