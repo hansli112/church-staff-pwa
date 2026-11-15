@@ -36,8 +36,8 @@ final _recentRostersProvider = StreamProvider.autoDispose<List<Roster>>((ref) {
 /// 其他聚會, its name, and when it meets.
 typedef AttendanceGroup = ({ChurchGroup group, String name, Meets Function(Day day) meetsOn});
 
-/// The groups of the church that meet (its services, 小組 and 其他聚會),
-/// in that order, as [AttendanceGroup]s; a service meets on its weekday
+/// The groups of the church that meet (its services, 小組 by when they
+/// meet, and 其他聚會), in that order, as [AttendanceGroup]s; a service meets on its weekday
 /// when that day has a roster, unless its 聚會時間 says otherwise
 /// (AttendanceRecord.time).
 final attendanceGroupsProvider = Provider.autoDispose<List<AttendanceGroup>>((ref) {
@@ -56,7 +56,8 @@ final attendanceGroupsProvider = Provider.autoDispose<List<AttendanceGroup>>((re
         name: s.name,
         meetsOn: (Day day) => Meets(weekday: s.weekday, roster: held.contains((s.id, day))),
       ),
-    for (final g in smallGroups) (group: g.group, name: g.name, meetsOn: (Day _) => g.meets),
+    for (final g in smallGroups.inMeetingOrder([for (final s in services) s.id]))
+      (group: g.group, name: g.name, meetsOn: (Day _) => g.meets),
     for (final g in gatherings) (group: GatheringGroup(g.id), name: g.name, meetsOn: (Day _) => g.time.meets()),
   ];
 });

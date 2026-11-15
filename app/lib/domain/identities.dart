@@ -446,14 +446,28 @@ extension SmallGroupsById on List<SmallGroupDetails> {
 
   /// As the church lists them: by service, as [services] (their ids) has
   /// them, then each service's in the order dragged (byOrder).
-  List<SmallGroupDetails> inChurchOrder(List<String> services) {
+  List<SmallGroupDetails> inChurchOrder(List<String> services) => _byService(services, (a, b) => 0);
+
+  /// As 回報人數 lists them: by service, then each service's by the
+  /// weekday they meet on, Monday first, those with no 聚會時間 last; on
+  /// the same day, in the order dragged.
+  List<SmallGroupDetails> inMeetingOrder(List<String> services) =>
+      _byService(services, (a, b) => (a.weekday ?? 8).compareTo(b.weekday ?? 8));
+
+  List<SmallGroupDetails> _byService(
+    List<String> services,
+    int Function(SmallGroupDetails a, SmallGroupDetails b) within,
+  ) {
     int at(String service) => switch (services.indexOf(service)) {
       -1 => services.length,
       final i => i,
     };
     return [...this]..sort(
       (a, b) => switch (at(a.service).compareTo(at(b.service))) {
-        0 => byOrder(a.place, b.place),
+        0 => switch (within(a, b)) {
+          0 => byOrder(a.place, b.place),
+          final c => c,
+        },
         final c => c,
       },
     );

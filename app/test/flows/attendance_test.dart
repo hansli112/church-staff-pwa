@@ -420,6 +420,21 @@ void main() {
       expect(arrow(Symbols.chevron_right_rounded).onPressed, isNull, reason: 'this week is the last');
     });
 
+    testWidgets("a service's 小組 by their 聚會時間, whatever their order", (tester) async {
+      final b = church();
+      b.smallGroups['grace']!['peace'] = peace.copyWith(weekday: () => DateTime.wednesday, order: () => 2);
+      b.smallGroups['grace']!['joy'] = joy.copyWith(order: () => 1);
+      b.smallGroups['grace']!['hope'] = const SmallGroupDetails(id: 'hope', name: '盼望小組', service: 'sunday', order: 0);
+      b.attendance['grace']!.remove('small:peace');
+      await pumpApp(tester, b);
+      await go(tester, '/me/attendance');
+      await tester.tap(find.byTooltip('下一週'));
+      await settle(tester);
+      double at(Finder f) => tester.getTopLeft(f).dy;
+      final ys = [at(inRow('平安小組', '未填')), at(inRow('喜樂小組', '未填')), at(inRow('盼望小組', '還沒設聚會時間'))];
+      expect(ys, orderedEquals([...ys]..sort()), reason: 'Wednesday, Friday, then one with no 聚會時間');
+    });
+
     testWidgets('a week adds up its services and its 小組 apart, a 聯合小組 once, and greys 沒聚會', (tester) async {
       final b = church();
       b.attendance['grace'] = {
