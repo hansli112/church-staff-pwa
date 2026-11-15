@@ -415,7 +415,7 @@ void main() {
       expect(inRow('主日崇拜', '未填'), findsOneWidget, reason: 'today, still to fill in');
       expect(inRow('主日崇拜', '提醒'), findsNothing, reason: "today's reminder is still to come");
       expect(inRow('喜樂小組', '提醒'), findsOneWidget);
-      expect(find.text('還有 3 個未填'), findsOneWidget);
+      expect(find.text('還有 2 個未填'), findsOneWidget, reason: "today's not counted, as on 首頁");
       expect(at(inRow('主日崇拜', '未填')), lessThan(at(inRow('喜樂小組', '未填'))), reason: 'the same order every week');
       expect(arrow(Symbols.chevron_right_rounded).onPressed, isNull, reason: 'this week is the last');
     });
@@ -715,6 +715,20 @@ void main() {
       await tapText(tester, '儲存');
       expect(find.textContaining('10月4日'), findsNothing);
       expect(find.text('填寫人數'), findsOneWidget, reason: "today's is still to fill in");
+    });
+
+    testWidgets("with only today's still to fill in, a week is neither 未填 nor 都填好了", (tester) async {
+      final b = withAttendance(seededChurch(as: office, extra: [office], clock: eveningOf(Day(2026, 10, 11))));
+      b.attendance['grace'] = {
+        'service:sunday': AttendanceRecord(days: {Day(2026, 10, 4): const AttendanceDay.count(120)}),
+      };
+      await pumpApp(tester, b);
+      await go(tester, '/me/attendance');
+      await tester.tap(find.byTooltip('下一週'));
+      await settle(tester);
+      expect(inRow('主日崇拜', '未填'), findsOneWidget);
+      expect(find.textContaining('個未填'), findsNothing);
+      expect(find.textContaining('都填好了'), findsNothing);
     });
 
     testWidgets('admins and 行政 see on 首頁 how many are still 未填, and open 回報人數 from it', (tester) async {

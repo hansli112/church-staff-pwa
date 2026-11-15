@@ -225,10 +225,13 @@ typedef AttendanceRow = ({AttendanceGroup group, Day? day, AttendanceDay? value,
 /// (attendanceGroupsProvider): a service before its 小組.
 @immutable
 class AttendanceWeek {
-  const AttendanceWeek(this.monday, this.rows);
+  const AttendanceWeek(this.monday, this.rows, {required this.today});
 
   final Day monday;
   final List<AttendanceRow> rows;
+
+  /// Its meetings today are not yet 未填, as on 首頁 (attendanceMissingCountProvider).
+  final Day today;
 
   /// Its services' 人數 added up, or null with none filled in.
   int? get services => _total(isService: true);
@@ -272,8 +275,11 @@ class AttendanceWeek {
     ];
   }
 
-  /// How many of its meetings are 未填.
-  int get missing => rows.where((r) => r.day != null && r.value == null).length;
+  /// How many of its meetings are 未填: not today's, still to fill in.
+  int get missing => rows.where((r) => r.day != null && r.day != today && r.value == null).length;
+
+  /// Whether a meeting today is still to fill in.
+  bool get waiting => rows.any((r) => r.day == today && r.value == null);
 
   /// Whether a meeting of it is listed, filled in or not.
   bool get met => rows.any((r) => r.day != null);
@@ -361,5 +367,5 @@ AttendanceWeek attendanceWeek(
       rows.add((group: g, day: null, value: null, next: null));
     }
   }
-  return AttendanceWeek(monday, rows);
+  return AttendanceWeek(monday, rows, today: today);
 }

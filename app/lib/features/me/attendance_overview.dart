@@ -201,15 +201,19 @@ class _AttendanceOverviewScreenState extends ConsumerState<AttendanceOverviewScr
     }
   }
 
-  /// 「聚會 150 人 · 小組 60 人 · 還有 2 個未填」, or 都填好了; nothing for a
-  /// week with no meeting in it yet.
+  /// 「聚會 150 人 · 小組 60 人 · 還有 2 個未填」, or 都填好了; today's not
+  /// counted, as on 首頁. Nothing for a week with no meeting in it yet.
   String? _summary(L10n l10n, AttendanceWeek week) {
     if (!week.met) return null;
     return [
       if (week.services case final n?) l10n.attendanceServicesTotal(n),
       if (week.smallGroups case final n?) l10n.attendanceSmallGroupsTotal(n),
       if (week.gatherings case final n?) l10n.attendanceGatheringsTotal(n),
-      week.missing > 0 ? l10n.attendanceOverviewMissing(week.missing) : l10n.attendanceOverviewDone,
+      if (week.missing > 0)
+        l10n.attendanceOverviewMissing(week.missing)
+      // Today's still to fill in: not 都填好了, nor 未填 yet.
+      else if (!week.waiting)
+        l10n.attendanceOverviewDone,
     ].join(l10n.dotSeparator);
   }
 
