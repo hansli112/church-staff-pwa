@@ -3095,19 +3095,16 @@ class L10nEn extends L10n {
   String get smallGroupLeadClear => 'Unassign';
 
   @override
-  String get deleteSmallGroup => 'Close small group';
+  String get deleteSmallGroup => 'Delete small group';
 
   @override
   String deleteSmallGroupTitle(String name) {
-    return 'Close “$name”?';
+    return 'Delete “$name”?';
   }
 
   @override
-  String get deleteSmallGroupBody => 'Its leaders and team members come out of it, and the attendance filled in stays';
-
-  @override
   String smallGroupDeleted(String name) {
-    return 'Closed “$name”';
+    return 'Deleted “$name”';
   }
 
   @override

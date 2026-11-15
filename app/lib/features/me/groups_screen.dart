@@ -834,13 +834,12 @@ class GroupScreen extends ConsumerWidget {
     );
   }
 
-  /// 關閉小組, once asked: its 小組長 and 同工 come out of it; its 人數 stay.
+  /// 刪除小組, once asked: its 小組長 and 同工 come out of it; its 人數 stay.
   Future<void> _deleteSmall(BuildContext context, WidgetRef ref, SmallGroupDetails small) async {
     final l10n = L10n.of(context);
     final ok = await confirmDestructive(
       context,
       title: l10n.deleteSmallGroupTitle(small.name),
-      message: l10n.deleteSmallGroupBody,
       action: l10n.deleteSmallGroup,
     );
     if (!ok || !context.mounted) return;

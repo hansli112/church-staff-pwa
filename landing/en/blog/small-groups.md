@@ -40,4 +40,4 @@ On or after the meeting day, tap **Attendance** on the small group’s page, the
 - **Still not filled in by 9 p.m. on the meeting day:** The small group leader gets a reminder. To stop these, go to **Settings** → **Notifications** and turn off **Attendance reminders**.
 - **Taking time off:** Tap the **Next meeting** row, check the meetings that are off, and tap **Done**. There are no reminders for those, and nothing is left **Not filled in**.
 
-Admins, office staff and the service’s leads can see the attendance you fill in, and it’s kept even after the small group is closed.
+Admins, office staff and the service’s leads can see the attendance you fill in, and it’s kept even after the small group is deleted.

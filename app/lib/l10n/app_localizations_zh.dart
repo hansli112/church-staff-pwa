@@ -2942,19 +2942,16 @@ class L10nZh extends L10n {
   String get smallGroupLeadClear => '取消指派';
 
   @override
-  String get deleteSmallGroup => '關閉小組';
+  String get deleteSmallGroup => '刪除小組';
 
   @override
   String deleteSmallGroupTitle(String name) {
-    return '關閉「$name」？';
+    return '刪除「$name」？';
   }
 
   @override
-  String get deleteSmallGroupBody => '小組長和同工都會移出這個小組，填過的人數會留著';
-
-  @override
   String smallGroupDeleted(String name) {
-    return '已關閉「$name」';
+    return '已刪除「$name」';
   }
 
   @override
@@ -6499,19 +6496,16 @@ class L10nZhHans extends L10nZh {
   String get smallGroupLeadClear => '取消指派';
 
   @override
-  String get deleteSmallGroup => '关闭小组';
+  String get deleteSmallGroup => '删除小组';
 
   @override
   String deleteSmallGroupTitle(String name) {
-    return '关闭“$name”？';
+    return '删除“$name”？';
   }
 
   @override
-  String get deleteSmallGroupBody => '小组长和同工都会移出这个小组，填过的人数会留着';
-
-  @override
   String smallGroupDeleted(String name) {
-    return '已关闭“$name”';
+    return '已删除“$name”';
   }
 
   @override

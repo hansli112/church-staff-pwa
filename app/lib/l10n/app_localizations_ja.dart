@@ -2946,19 +2946,16 @@ class L10nJa extends L10n {
   String get smallGroupLeadClear => '指名を取り消す';
 
   @override
-  String get deleteSmallGroup => '小グループを閉じる';
+  String get deleteSmallGroup => '小グループを削除';
 
   @override
   String deleteSmallGroupTitle(String name) {
-    return '「$name」を閉じますか？';
+    return '「$name」を削除しますか？';
   }
 
   @override
-  String get deleteSmallGroupBody => 'リーダーとメンバーはこの小グループから外れますが、記録した人数は残ります';
-
-  @override
   String smallGroupDeleted(String name) {
-    return '「$name」を閉じました';
+    return '「$name」を削除しました';
   }
 
   @override

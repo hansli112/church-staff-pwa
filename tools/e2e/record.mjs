@@ -212,10 +212,10 @@ const CLIPS = {
     async play(s) {
       await s.wait(1200);
       for (const [i, person] of [2, 5].entries()) {
-        // Each one added pushes 關閉小組 further down, under the tab bar.
+        // Each one added pushes 刪除小組 further down, under the tab bar.
         if (i > 0) await s.scroll(300);
         // 加入同工 is not in the web build's accessibility tree; it is the
-        // row above 關閉小組's section.
+        // row above 刪除小組's section.
         await s.tap(s.node(s.t('deleteSmallGroup')), { dy: -68 });
         await s.wait(1000);
         // The sheet's buttons: the scrim and 關閉, then the people.

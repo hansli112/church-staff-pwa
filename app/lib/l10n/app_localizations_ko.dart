@@ -2947,19 +2947,16 @@ class L10nKo extends L10n {
   String get smallGroupLeadClear => '지정 취소';
 
   @override
-  String get deleteSmallGroup => '소그룹 닫기';
+  String get deleteSmallGroup => '소그룹 삭제';
 
   @override
   String deleteSmallGroupTitle(String name) {
-    return '‘$name’을(를) 닫을까요?';
+    return '‘$name’을(를) 삭제할까요?';
   }
 
   @override
-  String get deleteSmallGroupBody => '리더와 멤버는 이 소그룹에서 빠지고, 기록한 인원은 남아요';
-
-  @override
   String smallGroupDeleted(String name) {
-    return '‘$name’ 닫음';
+    return '‘$name’ 삭제함';
   }
 
   @override

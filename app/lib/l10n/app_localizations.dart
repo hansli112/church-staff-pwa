@@ -5251,25 +5251,19 @@ abstract class L10n {
   /// Destructive row and dialog action on a 小組's page
   ///
   /// In zh, this message translates to:
-  /// **'關閉小組'**
+  /// **'刪除小組'**
   String get deleteSmallGroup;
 
-  /// Dialog title before closing a 小組
+  /// Dialog title before deleting a 小組
   ///
   /// In zh, this message translates to:
-  /// **'關閉「{name}」？'**
+  /// **'刪除「{name}」？'**
   String deleteSmallGroupTitle(String name);
 
-  /// Dialog body before closing a 小組
+  /// Toast after deleting a 小組
   ///
   /// In zh, this message translates to:
-  /// **'小組長和同工都會移出這個小組，填過的人數會留著'**
-  String get deleteSmallGroupBody;
-
-  /// Toast after closing a 小組
-  ///
-  /// In zh, this message translates to:
-  /// **'已關閉「{name}」'**
+  /// **'已刪除「{name}」'**
   String smallGroupDeleted(String name);
 
   /// Row in 設定 for admins and 行政, its page, and the switch on it turning 回報人數 on for the church (#85, #93)
