@@ -40,7 +40,7 @@ const RULES_FIELDS: Record<string, { text?: keyof typeof TEXT_LIMITS; other?: ke
   "request.resource.data.get('note', '')": { text: 'attendanceNote' },
   // attendance/{key}.pauses: a group's pauses, kept once over (#85).
   "request.resource.data.get('pauses', [])": { other: 'attendancePauses' },
-  // attendance/{key}.fillers: who else fills them in (誰填人數).
+  // attendance/{key}.fillers: who else fills them in (負責回報).
   "request.resource.data.get('fillers', [])": { other: 'attendanceFillers' },
   // A 聚會時間's weeks of the month (第 1、3 個週五): at most the first four.
   "request.resource.data.get('monthWeeks', [])": { other: 'monthWeeks' },

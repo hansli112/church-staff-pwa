@@ -2987,29 +2987,7 @@ class L10nZh extends L10n {
   String get attendanceNoMeeting => '這次沒聚會';
 
   @override
-  String get attendanceSkip => '哪幾次不聚會？';
-
-  @override
-  String attendanceSkipping(int count) {
-    return '接下來有 $count 次不聚會';
-  }
-
-  @override
-  String get attendanceSkipFooter => '勾起來的那次不提醒，也不會留下「未填」';
-
-  @override
   String get attendanceNoDays => '還沒有要填的聚會';
-
-  @override
-  String attendanceNext(String day) {
-    return '下次聚會 $day';
-  }
-
-  @override
-  String get attendanceNextMeeting => '下次聚會';
-
-  @override
-  String get attendanceSkipHint => '標記哪幾次不聚會';
 
   @override
   String get attendanceNoMeets => '還沒設聚會時間';
@@ -3066,7 +3044,7 @@ class L10nZh extends L10n {
   }
 
   @override
-  String get attendanceFillers => '誰填人數';
+  String get attendanceFillers => '負責回報';
 
   @override
   String get gatherings => '其他聚會';
@@ -6563,29 +6541,7 @@ class L10nZhHans extends L10nZh {
   String get attendanceNoMeeting => '这次没聚会';
 
   @override
-  String get attendanceSkip => '哪几次不聚会？';
-
-  @override
-  String attendanceSkipping(int count) {
-    return '接下来有 $count 次不聚会';
-  }
-
-  @override
-  String get attendanceSkipFooter => '勾选的那次不提醒，也不会留下“未填”';
-
-  @override
   String get attendanceNoDays => '还没有要填的聚会';
-
-  @override
-  String attendanceNext(String day) {
-    return '下次聚会 $day';
-  }
-
-  @override
-  String get attendanceNextMeeting => '下次聚会';
-
-  @override
-  String get attendanceSkipHint => '标记哪几次不聚会';
 
   @override
   String get attendanceNoMeets => '还没设聚会时间';
@@ -6642,7 +6598,7 @@ class L10nZhHans extends L10nZh {
   }
 
   @override
-  String get attendanceFillers => '谁填人数';
+  String get attendanceFillers => '负责回报';
 
   @override
   String get gatherings => '其他聚会';

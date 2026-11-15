@@ -2991,29 +2991,7 @@ class L10nJa extends L10n {
   String get attendanceNoMeeting => '今回は集まりなし';
 
   @override
-  String get attendanceSkip => '集まらない回';
-
-  @override
-  String attendanceSkipping(int count) {
-    return 'この先 $count 回は集まりなし';
-  }
-
-  @override
-  String get attendanceSkipFooter => 'チェックした回はお知らせせず、「未記入」も残りません';
-
-  @override
   String get attendanceNoDays => '記録する集まりはまだありません';
-
-  @override
-  String attendanceNext(String day) {
-    return '次の集まり $day';
-  }
-
-  @override
-  String get attendanceNextMeeting => '次の集まり';
-
-  @override
-  String get attendanceSkipHint => '集まらない回を選ぶ';
 
   @override
   String get attendanceNoMeets => '集まりの日時がまだ未設定';
@@ -3070,7 +3048,7 @@ class L10nJa extends L10n {
   }
 
   @override
-  String get attendanceFillers => '人数を記録する人';
+  String get attendanceFillers => '報告する人';
 
   @override
   String get gatherings => 'その他の集まり';

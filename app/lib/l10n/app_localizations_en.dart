@@ -3145,35 +3145,7 @@ class L10nEn extends L10n {
   String get attendanceNoMeeting => 'We didn\'t meet';
 
   @override
-  String get attendanceSkip => 'Which ones are off?';
-
-  @override
-  String attendanceSkipping(int count) {
-    String _temp0 = intl.Intl.pluralLogic(
-      count,
-      locale: localeName,
-      other: '$count coming meetings off',
-      one: '1 coming meeting off',
-    );
-    return '$_temp0';
-  }
-
-  @override
-  String get attendanceSkipFooter => 'No reminders for those checked, and nothing is left “Not filled in”';
-
-  @override
   String get attendanceNoDays => 'No meetings to fill in yet';
-
-  @override
-  String attendanceNext(String day) {
-    return 'Next meeting $day';
-  }
-
-  @override
-  String get attendanceNextMeeting => 'Next meeting';
-
-  @override
-  String get attendanceSkipHint => 'Mark the ones that are off';
 
   @override
   String get attendanceNoMeets => 'No meeting time set yet';
@@ -3230,7 +3202,7 @@ class L10nEn extends L10n {
   }
 
   @override
-  String get attendanceFillers => 'Who fills in';
+  String get attendanceFillers => 'Reported by';
 
   @override
   String get gatherings => 'Other gatherings';

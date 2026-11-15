@@ -226,7 +226,7 @@ service cloud.firestore {
 
     // Who fills in and sees group [key]'s 人數 (powers.ts fillsAttendance):
     // those above, and those it asks to (`fillers` on attendance/{key},
-    // 誰填人數), who set nothing else of it.
+    // 負責回報), who set nothing else of it.
     function fillsAttendance(cid, key) {
       let state = /databases/$(database)/documents/churches/$(cid)/attendance/$(key);
       return writesAttendance(cid, key)
@@ -465,7 +465,7 @@ service cloud.firestore {
       // (補填) or change it. A 小組 met with others (聯合小組, #93) says so,
       // `together` on the one filled in and `with` on the others: those
       // are fillAttendanceTogether's, which checks the others.
-      // Who else fills them in (`fillers`, 誰填人數) finds the groups that
+      // Who else fills them in (`fillers`, 負責回報) finds the groups that
       // ask them, a query on `fillers`. A service's 聚會時間 when not by
       // its rosters: `everyWeek`, `every` 2 from `startsOn`, or
       // `monthWeeks` of each month.

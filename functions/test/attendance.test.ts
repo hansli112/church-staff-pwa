@@ -337,7 +337,7 @@ describe('人數總覽: asked again, 提醒, 每週都填人數 (#93)', () => {
   });
 });
 
-describe('誰填人數, 聚會時間 and 其他聚會', () => {
+describe('負責回報, 聚會時間 and 其他聚會', () => {
   const at = (iso: string) => () => new Date(iso);
 
   test("those asked to fill in a service's 人數, its 招待, are reminded with its 負責人", async () => {

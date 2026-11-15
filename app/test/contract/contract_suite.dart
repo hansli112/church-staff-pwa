@@ -975,7 +975,7 @@ void contractTests(Future<ContractWorld> Function() open) {
       expect((await g.church.attendance.watch('service:sunday').first).days.keys, [Day(2026, 10, 4)]);
     });
 
-    test("a service's 聚會時間 and 誰填人數 stay beside the pauses; 小組 that met together are kept so (#93)", () async {
+    test("a service's 聚會時間 and 負責回報 stay beside the pauses; 小組 that met together are kept so (#93)", () async {
       final g = await Grace.open(w);
       await g.church.attendance.saveSince(Day(2026, 10, 1));
       final pauses = [AttendancePause(from: Day(2026, 10, 5), until: Day(2026, 11, 1))];

@@ -153,7 +153,9 @@ class _AttendanceOverviewScreenState extends ConsumerState<AttendanceOverviewScr
       dimmed: r.value?.none ?? false,
       subtitle: switch (r.day) {
         final day? => [dayLabel(l10n, day, today), ?attendanceDetail(l10n, r.value, nameOf)].join(l10n.dotSeparator),
-        null => attendanceNotYet(l10n, r.next, today),
+        null => switch (attendanceTimeOf(ref, r.group.group)) {
+          (:final time, :final serviceWeekday) => attendanceNotYet(l10n, time, serviceWeekday: serviceWeekday),
+        },
       },
       value: r.day == null ? null : attendanceValue(l10n, r.value, nameOf),
       trailing: r.day != null && r.value == null

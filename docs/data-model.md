@@ -15,7 +15,7 @@
 | `churches/{cid}/smallGroups/{id}` | 小組（#85）：`name`、`service`（屬於哪個聚會）、`weekday`（1 是週一…7 是週日）、`every`（1 每週、2 隔週）、`monthWeeks`（每月第幾個 `weekday`，1–4，有這個就不看 `every`）、`startsOn`（從這天起聚會，要是 `weekday` 那天；隔週照它算哪幾週）。後面幾個只有回報人數用到，可以沒有。只有後端寫（`editSmallGroup`），同工都讀得到 |
 | `churches/{cid}/gatherings/{id}` | 其他聚會：只為了回報人數的聚會（禱告會、長者共餐）。`name`，聚會時間和小組一樣（`weekday`、`every`、`monthWeeks`、`startsOn`）。同工都讀得到（填的人要看名字），管理員和行政直接寫、刪；刪了填過的人數留著 |
 | `churches/{cid}/settings/smallGroups` | 只有後端寫：`ids`，用過的小組 ID，只增不減 |
-| `churches/{cid}/attendance/{群組}` | 回報人數（#85），`{群組}` 是 `service:<id>`、`small:<id>` 或 `gathering:<id>`：`fillers`（誰填人數，uid，最多 20 個）、聚會的聚會時間（不照服事表時：`everyWeek` 每週，或 `every: 2` 加 `startsOn` 隔週，或 `monthWeeks` 加 `startsOn` 每月；每週也寫 `everyWeek: true`，舊版 App 讀這個）、`pauses`（暫停，每段 `{from, until}`：從 `from` 到 `until` 前一天不算；結束了也留著，那幾週才不會變成「未填」，最多 50 段）。底下 `days/{dateKey}` 是那次聚會的人數：`count`（0–100000）加選填的 `note`（最多 200 字），或 `none: true`（這次沒聚會）；`by` 是填的人。聯合小組（#93）：填的那個小組多 `together`（一起聚會的小組，最多 20 個），被勾到的小組那天只有 `with`（填的那個小組）；這兩個欄位只有後端寫（`fillAttendanceTogether`） |
+| `churches/{cid}/attendance/{群組}` | 回報人數（#85），`{群組}` 是 `service:<id>`、`small:<id>` 或 `gathering:<id>`：`fillers`（負責回報，uid，最多 20 個）、聚會的聚會時間（不照服事表時：`everyWeek` 每週，或 `every: 2` 加 `startsOn` 隔週，或 `monthWeeks` 加 `startsOn` 每月；每週也寫 `everyWeek: true`，舊版 App 讀這個）、`pauses`（暫停，每段 `{from, until}`：從 `from` 到 `until` 前一天不算；結束了也留著，那幾週才不會變成「未填」，最多 50 段）。底下 `days/{dateKey}` 是那次聚會的人數：`count`（0–100000）加選填的 `note`（最多 200 字），或 `none: true`（這次沒聚會）；`by` 是填的人。聯合小組（#93）：填的那個小組多 `together`（一起聚會的小組，最多 20 個），被勾到的小組那天只有 `with`（填的那個小組）；這兩個欄位只有後端寫（`fillAttendanceTogether`） |
 | `churches/{cid}/attendanceAsks/{群組}` | 人數總覽的「提醒」（#93）上次按的：`on`（教會當地哪一天按的，一天一次）、`day`（哪次聚會）、`by`、`at`。只有後端讀寫（`remindAttendance`） |
 | `churches/{cid}/unavailable/{uid}` | 不能服事的日子（#91）：`spans`（每段 `{from, to, note}`，`YYYY-MM-DD`，兩頭都算；`note` 選填，最多 30 字；最多 100 段）、`updatedAt`。只有本人寫，經 `saveUnavailableDays`（規則看不到清單裡面，由後端檢查每一段和原因的長度）；本人和排服事表的人（admin、行政、聚會負責人和牧者、事工負責人，`testdata/church_rules.json` 的 `unavailableReading`）讀得到。一律整天、全部聚會。過了的那段在本人下次存的時候拿掉；退出或被移出教會時刪掉（`onMemberDeleted`） |
 | `churches/{cid}/unavailableAsks/{聚會別}` | 通知同工填（#91）上次通知的：`at`、`by`、`from`、`to`（月份，`YYYY-MM`）。只有後端寫（`askUnavailable`），排服事表的人讀得到，選單上寫「上次 10/28 通知過」 |
@@ -129,7 +129,7 @@ App 與 Functions 各寫一次的教會資料規則也一樣：新教會的預�
 | 讀服事表、排序、設定 | 同工 |
 | 寫服事表、排序 | admin、行政（任何已設定的聚會別）；聚會負責人和牧者（只限 `leadTypes` 裡的聚會別，移動時新舊聚會別都要有）。事工負責人不能直接寫，經 `editLedDuties` 只改他事工連到的服事項目：其他服事項目、特別活動不能動，不能刪整天；還沒存過的那天可以照範本建立，但要有他的服事項目、其他服事項目要沒有人（`testdata/church_rules.json` 的 `ledDuties`） |
 | 寫活動的服事表 | admin、行政，和活動所屬群組的負責人（服事表的 `group`，由後端照活動寫；App 建立時帶活動的，之後改不了）；事工負責人經 `editLedDuties` 只排他的服事項目（照名稱比對）。一般服事表和活動的服事表不能互相改過去；取消了的不能再改，只能刪 |
-| 讀、寫回報人數（`attendance`，#85） | 照 `testdata/church_rules.json` 的 `attendanceAccess`：admin 和行政全部，其他聚會也是（行政做週報要看、要代填，#93）；聚會的負責人和牧者那個聚會和底下的小組；小組長自己的小組；`fillers` 裡的人那個群組（只能填人數，用 `fillers` 查自己要填哪些）。可以補填、改、清掉；暫停、聚會時間、誰填人數由前面那批人設。聯合小組寫別的小組那天，經後端（`fillAttendanceTogether`） |
+| 讀、寫回報人數（`attendance`，#85） | 照 `testdata/church_rules.json` 的 `attendanceAccess`：admin 和行政全部，其他聚會也是（行政做週報要看、要代填，#93）；聚會的負責人和牧者那個聚會和底下的小組；小組長自己的小組；`fillers` 裡的人那個群組（只能填人數，用 `fillers` 查自己要填哪些）。可以補填、改、清掉；暫停、聚會時間、負責回報由前面那批人設。聯合小組寫別的小組那天，經後端（`fillAttendanceTogether`） |
 | 讀不能服事的日子（`unavailable`、`unavailableAsks`，#91） | 本人讀自己的；排服事表的人（admin、行政、`leadTypes` 或 `leadMinistries` 不是空的）讀全部：他們選人時可以選全教會的人，所以看得到每個人的。小組長不算 |
 | 寫不能服事的日子 | 只有本人，經後端（`saveUnavailableDays`）；規則不讓 App 直接寫 |
 | 讀找人代／交換（`swapRequests`，#92） | 問的人、被問的人（請人代的 `asked`、交換的 `to`）；寫入都是後端 |
@@ -142,6 +142,7 @@ App 與 Functions 各寫一次的教會資料規則也一樣：新教會的預�
 
 管理員在「管理教會」打開，記下打開那天（`attendanceSince`），之前的聚會不算。
 
+- 一個群組的回報人數可以關掉一段時間：在 `pauses` 加一段從那天起、到 `9999-12-31` 的暫停；打開時那段的結束改成那天（同一天開關就拿掉），關掉的那幾週一直不算未填。
 - 什麼時候要填：聚會照服事設定的星期幾，而且那天有服事表；設了自己聚會時間的聚會不看服事表，照它每週、隔週或每月第幾個那天要填（以前的「每週都填人數」`everyWeek` 就是每週）。小組和其他聚會照它們的聚會時間：每週或隔週（從 `startsOn` 算），或每月第幾個 `weekday`（`monthWeeks`）；`startsOn` 之前不算，所以剛設好的不會有一排之前的未填。沒設星期幾的不提醒。暫停的期間不算（`testdata/church_rules.json` 的 `attendanceDue`）。
 - 提醒：每小時跑一次，教會當地 21:00 那次給還沒人填的群組推播：聚會當天一次，隔天還沒填再一次（「還沒填」，#93），之後不再推（`functions/src/attendance.ts`）。聚會給它的負責人（`lead` 身分；牧者看得到人數、能填，但不提醒，`testdata/church_rules.json` 的 `attendanceReminded`），小組給小組長，再加上那個群組 `fillers` 裡的人；其他聚會只給 `fillers`。首頁的「填寫人數」也只給會被提醒的人。有人填了、按了「這次沒聚會」、或和別的小組一起聚會了就不推。點推播直接開那次聚會的填寫畫面（`/home?fill=<群組>&day=<dateKey>`）。同工可以在「設定 → 通知」關掉「回報人數提醒」（`attendance`）。
 - 人數總覽（#93、#95）：在「設定」→「回報人數」頁（回報人數開著時）。管理員和行政看全部群組；聚會負責人和牧者從「我負責的」進去，只看自己的聚會和它的小組（能填人數的群組，`writesAttendance`）。一次一週，星期一到星期日，最早到回報人數開始那週（最多 12 週前），打開是最近一個有人填過的週。每個聚會一區（那個聚會和它的小組），其他聚會一區放最後；每次聚會一列，寫人數、「未填」或「沒聚會」，區裡照日期由舊到新、同一天聚會在小組前，沒聚會的在後面；今天的有人填了才列；這週還沒到的聚會列最後，寫下次聚會哪天，沒設聚會時間的小組寫「還沒設聚會時間」，舊版設的暫停中不列。最上面寫聚會、小組和其他聚會各自加起來的人數（和別的小組一起聚會的只算一次）和還有幾個未填。管理員和行政在最下面看到每個其他聚會和它的聚會時間（這週不聚會的也找得到），和「新增其他聚會」。未填的那列有「提醒」，推給和自動提醒同一批人，同一個群組一天一次，能填那個群組人數的人都能按（`remindAttendance`、`attendanceAsks`）。點一列開那一次的填寫畫面，行政也能代填；畫面最下面到那個群組的人數頁。

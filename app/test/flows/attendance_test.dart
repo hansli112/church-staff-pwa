@@ -47,12 +47,6 @@ Finder inRow(String title, String text) => find.descendant(
   matching: find.text(text),
 );
 
-/// The day on the 人數 page's 下次聚會 row.
-Finder nextMeeting(String day) => find.descendant(
-  of: find.ancestor(of: find.text('下次聚會'), matching: find.byType(ListRow)),
-  matching: find.textContaining(day),
-);
-
 /// Scrolls the page until [finder] shows, and on past the tab bar that
 /// covers the bottom: a service's page is long (#94).
 Future<void> scrollToShow(WidgetTester tester, Finder finder) async {
@@ -115,7 +109,7 @@ void main() {
     await tester.tap(find.byType(Switch));
     await settle(tester);
     expect(b.churches['grace']!.attendanceSince, testToday);
-    expect(find.textContaining('下次聚會'), findsWidgets, reason: 'the list, once on: from today, when each meets next');
+    expect(find.textContaining('有服事表的'), findsWidgets, reason: 'the list, once on: from today, when each meets');
   });
 
   testWidgets('a new 小組 says its 聚會時間 is not set, on its page and on 回報人數', (
@@ -134,13 +128,13 @@ void main() {
     expect(inRow('聚會時間', '未設定'), findsOneWidget, reason: 'set from here');
   });
 
-  testWidgets('a 小組 that has not met since 回報人數 came on says when it next meets, there too', (tester) async {
+  testWidgets('a 小組 that has not met since 回報人數 came on says when it meets, there too', (tester) async {
     // Monday: it meets on Friday, this week.
     final b = withJoy(seededChurch(clock: eveningOf(Day(2026, 10, 5))));
     b.churches['grace'] = b.churches['grace']!.copyWith(attendanceSince: () => Day(2026, 10, 5));
     await pumpApp(tester, b);
     await go(tester, '/me/attendance');
-    final next = find.textContaining(RegExp(r'^下次聚會 10月9日'));
+    final next = find.text('每週五');
     expect(
       find.descendant(
         of: find.ancestor(of: find.text('喜樂小組'), matching: find.byType(ListRow)),
@@ -149,9 +143,9 @@ void main() {
       findsOneWidget,
     );
     await go(tester, '/me/groups/small/joy');
-    await tester.scrollUntilVisible(next, 200, scrollable: find.byType(Scrollable).last);
-    expect(find.text('聚會人數'), findsOneWidget);
-    expect(next, findsOneWidget);
+    expect(inRow('聚會時間', '每週五'), findsOneWidget);
+    await tester.scrollUntilVisible(find.text('聚會人數'), 200, scrollable: find.byType(Scrollable).last);
+    expect(next, findsOneWidget, reason: 'said once, by 聚會時間');
   });
 
   testWidgets('新增一次聚會: a day it met off its 聚會時間, picked, then filled in', (tester) async {
@@ -259,7 +253,7 @@ void main() {
     expect(find.text('隔週五'), findsOneWidget);
   });
 
-  testWidgets("an older app's pause still asks for nothing and leaves nothing 未填", (tester) async {
+  testWidgets("an older app's pause still asks for nothing and leaves nothing 未填; 回報人數 shows off", (tester) async {
     final b = withJoy(withAttendance(seededChurch(as: staffHao, clock: eveningOf(Day(2026, 10, 9)))));
     b.attendance['grace'] = {
       'small:joy': AttendanceRecord(
@@ -271,43 +265,33 @@ void main() {
     expect(find.text('填寫人數'), findsNothing);
     await go(tester, '/me/groups/small/joy/attendance');
     expect(find.text('未填'), findsNothing);
-    expect(nextMeeting('11月6日'), findsOneWidget, reason: 'the first Friday after it');
+    expect(tester.widget<Switch>(find.byType(Switch)).value, isFalse);
   });
 
-  testWidgets('its 小組長 marks the coming meetings it will not meet, 這次沒聚會 ahead, and takes one back', (
+  testWidgets('its 小組長 turns its 回報人數 off for a break, and on: the weeks between stay asked for nothing', (
     tester,
   ) async {
-    final b = withJoy(withAttendance(seededChurch(as: staffHao, clock: eveningOf(Day(2026, 10, 9)))));
+    final b = withJoy(withAttendance(seededChurch(as: staffHao, clock: eveningOf(Day(2026, 10, 16)))));
+    b.attendance['grace'] = {
+      'small:joy': AttendanceRecord(pauses: [AttendancePause.off(Day(2026, 10, 9))]),
+    };
     await pumpApp(tester, b);
+    await go(tester, '/home');
+    expect(find.text('填寫人數'), findsNothing, reason: 'off: 10/9 and today ask for nothing');
     await go(tester, '/me/groups/small/joy/attendance');
-    expect(find.text('暫停聚會一段時間'), findsNothing, reason: 'each meeting instead, one by one');
-    expect(inRow('下次聚會', '標記哪幾次不聚會'), findsOneWidget, reason: 'what the row is for');
-    await tester.tap(nextMeeting('10月16日'));
+    expect(inRow('10月2日 週五', '未填'), findsOneWidget, reason: 'before it went off');
+    expect(find.textContaining('10月9日'), findsNothing);
+    await tester.tap(find.byType(Switch));
     await settle(tester);
-    expect(find.text('哪幾次不聚會？'), findsOneWidget);
-    await tester.tap(find.textContaining('10月16日').last);
-    await tester.tap(find.textContaining('10月23日').last);
-    await settle(tester);
-    await tapText(tester, '完成');
-    final days = b.attendance['grace']!['small:joy']!.days;
-    expect(days[Day(2026, 10, 16)], const AttendanceDay.none());
-    expect(days[Day(2026, 10, 23)], const AttendanceDay.none());
-    expect(nextMeeting('10月30日'), findsOneWidget, reason: 'the next it meets');
-    expect(
-      find.descendant(
-        of: find.ancestor(of: find.text('下次聚會'), matching: find.byType(ListRow)),
-        matching: findShown('接下來有 2 次不聚會'),
-      ),
-      findsOneWidget,
-    );
-    expect(find.text('標記哪幾次不聚會'), findsNothing);
+    expect(b.attendance['grace']!['small:joy']!.pauses, [
+      AttendancePause(from: Day(2026, 10, 9), until: Day(2026, 10, 16)),
+    ]);
+    expect(find.textContaining('10月9日'), findsNothing, reason: 'the week it was off');
+    expect(find.text('未填'), findsNWidgets(2), reason: 'today, and 10/2');
 
-    await tester.tap(nextMeeting('10月30日'));
+    await tester.tap(find.byType(Switch));
     await settle(tester);
-    await tester.tap(find.textContaining('10月23日').last);
-    await settle(tester);
-    await tapText(tester, '完成');
-    expect(b.attendance['grace']!['small:joy']!.days.keys, [Day(2026, 10, 16)]);
+    expect(b.attendance['grace']!['small:joy']!.pauses.last, AttendancePause.off(Day(2026, 10, 16)));
   });
 
   testWidgets('picking a year turns the month to it; only a day picks', (tester) async {
@@ -540,7 +524,6 @@ void main() {
       await tapText(tester, '儲存');
       expect(b.attendance['grace']!['service:youth']!.time, MeetingTime(startsOn: Day(2026, 10, 17)));
       expect(inRow('聚會時間', '每週六'), findsOneWidget);
-      expect(nextMeeting('10月17日'), findsOneWidget);
       expect(find.text('未填'), findsNothing, reason: 'the weeks before, without a roster, ask for nothing');
     });
 
@@ -555,17 +538,17 @@ void main() {
     });
   });
 
-  group('誰填人數、聚會時間、其他聚會', () {
+  group('負責回報、聚會時間、其他聚會', () {
     testWidgets("a service's 負責人 asks its 招待 to fill in its 人數 too", (tester) async {
       final b = withAttendance(seededChurch(as: editor, clock: eveningOf(Day(2026, 10, 4))));
       await pumpApp(tester, b);
       await go(tester, '/me/groups/service/sunday/attendance');
-      expect(inRow('誰填人數', '林同工'), findsOneWidget, reason: 'its 負責人');
-      await tapText(tester, '誰填人數');
+      expect(inRow('負責回報', '林同工'), findsOneWidget, reason: 'its 負責人');
+      await tapText(tester, '負責回報');
       await tapText(tester, '李美玉');
       await tapText(tester, '完成');
       expect(b.attendance['grace']!['service:sunday']!.fillers, ['mei']);
-      expect(inRow('誰填人數', '林同工、李美玉'), findsOneWidget);
+      expect(inRow('負責回報', '林同工、李美玉'), findsOneWidget);
     });
 
     testWidgets("a service's own 聚會時間 keeps the meetings it had by its rosters before", (tester) async {
@@ -604,8 +587,11 @@ void main() {
       expect(b.attendance['grace']!['service:sunday']!.days[Day(2026, 10, 4)], const AttendanceDay.count(86));
       await go(tester, '/me/groups/service/sunday/attendance');
       expect(find.text('86 人'), findsOneWidget);
-      expect(find.text('誰填人數'), findsNothing);
-      expect(find.text('聚會時間'), findsNothing);
+      ListRow row(String title) =>
+          tester.widget<ListRow>(find.ancestor(of: find.text(title), matching: find.byType(ListRow)));
+      expect(row('負責回報').onTap, isNull, reason: 'seen, not set');
+      expect(row('聚會時間').onTap, isNull);
+      expect(find.byType(Switch), findsNothing);
     });
 
     testWidgets('首頁 lists each meeting of the last two weeks still without its 人數, until filled in', (tester) async {
@@ -656,7 +642,6 @@ void main() {
       expect((joy.weekday, joy.startsOn), (DateTime.friday, Day(2026, 10, 16)));
       expect(joy.monthWeeks, [1, 3]);
       expect(inRow('聚會時間', '每月第 1、3 個週五'), findsOneWidget);
-      expect(nextMeeting('10月16日'), findsOneWidget);
     });
 
     testWidgets('an admin adds a 其他聚會, sets when it meets and who fills it in', (tester) async {
@@ -671,13 +656,13 @@ void main() {
       await tapText(tester, '聚會時間');
       await tapText(tester, '週三');
       await tapText(tester, '儲存');
-      await tapText(tester, '誰填人數');
+      await tapText(tester, '負責回報');
       await tapText(tester, '李美玉');
       await tapText(tester, '完成');
       final g = b.gatherings['grace']!.values.single;
       expect((g.name, g.time.weekday), ('長者共餐', DateTime.wednesday));
       expect(b.attendance['grace']!['gathering:${g.id}']!.fillers, ['mei']);
-      expect(inRow('誰填人數', '李美玉'), findsOneWidget);
+      expect(inRow('負責回報', '李美玉'), findsOneWidget);
     });
 
     testWidgets('a 其他聚會 has its own section on 回報人數; 行政 reminds who fills it in', (tester) async {

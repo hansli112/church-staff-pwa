@@ -2992,29 +2992,7 @@ class L10nKo extends L10n {
   String get attendanceNoMeeting => '이번엔 모이지 않았어요';
 
   @override
-  String get attendanceSkip => '모이지 않는 날';
-
-  @override
-  String attendanceSkipping(int count) {
-    return '앞으로 $count번 모이지 않아요';
-  }
-
-  @override
-  String get attendanceSkipFooter => '체크한 날은 알리지 않고 ‘미입력’도 남지 않아요';
-
-  @override
   String get attendanceNoDays => '기록할 모임이 아직 없어요';
-
-  @override
-  String attendanceNext(String day) {
-    return '다음 모임 $day';
-  }
-
-  @override
-  String get attendanceNextMeeting => '다음 모임';
-
-  @override
-  String get attendanceSkipHint => '모이지 않는 날 표시';
 
   @override
   String get attendanceNoMeets => '모임 시간이 아직 없어요';
@@ -3071,7 +3049,7 @@ class L10nKo extends L10n {
   }
 
   @override
-  String get attendanceFillers => '인원 기록하는 사람';
+  String get attendanceFillers => '보고 담당';
 
   @override
   String get gatherings => '기타 모임';

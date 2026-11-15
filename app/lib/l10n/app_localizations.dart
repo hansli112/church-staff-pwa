@@ -5326,47 +5326,11 @@ abstract class L10n {
   /// **'這次沒聚會'**
   String get attendanceNoMeeting;
 
-  /// Title of the sheet where the coming meetings a group will not meet (a break, 過年) are checked: each marked 這次沒聚會 ahead
-  ///
-  /// In zh, this message translates to:
-  /// **'哪幾次不聚會？'**
-  String get attendanceSkip;
-
-  /// Under 下次聚會: how many coming meetings are marked 這次沒聚會 ahead
-  ///
-  /// In zh, this message translates to:
-  /// **'接下來有 {count} 次不聚會'**
-  String attendanceSkipping(int count);
-
-  /// Footer under the coming meetings to check off
-  ///
-  /// In zh, this message translates to:
-  /// **'勾起來的那次不提醒，也不會留下「未填」'**
-  String get attendanceSkipFooter;
-
   /// The 人數 section with no meetings yet
   ///
   /// In zh, this message translates to:
   /// **'還沒有要填的聚會'**
   String get attendanceNoDays;
-
-  /// A group with nothing to fill in yet: when it next meets (#85)
-  ///
-  /// In zh, this message translates to:
-  /// **'下次聚會 {day}'**
-  String attendanceNext(String day);
-
-  /// The 人數 page's first row: its title, beside the day its group next meets; tapping it marks the coming ones off (#95)
-  ///
-  /// In zh, this message translates to:
-  /// **'下次聚會'**
-  String get attendanceNextMeeting;
-
-  /// Under 下次聚會 on the 人數 page while none is marked off: what tapping the row does (#95)
-  ///
-  /// In zh, this message translates to:
-  /// **'標記哪幾次不聚會'**
-  String get attendanceSkipHint;
 
   /// A 小組 with nothing to fill in because its 聚會時間 is not set
   ///
@@ -5452,10 +5416,10 @@ abstract class L10n {
   /// **'其他聚會 {count} 人'**
   String attendanceGatheringsTotal(int count);
 
-  /// A group's 人數 page: who is asked to fill in its 人數 and reminded; its leads always are
+  /// A group's 人數 page: who reports its 人數 and is reminded (負責回報); its leads always are
   ///
   /// In zh, this message translates to:
-  /// **'誰填人數'**
+  /// **'負責回報'**
   String get attendanceFillers;
 
   /// Groups only for their 人數, like 禱告會 or 長者共餐, with no roster

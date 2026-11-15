@@ -15,7 +15,7 @@ final attendanceProvider = StreamProvider.autoDispose.family<AttendanceRecord, S
   (ref, key) => openChurch(ref).attendance.watch(key),
 );
 
-/// The keys of the groups that asked me to fill in their 人數 (誰填人數).
+/// The keys of the groups that asked me to fill in their 人數 (負責回報).
 final myFillsProvider = StreamProvider.autoDispose<Set<String>>((ref) => openChurch(ref).attendance.mine());
 
 /// Whether I fill in [group]'s 人數, as who sets it or one it asked to; null until read.
@@ -115,20 +115,16 @@ Day? nextAttendanceDay(
   return null;
 }
 
-/// [group]'s meetings after [today], within [attendanceWeeks], oldest
-/// first: those its leads may mark 這次沒聚會 ahead (a break, 過年),
-/// which then are not reminded of nor left 未填. Replaces the pauses of
-/// before, which older apps may still set.
-List<Day> upcomingAttendanceDays(
-  AttendanceGroup group, {
-  required Day? since,
-  AttendanceRecord record = const AttendanceRecord(),
-  required Day today,
-}) => [
-  if (since != null)
-    for (var d = today.addDays(1); d.isBefore(today.addDays(7 * attendanceWeeks + 1)); d = d.addDays(1))
-      if (_due(group, since: since, record: record, day: d)) d,
-];
+/// [record]'s pauses with its 回報人數 turned on ([on]) or off from
+/// [today]: off, a pause from today on; on, the one covering today ends
+/// today, or goes, begun today. The weeks it was off stay asked for
+/// nothing.
+List<AttendancePause> pausesTurned(AttendanceRecord record, {required bool on, required Day today}) => on
+    ? [
+        for (final p in record.pauses)
+          if (!p.covers(today)) p else if (p.from.isBefore(today)) AttendancePause(from: p.from, until: today),
+      ]
+    : [...record.pauses, AttendancePause.off(today)];
 
 /// Whether [group] is a 小組 or a 其他聚會 whose 聚會時間 is not set yet.
 bool meetsUnset(AttendanceGroup group, Day today) =>

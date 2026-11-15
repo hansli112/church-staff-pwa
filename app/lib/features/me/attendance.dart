@@ -45,7 +45,7 @@ class GroupAttendanceRow extends ConsumerWidget {
     if (record == null) return const SizedBox.shrink();
     final today = ref.watch(todayProvider);
     final latest = latestAttendanceDay(group, since: since, record: record, today: today);
-    final next = nextAttendanceDay(group, since: since, record: record, today: today);
+    final time = attendanceTimeOf(ref, group.group);
     return ListSection(
       children: [
         ListRow(
@@ -53,8 +53,9 @@ class GroupAttendanceRow extends ConsumerWidget {
           value: latest == null ? null : attendanceValue(l10n, record.days[latest], attendanceGroupName(ref)),
           subtitle: switch (latest) {
             final day? => dayLabel(l10n, day, today),
-            null when next != null || meetsUnset(group, today) => attendanceNotYet(l10n, next, today),
-            null => l10n.attendanceNoDays,
+            // A 小組's page says its 聚會時間 a row above.
+            null when group.group is SmallGroup => null,
+            null => attendanceNotYet(l10n, time.time, serviceWeekday: time.serviceWeekday),
           },
           onTap: () => context.push(attendancePage(group.group)),
         ),
@@ -64,7 +65,7 @@ class GroupAttendanceRow extends ConsumerWidget {
 }
 
 /// A group's 人數 page (#95), from its page, 人數總覽 or 填寫人數: its
-/// 聚會時間 and 誰填人數, which who sets them changes here; when it next
+/// 聚會時間 and 負責回報, which who sets them changes here; when it next
 /// meets; its meetings from [attendanceWeeks] back, newest first, each
 /// with what was filled in or 未填 (never 0). Who fills them in taps one
 /// to fill it in or change it (補填), the next to mark the coming ones it
@@ -107,9 +108,7 @@ class GroupAttendanceScreen extends ConsumerWidget {
     final schedules = small != null ? me.schedulesSmallGroup(small.group) : manages;
     final today = ref.watch(todayProvider);
     final days = attendanceDays(group, since: since, record: record, today: today);
-    final upcoming = upcomingAttendanceDays(group, since: since, record: record, today: today);
-    final skipped = upcoming.where((d) => record.days[d]?.none ?? false).length;
-    final next = upcoming.where((d) => !(record.days[d]?.none ?? false)).firstOrNull;
+    final on = record.pauseOn(today) == null;
     final nameOf = attendanceGroupName(ref);
     final time = switch ((small, gathering, service)) {
       (final g?, _, _) => g.time,
@@ -122,61 +121,52 @@ class GroupAttendanceScreen extends ConsumerWidget {
       body: ListView(
         padding: const EdgeInsets.only(bottom: Space.xl),
         children: [
-          if (manages || schedules)
-            ListSection(
-              children: [
-                if (gathering != null && manages)
-                  ListRow(
-                    title: l10n.gatheringName,
-                    value: gathering.name,
-                    onTap: () => _renameGathering(context, ref, gathering),
+          ListSection(
+            children: [
+              // Off for a while (a break, 暑假): asks for nothing, and the
+              // weeks it was off stay so once on again.
+              if (manages)
+                SwitchRow(
+                  title: l10n.attendance,
+                  value: on,
+                  onChanged: (v) => _save(
+                    context,
+                    () => ref.churchData.attendance.savePauses(
+                      group.group.key,
+                      pausesTurned(record, on: v, today: today),
+                    ),
                   ),
-                ListRow(
-                  title: l10n.smallGroupMeets,
-                  value: meetingTimeLabel(l10n, time, serviceWeekday: service?.weekday),
-                  chevron: schedules,
-                  onTap: schedules
-                      ? () => _setTime(
-                          context,
-                          ref,
-                          group.group,
-                          time,
-                          small: small,
-                          gathering: gathering,
-                          service: service,
-                        )
-                      : null,
                 ),
-                if (manages)
-                  ListRow(
-                    title: l10n.attendanceFillers,
-                    value: fillers.isEmpty ? l10n.meetsNotSet : fillers.map((m) => m.name).join(l10n.listSeparator),
-                    onTap: () => _pickFillers(context, ref, group.group, record.fillers),
-                  ),
-              ],
-            ),
-          // When it next meets, or why it does not; who fills it in marks
-          // the coming ones off from here.
-          if (writes && upcoming.isNotEmpty || days.isEmpty && !(schedules && next == null))
-            ListSection(
-              children: [
+              if (gathering != null && manages)
                 ListRow(
-                  title: switch (next) {
-                    _? => l10n.attendanceNextMeeting,
-                    null when meetsUnset(group, today) => attendanceNotYet(l10n, null, today),
-                    null => l10n.attendanceNoDays,
-                  },
-                  value: next == null ? null : dayLabel(l10n, next, today),
-                  subtitle: switch (skipped) {
-                    > 0 => l10n.attendanceSkipping(skipped),
-                    _ when writes && upcoming.isNotEmpty => l10n.attendanceSkipHint,
-                    _ => null,
-                  },
-                  chevron: writes && upcoming.isNotEmpty,
-                  onTap: writes && upcoming.isNotEmpty ? () => _skip(context, ref, group, record, upcoming) : null,
+                  title: l10n.gatheringName,
+                  value: gathering.name,
+                  onTap: () => _renameGathering(context, ref, gathering),
                 ),
-              ],
-            ),
+              ListRow(
+                title: l10n.smallGroupMeets,
+                value: meetingTimeLabel(l10n, time, serviceWeekday: service?.weekday),
+                chevron: schedules,
+                onTap: schedules
+                    ? () => _setTime(
+                        context,
+                        ref,
+                        group.group,
+                        time,
+                        small: small,
+                        gathering: gathering,
+                        service: service,
+                      )
+                    : null,
+              ),
+              ListRow(
+                title: l10n.attendanceFillers,
+                value: fillers.isEmpty ? l10n.meetsNotSet : fillers.map((m) => m.name).join(l10n.listSeparator),
+                chevron: manages,
+                onTap: manages ? () => _pickFillers(context, ref, group.group, record.fillers) : null,
+              ),
+            ],
+          ),
           if (days.isNotEmpty || writes)
             ListSection(
               children: [
@@ -311,90 +301,29 @@ class GroupAttendanceScreen extends ConsumerWidget {
     final day = Day(picked.year, picked.month, picked.day);
     await fillAttendance(context, ref, group, day, record.days[day]);
   }
-
-  /// The coming meetings it will not meet, marked 這次沒聚會 ahead; those
-  /// unmarked are cleared.
-  Future<void> _skip(
-    BuildContext context,
-    WidgetRef ref,
-    AttendanceGroup group,
-    AttendanceRecord record,
-    List<Day> upcoming,
-  ) async {
-    final was = {
-      for (final d in upcoming)
-        if (record.days[d]?.none ?? false) d,
-    };
-    final off = await showAppSheet<Set<Day>>(
-      context,
-      builder: (_) => _SkipSheet(days: upcoming, off: was),
-    );
-    if (off == null || !context.mounted) return;
-    final attendance = ref.churchData.attendance;
-    await _save(context, () async {
-      for (final d in upcoming) {
-        if (off.contains(d) && !was.contains(d)) await attendance.save(group.group.key, d, const AttendanceDay.none());
-        if (!off.contains(d) && was.contains(d)) await attendance.save(group.group.key, d, null);
-      }
-    });
-  }
 }
 
-/// 哪幾次不聚會？: the coming meetings, those it will not meet checked.
-class _SkipSheet extends ConsumerStatefulWidget {
-  const _SkipSheet({required this.days, required this.off});
+/// For a group with no meeting to fill in yet: its 聚會時間, or that it is
+/// not set.
+String attendanceNotYet(L10n l10n, MeetingTime? time, {int? serviceWeekday}) =>
+    serviceWeekday == null && time?.weekday == null
+    ? l10n.attendanceNoMeets
+    : meetingTimeLabel(l10n, time, serviceWeekday: serviceWeekday);
 
-  final List<Day> days;
-  final Set<Day> off;
-
-  @override
-  ConsumerState<_SkipSheet> createState() => _SkipSheetState();
-}
-
-class _SkipSheetState extends ConsumerState<_SkipSheet> {
-  late final _off = {...widget.off};
-
-  @override
-  Widget build(BuildContext context) {
-    final l10n = L10n.of(context);
-    final today = ref.watch(todayProvider);
-    return UnsavedChanges(
-      changed: () => !setEquals(_off, widget.off),
-      child: SafeArea(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            SheetBar(
-              title: l10n.attendanceSkip,
-              actions: [SecondaryButton(label: l10n.done, onPressed: () => Navigator.pop(context, _off))],
-            ),
-            Flexible(
-              child: SingleChildScrollView(
-                child: ListSection(
-                  footer: l10n.attendanceSkipFooter,
-                  children: [
-                    for (final d in widget.days)
-                      ListRow(
-                        title: dayLabel(l10n, d, today),
-                        selected: _off.contains(d),
-                        onTap: () => setState(() => _off.contains(d) ? _off.remove(d) : _off.add(d)),
-                      ),
-                  ],
-                ),
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-/// For a group with no meeting to fill in yet: its [next] one, or that
-/// its 聚會時間 is not set (null [next]).
-String attendanceNotYet(L10n l10n, Day? next, Day today) =>
-    next == null ? l10n.attendanceNoMeets : l10n.attendanceNext(dayLabel(l10n, next, today));
+/// [group]'s 聚會時間 as the church has it: a 小組's or a 其他聚會's own, a
+/// service's on its 人數 (null: by its rosters), with the service's weekday.
+({MeetingTime? time, int? serviceWeekday}) attendanceTimeOf(WidgetRef ref, ChurchGroup group) => switch (group) {
+  SmallGroup(:final id) => (time: ref.watch(smallGroupsProvider).value?.byId(id)?.time, serviceWeekday: null),
+  GatheringGroup(:final id) => (
+    time: ref.watch(gatheringsProvider).value?.where((g) => g.id == id).firstOrNull?.time,
+    serviceWeekday: null,
+  ),
+  ServiceGroup(:final id) => (
+    time: ref.watch(attendanceProvider(group.key)).value?.time,
+    serviceWeekday: ref.watch(servicesProvider).value?.byId(id)?.weekday,
+  ),
+  MinistryGroup() => (time: null, serviceWeekday: null),
+};
 
 /// The name of the group a key names, for 和○○一起.
 String Function(String key) attendanceGroupName(WidgetRef ref) {
@@ -702,7 +631,7 @@ List<Member> attendanceFillerMembers(WidgetRef ref, List<String> uids) {
   return [for (final u in uids) ?byUid[u]];
 }
 
-/// 誰填人數: anyone in the church ticked, besides [leads], who always are.
+/// 負責回報: anyone in the church ticked, besides [leads], who always are.
 class _FillersSheet extends ConsumerStatefulWidget {
   const _FillersSheet({required this.leads, required this.picked});
 

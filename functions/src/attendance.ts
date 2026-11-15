@@ -16,7 +16,7 @@ import { dateKeyIn, timeZoneOf, timeZonesAt } from './timeZones.js';
  * churches/{cid}/attendance/{key}/days/{dateKey} (`count` and `note`, or
  * `none` for 這次沒聚會). On attendance/{key} itself: its pauses (`pauses`,
  * each `{from, until}`, kept once over so the weeks they covered never
- * turn 未填), who else fills them in (`fillers`, uids: 誰填人數), and a
+ * turn 未填), who else fills them in (`fillers`, uids: 負責回報), and a
  * service's 聚會時間 when not by its rosters (`everyWeek`, or `every` and
  * `startsOn`, or `monthWeeks`). The app writes them; firestore.rules keeps
  * who may, as powers.ts fillsAttendance and writesAttendance.
@@ -150,7 +150,7 @@ async function stillAsked(deps: { db: PushDeps['db'] }, cid: string, g: Due, day
     .map((m) => m.id))];
 }
 
-/** Who else fills in a group's 人數 (誰填人數), as attendance/{key} [d] has them. */
+/** Who else fills in a group's 人數 (負責回報), as attendance/{key} [d] has them. */
 export function fillersOf(d: DocumentSnapshot | undefined): string[] {
   const list = d?.get('fillers');
   return (Array.isArray(list) ? list : []).filter((u): u is string => typeof u === 'string');

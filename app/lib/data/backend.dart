@@ -569,7 +569,7 @@ abstract interface class AttendanceData {
   /// see them (Member.readsAttendance).
   Stream<AttendanceRecord> watch(String key);
 
-  /// The keys of the groups that asked me to fill in their 人數 (誰填人數,
+  /// The keys of the groups that asked me to fill in their 人數 (負責回報,
   /// AttendanceRecord.fillers).
   Stream<Set<String>> mine();
 
@@ -577,7 +577,7 @@ abstract interface class AttendanceData {
   /// null clears it.
   Future<void> save(String key, Day day, AttendanceDay? value);
 
-  /// Sets who else fills in group [key]'s 人數, by uid (誰填人數), by who
+  /// Sets who else fills in group [key]'s 人數, by uid (負責回報), by who
   /// sets it (Member.writesAttendance).
   Future<void> saveFillers(String key, List<String> fillers);
 
@@ -603,8 +603,9 @@ abstract interface class AttendanceData {
   /// cleared. Through the backend, which writes the others' too.
   Future<void> saveTogether(String key, Day day, AttendanceDay value);
 
-  /// Sets group [key]'s pauses: older apps made them, this one only reads
-  /// them (upcomingAttendanceDays took their place).
+  /// Sets group [key]'s pauses: its 回報人數 turned off for a while is one
+  /// open to AttendancePause.forever (pausesTurned); older apps set some
+  /// to a day.
   Future<void> savePauses(String key, List<AttendancePause> pauses);
 
   /// 提醒 on 人數總覽 (#93), by who fills in group [key]'s 人數

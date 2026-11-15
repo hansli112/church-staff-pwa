@@ -382,7 +382,7 @@ class Member {
   bool writesAttendance(ChurchGroup group) => group is! MinistryGroup && (overseesAttendance || managesGroup(group));
 
   /// Whether this member fills in the 人數 of [group], whose [fillers]
-  /// (誰填人數) they may be one of, and sees them.
+  /// (負責回報) they may be one of, and sees them.
   bool fillsAttendance(ChurchGroup group, List<String> fillers) =>
       writesAttendance(group) || (group is! MinistryGroup && fillers.contains(uid));
 
@@ -410,7 +410,7 @@ class Member {
   ];
 
   /// Whether this member is reminded of group [key]'s 人數, whose
-  /// [fillers] (誰填人數) they may be one of.
+  /// [fillers] (負責回報) they may be one of.
   bool remindedOf(String key, List<String> fillers) =>
       remindedAttendance.contains(key) || (!key.startsWith('ministry:') && fillers.contains(uid));
 

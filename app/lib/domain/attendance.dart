@@ -82,13 +82,20 @@ class Gathering {
   int get hashCode => Object.hash(id, name, time);
 }
 
-/// One of a group's pauses (暫停到某一天): no meeting is asked for from
-/// [from] until, not including, [until]. Kept once over, so the weeks it
-/// covered never turn 未填. Only older apps set them: a lead now marks
-/// each meeting ahead 這次沒聚會 (upcomingAttendanceDays).
+/// One of a group's pauses: no meeting is asked for from [from] until,
+/// not including, [until]. Kept once over, so the weeks it covered never
+/// turn 未填. A group's 回報人數 turned off is one open to [forever];
+/// turned on again, it ends that day. Older apps set some to a day
+/// (暫停到某一天).
 @immutable
 class AttendancePause {
   const AttendancePause({required this.from, required this.until});
+
+  /// Turned off from [from], until turned on again.
+  AttendancePause.off(this.from) : until = forever;
+
+  /// The end of a pause with none.
+  static final forever = Day(9999, 12, 31);
 
   final Day from;
   final Day until;
@@ -154,7 +161,7 @@ class AttendanceDay {
 }
 
 /// A group's 回報人數: its pauses, the 人數 of each meeting filled in, who
-/// else fills them in ([fillers], uids: 誰填人數), and, a service, its
+/// else fills them in ([fillers], uids: 負責回報), and, a service, its
 /// 聚會時間 when not by its rosters ([time]; every week was 每週都填人數,
 /// #93).
 @immutable

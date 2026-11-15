@@ -613,7 +613,7 @@ describe('回報人數 (attendance) 與小組 (smallGroups)', () => {
     await assertFails(setDoc(group(MEMBER_A), { pauses: [], everyWeek: true }));
   });
 
-  it('誰填人數：一串 uid，最多 20 個；被指定的人查得到自己要填哪些', async () => {
+  it('負責回報：一串 uid，最多 20 個；被指定的人查得到自己要填哪些', async () => {
     const group = (uid) => doc(as(uid), `churches/${A}/attendance/service:sunday`);
     await assertSucceeds(setDoc(group(EDITOR_A), { fillers: [MEMBER_A] }));
     await assertFails(setDoc(group(EDITOR_A), { fillers: 'member-a' }));
