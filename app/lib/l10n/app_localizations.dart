@@ -5188,6 +5188,36 @@ abstract class L10n {
   /// **'隔週'**
   String get meetsEveryOtherWeek;
 
+  /// 聚會時間: those weeks of each month (第 1、3 個週五)
+  ///
+  /// In zh, this message translates to:
+  /// **'每月'**
+  String get meetsEveryMonth;
+
+  /// 聚會時間 of a service: on its weekday when that day has a roster
+  ///
+  /// In zh, this message translates to:
+  /// **'照服事表'**
+  String get meetsByRoster;
+
+  /// A service meeting when its day has a roster
+  ///
+  /// In zh, this message translates to:
+  /// **'有服事表的{weekday}'**
+  String meetsWithRoster(String weekday);
+
+  /// Meeting on those weeks of each month; weeks is a list like 1、3
+  ///
+  /// In zh, this message translates to:
+  /// **'每月第 {weeks} 個{weekday}'**
+  String meetsMonthly(String weeks, String weekday);
+
+  /// A row to tick: that week of each month
+  ///
+  /// In zh, this message translates to:
+  /// **'第 {n} 個{weekday}'**
+  String meetsWeekOfMonth(int n, String weekday);
+
   /// Row for a 小組 meeting every other week: the next day it meets; tapping moves it a week
   ///
   /// In zh, this message translates to:
@@ -5245,7 +5275,7 @@ abstract class L10n {
   /// Under the 回報人數 switch: what it does
   ///
   /// In zh, this message translates to:
-  /// **'聚會和小組當天 21:00 提醒負責人填這次來了幾個人'**
+  /// **'聚會當天 21:00 提醒填人數的人'**
   String get attendanceSub;
 
   /// Section on a service's or 小組's page: how many came to each meeting
@@ -5383,20 +5413,8 @@ abstract class L10n {
   /// Toast after 提醒 when the group has no 負責人 or 小組長 to remind
   ///
   /// In zh, this message translates to:
-  /// **'沒有可以提醒的負責人，請直接聯絡'**
+  /// **'沒有可以提醒的人，請直接聯絡'**
   String get attendanceRemindNobody;
-
-  /// Switch in a service's 人數 section (#93): it meets every week, roster or not
-  ///
-  /// In zh, this message translates to:
-  /// **'每週都填人數'**
-  String get attendanceEveryWeek;
-
-  /// Under 每週都填人數
-  ///
-  /// In zh, this message translates to:
-  /// **'沒排服事表的那天也要填'**
-  String get attendanceEveryWeekSub;
 
   /// Section in the fill-in sheet of a 小組 (#93): the others it met with this time
   ///
@@ -5427,6 +5445,48 @@ abstract class L10n {
   /// In zh, this message translates to:
   /// **'小組 {count} 人'**
   String attendanceSmallGroupsTotal(int count);
+
+  /// 人數總覽: the 其他聚會' 人數 added up
+  ///
+  /// In zh, this message translates to:
+  /// **'其他聚會 {count} 人'**
+  String attendanceGatheringsTotal(int count);
+
+  /// A group's 人數 page: who is asked to fill in its 人數 and reminded; its leads always are
+  ///
+  /// In zh, this message translates to:
+  /// **'誰填人數'**
+  String get attendanceFillers;
+
+  /// Groups only for their 人數, like 禱告會 or 長者共餐, with no roster
+  ///
+  /// In zh, this message translates to:
+  /// **'其他聚會'**
+  String get gatherings;
+
+  /// No description provided for @addGathering.
+  ///
+  /// In zh, this message translates to:
+  /// **'新增其他聚會'**
+  String get addGathering;
+
+  /// A 其他聚會's name
+  ///
+  /// In zh, this message translates to:
+  /// **'名稱'**
+  String get gatheringName;
+
+  /// No description provided for @deleteGathering.
+  ///
+  /// In zh, this message translates to:
+  /// **'刪除這個聚會'**
+  String get deleteGathering;
+
+  /// Toast after deleting a 其他聚會, with undo
+  ///
+  /// In zh, this message translates to:
+  /// **'已刪除「{name}」'**
+  String gatheringDeleted(String name);
 
   /// Button on 人數總覽 (#95): the week before
   ///

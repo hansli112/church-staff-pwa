@@ -3058,6 +3058,27 @@ class L10nEn extends L10n {
   String get meetsEveryOtherWeek => 'Every other week';
 
   @override
+  String get meetsEveryMonth => 'Monthly';
+
+  @override
+  String get meetsByRoster => 'Roster';
+
+  @override
+  String meetsWithRoster(String weekday) {
+    return '${weekday}s with a schedule';
+  }
+
+  @override
+  String meetsMonthly(String weeks, String weekday) {
+    return 'Monthly: $weekday, weeks $weeks';
+  }
+
+  @override
+  String meetsWeekOfMonth(int n, String weekday) {
+    return '$weekday, week $n';
+  }
+
+  @override
   String get nextMeeting => 'Next meeting';
 
   @override
@@ -3089,7 +3110,7 @@ class L10nEn extends L10n {
   String get attendance => 'Attendance';
 
   @override
-  String get attendanceSub => 'Leads are reminded at 9 PM on the day to fill in how many came';
+  String get attendanceSub => 'Those who fill it in are reminded at 9 PM on the day';
 
   @override
   String get attendanceHeader => 'Attendance';
@@ -3178,13 +3199,7 @@ class L10nEn extends L10n {
   String get attendanceRemindSent => 'Reminded';
 
   @override
-  String get attendanceRemindNobody => 'No lead to remind; contact them directly';
-
-  @override
-  String get attendanceEveryWeek => 'Fill in every week';
-
-  @override
-  String get attendanceEveryWeekSub => 'Even on days with no roster';
+  String get attendanceRemindNobody => 'No one to remind; contact them directly';
 
   @override
   String get attendanceTogether => 'Met together with';
@@ -3207,6 +3222,31 @@ class L10nEn extends L10n {
   @override
   String attendanceSmallGroupsTotal(int count) {
     return 'Small groups $count';
+  }
+
+  @override
+  String attendanceGatheringsTotal(int count) {
+    return 'Other $count';
+  }
+
+  @override
+  String get attendanceFillers => 'Who fills in';
+
+  @override
+  String get gatherings => 'Other gatherings';
+
+  @override
+  String get addGathering => 'Add a gathering';
+
+  @override
+  String get gatheringName => 'Name';
+
+  @override
+  String get deleteGathering => 'Delete this gathering';
+
+  @override
+  String gatheringDeleted(String name) {
+    return 'Deleted “$name”';
   }
 
   @override

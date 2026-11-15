@@ -98,6 +98,9 @@ final smallGroupsProvider = StreamProvider<List<SmallGroupDetails>>(
   (ref) => openChurch(ref).smallGroups().map((list) => [...list]..sort((a, b) => a.name.compareTo(b.name))),
 );
 
+/// The church's 其他聚會 (回報人數), by name.
+final gatheringsProvider = StreamProvider<List<Gathering>>((ref) => openChurch(ref).attendance.gatherings());
+
 /// The church's groups by name (ChurchGroups); null until they are loaded.
 /// 事工 or 小組 that fail to load leave the rest.
 final churchGroupsProvider = Provider<ChurchGroups?>((ref) {
@@ -113,6 +116,7 @@ final churchGroupsProvider = Provider<ChurchGroups?>((ref) {
     services: services,
     ministries: ministries.value ?? const MinistrySettings(),
     smallGroups: smallGroups.value ?? const [],
+    gatherings: ref.watch(gatheringsProvider).value ?? const [],
   );
 });
 

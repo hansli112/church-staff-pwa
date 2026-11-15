@@ -2910,6 +2910,27 @@ class L10nJa extends L10n {
   String get meetsEveryOtherWeek => '隔週';
 
   @override
+  String get meetsEveryMonth => '毎月';
+
+  @override
+  String get meetsByRoster => '奉仕表どおり';
+
+  @override
+  String meetsWithRoster(String weekday) {
+    return '奉仕表がある$weekday';
+  }
+
+  @override
+  String meetsMonthly(String weeks, String weekday) {
+    return '毎月第$weeks$weekday';
+  }
+
+  @override
+  String meetsWeekOfMonth(int n, String weekday) {
+    return '第$n$weekday';
+  }
+
+  @override
   String get nextMeeting => '次の集まり';
 
   @override
@@ -2941,7 +2962,7 @@ class L10nJa extends L10n {
   String get attendance => '人数の記録';
 
   @override
-  String get attendanceSub => '集まりの日の21時に、リーダーに何人来たかの記録をお知らせします';
+  String get attendanceSub => '集まりの日の21時に、人数を記録する人にお知らせします';
 
   @override
   String get attendanceHeader => '出席人数';
@@ -3018,13 +3039,7 @@ class L10nJa extends L10n {
   String get attendanceRemindSent => '知らせました';
 
   @override
-  String get attendanceRemindNobody => '知らせるリーダーがいません。直接連絡してください';
-
-  @override
-  String get attendanceEveryWeek => '毎週記録する';
-
-  @override
-  String get attendanceEveryWeekSub => '当番表がない日も記録します';
+  String get attendanceRemindNobody => '知らせる人がいません。直接連絡してください';
 
   @override
   String get attendanceTogether => '一緒に集まった小グループ';
@@ -3047,6 +3062,31 @@ class L10nJa extends L10n {
   @override
   String attendanceSmallGroupsTotal(int count) {
     return '小グループ $count人';
+  }
+
+  @override
+  String attendanceGatheringsTotal(int count) {
+    return 'その他 $count人';
+  }
+
+  @override
+  String get attendanceFillers => '人数を記録する人';
+
+  @override
+  String get gatherings => 'その他の集まり';
+
+  @override
+  String get addGathering => 'その他の集まりを追加';
+
+  @override
+  String get gatheringName => '名前';
+
+  @override
+  String get deleteGathering => 'この集まりを削除';
+
+  @override
+  String gatheringDeleted(String name) {
+    return '「$name」を削除しました';
   }
 
   @override

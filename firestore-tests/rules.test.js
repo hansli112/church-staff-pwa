@@ -560,12 +560,19 @@ describe('attendanceAccess (testdata/church_rules.json)', () => {
       }));
       const [kind, id] = r.group.split(':');
       if (kind === 'small') await seed(`churches/${A}/smallGroups/${id}`, { name: id, service: r.smallGroupService });
+      if (kind === 'gathering') await seed(`churches/${A}/gatherings/${id}`, { name: id, weekday: 7, every: 1 });
+      await seed(`churches/${A}/attendance/${r.group}`, { fillers: r.filler ? [uid] : [] });
       const day = doc(as(uid), `churches/${A}/attendance/${r.group}/days/2030-10-0${(i % 9) + 1}`);
       const write = setDoc(day, { count: 30, note: '', by: uid });
       await (r.writes ? assertSucceeds(write) : assertFails(write));
       await seed(`churches/${A}/attendance/${r.group}/days/2030-11-01`, { count: 1, by: 'x' });
       const read = getDocs(collection(as(uid), `churches/${A}/attendance/${r.group}/days`));
       await (r.reads ? assertSucceeds(read) : assertFails(read));
+      const read2 = getDoc(doc(as(uid), `churches/${A}/attendance/${r.group}`));
+      await (r.reads ? assertSucceeds(read2) : assertFails(read2));
+      // When it meets and who else fills them in: not one asked to.
+      const manage = setDoc(doc(as(uid), `churches/${A}/attendance/${r.group}`), { fillers: [uid, 'someone'] });
+      await ((r.manages ?? r.writes) ? assertSucceeds(manage) : assertFails(manage));
     });
   });
 });
@@ -604,6 +611,40 @@ describe('回報人數 (attendance) 與小組 (smallGroups)', () => {
     await assertSucceeds(setDoc(group(OFFICE_A), { pauses: [], everyWeek: false }));
     await assertFails(setDoc(group(EDITOR_A), { pauses: [], everyWeek: 'yes' }));
     await assertFails(setDoc(group(MEMBER_A), { pauses: [], everyWeek: true }));
+  });
+
+  it('誰填人數：一串 uid，最多 20 個；被指定的人查得到自己要填哪些', async () => {
+    const group = (uid) => doc(as(uid), `churches/${A}/attendance/service:sunday`);
+    await assertSucceeds(setDoc(group(EDITOR_A), { fillers: [MEMBER_A] }));
+    await assertFails(setDoc(group(EDITOR_A), { fillers: 'member-a' }));
+    await assertFails(setDoc(group(EDITOR_A), { fillers: Array.from({ length: 21 }, (_, i) => `u${i}`) }));
+    await assertSucceeds(getDocs(query(collection(as(MEMBER_A), `churches/${A}/attendance`), where('fillers', 'array-contains', MEMBER_A))));
+    await assertFails(getDocs(collection(as(MEMBER_A), `churches/${A}/attendance`)));
+  });
+
+  it('聚會時間：聚會的每週、隔週或每月第幾個', async () => {
+    const group = (uid) => doc(as(uid), `churches/${A}/attendance/service:sunday`);
+    await assertSucceeds(setDoc(group(EDITOR_A), { everyWeek: false, every: 2, startsOn: '2030-10-06' }));
+    await assertSucceeds(setDoc(group(EDITOR_A), { everyWeek: false, monthWeeks: [1, 3], startsOn: '2030-10-06' }));
+    await assertFails(setDoc(group(EDITOR_A), { every: 3 }));
+    await assertFails(setDoc(group(EDITOR_A), { startsOn: 'soon' }));
+    await assertFails(setDoc(group(EDITOR_A), { monthWeeks: [1, 2, 3, 4, 5] }));
+    await assertFails(setDoc(group(EDITOR_A), { monthWeeks: '1,3' }));
+  });
+
+  it('其他聚會：同工都讀得到，管理員和行政新增、改、刪', async () => {
+    const g = (uid, id = 'kids') => doc(as(uid), `churches/${A}/gatherings/${id}`);
+    const kids = { name: '兒童學習天地', weekday: 7, every: 1, startsOn: '2030-10-06' };
+    await assertSucceeds(setDoc(g(ADMIN_A), kids));
+    await assertSucceeds(setDoc(g(OFFICE_A, 'pray'), { name: '禱告會', weekday: 5, monthWeeks: [1, 3] }));
+    await assertSucceeds(getDoc(g(MEMBER_A)));
+    await assertFails(getDoc(g(ADMIN_B)));
+    await assertFails(setDoc(g(EDITOR_A, 'x'), kids));
+    await assertFails(setDoc(g(ADMIN_A, 'x'), { ...kids, name: '' }));
+    await assertFails(setDoc(g(ADMIN_A, 'x'), { ...kids, weekday: 8 }));
+    await assertFails(setDoc(g(ADMIN_A, 'x'), { ...kids, extra: 1 }));
+    await assertFails(deleteDoc(g(EDITOR_A)));
+    await assertSucceeds(deleteDoc(g(OFFICE_A)));
   });
 
   it('聯合小組（#93）：和別組一起只有後端寫', async () => {

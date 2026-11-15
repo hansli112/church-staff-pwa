@@ -2911,6 +2911,27 @@ class L10nKo extends L10n {
   String get meetsEveryOtherWeek => '격주';
 
   @override
+  String get meetsEveryMonth => '매월';
+
+  @override
+  String get meetsByRoster => '봉사표대로';
+
+  @override
+  String meetsWithRoster(String weekday) {
+    return '봉사표가 있는 $weekday';
+  }
+
+  @override
+  String meetsMonthly(String weeks, String weekday) {
+    return '매월 $weeks째 주 $weekday';
+  }
+
+  @override
+  String meetsWeekOfMonth(int n, String weekday) {
+    return '$n째 주 $weekday';
+  }
+
+  @override
   String get nextMeeting => '다음 모임';
 
   @override
@@ -2942,7 +2963,7 @@ class L10nKo extends L10n {
   String get attendance => '인원 기록';
 
   @override
-  String get attendanceSub => '모임 당일 오후 9시에 리더에게 몇 명이 왔는지 기록하라고 알려요';
+  String get attendanceSub => '모임 당일 오후 9시에 인원 기록하는 사람에게 알려요';
 
   @override
   String get attendanceHeader => '출석 인원';
@@ -3019,13 +3040,7 @@ class L10nKo extends L10n {
   String get attendanceRemindSent => '알렸어요';
 
   @override
-  String get attendanceRemindNobody => '알릴 리더가 없어요. 직접 연락해 주세요';
-
-  @override
-  String get attendanceEveryWeek => '매주 기록';
-
-  @override
-  String get attendanceEveryWeekSub => '봉사표가 없는 날도 기록해요';
+  String get attendanceRemindNobody => '알릴 사람이 없어요. 직접 연락해 주세요';
 
   @override
   String get attendanceTogether => '함께 모인 소그룹';
@@ -3048,6 +3063,31 @@ class L10nKo extends L10n {
   @override
   String attendanceSmallGroupsTotal(int count) {
     return '소그룹 $count명';
+  }
+
+  @override
+  String attendanceGatheringsTotal(int count) {
+    return '기타 $count명';
+  }
+
+  @override
+  String get attendanceFillers => '인원 기록하는 사람';
+
+  @override
+  String get gatherings => '기타 모임';
+
+  @override
+  String get addGathering => '기타 모임 추가';
+
+  @override
+  String get gatheringName => '이름';
+
+  @override
+  String get deleteGathering => '이 모임 삭제';
+
+  @override
+  String gatheringDeleted(String name) {
+    return '‘$name’ 삭제함';
   }
 
   @override

@@ -918,6 +918,33 @@ void contractTests(Future<ContractWorld> Function() open) {
       expect((await g.church.smallGroups().first).single.name, '喜樂');
     });
 
+    test('who a group asks fills in its 人數 and finds it; 其他聚會 are made by admins, read by all', () async {
+      final g = await Grace.open(w);
+      await g.church.attendance.saveSince(Day(2026, 10, 1));
+      final id = await g.church.attendance.saveGathering(
+        const Gathering(
+          id: '',
+          name: '長者共餐',
+          time: MeetingTime(weekday: DateTime.wednesday),
+        ),
+      );
+      await g.church.attendance.saveFillers('gathering:$id', [g.mei]);
+      await w.signIn(Grace.meiEmail);
+      expect((await g.church.attendance.gatherings().first).single.name, '長者共餐');
+      expect(await g.church.attendance.mine().firstWhere((k) => k.isNotEmpty), {'gathering:$id'});
+      await g.church.attendance.save('gathering:$id', Day(2026, 10, 7), const AttendanceDay.count(18));
+      expect(
+        (await g.church.attendance.watch('gathering:$id').firstWhere((r) => r.days.isNotEmpty)).days,
+        {Day(2026, 10, 7): const AttendanceDay.count(18)},
+      );
+      await expectLater(g.church.attendance.saveFillers('gathering:$id', [g.mei, g.editor]), denied());
+      await expectLater(g.church.attendance.saveGathering(Gathering(id: id, name: '共餐')), denied());
+      await expectLater(
+        g.church.attendance.save('service:sunday', Day(2026, 10, 4), const AttendanceDay.count(1)),
+        denied(),
+      );
+    });
+
     test("leads fill in their group's 人數; 行政 reads a service's; a 同工 neither", () async {
       final g = await Grace.open(w);
       await g.church.attendance.saveSince(Day(2026, 10, 1));
@@ -948,15 +975,22 @@ void contractTests(Future<ContractWorld> Function() open) {
       expect((await g.church.attendance.watch('service:sunday').first).days.keys, [Day(2026, 10, 4)]);
     });
 
-    test('每週都填人數 stays beside the pauses; 小組 that met together are kept so (#93)', () async {
+    test("a service's 聚會時間 and 誰填人數 stay beside the pauses; 小組 that met together are kept so (#93)", () async {
       final g = await Grace.open(w);
       await g.church.attendance.saveSince(Day(2026, 10, 1));
       final pauses = [AttendancePause(from: Day(2026, 10, 5), until: Day(2026, 11, 1))];
       await g.church.attendance.savePauses('service:youth', pauses);
-      await g.church.attendance.saveEveryWeek('service:youth', true);
+      final monthly = MeetingTime(monthWeeks: const [1, 3], startsOn: Day(2026, 10, 3));
+      await g.church.attendance.saveTime('service:youth', monthly);
+      await g.church.attendance.saveFillers('service:youth', [g.mei]);
       await g.church.attendance.savePauses('service:youth', pauses);
-      final youth = await g.church.attendance.watch('service:youth').firstWhere((r) => r.everyWeek);
+      var youth = await g.church.attendance.watch('service:youth').firstWhere((r) => r.time != null);
       expect(youth.pauses, pauses);
+      expect(youth.time, monthly);
+      expect(youth.fillers, [g.mei]);
+      await g.church.attendance.saveTime('service:youth', const MeetingTime());
+      youth = await g.church.attendance.watch('service:youth').firstWhere((r) => r.time?.monthWeeks.isEmpty ?? false);
+      expect(youth.time, const MeetingTime());
 
       const friday = SmallGroupDetails(id: '', name: '喜樂小組', service: 'sunday', weekday: DateTime.friday);
       final joy = await g.church.saveSmallGroup(friday);

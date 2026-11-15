@@ -13,6 +13,7 @@ import { ledDuties, type Ministry } from './ministries.js';
 
 /** The member fields what they may do is worked out from. */
 export interface MemberFields {
+  uid?: unknown;
   role?: unknown;
   groups?: unknown;
   identities?: unknown;
@@ -48,6 +49,22 @@ export function groupOf(key: unknown, smallGroupService: string | null = null): 
   if (!m) return null;
   const [, kind, id] = m;
   return kind === 'small' ? { kind, id, service: smallGroupService } : { kind: kind as 'service' | 'ministry', id };
+}
+
+/**
+ * A group whose 人數 are asked for (回報人數, #85): a service, a 小組, or
+ * a 其他聚會 (`gathering:<id>`), which is nothing but that.
+ */
+export type AttendanceGroup = Exclude<ChurchGroup, { kind: 'ministry' }> | { kind: 'gathering'; id: string };
+
+const ATTENDANCE_KEY = new RegExp(`^(service|small|gathering):(${ID})$`);
+
+/** The group whose 人數 [key] names, a 小組's in [smallGroupService]; null for anything else. */
+export function attendanceGroupOf(key: unknown, smallGroupService: string | null = null): AttendanceGroup | null {
+  const m = typeof key === 'string' ? ATTENDANCE_KEY.exec(key) : null;
+  if (!m) return null;
+  const [, kind, id] = m;
+  return kind === 'small' ? { kind, id, service: smallGroupService } : { kind: kind as 'service' | 'gathering', id };
 }
 
 /** [value] as an event's group (#84): '' (the church's) or a group's key. */
@@ -149,24 +166,33 @@ export function powersOf(m: MemberFields) {
     overseesAttendance: inGroup('roster-editors'),
 
     /**
-     * Whether they fill in the 人數 of [group] (attendanceAccess): admins
-     * and 行政 any; a service's 負責人 and 牧者 its own and its 小組'; a
-     * 小組長 their 小組's.
+     * Whether they fill in the 人數 of [group], and set when it meets and
+     * who else fills them in (attendanceAccess): admins and 行政 any, a
+     * 其他聚會's too; a service's 負責人 and 牧者 its own and its 小組'; a
+     * 小組長 their 小組's. Those asked to (`fillers` on attendance/{key})
+     * fill them in too, and nothing else ([fillsAttendance]).
      */
-    writesAttendance: (group: ChurchGroup) => group.kind !== 'ministry' && (inGroup('roster-editors') || manages(group)),
+    writesAttendance: (group: ChurchGroup | AttendanceGroup) =>
+      group.kind !== 'ministry' && (inGroup('roster-editors') || (group.kind !== 'gathering' && manages(group))),
+
+    /** Whether they fill in the 人數 of [group], of whose [fillers] they may be one. */
+    fillsAttendance: (group: ChurchGroup | AttendanceGroup, fillers: string[] = []) =>
+      self.writesAttendance(group) || (group.kind !== 'ministry' && typeof m.uid === 'string' && fillers.includes(m.uid)),
 
     /** Whether they see the 人數 of [group]: who fills them in. */
-    readsAttendance: (group: ChurchGroup) => self.writesAttendance(group),
+    readsAttendance: (group: ChurchGroup | AttendanceGroup, fillers: string[] = []) => self.fillsAttendance(group, fillers),
 
     /**
      * Whether they are reminded of the 人數 of [group] (attendanceReminded):
      * a service's 負責人, by a `lead` 身分 of it, not its 牧者; a 小組's
-     * 小組長.
+     * 小組長. Those asked to fill them in are too, by the group's
+     * `fillers`.
      */
-    remindedOfAttendance: (group: ChurchGroup) =>
-      group.kind === 'small'
+    remindedOfAttendance: (group: ChurchGroup | AttendanceGroup, fillers: string[] = []) =>
+      (typeof m.uid === 'string' && group.kind !== 'ministry' && fillers.includes(m.uid))
+      || (group.kind === 'small'
         ? smallGroups.includes(group.id)
-        : group.kind === 'service' && identities.some((i) => 'service' in i && i.service === group.id),
+        : group.kind === 'service' && identities.some((i) => 'service' in i && i.service === group.id)),
   };
   return self;
 }

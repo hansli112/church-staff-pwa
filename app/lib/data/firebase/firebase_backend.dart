@@ -1089,7 +1089,7 @@ class FirestoreChurchData implements ChurchData {
     'uid': uid,
     ...switch (group) {
       ServiceGroup(:final id) => {'service': id, if (member) 'duties': duties, if (member) 'smallGroups': smallGroups},
-      MinistryGroup() => throw const CloudException(CloudErrorCode.unknown),
+      MinistryGroup() || GatheringGroup() => throw const CloudException(CloudErrorCode.unknown),
       SmallGroup(:final id) => {'smallGroup': id},
     },
     'member': member,
@@ -1426,7 +1426,13 @@ class _FirestoreAttendance implements AttendanceData {
         ._col('attendance')
         .doc(key)
         .live()
-        .map((s) => (pauses: attendancePausesFromJson(s.data()), everyWeek: s.data()?['everyWeek'] == true)),
+        .map(
+          (s) => AttendanceRecord(
+            pauses: attendancePausesFromJson(s.data()),
+            time: key.startsWith('service:') ? serviceTimeFromJson(s.data()) : null,
+            fillers: attendanceFillersFromJson(s.data()),
+          ),
+        ),
     _c
         ._col('attendance')
         .doc(key)
@@ -1438,8 +1444,51 @@ class _FirestoreAttendance implements AttendanceData {
               if ((Day.tryParse(d.id), attendanceDayFromJson(d.data())) case (final day?, final value?)) day: value,
           },
         ),
-    (group, days) => AttendanceRecord(pauses: group.pauses, everyWeek: group.everyWeek, days: days),
+    (group, days) => group.copyWith(days: days),
   ).translated();
+
+  @override
+  Stream<Set<String>> mine() => _c
+      ._col('attendance')
+      .where('fillers', arrayContains: _c._calls._auth.currentUser?.uid ?? '')
+      .live()
+      .map((snap) => {for (final d in snap.docs) d.id})
+      .translated();
+
+  @override
+  Future<void> saveFillers(String key, List<String> fillers) {
+    final ref = _c._col('attendance').doc(key);
+    return _c._write(ref, (tx) => tx.set(ref, {'fillers': fillers}, SetOptions(merge: true)));
+  }
+
+  @override
+  Future<void> saveTime(String key, MeetingTime? time) {
+    final ref = _c._col('attendance').doc(key);
+    return _c._write(ref, (tx) => tx.set(ref, serviceTimeToJson(time), SetOptions(merge: true)));
+  }
+
+  @override
+  Stream<List<Gathering>> gatherings() => _c
+      ._col('gatherings')
+      .live()
+      .map(
+        (snap) =>
+            [for (final d in snap.docs) gatheringFromJson(d.id, d.data())]..sort((a, b) => a.name.compareTo(b.name)),
+      )
+      .translated();
+
+  @override
+  Future<String> saveGathering(Gathering gathering) async {
+    final ref = gathering.id.isEmpty ? _c._col('gatherings').doc() : _c._col('gatherings').doc(gathering.id);
+    await _c._write(ref, (tx) => tx.set(ref, gatheringToJson(gathering.copyWith(name: gathering.name.trim()))));
+    return ref.id;
+  }
+
+  @override
+  Future<void> deleteGathering(String id) {
+    final ref = _c._col('gatherings').doc(id);
+    return _c._write(ref, (tx) => tx.delete(ref));
+  }
 
   @override
   Future<void> save(String key, Day day, AttendanceDay? value) {
@@ -1460,12 +1509,6 @@ class _FirestoreAttendance implements AttendanceData {
   Future<void> savePauses(String key, List<AttendancePause> pauses) {
     final ref = _c._col('attendance').doc(key);
     return _c._write(ref, (tx) => tx.set(ref, attendancePausesToJson(pauses), SetOptions(merge: true)));
-  }
-
-  @override
-  Future<void> saveEveryWeek(String key, bool everyWeek) {
-    final ref = _c._col('attendance').doc(key);
-    return _c._write(ref, (tx) => tx.set(ref, {'everyWeek': everyWeek}, SetOptions(merge: true)));
   }
 
   @override

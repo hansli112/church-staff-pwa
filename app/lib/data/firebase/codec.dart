@@ -144,6 +144,7 @@ SmallGroupDetails smallGroupFromJson(String id, Json data) => SmallGroupDetails(
   },
   every: data['every'] == 2 ? 2 : 1,
   startsOn: Day.tryParse(data['startsOn'] as String?),
+  monthWeeks: _monthWeeks(data['monthWeeks']),
 );
 
 /// What editSmallGroup takes of [g].
@@ -151,10 +152,67 @@ Json smallGroupToJson(SmallGroupDetails g) => {
   if (g.id.isNotEmpty) 'id': g.id,
   'name': g.name,
   'service': g.service,
-  'weekday': ?g.weekday,
-  if (g.weekday != null) 'every': g.every,
-  if (g.weekday != null) 'startsOn': ?g.startsOn?.key,
+  ...meetingTimeToJson(g.time),
 };
+
+/// A 聚會時間's weeks of each month, 1–4, as read.
+List<int> _monthWeeks(Object? v) => [
+  if (v is List)
+    for (final w in v)
+      if (w is int && w >= 1 && w <= MeetingTime.weeksOfMonth) w,
+];
+
+/// A 聚會時間 as a 小組's, a 其他聚會's or a service's (with no weekday) doc has it.
+MeetingTime meetingTimeFromJson(Json? data) => MeetingTime(
+  weekday: switch (data?['weekday']) {
+    final int w when w >= 1 && w <= 7 => w,
+    _ => null,
+  },
+  every: data?['every'] == 2 ? 2 : 1,
+  startsOn: Day.tryParse(data?['startsOn'] as String?),
+  monthWeeks: _monthWeeks(data?['monthWeeks']),
+);
+
+/// [t]'s fields: when it meets monthly, its weeks; else every [MeetingTime.every] weeks.
+Json meetingTimeToJson(MeetingTime t) => {
+  'weekday': ?t.weekday,
+  if (t.monthWeeks.isNotEmpty) 'monthWeeks': t.monthWeeks else if (t.weekday != null) 'every': t.every,
+  if (t.weekday != null) 'startsOn': ?t.startsOn?.key,
+};
+
+/// churches/{cid}/gatherings/{id}: a 其他聚會.
+Gathering gatheringFromJson(String id, Json data) =>
+    Gathering(id: id, name: data['name'] as String? ?? '', time: meetingTimeFromJson(data));
+
+Json gatheringToJson(Gathering g) => {'name': g.name, ...meetingTimeToJson(g.time)};
+
+/// attendance/{key} of a service: its 聚會時間 when not by its rosters;
+/// every week was 每週都填人數 (#93), which older apps read.
+MeetingTime? serviceTimeFromJson(Json? data) => switch (meetingTimeFromJson(data)) {
+  final t when t.monthWeeks.isNotEmpty || t.every == 2 => MeetingTime(
+    every: t.every,
+    startsOn: t.startsOn,
+    monthWeeks: t.monthWeeks,
+  ),
+  _ when data?['everyWeek'] == true => MeetingTime(startsOn: Day.tryParse(data?['startsOn'] as String?)),
+  _ => null,
+};
+
+/// Service [t] as attendance/{key} keeps it, every field written, so a
+/// change takes the others away.
+Json serviceTimeToJson(MeetingTime? t) => {
+  'everyWeek': t != null && t.monthWeeks.isEmpty && t.every == 1,
+  'every': t != null && t.monthWeeks.isEmpty && t.every == 2 ? 2 : FieldValue.delete(),
+  'startsOn': t?.startsOn?.key ?? FieldValue.delete(),
+  'monthWeeks': t != null && t.monthWeeks.isNotEmpty ? t.monthWeeks : FieldValue.delete(),
+};
+
+/// Who else fills in a group's 人數, attendance/{key}.fillers.
+List<String> attendanceFillersFromJson(Json? data) => [
+  if (data?['fillers'] is List)
+    for (final u in data!['fillers'] as List<dynamic>)
+      if (u is String) u,
+];
 
 /// attendance/{key} and its days (#85).
 List<AttendancePause> attendancePausesFromJson(Json? data) => [

@@ -206,21 +206,31 @@ service cloud.firestore {
         || (g.matches('small:.+') && g.split(':')[1] in member(cid).get('leadSmallGroups', []));
     }
 
-    // 回報人數 (#85) of group [key], `service:<id>` or `small:<id>`
-    // (testdata/church_rules.json, attendanceAccess, as
-    // functions/src/powers.ts): admins and 行政 any (人數總覽, #93); a
-    // service's 負責人 and 牧者 its own and its 小組'; a 小組長 their 小組's.
-    // Who fills them in sees them.
+    // 回報人數 (#85) of group [key], `service:<id>`, `small:<id>` or
+    // `gathering:<id>` (其他聚會) (testdata/church_rules.json,
+    // attendanceAccess, as functions/src/powers.ts writesAttendance): admins
+    // and 行政 any (人數總覽, #93); a service's 負責人 and 牧者 its own and
+    // its 小組'; a 小組長 their 小組's. They also set when it meets and who
+    // else fills them in.
     function writesAttendance(cid, key) {
       let kind = key.split(':')[0];
       let id = key.split(':')[1];
       let leads = member(cid).get('leadTypes', []);
       let small = /databases/$(database)/documents/churches/$(cid)/smallGroups/$(id);
-      return isMember(cid) && key.matches('(service|small):[A-Za-z0-9_-]{1,64}')
+      return isMember(cid) && key.matches('(service|small|gathering):[A-Za-z0-9_-]{1,64}')
         && (inGroup(cid, 'roster-editors')
           || (kind == 'service' && id in leads)
           || (kind == 'small' && (id in member(cid).get('leadSmallGroups', [])
               || (exists(small) && get(small).data.get('service', '') in leads))));
+    }
+
+    // Who fills in and sees group [key]'s 人數 (powers.ts fillsAttendance):
+    // those above, and those it asks to (`fillers` on attendance/{key},
+    // 誰填人數), who set nothing else of it.
+    function fillsAttendance(cid, key) {
+      let state = /databases/$(database)/documents/churches/$(cid)/attendance/$(key);
+      return writesAttendance(cid, key)
+        || (isMember(cid) && exists(state) && request.auth.uid in get(state).data.get('fillers', []));
     }
 
     function isEventRoster(data) {
@@ -455,17 +465,30 @@ service cloud.firestore {
       // (補填) or change it. A 小組 met with others (聯合小組, #93) says so,
       // `together` on the one filled in and `with` on the others: those
       // are fillAttendanceTogether's, which checks the others.
+      // Who else fills them in (`fillers`, 誰填人數) finds the groups that
+      // ask them, a query on `fillers`. A service's 聚會時間 when not by
+      // its rosters: `everyWeek`, `every` 2 from `startsOn`, or
+      // `monthWeeks` of each month.
       match /attendance/{key} {
-        allow read: if writesAttendance(cid, key);
+        allow read: if writesAttendance(cid, key)
+          || (isMember(cid) && request.auth.uid in resource.data.get('fillers', []));
         allow create, update: if writesAttendance(cid, key)
-          && request.resource.data.keys().hasOnly(['pauses', 'everyWeek', 'updatedAt'])
+          && request.resource.data.keys().hasOnly(['pauses', 'everyWeek', 'updatedAt', 'fillers', 'every', 'startsOn', 'monthWeeks'])
           && request.resource.data.get('pauses', []) is list
           && request.resource.data.get('pauses', []).size() <= 50
-          && request.resource.data.get('everyWeek', false) is bool;
+          && request.resource.data.get('everyWeek', false) is bool
+          && request.resource.data.get('fillers', []) is list
+          && request.resource.data.get('fillers', []).size() <= 20
+          && request.resource.data.get('every', 1) in [1, 2]
+          && (!('startsOn' in request.resource.data)
+              || (request.resource.data.startsOn is string && request.resource.data.startsOn.matches('[0-9]{4}-[0-9]{2}-[0-9]{2}')))
+          && request.resource.data.get('monthWeeks', []) is list
+          && request.resource.data.get('monthWeeks', []).size() <= 4
+          && request.resource.data.get('monthWeeks', []).hasOnly([1, 2, 3, 4]);
 
         match /days/{day} {
-          allow read: if writesAttendance(cid, key);
-          allow create, update: if writesAttendance(cid, key) && day.matches('[0-9]{4}-[0-9]{2}-[0-9]{2}')
+          allow read: if fillsAttendance(cid, key);
+          allow create, update: if fillsAttendance(cid, key) && day.matches('[0-9]{4}-[0-9]{2}-[0-9]{2}')
             && request.resource.data.keys().hasOnly(['count', 'note', 'none', 'by', 'updatedAt'])
             && request.resource.data.get('by', '') == request.auth.uid
             && (request.resource.data.get('none', false) == true
@@ -474,8 +497,28 @@ service cloud.firestore {
                     && request.resource.data.count >= 0 && request.resource.data.count <= 100000
                     && request.resource.data.get('note', '') is string
                     && request.resource.data.get('note', '').size() <= 800));
-          allow delete: if writesAttendance(cid, key);
+          allow delete: if fillsAttendance(cid, key);
         }
+      }
+
+      // 其他聚會: a group whose 人數 are asked for and nothing else
+      // (禱告會, 長者共餐), its name and 聚會時間, as a 小組's. Everyone reads
+      // them, for their names; admins and 行政 make them.
+      match /gatherings/{id} {
+        allow read: if isMember(cid);
+        allow delete: if isMember(cid) && inGroup(cid, 'roster-editors');
+        allow create, update: if isMember(cid) && inGroup(cid, 'roster-editors')
+          && request.resource.data.keys().hasOnly(['name', 'weekday', 'every', 'startsOn', 'monthWeeks'])
+          && request.resource.data.name is string
+          && request.resource.data.name.size() >= 1 && request.resource.data.name.size() <= 160
+          && (!('weekday' in request.resource.data)
+              || (request.resource.data.weekday is int && request.resource.data.weekday >= 1 && request.resource.data.weekday <= 7))
+          && request.resource.data.get('every', 1) in [1, 2]
+          && (!('startsOn' in request.resource.data)
+              || (request.resource.data.startsOn is string && request.resource.data.startsOn.matches('[0-9]{4}-[0-9]{2}-[0-9]{2}')))
+          && request.resource.data.get('monthWeeks', []) is list
+          && request.resource.data.get('monthWeeks', []).size() <= 4
+          && request.resource.data.get('monthWeeks', []).hasOnly([1, 2, 3, 4]);
       }
 
       // 不能服事的日子 (#91): the stretches of days a member cannot serve

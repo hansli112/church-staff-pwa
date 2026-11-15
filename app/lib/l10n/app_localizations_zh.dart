@@ -2906,6 +2906,27 @@ class L10nZh extends L10n {
   String get meetsEveryOtherWeek => '隔週';
 
   @override
+  String get meetsEveryMonth => '每月';
+
+  @override
+  String get meetsByRoster => '照服事表';
+
+  @override
+  String meetsWithRoster(String weekday) {
+    return '有服事表的$weekday';
+  }
+
+  @override
+  String meetsMonthly(String weeks, String weekday) {
+    return '每月第 $weeks 個$weekday';
+  }
+
+  @override
+  String meetsWeekOfMonth(int n, String weekday) {
+    return '第 $n 個$weekday';
+  }
+
+  @override
   String get nextMeeting => '下次聚會';
 
   @override
@@ -2937,7 +2958,7 @@ class L10nZh extends L10n {
   String get attendance => '回報人數';
 
   @override
-  String get attendanceSub => '聚會和小組當天 21:00 提醒負責人填這次來了幾個人';
+  String get attendanceSub => '聚會當天 21:00 提醒填人數的人';
 
   @override
   String get attendanceHeader => '聚會人數';
@@ -3014,13 +3035,7 @@ class L10nZh extends L10n {
   String get attendanceRemindSent => '已提醒';
 
   @override
-  String get attendanceRemindNobody => '沒有可以提醒的負責人，請直接聯絡';
-
-  @override
-  String get attendanceEveryWeek => '每週都填人數';
-
-  @override
-  String get attendanceEveryWeekSub => '沒排服事表的那天也要填';
+  String get attendanceRemindNobody => '沒有可以提醒的人，請直接聯絡';
 
   @override
   String get attendanceTogether => '和其他小組一起';
@@ -3043,6 +3058,31 @@ class L10nZh extends L10n {
   @override
   String attendanceSmallGroupsTotal(int count) {
     return '小組 $count 人';
+  }
+
+  @override
+  String attendanceGatheringsTotal(int count) {
+    return '其他聚會 $count 人';
+  }
+
+  @override
+  String get attendanceFillers => '誰填人數';
+
+  @override
+  String get gatherings => '其他聚會';
+
+  @override
+  String get addGathering => '新增其他聚會';
+
+  @override
+  String get gatheringName => '名稱';
+
+  @override
+  String get deleteGathering => '刪除這個聚會';
+
+  @override
+  String gatheringDeleted(String name) {
+    return '已刪除「$name」';
   }
 
   @override
@@ -6442,6 +6482,27 @@ class L10nZhHans extends L10nZh {
   String get meetsEveryOtherWeek => '隔周';
 
   @override
+  String get meetsEveryMonth => '每月';
+
+  @override
+  String get meetsByRoster => '照服事表';
+
+  @override
+  String meetsWithRoster(String weekday) {
+    return '有服事表的$weekday';
+  }
+
+  @override
+  String meetsMonthly(String weeks, String weekday) {
+    return '每月第 $weeks 个$weekday';
+  }
+
+  @override
+  String meetsWeekOfMonth(int n, String weekday) {
+    return '第 $n 个$weekday';
+  }
+
+  @override
   String get nextMeeting => '下次聚会';
 
   @override
@@ -6473,7 +6534,7 @@ class L10nZhHans extends L10nZh {
   String get attendance => '回报人数';
 
   @override
-  String get attendanceSub => '聚会和小组当天 21:00 提醒负责人填这次来了几个人';
+  String get attendanceSub => '聚会当天 21:00 提醒填人数的人';
 
   @override
   String get attendanceHeader => '聚会人数';
@@ -6550,13 +6611,7 @@ class L10nZhHans extends L10nZh {
   String get attendanceRemindSent => '已提醒';
 
   @override
-  String get attendanceRemindNobody => '没有可以提醒的负责人，请直接联络';
-
-  @override
-  String get attendanceEveryWeek => '每周都填人数';
-
-  @override
-  String get attendanceEveryWeekSub => '没排服事表的那天也要填';
+  String get attendanceRemindNobody => '没有可以提醒的人，请直接联络';
 
   @override
   String get attendanceTogether => '和其他小组一起';
@@ -6579,6 +6634,31 @@ class L10nZhHans extends L10nZh {
   @override
   String attendanceSmallGroupsTotal(int count) {
     return '小组 $count 人';
+  }
+
+  @override
+  String attendanceGatheringsTotal(int count) {
+    return '其他聚会 $count 人';
+  }
+
+  @override
+  String get attendanceFillers => '谁填人数';
+
+  @override
+  String get gatherings => '其他聚会';
+
+  @override
+  String get addGathering => '新增其他聚会';
+
+  @override
+  String get gatheringName => '名称';
+
+  @override
+  String get deleteGathering => '删除这个聚会';
+
+  @override
+  String gatheringDeleted(String name) {
+    return '已删除“$name”';
   }
 
   @override

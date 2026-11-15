@@ -75,6 +75,9 @@ abstract final class Limits {
   /// The other 小組 one met with (聯合小組, #93).
   static const attendanceTogether = 20;
 
+  /// Who else fills in a group's 人數 (誰填人數).
+  static const attendanceFillers = 20;
+
   /// A member's stretches of 不能服事的日子 (#91).
   static const unavailableSpans = 100;
 }

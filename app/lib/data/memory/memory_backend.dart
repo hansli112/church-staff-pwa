@@ -106,6 +106,10 @@ class MemoryBackend implements Backend {
   /// reminded, the meeting it was about, and whom it told.
   final attendanceReminders = <String, Map<String, ({Day on, Day day, List<String> told})>>{};
   var _smallGroupIds = 0;
+
+  /// churches/{cid}/gatherings per church: the 其他聚會, by id.
+  final gatherings = <String, Map<String, Gathering>>{};
+  var _gatheringIds = 0;
   final rosters = <String, Map<String, Roster>>{};
 
   /// 安排服事 (#90): per church, by `rosterId/uid`, someone put on or taken
@@ -1002,8 +1006,13 @@ class MemoryChurchData implements ChurchData {
       throw const CloudException(CloudErrorCode.conflict);
     }
     if (_b.services[churchId]!.byId(group.service) == null) throw const CloudException(CloudErrorCode.unknown);
-    // A day it meets: on its weekday.
+    // A day it meets: on its weekday. Those weeks of each month, the first four.
     if (group.startsOn case final start? when group.weekday == null || start.weekday != group.weekday) {
+      throw const CloudException(CloudErrorCode.unknown);
+    }
+    if (group.monthWeeks.length > MeetingTime.weeksOfMonth ||
+        group.monthWeeks.toSet().length != group.monthWeeks.length ||
+        group.monthWeeks.any((w) => w < 1 || w > MeetingTime.weeksOfMonth)) {
       throw const CloudException(CloudErrorCode.unknown);
     }
     final name = group.name.trim();
@@ -1021,6 +1030,7 @@ class MemoryChurchData implements ChurchData {
           weekday: group.weekday,
           every: group.every,
           startsOn: group.startsOn,
+          monthWeeks: group.monthWeeks,
         ),
       );
       if (leads == null) return;
@@ -1037,8 +1047,9 @@ class MemoryChurchData implements ChurchData {
     name: g.name.trim(),
     service: g.service,
     weekday: g.weekday,
-    every: g.weekday == null ? 1 : g.every,
+    every: g.weekday == null || g.monthWeeks.isNotEmpty ? 1 : g.every,
     startsOn: g.weekday == null ? null : g.startsOn,
+    monthWeeks: g.weekday == null ? const [] : ([...g.monthWeeks]..sort()),
   );
 
   @override
@@ -1071,6 +1082,15 @@ class MemoryChurchData implements ChurchData {
   void _requireAttendanceWriter(String key) {
     final group = _group(key);
     if (group == null || !_b.requireMember(churchId).writesAttendance(group)) {
+      throw const CloudException(CloudErrorCode.permissionDenied);
+    }
+  }
+
+  /// As [_requireAttendanceWriter], or one the group asked to (fillers).
+  void _requireAttendanceFiller(String key) {
+    final group = _group(key);
+    final fillers = _b.attendance[churchId]?[key]?.fillers ?? const <String>[];
+    if (group == null || !_b.requireMember(churchId).fillsAttendance(group, fillers)) {
       throw const CloudException(CloudErrorCode.permissionDenied);
     }
   }
@@ -1676,7 +1696,7 @@ class MemoryChurchData implements ChurchData {
       final members = _b.members[churchId]!;
       final service = switch (group) {
         ServiceGroup(:final id) => _b.services[churchId]!.byId(id),
-        MinistryGroup() || SmallGroup() => null,
+        MinistryGroup() || SmallGroup() || GatheringGroup() => null,
       };
       final small = switch (group) {
         SmallGroup(:final id) => _b.smallGroups[churchId]?[id],
@@ -1684,8 +1704,8 @@ class MemoryChurchData implements ChurchData {
       };
       final known = switch (group) {
         ServiceGroup() => service != null,
-        // A 事工 has no 同工 of its own (#94).
-        MinistryGroup() => throw const CloudException(CloudErrorCode.unknown),
+        // A 事工 has no 同工 of its own (#94), nor a 其他聚會.
+        MinistryGroup() || GatheringGroup() => throw const CloudException(CloudErrorCode.unknown),
         SmallGroup() => small != null,
       };
       if (!known) throw const CloudException(CloudErrorCode.permissionDenied);
@@ -2483,15 +2503,25 @@ class _MemoryAttendance implements AttendanceData {
   @override
   Stream<AttendanceRecord> watch(String key) => _c._b.watch(() {
     final group = _c._group(key);
-    if (group == null || !_c._b.requireMember(_c.churchId).readsAttendance(group)) {
+    final record = _c._b.attendance[_c.churchId]?[key] ?? const AttendanceRecord();
+    if (group == null || !_c._b.requireMember(_c.churchId).readsAttendance(group, record.fillers)) {
       throw const CloudException(CloudErrorCode.permissionDenied);
     }
-    return _c._b.attendance[_c.churchId]?[key] ?? const AttendanceRecord();
+    return record;
   });
 
   @override
+  Stream<Set<String>> mine() => _c._b.watch(() {
+    final me = _c._b.requireMember(_c.churchId).uid;
+    return {
+      for (final e in _all.entries)
+        if (e.value.fillers.contains(me)) e.key,
+    };
+  }, equals: setEquals);
+
+  @override
   Future<void> save(String key, Day day, AttendanceDay? value) async {
-    _c._requireAttendanceWriter(key);
+    _c._requireAttendanceFiller(key);
     _requireValid(value);
     await _c._b.write(() => _setDay(key, day, value));
   }
@@ -2511,16 +2541,12 @@ class _MemoryAttendance implements AttendanceData {
 
   void _setDay(String key, Day day, AttendanceDay? value) {
     final was = _all[key] ?? const AttendanceRecord();
-    _all[key] = AttendanceRecord(
-      pauses: was.pauses,
-      everyWeek: was.everyWeek,
-      days: {...was.days, day: ?value}..removeWhere((d, _) => d == day && value == null),
-    );
+    _all[key] = was.copyWith(days: {...was.days, day: ?value}..removeWhere((d, _) => d == day && value == null));
   }
 
   @override
   Future<void> saveTogether(String key, Day day, AttendanceDay value) async {
-    _c._requireAttendanceWriter(key);
+    _c._requireAttendanceFiller(key);
     _requireValid(value);
     final host = _c._group(key);
     final since = _c._b.churches[_c.churchId]!.attendanceSince;
@@ -2563,19 +2589,67 @@ class _MemoryAttendance implements AttendanceData {
   Future<void> savePauses(String key, List<AttendancePause> pauses) async {
     _c._requireAttendanceWriter(key);
     if (pauses.length > Limits.attendancePauses) throw const CloudException(CloudErrorCode.permissionDenied);
-    await _c._b.write(() {
-      final was = _all[key] ?? const AttendanceRecord();
-      _all[key] = AttendanceRecord(pauses: pauses, everyWeek: was.everyWeek, days: was.days);
-    });
+    await _c._b.write(() => _all[key] = (_all[key] ?? const AttendanceRecord()).copyWith(pauses: pauses));
   }
 
   @override
-  Future<void> saveEveryWeek(String key, bool everyWeek) async {
+  Future<void> saveFillers(String key, List<String> fillers) async {
     _c._requireAttendanceWriter(key);
-    await _c._b.write(() {
-      final was = _all[key] ?? const AttendanceRecord();
-      _all[key] = AttendanceRecord(pauses: was.pauses, everyWeek: everyWeek, days: was.days);
-    });
+    if (fillers.length > Limits.attendanceFillers) throw const CloudException(CloudErrorCode.permissionDenied);
+    await _c._b.write(() => _all[key] = (_all[key] ?? const AttendanceRecord()).copyWith(fillers: [...fillers]));
+  }
+
+  @override
+  Future<void> saveTime(String key, MeetingTime? time) async {
+    _c._requireAttendanceWriter(key);
+    if (_c._group(key) is! ServiceGroup) throw const CloudException(CloudErrorCode.unknown);
+    _requireValidTime(time);
+    await _c._b.write(
+      () => _all[key] = (_all[key] ?? const AttendanceRecord()).copyWith(
+        time: () =>
+            time == null ? null : MeetingTime(every: time.every, startsOn: time.startsOn, monthWeeks: time.monthWeeks),
+      ),
+    );
+  }
+
+  void _requireValidTime(MeetingTime? time) {
+    if (time != null &&
+        (!(time.every == 1 || time.every == 2) ||
+            time.monthWeeks.length > MeetingTime.weeksOfMonth ||
+            time.monthWeeks.any((w) => w < 1 || w > MeetingTime.weeksOfMonth))) {
+      throw const CloudException(CloudErrorCode.permissionDenied);
+    }
+  }
+
+  Map<String, Gathering> get _gatherings => _c._b.gatherings.putIfAbsent(_c.churchId, () => {});
+
+  @override
+  Stream<List<Gathering>> gatherings() => _c._b.watch(() {
+    _c._b.requireMember(_c.churchId);
+    return [..._gatherings.values]..sort((a, b) => a.name.compareTo(b.name));
+  }, equals: listEquals);
+
+  @override
+  Future<String> saveGathering(Gathering gathering) async {
+    if (!_c._b.requireMember(_c.churchId).overseesAttendance) {
+      throw const CloudException(CloudErrorCode.permissionDenied);
+    }
+    final name = gathering.name.trim();
+    if (name.isEmpty || !withinTextLimit(name, TextLimits.profileName)) {
+      throw const CloudException(CloudErrorCode.permissionDenied);
+    }
+    _requireValidTime(gathering.time);
+    final id = gathering.id.isEmpty ? 'gathering${++_c._b._gatheringIds}' : gathering.id;
+    await _c._b.write(() => _gatherings[id] = Gathering(id: id, name: name, time: gathering.time));
+    return id;
+  }
+
+  @override
+  Future<void> deleteGathering(String id) async {
+    if (!_c._b.requireMember(_c.churchId).overseesAttendance) {
+      throw const CloudException(CloudErrorCode.permissionDenied);
+    }
+    await _c._b.write(() => _gatherings.remove(id));
   }
 
   @override
@@ -2590,11 +2664,12 @@ class _MemoryAttendance implements AttendanceData {
     final record = _all[key] ?? const AttendanceRecord();
     final meets = switch (_c._group(key)) {
       ServiceGroup(:final id) => switch (b.services[cid]!.byId(id)) {
-        final s? when record.everyWeek => Meets(weekday: s.weekday),
+        final s? when record.time != null => record.time!.meets(weekday: s.weekday),
         final s? => Meets(weekday: s.weekday, roster: b.rosters[cid]!.containsKey(Roster.idFor(id, day))),
         null => null,
       },
       SmallGroup(:final id) => b.smallGroups[cid]?[id]?.meets,
+      GatheringGroup(:final id) => _gatherings[id]?.time.meets(),
       _ => null,
     };
     if (since == null ||
@@ -2609,7 +2684,7 @@ class _MemoryAttendance implements AttendanceData {
     }
     final told = [
       for (final m in b.members[cid]!.values)
-        if (m.remindedAttendance.contains(key)) m.uid,
+        if (m.remindedOf(key, record.fillers)) m.uid,
     ];
     await b.write(() => (b.attendanceReminders[cid] ??= {})[key] = (on: today, day: day, told: told));
     return told.length;

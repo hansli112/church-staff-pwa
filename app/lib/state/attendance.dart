@@ -15,22 +15,35 @@ final attendanceProvider = StreamProvider.autoDispose.family<AttendanceRecord, S
   (ref, key) => openChurch(ref).attendance.watch(key),
 );
 
+/// The keys of the groups that asked me to fill in their 人數 (誰填人數).
+final myFillsProvider = StreamProvider.autoDispose<Set<String>>((ref) => openChurch(ref).attendance.mine());
+
+/// Whether I fill in [group]'s 人數, as who sets it or one it asked to; null until read.
+final fillsAttendanceProvider = Provider.autoDispose.family<bool?, ChurchGroup>((ref, group) {
+  final me = ref.watch(meProvider).value;
+  if (me == null) return null;
+  if (me.writesAttendance(group)) return true;
+  return ref.watch(myFillsProvider).value?.contains(group.key);
+});
+
 /// Rosters from [attendanceWeeks] back on: which days a service met.
 final _recentRostersProvider = StreamProvider.autoDispose<List<Roster>>((ref) {
   final today = ref.watch(todayProvider);
   return openChurch(ref).rosters(from: today.addDays(-7 * attendanceWeeks));
 });
 
-/// A group 回報人數 is about: a service or a 小組 (with its service), its
-/// name, and when it meets.
+/// A group 回報人數 is about: a service, a 小組 (with its service) or a
+/// 其他聚會, its name, and when it meets.
 typedef AttendanceGroup = ({ChurchGroup group, String name, Meets Function(Day day) meetsOn});
 
-/// The groups of the church that meet (its services and 小組), as
-/// [AttendanceGroup]s; a service meets on its weekday when that day has a
-/// roster.
+/// The groups of the church that meet (its services, 小組 and 其他聚會),
+/// in that order, as [AttendanceGroup]s; a service meets on its weekday
+/// when that day has a roster, unless its 聚會時間 says otherwise
+/// (AttendanceRecord.time).
 final attendanceGroupsProvider = Provider.autoDispose<List<AttendanceGroup>>((ref) {
   final services = ref.watch(servicesProvider).value?.enabled ?? const <Service>[];
   final smallGroups = ref.watch(smallGroupsProvider).value ?? const <SmallGroupDetails>[];
+  final gatherings = ref.watch(gatheringsProvider).value ?? const <Gathering>[];
   final rosters = ref.watch(_recentRostersProvider).value ?? const <Roster>[];
   final held = {
     for (final r in rosters)
@@ -44,14 +57,15 @@ final attendanceGroupsProvider = Provider.autoDispose<List<AttendanceGroup>>((re
         meetsOn: (Day day) => Meets(weekday: s.weekday, roster: held.contains((s.id, day))),
       ),
     for (final g in smallGroups) (group: g.group, name: g.name, meetsOn: (Day _) => g.meets),
+    for (final g in gatherings) (group: GatheringGroup(g.id), name: g.name, meetsOn: (Day _) => g.time.meets()),
   ];
 });
 
 /// The meetings of [group] from [attendanceWeeks] back to today that ask
 /// for their 人數, newest first: none with 回報人數 off. Days [record] has
 /// 人數 for are listed too, though the group no longer meets on them. A
-/// service filled in every week ([AttendanceRecord.everyWeek], #93) meets
-/// on its weekday, roster or not.
+/// service with a 聚會時間 of its own ([AttendanceRecord.time]) meets by
+/// it, roster or not.
 List<Day> attendanceDays(
   AttendanceGroup group, {
   required Day? since,
@@ -69,9 +83,9 @@ List<Day> attendanceDays(
 /// Whether [group] meets on [day] and asks for its 人數 then.
 bool _due(AttendanceGroup group, {required Day since, required AttendanceRecord record, required Day day}) =>
     attendanceDue(
-      switch (group.meetsOn(day)) {
-        Meets(:final weekday, roster: _?) when record.everyWeek => Meets(weekday: weekday),
-        final meets => meets,
+      switch ((group.meetsOn(day), record.time)) {
+        (Meets(:final weekday, roster: _?), final time?) => time.meets(weekday: weekday),
+        (final meets, _) => meets,
       },
       since: since,
       pauses: record.pauses,
@@ -109,8 +123,9 @@ List<Day> upcomingAttendanceDays(
       if (_due(group, since: since, record: record, day: d)) d,
 ];
 
-/// Whether [group] is a 小組 whose 聚會時間 is not set yet.
-bool meetsUnset(AttendanceGroup group, Day today) => group.group is SmallGroup && group.meetsOn(today).weekday == null;
+/// Whether [group] is a 小組 or a 其他聚會 whose 聚會時間 is not set yet.
+bool meetsUnset(AttendanceGroup group, Day today) =>
+    group.group is! ServiceGroup && group.meetsOn(today).weekday == null;
 
 /// [group]'s latest meeting that asks for its 人數, or one filled in;
 /// today's once filled in, else each morning would show 未填 (#95).
@@ -126,34 +141,64 @@ Day? latestAttendanceDay(
   today: today,
 ).where((d) => d != today || record.days.containsKey(d)).firstOrNull;
 
-/// A meeting that waits for its 人數 on 首頁, for one who leads its group:
-/// the latest one, until the next comes (首頁顯示「填寫人數」到下一次聚會為止).
+/// How far back 首頁 asks for the 人數 still not filled in, today too.
+const attendanceDueDays = 14;
+
+/// A meeting that waits for its 人數 on 首頁, for one reminded of its
+/// group's: each of the last [attendanceDueDays] days still without, until
+/// filled in.
 typedef AttendanceDue = ({AttendanceGroup group, Day day});
 
+/// The meetings of [record]'s [group] from [attendanceDueDays] back to
+/// [today] still without their 人數, newest first; today's with them.
+List<Day> attendanceMissing(
+  AttendanceGroup group, {
+  required Day since,
+  required AttendanceRecord record,
+  required Day today,
+}) => [
+  for (final d in attendanceDays(
+    group,
+    since: since,
+    record: record.copyWith(days: const {}),
+    today: today,
+  ))
+    if (!d.isBefore(today.addDays(1 - attendanceDueDays)) && !record.days.containsKey(d)) d,
+];
+
 /// Every [AttendanceDue] of the groups I am reminded of
-/// (Member.remindedAttendance), for 首頁.
+/// (Member.remindedAttendance, and those that asked me to fill theirs in),
+/// for 首頁.
 final attendanceDueProvider = Provider.autoDispose<List<AttendanceDue>>((ref) {
   final since = ref.watch(churchProvider.select((c) => c.value?.attendanceSince));
   final me = ref.watch(meProvider).value;
   if (since == null || me == null) return const [];
   final today = ref.watch(todayProvider);
-  final mine = me.remindedAttendance.toSet();
+  final mine = {...me.remindedAttendance, ...?ref.watch(myFillsProvider).value};
   // Nobody else reads the weeks of rosters it takes.
   if (mine.isEmpty) return const [];
   return [
     for (final g in ref.watch(attendanceGroupsProvider))
       if (mine.contains(g.group.key))
         if (ref.watch(attendanceProvider(g.group.key)).value case final record?)
-          // The latest it met, not a day filled in it no longer meets on.
-          if (attendanceDays(
-                g,
-                since: since,
-                record: AttendanceRecord(pauses: record.pauses, everyWeek: record.everyWeek),
-                today: today,
-              ).firstOrNull
-              case final day? when !record.days.containsKey(day))
-            (group: g, day: day),
+          for (final day in attendanceMissing(g, since: since, record: record, today: today)) (group: g, day: day),
   ];
+});
+
+/// For admins and 行政 on 首頁: how many meetings of the last
+/// [attendanceDueDays] days, before today, are still 未填; null until read.
+final attendanceMissingCountProvider = Provider.autoDispose<int?>((ref) {
+  final since = ref.watch(churchProvider.select((c) => c.value?.attendanceSince));
+  final me = ref.watch(meProvider).value;
+  if (since == null || me == null || !me.overseesAttendance) return 0;
+  final records = ref.watch(_overviewRecordsProvider);
+  if (records == null) return null;
+  final today = ref.watch(todayProvider);
+  return records.fold<int>(
+    0,
+    (n, r) =>
+        n + attendanceMissing(r.group, since: since, record: r.record, today: today).where((d) => d != today).length,
+  );
 });
 
 /// The Monday of [day]'s week: 人數總覽 shows a week, Monday to Sunday,
@@ -182,12 +227,40 @@ class AttendanceWeek {
   /// to those too. One that met with another is counted once, with it.
   int? get smallGroups => _total(isService: false);
 
-  int? _total({required bool isService}) {
+  /// Its 其他聚會' 人數 added up, apart from both.
+  int? get gatherings => _total();
+
+  int? _total({bool? isService}) {
     final counts = [
       for (final r in rows)
-        if ((r.group.group is ServiceGroup) == isService) ?r.value?.count,
+        if (switch (r.group.group) {
+          ServiceGroup() => isService == true,
+          SmallGroup() => isService == false,
+          _ => isService == null,
+        })
+          ?r.value?.count,
     ];
     return counts.isEmpty ? null : counts.reduce((a, b) => a + b);
+  }
+
+  /// Its rows by the service they are of, a service's and its 小組',
+  /// each in the order [rows] has them, as [groups] has the services;
+  /// the 其他聚會 last, with no service.
+  List<({String? service, List<AttendanceRow> rows})> sections(List<AttendanceGroup> groups) {
+    String? serviceOf(AttendanceRow r) => switch (r.group.group) {
+      ServiceGroup(:final id) => id,
+      SmallGroup(:final service) => service,
+      _ => null,
+    };
+    final order = [
+      for (final g in groups)
+        if (g.group case ServiceGroup(:final id)) id,
+    ];
+    final keys = {...order.where((id) => rows.any((r) => serviceOf(r) == id)), ...rows.map(serviceOf)};
+    final sorted = [...keys.whereType<String>(), if (keys.contains(null)) null];
+    return [
+      for (final key in sorted) (service: key, rows: [...rows.where((r) => serviceOf(r) == key)]),
+    ];
   }
 
   /// How many of its meetings are 未填.

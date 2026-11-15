@@ -11,7 +11,7 @@ import { unreadCount } from '../src/notificationList.js';
 import { standing } from '../src/joinRequests.js';
 import { ledChangeAllowed } from '../src/ledDuties.js';
 import { LANGUAGES, words } from '../src/languages.js';
-import { groupOf, powersOf, type ChurchGroup } from '../src/powers.js';
+import { attendanceGroupOf, groupOf, powersOf, type ChurchGroup } from '../src/powers.js';
 import { dutiesByUid } from '../src/rosters.js';
 import { validDutyRename } from '../src/serviceSettings.js';
 import { askedToFill } from '../src/unavailable.js';
@@ -123,16 +123,23 @@ describe('smallGroupScheduling', () => {
 describe('attendanceAccess', () => {
   for (const r of rows('attendanceAccess')) {
     test(r.why, () => {
-      const group = groupOf(r.group, r.smallGroupService ?? null)!;
-      assert.equal(powersOf(r.member).writesAttendance(group), r.writes, 'writes');
-      assert.equal(powersOf(r.member).readsAttendance(group), r.reads, 'reads');
+      const group = attendanceGroupOf(r.group, r.smallGroupService ?? null)!;
+      const powers = powersOf({ ...r.member, uid: 'u' });
+      const fillers = r.filler ? ['u'] : [];
+      assert.equal(powers.fillsAttendance(group, fillers), r.writes, 'writes');
+      assert.equal(powers.readsAttendance(group, fillers), r.reads, 'reads');
+      assert.equal(powers.writesAttendance(group), r.manages ?? r.writes, 'manages');
     });
   }
 });
 
 describe('attendanceReminded', () => {
   for (const r of rows('attendanceReminded')) {
-    test(r.why, () => assert.equal(powersOf(r.member).remindedOfAttendance(groupOf(r.group)!), r.reminded));
+    test(r.why, () =>
+      assert.equal(
+        powersOf({ ...r.member, uid: 'u' }).remindedOfAttendance(attendanceGroupOf(r.group)!, r.filler ? ['u'] : []),
+        r.reminded,
+      ));
   }
 });
 

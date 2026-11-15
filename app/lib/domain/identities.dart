@@ -285,11 +285,13 @@ sealed class ChurchGroup {
   final String id;
 
   /// How an event, and its 人數, name it as its group (#84):
-  /// `service:<id>`, `ministry:<id>` or `small:<id>`.
+  /// `service:<id>`, `ministry:<id>` or `small:<id>`; a 其他聚會's 人數,
+  /// `gathering:<id>`.
   String get key => switch (this) {
     ServiceGroup() => 'service:$id',
     MinistryGroup() => 'ministry:$id',
     SmallGroup() => 'small:$id',
+    GatheringGroup() => 'gathering:$id',
   };
 
   /// [key] read back; null for the church's ('') or anything else.
@@ -301,9 +303,22 @@ sealed class ChurchGroup {
       'service' => ServiceGroup(id),
       'ministry' => MinistryGroup(id),
       'small' => SmallGroup(id),
+      'gathering' => GatheringGroup(id),
       _ => null,
     };
   }
+}
+
+/// A 其他聚會 (Gathering): a group only for its 人數, with no 同工, 負責人
+/// or events of its own.
+final class GatheringGroup extends ChurchGroup {
+  const GatheringGroup(super.id);
+
+  @override
+  bool operator ==(Object other) => other is GatheringGroup && other.id == id;
+
+  @override
+  int get hashCode => Object.hash('gathering', id);
 }
 
 final class ServiceGroup extends ChurchGroup {
@@ -343,8 +358,9 @@ final class SmallGroup extends ChurchGroup {
 }
 
 /// A 小組 (churches/{cid}/smallGroups/{id}): in one [service], and, for
-/// 回報人數, when it meets: on [weekday] (1 = Monday … 7 = Sunday) every
-/// [every] weeks (1 or 2) from [startsOn], a day it met.
+/// 回報人數, when it meets ([time]): on [weekday] (1 = Monday … 7 = Sunday)
+/// every [every] weeks (1 or 2) from [startsOn], a day it met, or those
+/// [monthWeeks] of each month.
 @immutable
 class SmallGroupDetails {
   const SmallGroupDetails({
@@ -354,6 +370,7 @@ class SmallGroupDetails {
     this.weekday,
     this.every = 1,
     this.startsOn,
+    this.monthWeeks = const [],
   });
 
   /// Empty for one not made yet; the backend gives it one.
@@ -363,17 +380,22 @@ class SmallGroupDetails {
   final int? weekday;
   final int every;
   final Day? startsOn;
+  final List<int> monthWeeks;
 
   SmallGroup get group => SmallGroup(id, service: service);
 
+  /// Its 聚會時間.
+  MeetingTime get time => MeetingTime(weekday: weekday, every: every, startsOn: startsOn, monthWeeks: monthWeeks);
+
   /// When it meets, for [attendanceDue].
-  Meets get meets => Meets(weekday: weekday, every: every, startsOn: startsOn);
+  Meets get meets => time.meets();
 
   SmallGroupDetails copyWith({
     String? name,
     int? Function()? weekday,
     int? every,
     Day? Function()? startsOn,
+    List<int>? monthWeeks,
   }) => SmallGroupDetails(
     id: id,
     name: name ?? this.name,
@@ -381,6 +403,15 @@ class SmallGroupDetails {
     weekday: weekday == null ? this.weekday : weekday(),
     every: every ?? this.every,
     startsOn: startsOn == null ? this.startsOn : startsOn(),
+    monthWeeks: monthWeeks ?? this.monthWeeks,
+  );
+
+  /// With [time] as its 聚會時間.
+  SmallGroupDetails withTime(MeetingTime time) => copyWith(
+    weekday: () => time.weekday,
+    every: time.every,
+    startsOn: () => time.startsOn,
+    monthWeeks: time.monthWeeks,
   );
 
   @override
@@ -391,10 +422,11 @@ class SmallGroupDetails {
       other.service == service &&
       other.weekday == weekday &&
       other.every == every &&
-      other.startsOn == startsOn;
+      other.startsOn == startsOn &&
+      listEquals(other.monthWeeks, monthWeeks);
 
   @override
-  int get hashCode => Object.hash(id, name, service, weekday, every, startsOn);
+  int get hashCode => Object.hash(id, name, service, weekday, every, startsOn, Object.hashAll(monthWeeks));
 }
 
 /// The church's 小組 by ID.

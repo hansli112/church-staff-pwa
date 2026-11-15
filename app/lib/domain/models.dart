@@ -332,6 +332,7 @@ class Member {
     ServiceGroup(:final id) => zoneTypes.contains(id),
     MinistryGroup(:final id) => ministries.any((m) => m.id == id && onListsOf(m)),
     SmallGroup(:final id) => smallGroups.contains(id),
+    GatheringGroup() => false,
   };
 
   /// Whether this member is on the list of any duty [ministry] links.
@@ -343,6 +344,7 @@ class Member {
     ServiceGroup(:final id) => leadTypes.contains(id),
     MinistryGroup(:final id) => leadMinistries.contains(id),
     SmallGroup(:final id) => leadSmallGroups.contains(id),
+    GatheringGroup() => false,
   };
 
   /// Whether this member manages [group]'s 同工: as an admin, its 負責人,
@@ -373,21 +375,29 @@ class Member {
   /// (人數總覽, #93): admins and 行政.
   bool get overseesAttendance => inGroup(Group.rosterEditors);
 
-  /// Whether this member fills in the 人數 of [group]
-  /// (testdata/church_rules.json, attendanceAccess): admins and 行政 any; a
+  /// Whether this member fills in the 人數 of [group], and sets when it
+  /// meets and who else fills them in (testdata/church_rules.json,
+  /// attendanceAccess, `manages`): admins and 行政 any, a 其他聚會's too; a
   /// service's 負責人 and 牧者 its own and its 小組'; a 小組長 their 小組's.
   bool writesAttendance(ChurchGroup group) => group is! MinistryGroup && (overseesAttendance || managesGroup(group));
+
+  /// Whether this member fills in the 人數 of [group], whose [fillers]
+  /// (誰填人數) they may be one of, and sees them.
+  bool fillsAttendance(ChurchGroup group, List<String> fillers) =>
+      writesAttendance(group) || (group is! MinistryGroup && fillers.contains(uid));
 
   /// Whether 人數總覽 lists anything for them (#95): every group for
   /// admins and 行政; a service's and its 小組' for its 負責人 and 牧者.
   bool get seesAttendanceOverview => overseesAttendance || leadTypes.isNotEmpty;
 
   /// Whether this member sees the 人數 of [group]: who fills them in.
-  bool readsAttendance(ChurchGroup group) => writesAttendance(group);
+  bool readsAttendance(ChurchGroup group, [List<String> fillers = const []]) => fillsAttendance(group, fillers);
 
   /// The group keys whose 人數 this member is reminded of, at 21:00 and on
   /// 首頁 (testdata/church_rules.json, attendanceReminded): a service's as
   /// its 負責人, not its 牧者, who only sees them; a 小組's as its 小組長.
+  /// Those of the groups that asked them to fill theirs in (fillers) too:
+  /// [AttendanceData.mine].
   List<String> get remindedAttendance => [
     ...{
       for (final i in identities)
@@ -398,6 +408,11 @@ class Member {
         },
     },
   ];
+
+  /// Whether this member is reminded of group [key]'s 人數, whose
+  /// [fillers] (誰填人數) they may be one of.
+  bool remindedOf(String key, List<String> fillers) =>
+      remindedAttendance.contains(key) || (!key.startsWith('ministry:') && fillers.contains(uid));
 
   /// [leadsGroup] by an event's group key; the church's ('') nobody leads.
   bool _leadsKey(String key) => switch (ChurchGroup.parse(key)) {
@@ -441,7 +456,7 @@ class Member {
               Zone(serviceType: id, duties: duties, smallGroups: smallGroups),
       ],
     ),
-    MinistryGroup() => this,
+    MinistryGroup() || GatheringGroup() => this,
     SmallGroup(:final id) => copyWith(smallGroups: member ? {...smallGroups, id} : ({...smallGroups}..remove(id))),
   };
 

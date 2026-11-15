@@ -200,7 +200,7 @@ String Function(ChurchGroup?) _groupNames(WidgetRef ref) {
     ServiceGroup(:final id) => services?.byId(id)?.name ?? id,
     MinistryGroup(:final id) => ministries?.nameOf(id, services) ?? id,
     SmallGroup(:final id) => smallGroupName(smallGroups, id),
-    null => '',
+    GatheringGroup() || null => '',
   };
 }
 

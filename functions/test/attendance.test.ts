@@ -336,3 +336,76 @@ describe('人數總覽: asked again, 提醒, 每週都填人數 (#93)', () => {
     assert.equal((await db.doc(`churches/C1/attendance/small:${peace}/days/2026-10-16`).get()).get('count'), 12);
   });
 });
+
+describe('誰填人數, 聚會時間 and 其他聚會', () => {
+  const at = (iso: string) => () => new Date(iso);
+
+  test("those asked to fill in a service's 人數, its 招待, are reminded with its 負責人", async () => {
+    await church();
+    await roster('2026-10-18');
+    await db.doc('churches/C1/attendance/service:sunday').set({ fillers: ['mei', 'gone'] });
+    const { sent, messaging } = fakePush();
+    await sendAttendanceReminders({ db, messaging, now: sundayEvening, appUrl });
+    assert.deepEqual(sent.map((s) => [...s.tokens].sort()), [['tok-mei', 'tok-sundayLead']]);
+  });
+
+  test('a service set to meet every other week is asked on its weeks, roster or not', async () => {
+    await church();
+    await db.doc('churches/C1/attendance/service:sunday').set({ every: 2, startsOn: '2026-10-11' });
+    const { sent, messaging } = fakePush();
+    await sendAttendanceReminders({ db, messaging, now: sundayEvening, appUrl });
+    assert.equal(sent.length, 0);
+    await sendAttendanceReminders({ db, messaging, now: at('2026-10-25T21:00:00+08:00'), appUrl });
+    assert.equal(sent.length, 1);
+  });
+
+  test('a 小組 meets on the weeks of the month set, 第 1、3 個週五', async () => {
+    await church();
+    const id = await joy();
+    await editSmallGroup(deps, caller('joyLead'), {
+      churchId: 'C1', op: 'save', group: { id, name: '喜樂小組', service: 'sunday', weekday: 5, monthWeeks: [1, 3], startsOn: '2026-11-06' },
+    });
+    assert.deepEqual((await db.doc(`churches/C1/smallGroups/${id}`).get()).get('monthWeeks'), [1, 3]);
+    const { sent, messaging } = fakePush();
+    for (const day of ['2026-11-06', '2026-11-13', '2026-11-20']) {
+      await sendAttendanceReminders({ db, messaging, now: at(`${day}T21:00:00+08:00`), appUrl });
+    }
+    assert.equal(sent.length, 2);
+    await rejectsWith(
+      editSmallGroup(deps, caller('joyLead'), {
+        churchId: 'C1', op: 'save', group: { id, name: '喜樂小組', service: 'sunday', weekday: 5, monthWeeks: [0] },
+      }),
+      'unknown',
+    );
+  });
+
+  test('a 其他聚會 asks those who fill it in, on its days; 行政 reminds them', async () => {
+    await church();
+    await db.doc('churches/C1/members/youthLead').update({ groups: ['roster-editors', 'calendar-editors'], identities: [{ kind: 'office' }] });
+    await db.doc('churches/C1/gatherings/kids').set({ name: '兒童學習天地', weekday: 7, every: 1 });
+    await db.doc('churches/C1/attendance/gathering:kids').set({ fillers: ['mei'] });
+    const { sent, messaging } = fakePush();
+    await sendAttendanceReminders({ db, messaging, now: sundayEvening, appUrl });
+    assert.deepEqual(sent.map((s) => [s.tokens, s.body, decodeURIComponent(s.link)]), [
+      [['tok-mei'], '「兒童學習天地」10/18（週日）的聚會有幾個人？', '/c/C1?to=/home?fill=gathering:kids&day=2026-10-18'],
+    ]);
+    const remind = (who: string) =>
+      remindAttendance({ ...deps, now: at('2026-10-20T09:00:00+08:00'), messaging, appUrl }, caller(who), {
+        churchId: 'C1', key: 'gathering:kids', day: '2026-10-18',
+      });
+    await rejectsWith(remind('sundayLead'), 'permissionDenied');
+    assert.deepEqual(await remind('youthLead'), { people: 1 });
+  });
+
+  test("聯合小組 by one asked to fill in the 小組's 人數", async () => {
+    await church();
+    const id = await joy();
+    await db.doc(`churches/C1/attendance/small:${id}`).set({ fillers: ['mei'] });
+    await fillAttendanceTogether(deps, caller('mei'), { churchId: 'C1', key: `small:${id}`, day: '2026-10-16', count: 12, together: [] });
+    assert.equal((await db.doc(`churches/C1/attendance/small:${id}/days/2026-10-16`).get()).get('count'), 12);
+    await rejectsWith(
+      fillAttendanceTogether(deps, caller('youthLead'), { churchId: 'C1', key: `small:${id}`, day: '2026-10-16', count: 1, together: [] }),
+      'permissionDenied',
+    );
+  });
+});

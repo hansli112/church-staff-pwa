@@ -272,8 +272,10 @@ void main() {
           SmallGroup(:final id) => SmallGroup(id, service: r['smallGroupService'] as String?),
           final g => g,
         };
-        expect(m.writesAttendance(group), r['writes'], reason: 'writes');
-        expect(m.readsAttendance(group), r['reads'], reason: 'reads');
+        final fillers = [if (r['filler'] == true) m.uid];
+        expect(m.fillsAttendance(group, fillers), r['writes'], reason: 'writes');
+        expect(m.readsAttendance(group, fillers), r['reads'], reason: 'reads');
+        expect(m.writesAttendance(group), r['manages'] ?? r['writes'], reason: 'manages');
       });
     }
   });
@@ -282,7 +284,7 @@ void main() {
     for (final r in _rows('attendanceReminded')) {
       test(r['why'] as String, () {
         final m = _member('u', r['member'] as Map<String, dynamic>);
-        expect(m.remindedAttendance.contains(r['group']), r['reminded']);
+        expect(m.remindedOf(r['group'] as String, [if (r['filler'] == true) m.uid]), r['reminded']);
       });
     }
   });
@@ -299,6 +301,7 @@ void main() {
               roster: meets['roster'] as bool?,
               every: meets['every'] as int? ?? 1,
               startsOn: Day.tryParse(meets['startsOn'] as String?),
+              monthWeeks: (meets['monthWeeks'] as List? ?? const []).cast<int>(),
             ),
             since: Day.parse(r['since'] as String),
             pauses: [

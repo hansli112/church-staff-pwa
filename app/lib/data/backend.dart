@@ -561,15 +561,40 @@ abstract interface class PhotoData {
   Future<String> prompt(String serviceType);
 }
 
-/// 回報人數 (#85): each meeting's 人數, by group key (`service:<id>`, `small:<id>`).
+/// 回報人數 (#85): each meeting's 人數, by group key (`service:<id>`,
+/// `small:<id>`, `gathering:<id>`), and the 其他聚會.
 abstract interface class AttendanceData {
-  /// Group [key]'s 回報人數 (#85): its pauses and each meeting's 人數 filled
-  /// in. For those who see them (Member.readsAttendance).
+  /// Group [key]'s 回報人數 (#85): its pauses, who else fills them in, a
+  /// service's 聚會時間, and each meeting's 人數 filled in. For those who
+  /// see them (Member.readsAttendance).
   Stream<AttendanceRecord> watch(String key);
 
-  /// Fills in [day]'s 人數 of group [key] (Member.writesAttendance), or with
+  /// The keys of the groups that asked me to fill in their 人數 (誰填人數,
+  /// AttendanceRecord.fillers).
+  Stream<Set<String>> mine();
+
+  /// Fills in [day]'s 人數 of group [key] (Member.fillsAttendance), or with
   /// null clears it.
   Future<void> save(String key, Day day, AttendanceDay? value);
+
+  /// Sets who else fills in group [key]'s 人數, by uid (誰填人數), by who
+  /// sets it (Member.writesAttendance).
+  Future<void> saveFillers(String key, List<String> fillers);
+
+  /// Sets service [key]'s 聚會時間 (Member.writesAttendance): null meets
+  /// on its weekday when that day has a roster; [MeetingTime.every] 1
+  /// every week (每週都填人數, #93).
+  Future<void> saveTime(String key, MeetingTime? time);
+
+  /// The church's 其他聚會, by name.
+  Stream<List<Gathering>> gatherings();
+
+  /// Makes [gathering] (its id empty) or changes it (admins and 行政).
+  /// Returns its id.
+  Future<String> saveGathering(Gathering gathering);
+
+  /// Deletes 其他聚會 [id] (admins and 行政); its 人數 stay.
+  Future<void> deleteGathering(String id);
 
   /// Fills in [day]'s 人數 of 小組 [key], met with the 小組 [value]
   /// names (AttendanceDay.together, 聯合小組, #93): each in the same
@@ -581,10 +606,6 @@ abstract interface class AttendanceData {
   /// Sets group [key]'s pauses: older apps made them, this one only reads
   /// them (upcomingAttendanceDays took their place).
   Future<void> savePauses(String key, List<AttendancePause> pauses);
-
-  /// Sets whether service [key] fills in its 人數 every week, roster or
-  /// not (每週都填人數, #93).
-  Future<void> saveEveryWeek(String key, bool everyWeek);
 
   /// 提醒 on 人數總覽 (#93), by who fills in group [key]'s 人數
   /// (Member.writesAttendance): asks whoever is reminded of them

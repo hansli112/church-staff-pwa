@@ -3,34 +3,41 @@ import { FieldValue, type DocumentSnapshot } from 'firebase-admin/firestore';
 import { churchAccess, isChurchOpen } from './access.js';
 import { fail, record, type Caller, type Deps } from './common.js';
 import { LIMITS, TEXT_LIMITS, withinTextLimit } from './limits.js';
-import { groupOf, powersOf, type ChurchGroup } from './powers.js';
+import { attendanceGroupOf, powersOf, type ChurchGroup } from './powers.js';
 import { notifyMembers, type PushDeps } from './push.js';
 import { dateKeyIn, timeZoneOf, timeZonesAt } from './timeZones.js';
 
 /**
  * 回報人數 (#85): a church that turned it on (`attendanceSince` on the
  * church doc, the day it did) asks the leads of each group how many came
- * to its meetings. A group is a service (`service:<id>`) or a 小組
- * (`small:<id>`); its 人數 are churches/{cid}/attendance/{key}/days/{dateKey}
- * (`count` and `note`, or `none` for 這次沒聚會), and its pauses
- * (`pauses`, each `{from, until}`, kept once over so the weeks they
- * covered never turn 未填) are on attendance/{key} itself. The app writes
- * them; firestore.rules keeps who may, as powers.ts writesAttendance.
+ * to its meetings. A group is a service (`service:<id>`), a 小組
+ * (`small:<id>`) or a 其他聚會 (`gathering:<id>`, churches/{cid}/gatherings,
+ * nothing but its name and 聚會時間); its 人數 are
+ * churches/{cid}/attendance/{key}/days/{dateKey} (`count` and `note`, or
+ * `none` for 這次沒聚會). On attendance/{key} itself: its pauses (`pauses`,
+ * each `{from, until}`, kept once over so the weeks they covered never
+ * turn 未填), who else fills them in (`fillers`, uids: 誰填人數), and a
+ * service's 聚會時間 when not by its rosters (`everyWeek`, or `every` and
+ * `startsOn`, or `monthWeeks`). The app writes them; firestore.rules keeps
+ * who may, as powers.ts fillsAttendance and writesAttendance.
  */
 
 /** The hour the leads are asked, on each church's clock. */
 export const ATTENDANCE_HOUR = 21;
 
 /**
- * When a group meets. A service: on its [weekday], when that day has a
- * roster ([roster], whether it has). A 小組: on [weekday], every [every]
- * weeks (1 or 2) from [startsOn], a day it met.
+ * When a group meets. A service, unless its 聚會時間 says otherwise: on
+ * its [weekday], when that day has a roster ([roster], whether it has).
+ * Else on [weekday], every [every] weeks (1 or 2) from [startsOn], a day
+ * it met; or, with [monthWeeks], those weeks of each month (第 1、3 個週五),
+ * from [startsOn] on.
  */
 export interface Meets {
   weekday?: number;
   roster?: boolean;
   every?: number;
   startsOn?: string;
+  monthWeeks?: number[];
 }
 
 /** A pause: no meeting asked for from [from] until, not including, [until]. */
@@ -60,17 +67,18 @@ export function attendanceDue(meets: Meets, state: AttendanceState, day: string)
   if (state.pauses.some((p) => p.from <= day && day < p.until)) return false;
   if (meets.weekday === undefined || weekdayOf(day) !== meets.weekday) return false;
   if ('roster' in meets) return meets.roster === true;
+  if (meets.startsOn && day < meets.startsOn) return false;
+  if (meets.monthWeeks?.length) return meets.monthWeeks.includes(Math.floor((Number(day.slice(8)) - 1) / 7) + 1);
   const every = meets.every === 2 ? 2 : 1;
   if (!meets.startsOn) return every === 1;
-  if (day < meets.startsOn) return false;
   return Math.floor((dayMs(day) - dayMs(meets.startsOn)) / WEEK_MS) % every === 0;
 }
 
-/** A group that may meet on a day: its key, its name, the member field naming who leads it, and when it meets. */
+/** A group that may meet on a day: its key, its name, the member field naming who leads it (none: a 其他聚會), and when it meets. */
 interface Due {
   key: string;
   name: string;
-  leads: { field: 'leadTypes' | 'leadSmallGroups'; id: string };
+  leads: { field: 'leadTypes' | 'leadSmallGroups'; id: string } | null;
   meets: Meets;
 }
 
@@ -125,11 +133,23 @@ async function stillAsked(deps: { db: PushDeps['db'] }, cid: string, g: Due, day
   );
   if (filled.exists) return null;
   if (!attendanceDue(g.meets, { since, pauses: pausesOf(state) }, day)) return null;
-  const leads = await deps.db
-    .collection(`churches/${cid}/members`)
-    .where(g.leads.field, 'array-contains', g.leads.id)
-    .get();
-  return leads.docs.filter((m) => powersOf(m.data()).remindedOfAttendance(groupOf(g.key)!)).map((m) => m.id);
+  const leads = g.leads
+    ? await deps.db.collection(`churches/${cid}/members`).where(g.leads.field, 'array-contains', g.leads.id).get()
+    : null;
+  const group = attendanceGroupOf(g.key)!;
+  const fillers = fillersOf(state);
+  const asked = await (fillers.length
+    ? deps.db.getAll(...fillers.map((uid) => deps.db.doc(`churches/${cid}/members/${uid}`)))
+    : []);
+  return [...new Set([...(leads?.docs ?? []), ...asked.filter((m) => m.exists)]
+    .filter((m) => powersOf({ ...m.data(), uid: m.id }).remindedOfAttendance(group, fillers))
+    .map((m) => m.id))];
+}
+
+/** Who else fills in a group's 人數 (誰填人數), as attendance/{key} [d] has them. */
+export function fillersOf(d: DocumentSnapshot | undefined): string[] {
+  const list = d?.get('fillers');
+  return (Array.isArray(list) ? list : []).filter((u): u is string => typeof u === 'string');
 }
 
 /** The pauses attendance/{key} has. */
@@ -144,19 +164,25 @@ type Service = { id: string; name?: string; weekday?: number; enabled?: boolean 
 
 /**
  * When service [s] meets on [day]: on its weekday when that day has a
- * roster ([roster]), or every week with 每週都填人數 on ([state],
- * attendance/service:<id>, #93).
+ * roster ([roster]), unless its 聚會時間 says otherwise ([state],
+ * attendance/service:<id>): every other week, those weeks of each month,
+ * or every week (`everyWeek`, 每週都填人數, #93).
  */
 function serviceMeets(s: Service, roster: boolean, state: DocumentSnapshot | undefined): Meets {
-  return state?.get('everyWeek') === true ? { weekday: s.weekday } : { weekday: s.weekday, roster };
+  const time = meetsOf(state);
+  if (time.monthWeeks || time.every === 2 || state?.get('everyWeek') === true) {
+    return { ...time, weekday: s.weekday };
+  }
+  return { weekday: s.weekday, roster };
 }
 
-/** The services and 小組 of church [cid] meeting on [day], before pauses and what was filled in. */
+/** The services, 小組 and 其他聚會 of church [cid] meeting on [day], before pauses and what was filled in. */
 async function dueOn(deps: { db: PushDeps['db'] }, cid: string, day: string): Promise<Due[]> {
   const weekday = weekdayOf(day);
-  const [services, smallGroups] = await Promise.all([
+  const [services, smallGroups, gatherings] = await Promise.all([
     deps.db.doc(`churches/${cid}/settings/services`).get(),
     deps.db.collection(`churches/${cid}/smallGroups`).where('weekday', '==', weekday).get(),
+    deps.db.collection(`churches/${cid}/gatherings`).where('weekday', '==', weekday).get(),
   ]);
   const meetingServices = ((services.get('services') as Service[] | undefined) ?? [])
     .filter((s) => s.enabled !== false && s.weekday === weekday);
@@ -179,22 +205,30 @@ async function dueOn(deps: { db: PushDeps['db'] }, cid: string, day: string): Pr
       leads: { field: 'leadSmallGroups' as const, id: g.id },
       meets: meetsOf(g),
     })),
+    ...gatherings.docs.map((g) => ({
+      key: `gathering:${g.id}`,
+      name: (g.get('name') as string | undefined) ?? '',
+      leads: null,
+      meets: meetsOf(g),
+    })),
   ];
 }
 
-/** When the 小組 [g] meets, as smallGroups/{id} has it. */
-export function meetsOf(g: DocumentSnapshot): Meets {
-  const weekday = g.get('weekday');
-  const every = g.get('every');
-  const startsOn = g.get('startsOn');
+/** When a 小組 or 其他聚會 [g] meets, as its doc has it; a service's 聚會時間 too, but its weekday. */
+export function meetsOf(g: DocumentSnapshot | undefined): Meets {
+  const weekday = g?.get('weekday');
+  const every = g?.get('every');
+  const startsOn = g?.get('startsOn');
+  const monthWeeks = g?.get('monthWeeks');
   return {
     ...(typeof weekday === 'number' ? { weekday } : {}),
     ...(every === 2 ? { every: 2 } : {}),
     ...(typeof startsOn === 'string' ? { startsOn } : {}),
+    ...(Array.isArray(monthWeeks) && monthWeeks.length > 0 ? { monthWeeks: monthWeeks.filter((w) => typeof w === 'number') } : {}),
   };
 }
 
-const KEY = /^(service|small):[A-Za-z0-9_-]{1,64}$/;
+const KEY = /^(service|small|gathering):[A-Za-z0-9_-]{1,64}$/;
 
 /** The 小組 smallGroups/{id} [doc] has, with its service, for who may fill in its 人數. */
 const smallGroupIn = (doc: DocumentSnapshot): Extract<ChurchGroup, { kind: 'small' }> => {
@@ -221,7 +255,7 @@ export async function remindAttendance(deps: Deps & PushDeps, caller: Caller | n
     // A 小組's, by its service's 負責人 and 牧者 too.
     const group = SMALL.test(key)
       ? smallGroupIn(await deps.db.doc(`churches/${cid}/smallGroups/${key.slice('small:'.length)}`).get())
-      : groupOf(key)!;
+      : attendanceGroupOf(key)!;
     if (!powers.writesAttendance(group)) fail('permission-denied', 'permissionDenied');
   }
   const since = church.get('attendanceSince');
@@ -274,9 +308,9 @@ export async function fillAttendanceTogether(deps: Deps, caller: Caller | null, 
   const smallGroup = (k: string) => deps.db.doc(`churches/${cid}/smallGroups/${k.slice('small:'.length)}`);
   const dayOf = (k: string) => deps.db.doc(`churches/${cid}/attendance/${k}/days/${day}`);
   await deps.db.runTransaction(async (tx) => {
-    const host = await tx.get(smallGroup(key));
+    const [host, hostState] = await Promise.all([tx.get(smallGroup(key)), tx.get(deps.db.doc(`churches/${cid}/attendance/${key}`))]);
     const { service } = smallGroupIn(host);
-    if (!host.exists || !powers.writesAttendance(smallGroupIn(host))) {
+    if (!host.exists || !powers.fillsAttendance(smallGroupIn(host), fillersOf(hostState))) {
       fail('permission-denied', 'permissionDenied');
     }
     const was = await tx.get(dayOf(key));

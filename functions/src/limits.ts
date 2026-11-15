@@ -47,6 +47,8 @@ export const LIMITS = {
   attendancePauses: 50,
   /** The other 小組 one met with (聯合小組, #93). */
   attendanceTogether: 20,
+  /** Who else fills in a group's 人數 (誰填人數). */
+  attendanceFillers: 20,
   /** A member's stretches of 不能服事的日子 (#91). */
   unavailableSpans: 100,
 } as const;

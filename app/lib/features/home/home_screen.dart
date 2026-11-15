@@ -113,6 +113,7 @@ class HomeScreen extends ConsumerWidget {
           final addToHome = AddToHomeCard.shown(ref);
           final notifications = TurnOnNotificationsCard.shown(ref);
           final attendance = AttendanceDueCard.shown(ref);
+          final missing = AttendanceMissingRow.shown(ref);
           // 找人代／交換 asking me (#92): first among what is mine to do.
           final asks = waitingOnMe(
             ref.watch(swapRequestsToMeProvider).value ?? const [],
@@ -123,6 +124,7 @@ class HomeScreen extends ConsumerWidget {
               !welcome &&
               asks.isEmpty &&
               !attendance &&
+              !missing &&
               link == null &&
               !sourceMissing &&
               claims.isEmpty &&
@@ -166,6 +168,7 @@ class HomeScreen extends ConsumerWidget {
                   ],
                 ),
               if (attendance) const AttendanceDueCard(),
+              if (missing) const AttendanceMissingRow(),
               for (final start in gettingStarted) GettingStartedSection(start),
               if (waiting > 0)
                 ListSection(

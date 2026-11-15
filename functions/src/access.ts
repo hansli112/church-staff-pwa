@@ -105,7 +105,7 @@ export async function churchAccess(
   const open = isChurchOpen(church);
   if (!open && opts.closed !== 'allow') churchClosed();
 
-  const powers = powersOf(member.data() ?? {});
+  const powers = powersOf({ ...member.data(), uid: member.id });
   const access: ChurchAccess = {
     cid,
     caller: c,
@@ -147,7 +147,7 @@ export async function accessIn(tx: Transaction, deps: Deps, a: ChurchAccess, ...
   )) as DocumentSnapshot[];
   if (!me.exists) fail('permission-denied', 'permissionDenied');
   if (!isChurchOpen(church)) churchClosed();
-  return { powers: powersOf(me.data()!), docs };
+  return { powers: powersOf({ ...me.data()!, uid: me.id }), docs };
 }
 
 /**

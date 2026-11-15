@@ -115,7 +115,7 @@ class ChurchWrites {
   ChurchWrite groupMember(Member who, ChurchGroup group, {required bool member, List<String> duties = const []}) {
     final had = switch (group) {
       ServiceGroup(:final id) => who.zones.where((z) => z.serviceType == id).firstOrNull,
-      MinistryGroup() || SmallGroup() => null,
+      MinistryGroup() || SmallGroup() || GatheringGroup() => null,
     };
     return _reversible(
       (data) => data.setGroupMember(who.uid, group, member: member, duties: duties),

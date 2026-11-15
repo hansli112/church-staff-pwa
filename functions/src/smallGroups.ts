@@ -28,7 +28,7 @@ function setLead(tx: Transaction, m: DocumentSnapshot, id: string, lead: boolean
 
 /**
  * `{ churchId, op: 'save', group: { id?, name, service, weekday?, every?,
- * startsOn? }, leads? }` opens a 小組 (no id) or changes one, and with
+ * monthWeeks?, startsOn? }, leads? }` opens a 小組 (no id) or changes one, and with
  * `leads` (uids) makes them its 小組長 and nobody else; `{ churchId, op:
  * 'delete', id }` closes it, taking it off its 小組長 and 同工. Its 人數
  * stay. Returns its id. A change saying what it was made over, `before`
@@ -117,6 +117,13 @@ function smallGroupFields(g: Record<string, unknown>) {
   if (g.every !== undefined && g.every !== null) {
     if (g.every !== 1 && g.every !== 2) fail('invalid-argument', 'unknown');
     out.every = g.every;
+  }
+  // Those weeks of each month (第 1、3 個週五) instead of every [every].
+  if (g.monthWeeks !== undefined && g.monthWeeks !== null) {
+    const weeks = g.monthWeeks;
+    if (!Array.isArray(weeks) || weeks.length > 4 || new Set(weeks).size !== weeks.length
+        || weeks.some((w) => !Number.isInteger(w) || w < 1 || w > 4) || out.weekday === undefined) fail('invalid-argument', 'unknown');
+    if (weeks.length > 0) out.monthWeeks = [...(weeks as number[])].sort((a, b) => a - b);
   }
   if (g.startsOn !== undefined && g.startsOn !== null) {
     // A day it meets: on its weekday.

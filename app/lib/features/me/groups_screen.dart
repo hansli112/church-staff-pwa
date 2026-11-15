@@ -29,8 +29,11 @@ import 'service_staff.dart';
 /// `small/<id>`.
 String groupPage(ChurchGroup group) => '/me/groups/${group.key.replaceFirst(':', '/')}';
 
-/// A service's or 小組's 人數 page (#95).
-String attendancePage(ChurchGroup group) => '${groupPage(group)}/attendance';
+/// A service's, 小組's or 其他聚會's 人數 page (#95); a 其他聚會 has no other.
+String attendancePage(ChurchGroup group) => switch (group) {
+  GatheringGroup(:final id) => '/me/attendance/gathering/$id',
+  _ => '${groupPage(group)}/attendance',
+};
 
 /// Where [group]'s 同工 are added: for a service, the page of its 同工;
 /// otherwise the group's own page.
@@ -155,7 +158,7 @@ List<Candidate> groupCandidates(ChurchGroup group, List<Roster> rosters, List<Me
       final counts = switch (group) {
         ServiceGroup(:final id) => !r.isEvent && r.type == id,
         MinistryGroup() => ministry != null && ministry.dutiesIn(r.isEvent ? null : r.type).contains(d.role),
-        SmallGroup() => false,
+        SmallGroup() || GatheringGroup() => false,
       };
       if (!counts) continue;
       for (final uid in {for (final name in d.people) ?d.uids[name]}) {
@@ -720,6 +723,8 @@ class GroupScreen extends ConsumerWidget {
       ServiceGroup(:final id) => ServiceLead(id) as Identity,
       MinistryGroup(:final id) => MinistryLead(id),
       SmallGroup(:final id) => SmallGroupLead(id),
+      // No page of its own, nor 負責人.
+      GatheringGroup() => throw StateError('a 其他聚會 has no 負責人'),
     };
     final pastor = switch (group) {
       ServiceGroup(:final id) => m.identities.any(
@@ -1102,6 +1107,7 @@ Future<void> assignLead(
     ServiceGroup(:final id) => ServiceLead(id) as Identity,
     MinistryGroup(:final id) => MinistryLead(id),
     SmallGroup(:final id) => SmallGroupLead(id),
+    GatheringGroup() => throw StateError('a 其他聚會 has no 負責人'),
   };
   await runWithUndo(
     context,

@@ -13,16 +13,19 @@ class ChurchGroups {
     required ServiceSettings services,
     required MinistrySettings ministries,
     required List<SmallGroupDetails> smallGroups,
+    List<Gathering> gatherings = const [],
   }) : _services = services,
        _ministries = ministries,
-       _smallGroups = smallGroups;
+       _smallGroups = smallGroups,
+       _gatherings = gatherings;
 
   final ServiceSettings _services;
   final MinistrySettings _ministries;
   final List<SmallGroupDetails> _smallGroups;
+  final List<Gathering> _gatherings;
 
   /// Every group to pick from, in order: the services in use, the 事工,
-  /// the 小組.
+  /// the 小組; not a 其他聚會, which is only for its 人數.
   List<NamedGroup> get all => [
     for (final s in _services.enabled) (group: ServiceGroup(s.id), name: s.name),
     for (final m in _ministries.ministries) (group: MinistryGroup(m.id), name: _ministries.nameOf(m.id, _services)),
@@ -42,6 +45,10 @@ class ChurchGroups {
     },
     SmallGroup(:final id) => switch (_smallGroups.byId(id)) {
       final g? => (group: g.group, name: g.name),
+      null => null,
+    },
+    GatheringGroup(:final id) => switch (_gatherings.where((g) => g.id == id).firstOrNull) {
+      final g? => (group: GatheringGroup(id), name: g.name),
       null => null,
     },
     null => null,
