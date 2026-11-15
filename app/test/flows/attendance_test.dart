@@ -568,6 +568,26 @@ void main() {
       expect(inRow('誰填人數', '林同工、李美玉'), findsOneWidget);
     });
 
+    testWidgets("a service's own 聚會時間 keeps the meetings it had by its rosters before", (tester) async {
+      final b = withAttendance(seededChurch(as: editor, clock: eveningOf(Day(2026, 10, 11))));
+      await pumpApp(tester, b);
+      await go(tester, '/me/groups/service/sunday/attendance');
+      await tapText(tester, '聚會時間');
+      await tapText(tester, '每週');
+      await tapText(tester, '儲存');
+      expect(b.attendance['grace']!['service:sunday']!.time, MeetingTime(startsOn: Day(2026, 10, 11)));
+      expect(find.textContaining('10月4日'), findsOneWidget, reason: 'it had a roster: still asks for its 人數');
+      await tapText(tester, '聚會時間');
+      await tapText(tester, '每月');
+      await tapText(tester, '第 2 個週日');
+      await tapText(tester, '儲存');
+      expect(
+        b.attendance['grace']!['service:sunday']!.time?.startsOn,
+        Day(2026, 10, 11),
+        reason: '10/11 is the second',
+      );
+    });
+
     testWidgets('who is asked fills them in from 首頁, and sets nothing else', (tester) async {
       final b = withAttendance(seededChurch(as: staffMei, clock: eveningOf(Day(2026, 10, 4))));
       b.attendance['grace'] = {

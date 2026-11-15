@@ -630,6 +630,11 @@ describe('回報人數 (attendance) 與小組 (smallGroups)', () => {
     await assertFails(setDoc(group(EDITOR_A), { startsOn: 'soon' }));
     await assertFails(setDoc(group(EDITOR_A), { monthWeeks: [1, 2, 3, 4, 5] }));
     await assertFails(setDoc(group(EDITOR_A), { monthWeeks: '1,3' }));
+    await assertFails(setDoc(group(EDITOR_A), { monthWeeks: [1, 1] }));
+    // A 小組's is on the 小組.
+    await seed(`churches/${A}/smallGroups/g9`, { name: '喜樂', service: 'sunday' });
+    await assertFails(setDoc(doc(as(EDITOR_A), `churches/${A}/attendance/small:g9`), { every: 2 }));
+    await assertSucceeds(setDoc(doc(as(EDITOR_A), `churches/${A}/attendance/small:g9`), { fillers: [MEMBER_A] }));
   });
 
   it('其他聚會：同工都讀得到，管理員和行政新增、改、刪', async () => {

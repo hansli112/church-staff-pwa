@@ -3083,7 +3083,7 @@ class L10nKo extends L10n {
   String get gatheringName => '이름';
 
   @override
-  String get deleteGathering => '이 모임 삭제';
+  String get deleteGathering => '기타 모임 삭제';
 
   @override
   String gatheringDeleted(String name) {

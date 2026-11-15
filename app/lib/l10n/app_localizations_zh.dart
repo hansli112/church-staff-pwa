@@ -3078,7 +3078,7 @@ class L10nZh extends L10n {
   String get gatheringName => '名稱';
 
   @override
-  String get deleteGathering => '刪除這個聚會';
+  String get deleteGathering => '刪除其他聚會';
 
   @override
   String gatheringDeleted(String name) {
@@ -6485,11 +6485,11 @@ class L10nZhHans extends L10nZh {
   String get meetsEveryMonth => '每月';
 
   @override
-  String get meetsByRoster => '照服事表';
+  String get meetsByRoster => '照事奉表';
 
   @override
   String meetsWithRoster(String weekday) {
-    return '有服事表的$weekday';
+    return '有事奉表的$weekday';
   }
 
   @override
@@ -6654,7 +6654,7 @@ class L10nZhHans extends L10nZh {
   String get gatheringName => '名称';
 
   @override
-  String get deleteGathering => '删除这个聚会';
+  String get deleteGathering => '删除其他聚会';
 
   @override
   String gatheringDeleted(String name) {

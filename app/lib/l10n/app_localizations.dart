@@ -5479,7 +5479,7 @@ abstract class L10n {
   /// No description provided for @deleteGathering.
   ///
   /// In zh, this message translates to:
-  /// **'刪除這個聚會'**
+  /// **'刪除其他聚會'**
   String get deleteGathering;
 
   /// Toast after deleting a 其他聚會, with undo

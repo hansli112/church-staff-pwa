@@ -7,6 +7,7 @@ library;
 import 'package:cloud_firestore/cloud_firestore.dart';
 
 import '../../domain/day.dart';
+import '../../domain/limits.dart';
 import '../../domain/models.dart';
 import '../../domain/swap.dart';
 
@@ -159,7 +160,7 @@ Json smallGroupToJson(SmallGroupDetails g) => {
 List<int> _monthWeeks(Object? v) => [
   if (v is List)
     for (final w in v)
-      if (w is int && w >= 1 && w <= MeetingTime.weeksOfMonth) w,
+      if (w is int && w >= 1 && w <= Limits.monthWeeks) w,
 ];
 
 /// A 聚會時間 as a 小組's, a 其他聚會's or a service's (with no weekday) doc has it.

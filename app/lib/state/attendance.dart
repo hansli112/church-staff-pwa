@@ -84,7 +84,14 @@ List<Day> attendanceDays(
 bool _due(AttendanceGroup group, {required Day since, required AttendanceRecord record, required Day day}) =>
     attendanceDue(
       switch ((group.meetsOn(day), record.time)) {
-        (Meets(:final weekday, roster: _?), final time?) => time.meets(weekday: weekday),
+        // Before its own began, by its rosters as before.
+        (Meets(:final weekday, :final roster?), final time?) => Meets(
+          weekday: weekday,
+          every: time.every,
+          startsOn: time.startsOn,
+          monthWeeks: time.monthWeeks,
+          roster: time.startsOn == null ? null : roster,
+        ),
         (final meets, _) => meets,
       },
       since: since,

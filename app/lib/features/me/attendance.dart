@@ -892,7 +892,7 @@ class _MeetsSheetState extends State<_MeetsSheet> {
     // As it was while it still meets so: the weeks it met keep asking.
     bool same(MeetingTime t) =>
         had != null &&
-        had.weekday == t.weekday &&
+        (had.weekday ?? widget.serviceWeekday) == t.weekday &&
         had.every == t.every &&
         setEquals({...had.monthWeeks}, {...t.monthWeeks}) &&
         (had.startsOn == null || !had.startsOn!.isAfter(t.startsOn ?? first));
@@ -990,7 +990,7 @@ class _MeetsSheetState extends State<_MeetsSheet> {
                     if (_repeat == _Repeat.monthly && weekday != null)
                       ListSection(
                         children: [
-                          for (var n = 1; n <= MeetingTime.weeksOfMonth; n++)
+                          for (var n = 1; n <= Limits.monthWeeks; n++)
                             ListRow(
                               title: l10n.meetsWeekOfMonth(n, weekdayLabel(l10n, weekday)),
                               selected: _weeks.contains(n),

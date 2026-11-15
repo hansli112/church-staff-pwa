@@ -43,7 +43,7 @@ const RULES_FIELDS: Record<string, { text?: keyof typeof TEXT_LIMITS; other?: ke
   // attendance/{key}.fillers: who else fills them in (誰填人數).
   "request.resource.data.get('fillers', [])": { other: 'attendanceFillers' },
   // A 聚會時間's weeks of the month (第 1、3 個週五): at most the first four.
-  "request.resource.data.get('monthWeeks', [])": { rulesOnly: 4 },
+  "request.resource.data.get('monthWeeks', [])": { other: 'monthWeeks' },
   // Where an event roster's event is, copied from Google: abuse guards only.
   "roster.get('calendarId', '')": { rulesOnly: 1024 },
   "roster.get('recurringEventId', '')": { rulesOnly: 1024 },

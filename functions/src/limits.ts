@@ -49,6 +49,8 @@ export const LIMITS = {
   attendanceTogether: 20,
   /** Who else fills in a group's 人數 (誰填人數). */
   attendanceFillers: 20,
+  /** A 聚會時間's weeks of each month: the first four, a fifth is not in every month. */
+  monthWeeks: 4,
   /** A member's stretches of 不能服事的日子 (#91). */
   unavailableSpans: 100,
 } as const;

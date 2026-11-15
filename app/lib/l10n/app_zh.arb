@@ -2236,7 +2236,7 @@
   "addGathering": "新增其他聚會",
   "gatheringName": "名稱",
   "@gatheringName": {"description": "A 其他聚會's name"},
-  "deleteGathering": "刪除這個聚會",
+  "deleteGathering": "刪除其他聚會",
   "gatheringDeleted": "已刪除「{name}」",
   "@gatheringDeleted": {"description": "Toast after deleting a 其他聚會, with undo", "placeholders": {"name": {"type": "String", "example": "長者共餐"}}},
   "attendancePrevWeek": "上一週",

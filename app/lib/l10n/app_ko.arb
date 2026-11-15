@@ -923,7 +923,7 @@
   "gatherings": "기타 모임",
   "addGathering": "기타 모임 추가",
   "gatheringName": "이름",
-  "deleteGathering": "이 모임 삭제",
+  "deleteGathering": "기타 모임 삭제",
   "gatheringDeleted": "‘{name}’ 삭제함",
   "attendancePrevWeek": "이전 주",
   "attendanceNextWeek": "다음 주",

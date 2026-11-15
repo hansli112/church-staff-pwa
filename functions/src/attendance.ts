@@ -58,6 +58,9 @@ const dayMs = (day: string) => Date.parse(`${day}T00:00:00Z`);
 /** 1 = Monday … 7 = Sunday. */
 export const weekdayOf = (day: string) => ((new Date(dayMs(day)).getUTCDay() + 6) % 7) + 1;
 
+/** Which of its weekday in its month [day] is: 1 for the first … 5 for a fifth. */
+export const weekOfMonth = (day: string) => Math.floor((Number(day.slice(8)) - 1) / 7) + 1;
+
 /**
  * Whether a group that [meets] so meets on [day] and is asked its 人數
  * (testdata/church_rules.json, attendanceDue).
@@ -66,9 +69,10 @@ export function attendanceDue(meets: Meets, state: AttendanceState, day: string)
   if (day < state.since) return false;
   if (state.pauses.some((p) => p.from <= day && day < p.until)) return false;
   if (meets.weekday === undefined || weekdayOf(day) !== meets.weekday) return false;
-  if ('roster' in meets) return meets.roster === true;
+  // A service by its rosters, or, on a 聚會時間 of its own, before it began.
+  if ('roster' in meets && (!meets.startsOn || day < meets.startsOn)) return meets.roster === true;
   if (meets.startsOn && day < meets.startsOn) return false;
-  if (meets.monthWeeks?.length) return meets.monthWeeks.includes(Math.floor((Number(day.slice(8)) - 1) / 7) + 1);
+  if (meets.monthWeeks?.length) return meets.monthWeeks.includes(weekOfMonth(day));
   const every = meets.every === 2 ? 2 : 1;
   if (!meets.startsOn) return every === 1;
   return Math.floor((dayMs(day) - dayMs(meets.startsOn)) / WEEK_MS) % every === 0;
@@ -171,7 +175,8 @@ type Service = { id: string; name?: string; weekday?: number; enabled?: boolean 
 function serviceMeets(s: Service, roster: boolean, state: DocumentSnapshot | undefined): Meets {
   const time = meetsOf(state);
   if (time.monthWeeks || time.every === 2 || state?.get('everyWeek') === true) {
-    return { ...time, weekday: s.weekday };
+    // Before it began, by its rosters as before.
+    return { ...time, weekday: s.weekday, ...(time.startsOn ? { roster } : {}) };
   }
   return { weekday: s.weekday, roster };
 }

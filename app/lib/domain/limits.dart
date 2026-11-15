@@ -78,6 +78,9 @@ abstract final class Limits {
   /// Who else fills in a group's 人數 (誰填人數).
   static const attendanceFillers = 20;
 
+  /// A 聚會時間's weeks of each month: the first four, a fifth is not in every month.
+  static const monthWeeks = 4;
+
   /// A member's stretches of 不能服事的日子 (#91).
   static const unavailableSpans = 100;
 }

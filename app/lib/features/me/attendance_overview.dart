@@ -94,11 +94,12 @@ class _AttendanceOverviewScreenState extends ConsumerState<AttendanceOverviewScr
                       ),
                     ),
                   if (week.rows.isEmpty) ListSection(children: [ListRow(title: l10n.attendanceNoDays, chevron: false)]),
-                  for (final section in week.sections(groups))
+                  for (final section in _sections(week.sections(groups)))
                     ListSection(
-                      header: switch (section.service) {
-                        final id? => nameOf('service:$id'),
-                        null => l10n.gatherings,
+                      header: switch (section) {
+                        (service: final id?, rows: _, :final named) when named => nameOf('service:$id'),
+                        (service: null, rows: _, named: _) => l10n.gatherings,
+                        _ => null,
                       },
                       children: [for (final r in section.rows) _row(context, r, today, nameOf)],
                     ),
@@ -125,6 +126,23 @@ class _AttendanceOverviewScreenState extends ConsumerState<AttendanceOverviewScr
               ],
             ),
     );
+  }
+
+  /// [sections] as listed: a service with its 小組 under its name; those
+  /// with no 小組 that week together, the row saying the name already.
+  List<({String? service, List<AttendanceRow> rows, bool named})> _sections(
+    List<({String? service, List<AttendanceRow> rows})> sections,
+  ) {
+    final out = <({String? service, List<AttendanceRow> rows, bool named})>[];
+    for (final s in sections) {
+      final named = s.service == null || s.rows.any((r) => r.group.group is! ServiceGroup);
+      if (!named && out.isNotEmpty && !out.last.named && out.last.service != null) {
+        out.last.rows.addAll(s.rows);
+      } else {
+        out.add((service: s.service, rows: [...s.rows], named: named));
+      }
+    }
+    return out;
   }
 
   /// A meeting of [week]: its 人數, 未填 with 提醒, or when it next meets.

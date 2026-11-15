@@ -923,7 +923,7 @@
   "gatherings": "その他の集まり",
   "addGathering": "その他の集まりを追加",
   "gatheringName": "名前",
-  "deleteGathering": "この集まりを削除",
+  "deleteGathering": "その他の集まりを削除",
   "gatheringDeleted": "「{name}」を削除しました",
   "attendancePrevWeek": "前の週",
   "attendanceNextWeek": "次の週",

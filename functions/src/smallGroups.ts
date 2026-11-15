@@ -5,7 +5,7 @@ import { accessIn, churchAccess } from './access.js';
 import { fail, record, strings, text, type Caller, type Deps } from './common.js';
 import { weekdayOf } from './attendance.js';
 import { identitiesOf, withIdentities, type Identity } from './identities.js';
-import { TEXT_LIMITS } from './limits.js';
+import { LIMITS, TEXT_LIMITS } from './limits.js';
 
 /**
  * 小組 (#85): churches/{cid}/smallGroups/{id}, each in one service
@@ -121,8 +121,10 @@ function smallGroupFields(g: Record<string, unknown>) {
   // Those weeks of each month (第 1、3 個週五) instead of every [every].
   if (g.monthWeeks !== undefined && g.monthWeeks !== null) {
     const weeks = g.monthWeeks;
-    if (!Array.isArray(weeks) || weeks.length > 4 || new Set(weeks).size !== weeks.length
-        || weeks.some((w) => !Number.isInteger(w) || w < 1 || w > 4) || out.weekday === undefined) fail('invalid-argument', 'unknown');
+    if (!Array.isArray(weeks) || weeks.length > LIMITS.monthWeeks || new Set(weeks).size !== weeks.length
+        || weeks.some((w) => !Number.isInteger(w) || w < 1 || w > LIMITS.monthWeeks) || out.weekday === undefined) {
+      fail('invalid-argument', 'unknown');
+    }
     if (weeks.length > 0) out.monthWeeks = [...(weeks as number[])].sort((a, b) => a - b);
   }
   if (g.startsOn !== undefined && g.startsOn !== null) {

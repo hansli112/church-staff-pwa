@@ -3061,7 +3061,7 @@ class L10nEn extends L10n {
   String get meetsEveryMonth => 'Monthly';
 
   @override
-  String get meetsByRoster => 'Roster';
+  String get meetsByRoster => 'By schedule';
 
   @override
   String meetsWithRoster(String weekday) {
@@ -3226,7 +3226,7 @@ class L10nEn extends L10n {
 
   @override
   String attendanceGatheringsTotal(int count) {
-    return 'Other $count';
+    return 'Other gatherings $count';
   }
 
   @override
@@ -3242,7 +3242,7 @@ class L10nEn extends L10n {
   String get gatheringName => 'Name';
 
   @override
-  String get deleteGathering => 'Delete this gathering';
+  String get deleteGathering => 'Delete gathering';
 
   @override
   String gatheringDeleted(String name) {

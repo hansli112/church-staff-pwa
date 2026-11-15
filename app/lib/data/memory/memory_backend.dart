@@ -1010,9 +1010,9 @@ class MemoryChurchData implements ChurchData {
     if (group.startsOn case final start? when group.weekday == null || start.weekday != group.weekday) {
       throw const CloudException(CloudErrorCode.unknown);
     }
-    if (group.monthWeeks.length > MeetingTime.weeksOfMonth ||
+    if (group.monthWeeks.length > Limits.monthWeeks ||
         group.monthWeeks.toSet().length != group.monthWeeks.length ||
-        group.monthWeeks.any((w) => w < 1 || w > MeetingTime.weeksOfMonth)) {
+        group.monthWeeks.any((w) => w < 1 || w > Limits.monthWeeks)) {
       throw const CloudException(CloudErrorCode.unknown);
     }
     final name = group.name.trim();
@@ -2615,8 +2615,8 @@ class _MemoryAttendance implements AttendanceData {
   void _requireValidTime(MeetingTime? time) {
     if (time != null &&
         (!(time.every == 1 || time.every == 2) ||
-            time.monthWeeks.length > MeetingTime.weeksOfMonth ||
-            time.monthWeeks.any((w) => w < 1 || w > MeetingTime.weeksOfMonth))) {
+            time.monthWeeks.length > Limits.monthWeeks ||
+            time.monthWeeks.any((w) => w < 1 || w > Limits.monthWeeks))) {
       throw const CloudException(CloudErrorCode.permissionDenied);
     }
   }
@@ -2664,7 +2664,13 @@ class _MemoryAttendance implements AttendanceData {
     final record = _all[key] ?? const AttendanceRecord();
     final meets = switch (_c._group(key)) {
       ServiceGroup(:final id) => switch (b.services[cid]!.byId(id)) {
-        final s? when record.time != null => record.time!.meets(weekday: s.weekday),
+        final s? when record.time != null => Meets(
+          weekday: s.weekday,
+          every: record.time!.every,
+          startsOn: record.time!.startsOn,
+          monthWeeks: record.time!.monthWeeks,
+          roster: record.time!.startsOn == null ? null : b.rosters[cid]!.containsKey(Roster.idFor(id, day)),
+        ),
         final s? => Meets(weekday: s.weekday, roster: b.rosters[cid]!.containsKey(Roster.idFor(id, day))),
         null => null,
       },

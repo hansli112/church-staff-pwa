@@ -9,7 +9,8 @@ import 'day.dart';
 /// same rules.
 
 /// When a group meets. A service, unless its 聚會時間 says otherwise: on
-/// its [weekday] when that day has a roster ([roster], whether it has).
+/// its [weekday] when that day has a roster ([roster], whether it has);
+/// with one from [startsOn], by its rosters before then.
 /// Else on [weekday], every [every] weeks from [startsOn], a day it met;
 /// or, with [monthWeeks], those weeks of each month (第 1、3 個週五), from
 /// [startsOn] on.
@@ -42,9 +43,6 @@ class MeetingTime {
   final int every;
   final Day? startsOn;
   final List<int> monthWeeks;
-
-  /// The first four weeks of a month: a fifth is not in every month.
-  static const weeksOfMonth = 4;
 
   /// When it meets, for [attendanceDue]; [weekday] for a service's.
   Meets meets({int? weekday}) =>
@@ -115,8 +113,9 @@ bool attendanceDue(
 }) {
   if (day.isBefore(since) || pauses.any((p) => p.covers(day))) return false;
   if (meets.weekday == null || day.weekday != meets.weekday) return false;
-  if (meets.roster != null) return meets.roster!;
   final start = meets.startsOn;
+  // A service by its rosters, or, on a 聚會時間 of its own, before it began.
+  if (meets.roster != null && (start == null || day.isBefore(start))) return meets.roster!;
   if (start != null && day.isBefore(start)) return false;
   if (meets.monthWeeks.isNotEmpty) return meets.monthWeeks.contains(weekOfMonth(day));
   if (start == null) return meets.every != 2;

@@ -3082,7 +3082,7 @@ class L10nJa extends L10n {
   String get gatheringName => '名前';
 
   @override
-  String get deleteGathering => 'この集まりを削除';
+  String get deleteGathering => 'その他の集まりを削除';
 
   @override
   String gatheringDeleted(String name) {
