@@ -449,10 +449,13 @@ extension SmallGroupsById on List<SmallGroupDetails> {
   List<SmallGroupDetails> inChurchOrder(List<String> services) => _byService(services, (a, b) => 0);
 
   /// As 回報人數 lists them: by service, then each service's by the
-  /// weekday they meet on, Monday first, those with no 聚會時間 last; on
-  /// the same day, in the order dragged.
+  /// weekday they meet on, Sunday first as 人數總覽's week, those with no
+  /// 聚會時間 last; on the same day, in the order dragged.
   List<SmallGroupDetails> inMeetingOrder(List<String> services) =>
-      _byService(services, (a, b) => (a.weekday ?? 8).compareTo(b.weekday ?? 8));
+      _byService(services, (a, b) => _inWeek(a.weekday).compareTo(_inWeek(b.weekday)));
+
+  /// [weekday]'s place in a week from Sunday; none last.
+  static int _inWeek(int? weekday) => weekday == null ? 7 : weekday % 7;
 
   List<SmallGroupDetails> _byService(
     List<String> services,

@@ -5398,24 +5398,6 @@ abstract class L10n {
   /// **'{name}的聚會人數'**
   String attendanceOf(String name);
 
-  /// 人數總覽 (#95): the services of the week added up, 小組 apart, whose people come to them too
-  ///
-  /// In zh, this message translates to:
-  /// **'聚會 {count} 人'**
-  String attendanceServicesTotal(int count);
-
-  /// 人數總覽 (#95): the 小組 of the week added up; met together, counted once
-  ///
-  /// In zh, this message translates to:
-  /// **'小組 {count} 人'**
-  String attendanceSmallGroupsTotal(int count);
-
-  /// 人數總覽: the 其他聚會' 人數 added up
-  ///
-  /// In zh, this message translates to:
-  /// **'其他聚會 {count} 人'**
-  String attendanceGatheringsTotal(int count);
-
   /// A group's 人數 page: who reports its 人數 and is reminded (負責回報); its leads always are
   ///
   /// In zh, this message translates to:

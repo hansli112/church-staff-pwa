@@ -3029,21 +3029,6 @@ class L10nZh extends L10n {
   }
 
   @override
-  String attendanceServicesTotal(int count) {
-    return '聚會 $count 人';
-  }
-
-  @override
-  String attendanceSmallGroupsTotal(int count) {
-    return '小組 $count 人';
-  }
-
-  @override
-  String attendanceGatheringsTotal(int count) {
-    return '其他聚會 $count 人';
-  }
-
-  @override
   String get attendanceFillers => '負責回報';
 
   @override
@@ -6580,21 +6565,6 @@ class L10nZhHans extends L10nZh {
   @override
   String attendanceOf(String name) {
     return '$name的聚会人数';
-  }
-
-  @override
-  String attendanceServicesTotal(int count) {
-    return '聚会 $count 人';
-  }
-
-  @override
-  String attendanceSmallGroupsTotal(int count) {
-    return '小组 $count 人';
-  }
-
-  @override
-  String attendanceGatheringsTotal(int count) {
-    return '其他聚会 $count 人';
   }
 
   @override

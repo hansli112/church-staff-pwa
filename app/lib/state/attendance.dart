@@ -212,50 +212,28 @@ final attendanceMissingCountProvider = Provider.autoDispose<int?>((ref) {
   );
 });
 
-/// The Monday of [day]'s week: 人數總覽 shows a week, Monday to Sunday,
-/// its Sunday last, as a bulletin reports the week before (#95).
-Day weekOf(Day day) => day.addDays(DateTime.monday - day.weekday);
+/// The Sunday of [day]'s week: 人數總覽 shows a week, Sunday to Saturday,
+/// as a bulletin on Sunday reports the week just gone (#95).
+Day weekOf(Day day) => day.addDays(-(day.weekday % 7));
 
 /// A row of 人數總覽 (#93): a group's meeting on [day], and what it has
 /// (null: 未填); or, this week, a group that has not met in it, with no
 /// [day], and its [next] meeting (null: a 小組 with no 聚會時間).
 typedef AttendanceRow = ({AttendanceGroup group, Day? day, AttendanceDay? value, Day? next});
 
-/// One week of 人數總覽 (#95), from [monday]: the meetings in it, and this
+/// One week of 人數總覽 (#95), from [sunday]: the meetings in it, and this
 /// week the groups yet to meet in it, each group in the church's order
-/// (attendanceGroupsProvider): a service before its 小組.
+/// (attendanceGroupsProvider): a service before its 小組. Not added up:
+/// people come to more than one, a service and their 小組, or two services.
 @immutable
 class AttendanceWeek {
-  const AttendanceWeek(this.monday, this.rows, {required this.today});
+  const AttendanceWeek(this.sunday, this.rows, {required this.today});
 
-  final Day monday;
+  final Day sunday;
   final List<AttendanceRow> rows;
 
   /// Its meetings today are not yet 未填, as on 首頁 (attendanceMissingCountProvider).
   final Day today;
-
-  /// Its services' 人數 added up, or null with none filled in.
-  int? get services => _total(isService: true);
-
-  /// Its 小組' 人數 added up, apart from the services: their people come
-  /// to those too. One that met with another is counted once, with it.
-  int? get smallGroups => _total(isService: false);
-
-  /// Its 其他聚會' 人數 added up, apart from both.
-  int? get gatherings => _total();
-
-  int? _total({bool? isService}) {
-    final counts = [
-      for (final r in rows)
-        if (switch (r.group.group) {
-          ServiceGroup() => isService == true,
-          SmallGroup() => isService == false,
-          _ => isService == null,
-        })
-          ?r.value?.count,
-    ];
-    return counts.isEmpty ? null : counts.reduce((a, b) => a + b);
-  }
 
   /// Its rows by the service they are of, the service's own first, then
   /// its 小組', as [groups] has them; the 其他聚會 last, with no service.
@@ -311,7 +289,7 @@ final _overviewRecordsProvider = Provider.autoDispose<List<AttendanceOf>?>((ref)
 
 /// The weeks 人數總覽 turns through (#95): from the one 回報人數 came on in,
 /// at most [attendanceWeeks] back, whose rosters are read, to this one; it
-/// opens on the latest with anything filled in, so not on a Monday's week
+/// opens on the latest with anything filled in, so not on a Sunday's week
 /// of nothing yet. Null until read.
 final attendanceOverviewWeeksProvider = Provider.autoDispose<({Day first, Day last, Day opens})?>((ref) {
   final since = ref.watch(churchProvider.select((c) => c.value?.attendanceSince));
@@ -331,42 +309,42 @@ final attendanceOverviewWeeksProvider = Provider.autoDispose<({Day first, Day la
   return (first: first, last: last, opens: last);
 });
 
-/// The week of 人數總覽 from [monday] (#95); null until read.
-final attendanceOverviewProvider = Provider.autoDispose.family<AttendanceWeek?, Day>((ref, monday) {
+/// The week of 人數總覽 from [sunday] (#95); null until read.
+final attendanceOverviewProvider = Provider.autoDispose.family<AttendanceWeek?, Day>((ref, sunday) {
   final since = ref.watch(churchProvider.select((c) => c.value?.attendanceSince));
   final records = ref.watch(_overviewRecordsProvider);
   if (since == null || records == null) return null;
-  return attendanceWeek(records, monday: monday, since: since, today: ref.watch(todayProvider));
+  return attendanceWeek(records, sunday: sunday, since: since, today: ref.watch(todayProvider));
 });
 
-/// The week of [records] from [monday]: what [AttendanceWeek] lists, in
+/// The week of [records] from [sunday]: what [AttendanceWeek] lists, in
 /// the order of [records], so the same each week; a group's meetings by
 /// day. A meeting today is listed 未填 till filled in; this week, one yet
 /// to meet is listed as when it next meets. None for a service with no
 /// roster ahead, nor, but those filled in, for a group an older app paused.
 AttendanceWeek attendanceWeek(
   List<AttendanceOf> records, {
-  required Day monday,
+  required Day sunday,
   required Day since,
   required Day today,
 }) {
   final rows = <AttendanceRow>[];
   for (final (group: g, :record) in records) {
     var listed = false;
-    for (var d = monday; d.isBefore(monday.addDays(7)) && !d.isAfter(today); d = d.addDays(1)) {
+    for (var d = sunday; d.isBefore(sunday.addDays(7)) && !d.isAfter(today); d = d.addDays(1)) {
       final value = record.days[d];
       if (value == null && !_due(g, since: since, record: record, day: d)) continue;
       rows.add((group: g, day: d, value: value, next: null));
       listed = true;
     }
-    if (listed || monday != weekOf(today) || record.pauseOn(today) != null) continue;
+    if (listed || sunday != weekOf(today) || record.pauseOn(today) != null) continue;
     // Only what is still to meet this week: one that does not (隔週, no
     // roster, 這次沒聚會) is not listed.
     if (nextAttendanceDay(g, since: since, record: record, today: today) case final next?) {
-      if (next.isBefore(monday.addDays(7))) rows.add((group: g, day: null, value: null, next: next));
+      if (next.isBefore(sunday.addDays(7))) rows.add((group: g, day: null, value: null, next: next));
     } else if (meetsUnset(g, today)) {
       rows.add((group: g, day: null, value: null, next: null));
     }
   }
-  return AttendanceWeek(monday, rows, today: today);
+  return AttendanceWeek(sunday, rows, today: today);
 }

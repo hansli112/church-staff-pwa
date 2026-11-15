@@ -3034,21 +3034,6 @@ class L10nKo extends L10n {
   }
 
   @override
-  String attendanceServicesTotal(int count) {
-    return '예배 $count명';
-  }
-
-  @override
-  String attendanceSmallGroupsTotal(int count) {
-    return '소그룹 $count명';
-  }
-
-  @override
-  String attendanceGatheringsTotal(int count) {
-    return '기타 $count명';
-  }
-
-  @override
   String get attendanceFillers => '보고 담당';
 
   @override

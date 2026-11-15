@@ -3188,21 +3188,6 @@ class L10nEn extends L10n {
   }
 
   @override
-  String attendanceServicesTotal(int count) {
-    return 'Services $count';
-  }
-
-  @override
-  String attendanceSmallGroupsTotal(int count) {
-    return 'Small groups $count';
-  }
-
-  @override
-  String attendanceGatheringsTotal(int count) {
-    return 'Other gatherings $count';
-  }
-
-  @override
   String get attendanceFillers => 'Reported by';
 
   @override

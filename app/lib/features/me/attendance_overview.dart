@@ -21,9 +21,9 @@ import 'groups_screen.dart' show attendancePage;
 
 /// 回報人數, for admins and 行政, and a service's 負責人 and 牧者, theirs
 /// (#95). An admin turns it on here (#85), from today, or off. Once on, a
-/// week of 人數總覽 (#93), Monday to Sunday, to copy into the bulletin by
-/// eye: the services, the 小組 and the 其他聚會 added up apart, how many
-/// are still 未填, and 提醒 beside each; each service, then its 小組, in
+/// week of 人數總覽 (#93), Sunday to Saturday, to copy into the bulletin by
+/// eye: how many are still 未填, and 提醒 beside each, not added up, as
+/// people come to more than one; each service, then its 小組, in
 /// the church's order, the 其他聚會 last. A row opens its 填寫人數, which opens the group's 人數
 /// page. Admins and 行政 list the 其他聚會 below, and add one.
 class AttendanceOverviewScreen extends ConsumerStatefulWidget {
@@ -34,8 +34,8 @@ class AttendanceOverviewScreen extends ConsumerStatefulWidget {
 }
 
 class _AttendanceOverviewScreenState extends ConsumerState<AttendanceOverviewScreen> {
-  /// The Monday of the week turned to; null for the one it opens on.
-  Day? _monday;
+  /// The Sunday of the week turned to; null for the one it opens on.
+  Day? _sunday;
 
   @override
   Widget build(BuildContext context) {
@@ -45,8 +45,8 @@ class _AttendanceOverviewScreenState extends ConsumerState<AttendanceOverviewScr
     final on = church?.attendanceSince != null;
     final admin = ref.watch(meProvider).value?.isAdmin ?? false;
     final range = ref.watch(attendanceOverviewWeeksProvider);
-    final monday = _monday ?? range?.opens;
-    final week = monday == null ? null : ref.watch(attendanceOverviewProvider(monday));
+    final sunday = _sunday ?? range?.opens;
+    final week = sunday == null ? null : ref.watch(attendanceOverviewProvider(sunday));
     final nameOf = attendanceGroupName(ref);
     final groups = ref.watch(attendanceGroupsProvider);
     final oversees = ref.watch(meProvider).value?.overseesAttendance ?? false;
@@ -78,11 +78,11 @@ class _AttendanceOverviewScreenState extends ConsumerState<AttendanceOverviewScr
                     ),
                   if (on && range != null && week != null) ...[
                     _WeekBar(
-                      monday: week.monday,
+                      sunday: week.sunday,
                       today: today,
-                      onShift: (by) => setState(() => _monday = week.monday.addDays(7 * by)),
-                      earlier: week.monday.isAfter(range.first),
-                      later: week.monday.isBefore(range.last),
+                      onShift: (by) => setState(() => _sunday = week.sunday.addDays(7 * by)),
+                      earlier: week.sunday.isAfter(range.first),
+                      later: week.sunday.isBefore(range.last),
                     ),
                     if (summary != null)
                       Padding(
@@ -201,20 +201,13 @@ class _AttendanceOverviewScreenState extends ConsumerState<AttendanceOverviewScr
     }
   }
 
-  /// 「聚會 150 人 · 小組 60 人 · 還有 2 個未填」, or 都填好了; today's not
-  /// counted, as on 首頁. Nothing for a week with no meeting in it yet.
+  /// 「還有 2 個未填」, or 都填好了; today's not counted, as on 首頁.
+  /// Nothing for a week with no meeting in it yet, nor with only today's
+  /// still to fill in.
   String? _summary(L10n l10n, AttendanceWeek week) {
     if (!week.met) return null;
-    return [
-      if (week.services case final n?) l10n.attendanceServicesTotal(n),
-      if (week.smallGroups case final n?) l10n.attendanceSmallGroupsTotal(n),
-      if (week.gatherings case final n?) l10n.attendanceGatheringsTotal(n),
-      if (week.missing > 0)
-        l10n.attendanceOverviewMissing(week.missing)
-      // Today's still to fill in: not 都填好了, nor 未填 yet.
-      else if (!week.waiting)
-        l10n.attendanceOverviewDone,
-    ].join(l10n.dotSeparator);
+    if (week.missing > 0) return l10n.attendanceOverviewMissing(week.missing);
+    return week.waiting ? null : l10n.attendanceOverviewDone;
   }
 
   Future<void> _remind(BuildContext context, AttendanceRow r) async {
@@ -228,17 +221,17 @@ class _AttendanceOverviewScreenState extends ConsumerState<AttendanceOverviewScr
   }
 }
 
-/// 「‹ 11月3日 – 11月9日 ›」: the week shown, and the ones beside it.
+/// 「‹ 11月2日 – 11月8日 ›」: the week shown, and the ones beside it.
 class _WeekBar extends StatelessWidget {
   const _WeekBar({
-    required this.monday,
+    required this.sunday,
     required this.today,
     required this.onShift,
     required this.earlier,
     required this.later,
   });
 
-  final Day monday;
+  final Day sunday;
   final Day today;
   final void Function(int by) onShift;
   final bool earlier;
@@ -247,8 +240,8 @@ class _WeekBar extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final l10n = L10n.of(context);
-    final sunday = monday.addDays(6);
-    final f = sunday.year == today.year ? DateFormat.MMMd() : DateFormat.yMMMd();
+    final saturday = sunday.addDays(6);
+    final f = saturday.year == today.year ? DateFormat.MMMd() : DateFormat.yMMMd();
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: Space.s),
       child: Row(
@@ -263,7 +256,7 @@ class _WeekBar extends StatelessWidget {
               header: true,
               liveRegion: true,
               child: Text(
-                '${f.format(monday.midnight)} – ${f.format(sunday.midnight)}',
+                '${f.format(sunday.midnight)} – ${f.format(saturday.midnight)}',
                 textAlign: TextAlign.center,
                 style: AppText.headline,
               ),

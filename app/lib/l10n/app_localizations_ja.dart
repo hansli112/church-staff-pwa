@@ -3033,21 +3033,6 @@ class L10nJa extends L10n {
   }
 
   @override
-  String attendanceServicesTotal(int count) {
-    return '集会 $count人';
-  }
-
-  @override
-  String attendanceSmallGroupsTotal(int count) {
-    return '小グループ $count人';
-  }
-
-  @override
-  String attendanceGatheringsTotal(int count) {
-    return 'その他 $count人';
-  }
-
-  @override
   String get attendanceFillers => '報告する人';
 
   @override

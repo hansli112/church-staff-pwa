@@ -22,7 +22,7 @@ void main() {
     );
   });
 
-  test('回報人數 lists them by service, then by weekday, Monday first; no 聚會時間 last; one day as dragged', () {
+  test('回報人數 lists them by service, then by weekday, Sunday first; no 聚會時間 last; one day as dragged', () {
     SmallGroupDetails on(String id, String service, int? weekday, {int? order}) =>
         SmallGroupDetails(id: id, name: id, service: service, weekday: weekday, order: order);
     final list = [
@@ -31,12 +31,13 @@ void main() {
       on('fri-a', 'sunday', DateTime.friday, order: 1),
       on('mon', 'sunday', DateTime.monday, order: 3),
       on('youth-tue', 'youth', DateTime.tuesday),
+      on('sun', 'sunday', DateTime.sunday, order: 4),
     ];
     expect(
       [
         for (final x in list.inMeetingOrder(['sunday', 'youth'])) x.id,
       ],
-      ['mon', 'fri-a', 'fri-b', 'none', 'youth-tue'],
+      ['sun', 'mon', 'fri-a', 'fri-b', 'none', 'youth-tue'],
     );
   });
 }
