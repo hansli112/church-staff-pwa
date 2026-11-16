@@ -34,7 +34,7 @@
 | `webhookSecrets/{cid}` | 只有後端讀寫：Webhook的密鑰，用行事曆 token 的金鑰以 AES-256-GCM 加密 |
 | `webhookOutbox/{cid}/rosterChanges/{eventId}` | 只有後端讀寫：還沒送出的服事表異動，每 5 分鐘合併成一則Webhook後刪除 |
 | `plannedPushes/{cid}_{rosterId}_{uid}` | 安排服事（#90）等著「完成」通知的服事表異動，只有後端寫：在那頁排（`via: 'plan'`）時，每個被排進或移出的人（排的人自己除外）一筆。`cid`、`rosterId`、`uid`、`roles`（第一筆之前這個人在那天的服事項目；之後照常通知過的、他自己改的、匯入的異動會併進來）、`dateKey`、`serviceId`、`serviceName`、`sendAt`（還沒按是 `null`；夜裡按的是 7:00）。按「完成」（或離開時答「通知」；`notifyPlanned`，能排這個聚會的人）時，那個聚會 `sendAt == null` 的每人合成一則：比對當下的服事表，只說淨變了什麼，過去的日子不說，送完刪除。這個人又變回原本的樣子（排進又移出，或照常通知過）就刪掉；每小時也刪掉日子在各地都已過去的。讀名單的人（admin、行政、負責人）查得到自己教會的，用來決定離開時要不要問 |
-| `joinedPushes/{cid}` | 只有後端讀寫：用邀請加入的人還沒推播給管理員的。`cid`、`lastAt`（上次推播）、`first`（之後第一個加入的名字）、`count`（之後加入幾人）、`sendAt`（什麼時候合成一則送，沒有等著的是 `null`）。一小時最多推播一次，22:00–7:00 等到 7:00；每 15 分鐘的排程送出，教會刪除時一起刪 |
+| `joinedPushes/{cid}` | 只有後端讀寫：用邀請加入的人還沒推播給管理員的。`cid`、`lastAt`（上次推播）、`names`（之後加入的名字，依序；2026-11-16 前只有第一個，存在 `first`，送出時照樣讀）、`count`（之後加入幾人）、`sendAt`（什麼時候合成一則送，沒有等著的是 `null`）。一小時最多推播一次，22:00–7:00 等到 7:00；每 15 分鐘的排程送出，教會刪除時一起刪 |
 | `heldPushes/{cid}_{rosterId}_{uid}` | 只有後端讀寫：教會當地 22:00–7:00 的服事表異動推播，等 7:00 再送。`cid`、`rosterId`、`uid`、`roles`（第一筆延後的異動之前，這個人在那天的服事項目；他自己改的、匯入的異動會併進來，不算消息）、`dateKey`（那時的日期，活動改期看得出來）、`serviceId`、`serviceName`、`event`、`sendAt`。送出時比對當下的服事表，只說這段時間淨變了什麼，送完刪除。7:00 後、排程送出前又有異動時，兩者合成一則一起送 |
 | `platform/funding` | 雲端費用進度，誰都讀得到（網站的支持頁不用登入）、只有後端寫：`month`（`YYYY-MM`）、`target`、`received`、`carried`、`monthsLeft`（金額都是新台幣整數）、`costs`（每一項費用公開給大家看：`name`、`names`（有填才有）、`perMonth` 每月新台幣、`per`；`target` 是 `perMonth` 加總；沒有匯率時沿用上一次的）、`updatedAt` |
 | `platform/app` | 商店 App 最低能用的 build number，誰都讀得到（沒登入也要擋）、App 不能寫，營運者在 Console 或 REST 改：`minBuild`（`android`、`ios`；沒有或 0 就不擋）。比它舊的 App 整個畫面要求更新（`docs/firebase-setup.md`〈要求更新手機 App〉） |

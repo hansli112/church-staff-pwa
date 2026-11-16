@@ -55,7 +55,7 @@ describe('someone joining by invite', () => {
     // The run's push is written a few seconds after its clock is read.
     at('2026-11-09T11:00:05');
     await sendDue();
-    assert.equal(sent[1].body, '「大衛」等 2 人加入了教會');
+    assert.equal(sent[1].body, '「大衛」、「以琳」加入了教會', 'each by name');
     await sendDue();
     assert.equal(sent.length, 2, 'told once');
 

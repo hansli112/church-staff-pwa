@@ -15,9 +15,9 @@ import { timeZoneOf } from './timeZones.js';
  * in an evening.
  *
  * What waits is at joinedPushes/{cid}, which only the backend reads and
- * writes: `lastAt` (the last push), `first` (the first name since) and
- * `count` (how many since), `sendAt` (when they are told, or null). Sent
- * every 15 minutes (index.ts).
+ * writes: `lastAt` (the last push), `names` (the names since, each told;
+ * before 2026-11-16 only the first, `first`) and `count` (how many since),
+ * `sendAt` (when they are told, or null). Sent every 15 minutes (index.ts).
  */
 export const JOINED_PUSH_GAP_MS = 60 * 60 * 1000;
 
@@ -31,10 +31,19 @@ type JoinedDeps = PushDeps & Pick<Deps, 'now'>;
 
 const pathOf = (cid: string) => `joinedPushes/${cid}`;
 
-async function tellAdmins(deps: JoinedDeps, church: DocumentSnapshot, first: string, count: number) {
+/** The names waiting in [state], [count] joins in all; one waiting from before `names`, its `first`. */
+function namesOf(state: DocumentSnapshot, count: number): string[] {
+  if (count === 0) return [];
+  const names = state.get('names') as string[] | undefined;
+  if (names) return names;
+  const first = state.get('first') as string | undefined;
+  return first ? [first] : [];
+}
+
+async function tellAdmins(deps: JoinedDeps, church: DocumentSnapshot, names: string[], count: number) {
   return notifyMembers(deps, church.id, await adminUids(deps.db, church.id), 'memberJoined', (w) => ({
     title: church.get('name') as string,
-    body: w.memberJoined(first || null, count),
+    body: w.memberJoined(names, count),
     link: '/me/members',
   }));
 }
@@ -61,7 +70,7 @@ export async function tellJoined(deps: JoinedDeps, church: DocumentSnapshot, nam
       ref,
       {
         cid: church.id,
-        ...(count === 0 ? { first: name } : {}),
+        names: [...namesOf(state, count), ...(name ? [name] : [])],
         count: count + 1,
         sendAt: (state.get('sendAt') as Timestamp | null | undefined) ?? Timestamp.fromMillis(after),
       },
@@ -69,7 +78,7 @@ export async function tellJoined(deps: JoinedDeps, church: DocumentSnapshot, nam
     );
     return false;
   });
-  return tellNow ? tellAdmins(deps, church, name, 1) : 0;
+  return tellNow ? tellAdmins(deps, church, name ? [name] : [], 1) : 0;
 }
 
 /**
@@ -107,10 +116,17 @@ async function sendWaiting(deps: JoinedDeps, ref: DocumentReference, cid: string
       tx.update(ref, { sendAt: Timestamp.fromDate(quiet) });
       return null;
     }
-    tx.update(ref, { lastAt: Timestamp.fromDate(deps.now()), count: 0, first: FieldValue.delete(), sendAt: null });
-    return { first: state.get('first') as string, count: state.get('count') as number };
+    const count = state.get('count') as number;
+    tx.update(ref, {
+      lastAt: Timestamp.fromDate(deps.now()),
+      count: 0,
+      names: FieldValue.delete(),
+      first: FieldValue.delete(),
+      sendAt: null,
+    });
+    return { names: namesOf(state, count), count };
   });
-  return taken ? tellAdmins(deps, church, taken.first, taken.count) : 0;
+  return taken ? tellAdmins(deps, church, taken.names, taken.count) : 0;
 }
 
 /** Forgets church [cid]'s waiting joins: the church is purged. */

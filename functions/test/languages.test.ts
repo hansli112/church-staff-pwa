@@ -86,14 +86,21 @@ describe('a member who left', () => {
 });
 
 describe('members who joined', () => {
-  test('one by name; more, the first and how many', () => {
-    assert.equal(words('zh-Hant').memberJoined('王小明', 1), '「王小明」加入了教會');
-    assert.equal(words('zh-Hant').memberJoined('王小明', 3), '「王小明」等 3 人加入了教會');
-    assert.equal(words('en').memberJoined('Ann', 2), 'Ann and 1 other joined the church');
-    assert.equal(words('en').memberJoined('Ann', 3), 'Ann and 2 others joined the church');
-    assert.equal(words('ja').memberJoined('田中', 3), '田中ほか2人が教会に参加しました');
-    assert.equal(words('ko').memberJoined('김민수', 3), '김민수 님 외 2명이 교회에 들어왔어요');
-    assert.equal(words('ko').memberJoined(null, 1), '멤버 한 명이 교회에 들어왔어요');
+  test('each by name; any without one, how many more', () => {
+    assert.equal(words('zh-Hant').memberJoined(['王小明'], 1), '「王小明」加入了教會');
+    assert.equal(words('zh-Hant').memberJoined(['王小明', '李大華', '陳美玲'], 3), '「王小明」、「李大華」、「陳美玲」加入了教會');
+    assert.equal(words('zh-Hant').memberJoined(['王小明'], 3), '「王小明」等 3 人加入了教會');
+    assert.equal(words('zh-Hant').memberJoined([], 2), '2 人加入了教會');
+    assert.equal(words('zh-Hans').memberJoined(['王小明', '李大华'], 2), '“王小明”、“李大华”加入了教会');
+    assert.equal(words('en').memberJoined(['Ann'], 1), 'Ann joined the church');
+    assert.equal(words('en').memberJoined(['Ann', 'Ben'], 2), 'Ann and Ben joined the church');
+    assert.equal(words('en').memberJoined(['Ann', 'Ben', 'Cy'], 3), 'Ann, Ben and Cy joined the church');
+    assert.equal(words('en').memberJoined(['Ann'], 3), 'Ann and 2 others joined the church');
+    assert.equal(words('ja').memberJoined(['田中', '鈴木'], 2), '田中、鈴木が教会に参加しました');
+    assert.equal(words('ja').memberJoined(['田中'], 3), '田中ほか2人が教会に参加しました');
+    assert.equal(words('ko').memberJoined(['김민수', '이지은'], 2), '김민수 님, 이지은 님이 교회에 들어왔어요');
+    assert.equal(words('ko').memberJoined(['김민수'], 3), '김민수 님 외 2명이 교회에 들어왔어요');
+    assert.equal(words('ko').memberJoined([], 1), '멤버 한 명이 교회에 들어왔어요');
   });
 });
 

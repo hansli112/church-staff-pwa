@@ -109,8 +109,8 @@ export interface Words {
    */
   planned(service: string, on: string[], off: string[]): string;
 
-  /** [count] people joined by invite (joinedPushes.ts), [name] the first of them. */
-  memberJoined(name: string | null, count: number): string;
+  /** [count] people joined by invite (joinedPushes.ts), [names] those of them with one. */
+  memberJoined(names: string[], count: number): string;
   /** A member left (triggers.ts); [name] is theirs, null when they had none. */
   memberLeft(name: string | null): string;
   /** To admins (claimAsks.ts): [name] says they are [pending], one of the 同工 without an account. */
@@ -207,8 +207,11 @@ const zhHant: Words = {
   putOn: (day, duties) => `你被排進 ${day}：${duties.join('、')}`,
   takenOff: (day, duties) => `你被移出 ${day}：${duties.join('、')}`,
   planned: (service, on, off) => [`${service}的服事排好了`, ...on.map((l) => `排進 ${l}`), ...off.map((l) => `移出 ${l}`)].join('\n'),
-  memberJoined: (name, n) =>
-    n > 1 ? (name ? `「${name}」等 ${n} 人加入了教會` : `${n} 人加入了教會`) : name ? `「${name}」加入了教會` : '有人加入了教會',
+  memberJoined: (names, n) => {
+    const named = names.map((x) => `「${x}」`).join('、');
+    if (!names.length) return n > 1 ? `${n} 人加入了教會` : '有人加入了教會';
+    return n > names.length ? `${named}等 ${n} 人加入了教會` : `${named}加入了教會`;
+  },
   memberLeft: (name) => (name ? `「${name}」退出了教會` : '有人退出了教會'),
   claimAsked: (name, pending) => `「${name}」說自己是服事表上的「${pending}」`,
   identityGiven: (given) =>
@@ -264,8 +267,11 @@ const zhHans: Words = {
   putOn: (day, duties) => `你被排入 ${day}：${duties.join('、')}`,
   takenOff: (day, duties) => `你被移出 ${day}：${duties.join('、')}`,
   planned: (service, on, off) => [`${service}的事奉排好了`, ...on.map((l) => `排入 ${l}`), ...off.map((l) => `移出 ${l}`)].join('\n'),
-  memberJoined: (name, n) =>
-    n > 1 ? (name ? `“${name}”等 ${n} 人加入了教会` : `${n} 人加入了教会`) : name ? `“${name}”加入了教会` : '有人加入了教会',
+  memberJoined: (names, n) => {
+    const named = names.map((x) => `“${x}”`).join('、');
+    if (!names.length) return n > 1 ? `${n} 人加入了教会` : '有人加入了教会';
+    return n > names.length ? `${named}等 ${n} 人加入了教会` : `${named}加入了教会`;
+  },
   memberLeft: (name) => (name ? `“${name}”退出了教会` : '有人退出了教会'),
   claimAsked: (name, pending) => `“${name}”说自己是事奉表上的“${pending}”`,
   identityGiven: (given) =>
@@ -321,12 +327,13 @@ const en: Words = {
   putOn: (day, duties) => `You’re on ${day}: ${duties.join(', ')}`,
   takenOff: (day, duties) => `You’re no longer on ${day}: ${duties.join(', ')}`,
   planned: (service, on, off) => [`${service}: your serving is arranged`, ...on.map((l) => `On ${l}`), ...off.map((l) => `Off ${l}`)].join('\n'),
-  memberJoined: (name, n) =>
-    n > 1
-      ? name
-        ? `${name} and ${n - 1} ${n === 2 ? 'other' : 'others'} joined the church`
-        : `${n} people joined the church`
-      : `${name ?? 'Someone'} joined the church`,
+  memberJoined: (names, n) => {
+    const more = n - names.length;
+    if (!names.length) return n > 1 ? `${n} people joined the church` : 'Someone joined the church';
+    if (more > 0) return `${names.join(', ')} and ${more} ${more === 1 ? 'other' : 'others'} joined the church`;
+    const listed = names.length === 1 ? names[0] : `${names.slice(0, -1).join(', ')} and ${names[names.length - 1]}`;
+    return `${listed} joined the church`;
+  },
   memberLeft: (name) => `${name ?? 'Someone'} left the church`,
   claimAsked: (name, pending) => `${name} says they are “${pending}” on the schedule`,
   // As the app labels each 身分 (identityLabel).
@@ -384,8 +391,11 @@ const ja: Words = {
   putOn: (day, duties) => `${day}の担当になりました：${duties.join('、')}`,
   takenOff: (day, duties) => `${day}の担当から外れました：${duties.join('、')}`,
   planned: (service, on, off) => [`${service}の奉仕が決まりました`, ...on.map((l) => `担当 ${l}`), ...off.map((l) => `解除 ${l}`)].join('\n'),
-  memberJoined: (name, n) =>
-    n > 1 ? (name ? `${name}ほか${n - 1}人が教会に参加しました` : `${n}人が教会に参加しました`) : `${name ?? 'メンバー'}が教会に参加しました`,
+  memberJoined: (names, n) => {
+    const more = n - names.length;
+    if (!names.length) return n > 1 ? `${n}人が教会に参加しました` : 'メンバーが教会に参加しました';
+    return more > 0 ? `${names.join('、')}ほか${more}人が教会に参加しました` : `${names.join('、')}が教会に参加しました`;
+  },
   memberLeft: (name) => `${name ?? 'メンバー'}が教会を退出しました`,
   claimAsked: (name, pending) => `${name}さんが、奉仕表の「${pending}」は自分だと言っています`,
   identityGiven: (given) =>
@@ -440,14 +450,12 @@ const ko: Words = {
   putOn: (day, duties) => `${day} 봉사에 배정됐어요: ${duties.join(', ')}`,
   takenOff: (day, duties) => `${day} 봉사에서 빠졌어요: ${duties.join(', ')}`,
   planned: (service, on, off) => [`${service} 봉사가 정해졌어요`, ...on.map((l) => `배정 ${l}`), ...off.map((l) => `제외 ${l}`)].join('\n'),
-  memberJoined: (name, n) =>
-    n > 1
-      ? name
-        ? `${name} 님 외 ${n - 1}명이 교회에 들어왔어요`
-        : `${n}명이 교회에 들어왔어요`
-      : name
-        ? `${name} 님이 교회에 들어왔어요`
-        : '멤버 한 명이 교회에 들어왔어요',
+  memberJoined: (names, n) => {
+    const more = n - names.length;
+    const listed = names.map((x) => `${x} 님`).join(', ');
+    if (!names.length) return n > 1 ? `${n}명이 교회에 들어왔어요` : '멤버 한 명이 교회에 들어왔어요';
+    return more > 0 ? `${listed} 외 ${more}명이 교회에 들어왔어요` : `${listed}이 교회에 들어왔어요`;
+  },
   memberLeft: (name) => (name ? `${name} 님이 교회를 나갔어요` : '멤버 한 명이 교회를 나갔어요'),
   claimAsked: (name, pending) => `${name} 님이 봉사표의 ‘${pending}’ 님이 본인이라고 해요`,
   identityGiven: (given) =>
