@@ -894,7 +894,7 @@ class L10nJa extends L10n {
 
   @override
   String inviteMessage(String church, String link) {
-    return '「$church」へのご招待です：$link';
+    return '「$church」へのご招待です\n$link';
   }
 
   @override

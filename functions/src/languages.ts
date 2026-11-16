@@ -153,6 +153,8 @@ export interface Words {
   loading: string;
   inviteInvalid: string;
   inviteExpired: string;
+  /** An invite link's preview in LINE and the like, as the app's invite message (inviteMessage) words it. */
+  invited(church: string): string;
 
   /** 線上支持 on ECPay's page and in its back office (ItemName, TradeDesc): plain words, at most 200 characters (fundingEcpay.ts). */
   supportItem: string;
@@ -245,6 +247,7 @@ const zhHant: Words = {
   // The app's errInviteInvalid and errInviteExpired (app/lib/l10n/app_zh.arb), word for word.
   inviteInvalid: '找不到這個邀請，請確認邀請碼，或向管理員要新的邀請',
   inviteExpired: '這個邀請過期了，請向管理員要新的邀請',
+  invited: (church) => `邀請你加入〈${church}〉`,
   placeholder: '待定',
   newChurchServices: [sunday('主日崇拜', ['司會', '敬拜', '司琴', '音控', '投影', '招待'], ['聖餐', '浸禮'])],
 };
@@ -301,6 +304,7 @@ const zhHans: Words = {
   // app/lib/l10n/app_zh_Hans.arb's.
   inviteInvalid: '找不到这个邀请，请确认邀请码，或向管理员要新的邀请',
   inviteExpired: '这个邀请已过期，请向管理员要新的邀请',
+  invited: (church) => `邀请你加入“${church}”`,
   placeholder: '待定',
   newChurchServices: [sunday('主日崇拜', ['领会', '敬拜主领', '司琴', '音控', '投影', '招待'], ['圣餐', '浸礼'])],
 };
@@ -362,6 +366,7 @@ const en: Words = {
   // app/lib/l10n/app_en.arb's.
   inviteInvalid: 'Couldn’t find this invite. Check the code, or ask an admin for a new invite.',
   inviteExpired: 'This invite has expired. Ask an admin for a new one.',
+  invited: (church) => `You’re invited to join ${church}`,
   placeholder: 'TBD',
   newChurchServices: [sunday('Sunday Service', ['Host', 'Worship Leader', 'Piano', 'Sound', 'Slides', 'Usher'], ['Communion', 'Baptism'])],
 };
@@ -418,6 +423,7 @@ const ja: Words = {
   // app/lib/l10n/app_ja.arb's.
   inviteInvalid: 'この招待が見つかりません。招待コードを確認するか、管理者に新しい招待をもらってください。',
   inviteExpired: 'この招待は期限切れです。管理者に新しい招待をもらってください。',
+  invited: (church) => `「${church}」へのご招待です`,
   placeholder: '未定',
   newChurchServices: [sunday('主日礼拝', ['司会', '賛美リード', '奏楽', '音響', 'スライド', '受付'], ['聖餐式', '洗礼式'])],
 };
@@ -480,6 +486,7 @@ const ko: Words = {
   // app/lib/l10n/app_ko.arb's.
   inviteInvalid: '초대를 찾을 수 없어요. 초대 코드를 확인하거나 관리자에게 새 초대를 요청해 주세요.',
   inviteExpired: '만료된 초대예요. 관리자에게 새 초대를 요청해 주세요.',
+  invited: (church) => `${church}에 초대합니다`,
   placeholder: '미정',
   newChurchServices: [sunday('주일예배', ['사회', '찬양 인도', '반주', '음향', '자막', '안내'], ['성찬', '세례'])],
 };

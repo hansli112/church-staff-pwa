@@ -1675,7 +1675,7 @@ abstract class L10n {
   /// No description provided for @inviteMessage.
   ///
   /// In zh, this message translates to:
-  /// **'邀請你加入〈{church}〉：{link}'**
+  /// **'邀請你加入〈{church}〉\n{link}'**
   String inviteMessage(String church, String link);
 
   /// No description provided for @servicesTitle.

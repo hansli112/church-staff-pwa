@@ -95,6 +95,8 @@ describe('church page', () => {
     assert.equal(r.headers['cache-control'], 'private, no-cache');
     const html = text(r.body);
     assert.match(html, /<title>恩典堂<\/title>/, 'still the church’s page');
+    assert.match(html, /<meta property="og:description" content="邀請你加入〈恩典堂〉">/, 'LINE’s preview says what it is, not the verse');
+    assert.match(html, /<meta property="og:url" content="https:\/\/martha.example\/c\/Grace\/join\/ABCDEFGH">/, 'not the church page’s preview');
     const shown = splashOf(html);
     assert.match(shown, /<p class="title">恩典堂<\/p>/, 'the church’s name now, not the invite’s');
     assert.doesNotMatch(shown, /加入/, 'someone already in it goes straight to the church');
@@ -118,6 +120,11 @@ describe('church page', () => {
       assert.doesNotMatch(s, /class="spin"/, path);
       assert.doesNotMatch(s, /關閉堂/, 'a closed church stays unnamed');
     }
+    assert.match(
+      text((await get('/c/Grace/join/EXPIRED1')).body),
+      /<meta property="og:description" content="這個邀請過期了，請向管理員要新的邀請">/,
+      'its preview too',
+    );
   });
 
   test('the app’s real page has the loading screen the server fills in', () => {
@@ -262,6 +269,7 @@ describe('church page', () => {
     assert.match(text(invite.body), /<html lang="en">/);
     assert.match(text(invite.body), /<title>恩典堂<\/title>/, "the church's name as typed");
     assert.match(splashOf(text(invite.body)), /<p class="note">Loading…<\/p>/);
+    assert.match(text(invite.body), /<meta property="og:description" content="You’re invited to join 恩典堂">/);
     assert.match(splashOf(text((await get('/c/Grace/join/EXPIRED1', en)).body)), /This invite has expired\. Ask an admin for a new one\./);
     const closed = text((await get('/c/Closed/join/NOSUCH02', 'fr-FR')).body);
     assert.match(splashOf(closed), /<p class="title">Martha, sit<\/p>/, 'none it speaks: English');

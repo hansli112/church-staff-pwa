@@ -162,14 +162,25 @@ export function withSplash(html: string, s: Splash): string {
   return html.replace(/<!--splash-->[\s\S]*?<!--\/splash-->/, () => `<!--splash-->${body}<!--/splash-->`);
 }
 
-/** The app shell with the church's name and icons in its head. */
-export function personalize(html: string, cid: string, f: ChurchFace, appUrl: string): string {
+/**
+ * The app shell with the church's name and icons in its head. A link
+ * preview (LINE's) is the church's; an invite's says so in [preview]
+ * rather than the app's description, at its own URL.
+ */
+export function personalize(
+  html: string,
+  cid: string,
+  f: ChurchFace,
+  appUrl: string,
+  preview?: { path: string; description: string },
+): string {
   const name = escape(f.name);
   const og = [
     `<meta property="og:type" content="website">`,
     `<meta property="og:title" content="${name}">`,
+    ...(preview ? [`<meta property="og:description" content="${escape(preview.description)}">`] : []),
     `<meta property="og:image" content="${escape(appUrl + f.ogImage)}">`,
-    `<meta property="og:url" content="${escape(`${appUrl}/c/${cid}`)}">`,
+    `<meta property="og:url" content="${escape(appUrl + (preview?.path ?? `/c/${cid}`))}">`,
   ].join('\n  ');
   return html
     .replace(/<title>[^<]*<\/title>/, () => `<title>${name}</title>`)
@@ -262,7 +273,11 @@ export async function churchPage(deps: PageDeps, path: string, acceptLanguage?: 
   if (code) {
     const invite = await checkInvite(deps, code);
     const icon = f && invite.ok && invite.cid === cid ? f.touchIcon : DEFAULT_TOUCH_ICON;
-    const page = inLanguage(f ? personalize(html, cid, f, deps.appUrl) : html, language);
+    const preview = {
+      path: `/c/${cid}/join/${code.toUpperCase()}`,
+      description: invite.ok ? w.invited(invite.churchName) : inviteError(w, invite.reason),
+    };
+    const page = inLanguage(f ? personalize(html, cid, f, deps.appUrl, preview) : html, language);
     return {
       status: 200,
       headers: { 'content-type': HTML, 'cache-control': FRESH, ...VARY },

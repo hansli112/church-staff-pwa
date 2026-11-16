@@ -922,7 +922,7 @@ class L10nEn extends L10n {
 
   @override
   String inviteMessage(String church, String link) {
-    return 'You’re invited to join $church: $link';
+    return 'You’re invited to join $church\n$link';
   }
 
   @override

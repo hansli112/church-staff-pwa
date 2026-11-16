@@ -894,7 +894,7 @@ class L10nZh extends L10n {
 
   @override
   String inviteMessage(String church, String link) {
-    return '邀請你加入〈$church〉：$link';
+    return '邀請你加入〈$church〉\n$link';
   }
 
   @override
@@ -4433,7 +4433,7 @@ class L10nZhHans extends L10nZh {
 
   @override
   String inviteMessage(String church, String link) {
-    return '邀请你加入“$church”：$link';
+    return '邀请你加入“$church”\n$link';
   }
 
   @override

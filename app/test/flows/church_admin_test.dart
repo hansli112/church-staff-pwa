@@ -408,7 +408,7 @@ void main() {
       final church = b.churches.values.single.name;
       expect(
         out.sharedTexts.single,
-        '邀請你加入〈$church〉：https://marthasit-dev.web.app/c/grace/join/$code?openExternalBrowser=1',
+        '邀請你加入〈$church〉\nhttps://marthasit-dev.web.app/c/grace/join/$code?openExternalBrowser=1',
       );
       await tapText(tester, code);
       await tapText(tester, '複製連結');
