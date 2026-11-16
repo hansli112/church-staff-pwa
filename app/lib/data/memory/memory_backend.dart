@@ -222,6 +222,10 @@ class MemoryBackend implements Backend {
   /// complete, as on a slow network or a cold start.
   Completer<void>? smallGroupSaveHeld;
 
+  /// Scripted: while set, 合併 (mergePending) waits for this to complete,
+  /// as it takes seconds on the real backend.
+  Completer<void>? mergeHeld;
+
   /// Scripted: while set, the back office's stats and costs wait for this
   /// to complete, as on a slow network.
   Completer<void>? backOfficeReadsHeld;
@@ -2085,6 +2089,7 @@ class MemoryChurchData implements ChurchData {
   @override
   Future<void> mergePending(String pendingId, String uid) async {
     _functionAdmin();
+    await _b.mergeHeld?.future;
     final p = _b.pendingMembers[churchId]?[pendingId];
     final m = _b.memberOf(churchId, uid);
     if (p == null || m == null) throw const CloudException(CloudErrorCode.notFound);

@@ -276,6 +276,9 @@ class L10nKo extends L10n {
   String get churchDeletedExpired => '30일이 지나서 더 이상 복원할 수 없어요';
 
   @override
+  String get closedJoinOther => '다른 교회에 참여하려면 관리자가 보낸 초대 링크를 열거나 초대 코드를 입력하세요';
+
+  @override
   String get churchUnavailable => '이 교회를 열 수 없어요';
 
   @override

@@ -311,12 +311,16 @@ final routerProvider = Provider<GoRouter>((ref) {
                     (_) => WarmUpOnOpen(
                       WarmUp.joinAnswer,
                       when: joinRequestsProvider.select((r) => r.value?.isNotEmpty ?? false),
-                      child: const MembersScreen(),
+                      child: WarmUpOnOpen(WarmUp.mergePending, when: _anyPending, child: const MembersScreen()),
                     ),
                     routes: [
                       page(
                         ':uid',
-                        (s) => MemberEditorScreen(uid: s.pathParameters['uid']!),
+                        (s) => WarmUpOnOpen(
+                          WarmUp.mergePending,
+                          when: _anyPending,
+                          child: MemberEditorScreen(uid: s.pathParameters['uid']!),
+                        ),
                       ),
                     ],
                   ),
@@ -395,3 +399,6 @@ Widget _ledDutiesWarm(Widget page) => WarmUpOnOpen(
   when: meProvider.select((m) => m.value != null && !m.value!.isAdmin && m.value!.leadMinistries.isNotEmpty),
   child: page,
 );
+
+/// Whether there are 同工 without an account, whom 同工 offers to merge.
+final _anyPending = pendingMembersProvider.select((p) => p.value?.isNotEmpty ?? false);

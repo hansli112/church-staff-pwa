@@ -521,7 +521,8 @@ class EchoingChurchData implements ChurchData {
   Future<void> restoreChurch() => _inner.restoreChurch();
 
   @override
-  Future<void> mergePending(String pendingId, String uid) => _inner.mergePending(pendingId, uid);
+  /// Seconds on the backend, shown on its way (儲存中…) with nothing to echo.
+  Future<void> mergePending(String pendingId, String uid) => _send(_Echo(), () => _inner.mergePending(pendingId, uid));
 }
 
 /// What one change makes of the documents it writes.

@@ -117,6 +117,7 @@ class FirebaseBackend implements Backend {
     WarmUp.swapAnswer => const ['answerSwap'],
     WarmUp.groupStaff => const ['setGroupMember', 'addByName'],
     WarmUp.joinAnswer => const ['answerJoinRequest'],
+    WarmUp.mergePending => const ['mergePending'],
     WarmUp.attendanceRemind => const ['remindAttendance'],
     WarmUp.attendanceTogether => const ['fillAttendanceTogether'],
     WarmUp.joinChurch => const ['previewInvite', 'redeemInvite'],

@@ -82,6 +82,7 @@
   "churchDeletedTitle": "{church} 삭제됨",
   "churchDeletedBody": "관리자가 {date} 전까지 복원할 수 있어요",
   "churchDeletedExpired": "30일이 지나서 더 이상 복원할 수 없어요",
+  "closedJoinOther": "다른 교회에 참여하려면 관리자가 보낸 초대 링크를 열거나 초대 코드를 입력하세요",
   "churchUnavailable": "이 교회를 열 수 없어요",
   "restoreChurch": "교회 복원",
   "churchRestored": "교회를 복원했어요",

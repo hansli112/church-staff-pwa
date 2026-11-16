@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
 import 'package:martha/core/languages.dart';
+import 'package:martha/data/backend.dart';
 import 'package:martha/data/memory/memory_backend.dart';
 import 'package:martha/domain/day.dart';
 import 'package:martha/domain/models.dart';
@@ -208,13 +209,19 @@ void main() {
     );
     await pumpApp(tester, b);
     await go(tester, '/me/members/mei-google');
+    expect(b.warmedUp, contains(WarmUp.mergePending), reason: 'a merge waits on the backend');
     await tester.scrollUntilVisible(find.text('合併沒有帳號的同工'), 200, scrollable: find.byType(Scrollable).last);
     await tapText(tester, '合併沒有帳號的同工');
     await tapText(tester, '李美玉');
     expect(find.text('合併「李美玉」？'), findsOneWidget);
     expect(findShownContaining('「李美玉」的服事、聚會和小組會接到「美玉」'), findsOneWidget);
     expect(findShownContaining('主日崇拜・司琴'), findsOneWidget, reason: 'what they serve, to be sure of them');
+    b.mergeHeld = Completer();
     await tapText(tester, '合併');
+    expect(find.text('儲存中…'), findsOneWidget, reason: 'a merge takes seconds: it shows it is on its way');
+    b.mergeHeld!.complete();
+    await settle(tester);
+    expect(find.text('儲存中…'), findsNothing);
 
     final m = b.members['grace']!['mei-google']!;
     expect(m.groups, isEmpty);

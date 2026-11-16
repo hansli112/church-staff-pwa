@@ -82,6 +82,7 @@
   "churchDeletedTitle": "“{church}”已删除",
   "churchDeletedBody": "管理员可以在 {date} 前恢复",
   "churchDeletedExpired": "已经超过 30 天，不能再恢复了",
+  "closedJoinOther": "要加入其他教会，点管理员给的邀请链接，或输入邀请码",
   "churchUnavailable": "无法打开这间教会",
   "restoreChurch": "恢复教会",
   "churchRestored": "教会已恢复",

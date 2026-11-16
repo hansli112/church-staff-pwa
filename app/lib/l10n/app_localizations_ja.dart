@@ -275,6 +275,9 @@ class L10nJa extends L10n {
   String get churchDeletedExpired => '30日を過ぎたため、復元できません';
 
   @override
+  String get closedJoinOther => '別の教会に参加するには、管理者からの招待リンクを開くか、招待コードを入力してください';
+
+  @override
   String get churchUnavailable => 'この教会を開けません';
 
   @override

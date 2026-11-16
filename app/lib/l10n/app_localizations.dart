@@ -592,6 +592,12 @@ abstract class L10n {
   /// **'已經超過 30 天，不能再還原了'**
   String get churchDeletedExpired;
 
+  /// On a deleted or suspended church's page: how to join another church instead, above 輸入邀請碼
+  ///
+  /// In zh, this message translates to:
+  /// **'要加入其他教會，點管理員給的邀請連結，或輸入邀請碼'**
+  String get closedJoinOther;
+
   /// No description provided for @churchUnavailable.
   ///
   /// In zh, this message translates to:

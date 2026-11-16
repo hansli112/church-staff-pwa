@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 
 import '../../core/design/components.dart';
 import '../../core/design/tokens.dart';
@@ -78,6 +79,10 @@ class _ClosedScreenState extends ConsumerState<ClosedScreen> {
                   const SizedBox(height: Space.s),
                   BalancedText(body, style: AppText.body.copyWith(color: c.secondaryLabel)),
                 ],
+                // Without another church, the way out; its link may have
+                // been tapped already.
+                const SizedBox(height: Space.s),
+                BalancedText(l10n.closedJoinOther, style: AppText.body.copyWith(color: c.secondaryLabel)),
                 const SizedBox(height: Space.xl),
                 if (canRestore)
                   PrimaryButton(
@@ -91,6 +96,11 @@ class _ClosedScreenState extends ConsumerState<ClosedScreen> {
                     expand: true,
                     onPressed: () => showChurchSwitcher(context, ref),
                   ),
+                SecondaryButton(
+                  label: l10n.enterInviteCode,
+                  expand: true,
+                  onPressed: () => context.push('/welcome/join'),
+                ),
                 SecondaryButton(
                   label: l10n.signOut,
                   expand: true,

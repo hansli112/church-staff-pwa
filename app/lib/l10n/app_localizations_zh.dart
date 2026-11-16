@@ -275,6 +275,9 @@ class L10nZh extends L10n {
   String get churchDeletedExpired => '已經超過 30 天，不能再還原了';
 
   @override
+  String get closedJoinOther => '要加入其他教會，點管理員給的邀請連結，或輸入邀請碼';
+
+  @override
   String get churchUnavailable => '無法開啟這間教會';
 
   @override
@@ -3812,6 +3815,9 @@ class L10nZhHans extends L10nZh {
 
   @override
   String get churchDeletedExpired => '已经超过 30 天，不能再恢复了';
+
+  @override
+  String get closedJoinOther => '要加入其他教会，点管理员给的邀请链接，或输入邀请码';
 
   @override
   String get churchUnavailable => '无法打开这间教会';

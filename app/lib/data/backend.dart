@@ -1143,6 +1143,9 @@ enum WarmUp {
   /// 同工 with a request to join waiting (#88): 允許.
   joinAnswer,
 
+  /// 同工, or one of them, with 同工 without an account to merge: 合併.
+  mergePending,
+
   /// 回報人數 (#93): 提醒.
   attendanceRemind,
 

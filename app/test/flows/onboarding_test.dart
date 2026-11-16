@@ -578,6 +578,31 @@ void main() {
     expect(find.byType(NavigationBar), findsOneWidget);
   });
 
+  testWidgets('someone whose only church is deleted is told how to join another, and joins by code', (tester) async {
+    final b = MemoryBackend(clock: testClock);
+    final cid = b.addChurch('刪除堂');
+    b.addChurch('希望堂', id: 'hope');
+    b.invites['HOPE2026'] = Invite(
+      code: 'HOPE2026',
+      churchId: 'hope',
+      churchName: '希望堂',
+      expiresAt: testNow.add(const Duration(days: 7)),
+    );
+    final user = b.auth.signInAs('s@gmail.com');
+    b.addMember(cid, Member(uid: user.uid, name: '同工'));
+    b.churches[cid] = b.churches[cid]!.copyWith(status: ChurchStatus.deleted);
+    await pumpApp(tester, b);
+    expect(find.text('〈刪除堂〉已刪除'), findsOneWidget);
+    expect(findShown('要加入其他教會，點管理員給的邀請連結，或輸入邀請碼'), findsOneWidget);
+    await tapText(tester, '輸入邀請碼');
+    await tester.enterText(find.byType(TextField), 'hope2026');
+    await tester.pump();
+    await tapText(tester, '下一步');
+    await tapText(tester, '加入');
+    expect(b.members['hope']!.containsKey(user.uid), isTrue);
+    expect(find.byType(NavigationBar), findsOneWidget);
+  });
+
   testWidgets('a deleted church can no longer be restored after 30 days', (tester) async {
     var now = testNow;
     final b = MemoryBackend(clock: () => now);

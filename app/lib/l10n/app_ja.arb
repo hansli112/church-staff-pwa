@@ -82,6 +82,7 @@
   "churchDeletedTitle": "「{church}」は削除されました",
   "churchDeletedBody": "{date}までは管理者が復元できます",
   "churchDeletedExpired": "30日を過ぎたため、復元できません",
+  "closedJoinOther": "別の教会に参加するには、管理者からの招待リンクを開くか、招待コードを入力してください",
   "churchUnavailable": "この教会を開けません",
   "restoreChurch": "教会を復元",
   "churchRestored": "教会を復元しました",

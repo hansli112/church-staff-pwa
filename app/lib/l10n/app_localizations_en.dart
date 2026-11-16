@@ -278,6 +278,10 @@ class L10nEn extends L10n {
   String get churchDeletedExpired => 'It’s been more than 30 days, so it can’t be restored';
 
   @override
+  String get closedJoinOther =>
+      'To join another church, open the invite link its admin gave you, or enter an invite code';
+
+  @override
   String get churchUnavailable => 'Can’t open this church';
 
   @override

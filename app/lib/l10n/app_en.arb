@@ -82,6 +82,7 @@
   "churchDeletedTitle": "{church} was deleted",
   "churchDeletedBody": "An admin can restore it before {date}",
   "churchDeletedExpired": "It’s been more than 30 days, so it can’t be restored",
+  "closedJoinOther": "To join another church, open the invite link its admin gave you, or enter an invite code",
   "churchUnavailable": "Can’t open this church",
   "restoreChurch": "Restore church",
   "churchRestored": "Church restored",

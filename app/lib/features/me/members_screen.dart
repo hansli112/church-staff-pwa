@@ -9,6 +9,7 @@ import '../../domain/text.dart';
 import '../../l10n/app_localizations.dart';
 import '../../state/providers.dart';
 import '../common/errors.dart';
+import '../common/saving_indicator.dart';
 import '../common/time_zones.dart';
 import '../common/labels.dart';
 import 'member_editor_screen.dart';
@@ -79,7 +80,7 @@ class _MembersScreenState extends ConsumerState<MembersScreen> {
       meProvider.select((m) => m.value?.isAdmin ?? false),
     );
     return Scaffold(
-      appBar: AppBar(title: Text(l10n.members)),
+      appBar: AppBar(title: Text(l10n.members), actions: const [SavingIndicator()]),
       body: members.when(
         skipLoadingOnReload: true,
         loading: () => const SizedBox.shrink(),

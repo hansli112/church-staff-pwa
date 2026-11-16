@@ -160,6 +160,8 @@
     }
   },
   "churchDeletedExpired": "已經超過 30 天，不能再還原了",
+  "closedJoinOther": "要加入其他教會，點管理員給的邀請連結，或輸入邀請碼",
+  "@closedJoinOther": {"description": "On a deleted or suspended church's page: how to join another church instead, above 輸入邀請碼"},
   "churchUnavailable": "無法開啟這間教會",
   "restoreChurch": "還原教會",
   "churchRestored": "教會已還原",
