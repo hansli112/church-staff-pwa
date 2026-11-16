@@ -2118,9 +2118,7 @@ class L10nJa extends L10n {
   String get merged => '統合しました';
 
   @override
-  String mergeSuggestion(String name) {
-    return 'アカウントのないメンバーにも「$name」がいます';
-  }
+  String get mergeSuggestion => '同じ名前でアカウントのないメンバーがいます';
 
   @override
   String mergeSuggestionLabel(String name) {

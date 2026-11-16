@@ -12,6 +12,7 @@ import '../../state/providers.dart';
 import '../common/errors.dart';
 import 'add_to_home.dart';
 import 'church_logo.dart';
+import 'claims.dart';
 import 'welcome_screen.dart';
 import 'your_name.dart';
 import '../../state/session.dart';
@@ -184,6 +185,22 @@ class _NotMemberState extends ConsumerState<_NotMember> {
             // the welcome page says so from now on.
             if (church.joinRequest == JoinRequestState.pending && !ref.read(askedToJoinProvider).contains(churchId)) {
               WidgetsBinding.instance.addPostFrameCallback((_) => ref.read(askedToJoinProvider.notifier).add(churchId));
+            }
+            // Data moved here under my email: mine to take, no asking.
+            if (claimsIn(ref, churchId).isNotEmpty) {
+              return Center(
+                child: ConstrainedBox(
+                  constraints: const BoxConstraints(maxWidth: 420),
+                  child: ListView(
+                    shrinkWrap: true,
+                    padding: const EdgeInsets.symmetric(vertical: Space.l),
+                    children: [
+                      ChurchLogo(url: church.logoUrl),
+                      PendingClaimsCard(churchId: churchId),
+                    ],
+                  ),
+                ),
+              );
             }
             final canAsk = church.takesJoinRequests && church.joinRequest != JoinRequestState.pending;
             final message = switch (church.joinRequest) {

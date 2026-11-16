@@ -1,6 +1,7 @@
 import { Timestamp, type DocumentSnapshot } from 'firebase-admin/firestore';
 
 import { churchAccess, churchId, isChurchOpen } from './access.js';
+import { takeWaiting } from './claim.js';
 import { DAY_MS, fail, id, requireCaller, type Caller, type Deps } from './common.js';
 import { newStaff } from './invites.js';
 import { personName, TEXT_LIMITS, withinTextLimit } from './limits.js';
@@ -138,7 +139,20 @@ export async function answerJoinRequest(deps: PushDeps & Deps, caller: Caller | 
     return {};
   }
   if (!takesJoinRequests(church)) fail('failed-precondition', 'unknown', 'requestsClosed');
-  const joined = await db.runTransaction(async (tx) => {
+  // Asked with a verified email (requestToJoin) that data moved here waits
+  // for: they join as it (claim.ts), nothing left for the admin to merge.
+  const request = await requestRef.get();
+  const email = request.get('email') as string | undefined;
+  const took =
+    stateOf(deps, request) === 'pending' &&
+    !!email &&
+    (await takeWaiting(deps, cid, { uid, email, name: personName(request.get('name')) }, async (tx) => {
+      // Still asking: not taken back or turned down meanwhile.
+      if (stateOf(deps, await tx.get(requestRef)) !== 'pending') return false;
+      tx.delete(requestRef);
+      return true;
+    }));
+  const joined = took || (await db.runTransaction(async (tx) => {
     const [request, member] = await tx.getAll(requestRef, memberRef);
     if (member.exists) {
       tx.delete(requestRef);
@@ -148,7 +162,7 @@ export async function answerJoinRequest(deps: PushDeps & Deps, caller: Caller | 
     tx.create(memberRef, newStaff(uid, personName(request.get('name')), request.get('email') ?? ''));
     tx.delete(requestRef);
     return true;
-  });
+  }));
   if (joined) {
     await notifyMembers(deps, cid, [uid], 'joinRequest', (w) => ({
       title: church.get('name') as string,

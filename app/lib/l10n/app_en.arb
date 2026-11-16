@@ -652,7 +652,7 @@
   "mergePendingBody": "What “{pending}” serves, their services and small groups move to “{member}”",
   "mergePendingAction": "Merge",
   "merged": "Merged",
-  "mergeSuggestion": "“{name}” is also listed without an account",
+  "mergeSuggestion": "Also listed by this name, without an account",
   "mergeSuggestionLabel": "Merge {name}",
   "fundingTitle": "This month’s support",
   "fundingProgress": "{available} / {target}",

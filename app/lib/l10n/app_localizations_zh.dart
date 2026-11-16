@@ -2114,9 +2114,7 @@ class L10nZh extends L10n {
   String get merged => '已合併';
 
   @override
-  String mergeSuggestion(String name) {
-    return '沒有帳號的同工裡也有「$name」';
-  }
+  String get mergeSuggestion => '有同名、沒有帳號的同工';
 
   @override
   String mergeSuggestionLabel(String name) {
@@ -5675,9 +5673,7 @@ class L10nZhHans extends L10nZh {
   String get merged => '已合并';
 
   @override
-  String mergeSuggestion(String name) {
-    return '没有账号的同工里也有“$name”';
-  }
+  String get mergeSuggestion => '有同名、没有账号的同工';
 
   @override
   String mergeSuggestionLabel(String name) {

@@ -652,7 +652,7 @@
   "mergePendingBody": "「{pending}」の奉仕・集会・小グループが「{member}」に引き継がれます",
   "mergePendingAction": "統合",
   "merged": "統合しました",
-  "mergeSuggestion": "アカウントのないメンバーにも「{name}」がいます",
+  "mergeSuggestion": "同じ名前でアカウントのないメンバーがいます",
   "mergeSuggestionLabel": "{name}を統合",
   "fundingTitle": "今月の応援",
   "fundingProgress": "{available} / {target}",

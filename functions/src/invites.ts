@@ -5,6 +5,7 @@ import { logger } from 'firebase-functions/v2';
 
 import { isChurchOpen } from './access.js';
 import { fail, requireCaller, serverTime, type Caller, type Deps } from './common.js';
+import { takeWaiting } from './claim.js';
 import { tellJoined } from './joinedPushes.js';
 import { personName } from './limits.js';
 import type { PushDeps } from './push.js';
@@ -85,12 +86,15 @@ export async function redeemInvite(deps: Deps & PushDeps, caller: Caller | null,
   const profile = await db.doc(`users/${c.uid}`).get();
   const zoneTypes = await inviteZoneTypes(deps, invite.cid, invite.zoneTypes);
   const name = personName(profile.get('name')) || personName(c.name);
-  const joined = await db.runTransaction(async (tx) => {
+  if ((await memberRef.get()).exists) return { churchId: invite.cid };
+  // Moved here under their email: they join as it (claim.ts).
+  const took = !!c.email && c.emailVerified && (await takeWaiting(deps, invite.cid, { uid: c.uid, email: c.email, name }));
+  const joined = took || (await db.runTransaction(async (tx) => {
     const existing = await tx.get(memberRef);
     if (existing.exists) return false;
     tx.create(memberRef, { ...newStaff(c.uid, name, c.email ?? '', zoneTypes), invitedWith: invite.code });
     return true;
-  });
+  }));
   if (joined) {
     try {
       await tellJoined(deps, await db.doc(`churches/${invite.cid}`).get(), name);

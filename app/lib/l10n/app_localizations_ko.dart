@@ -2118,9 +2118,7 @@ class L10nKo extends L10n {
   String get merged => '합쳤어요';
 
   @override
-  String mergeSuggestion(String name) {
-    return '계정 없는 멤버 중에도 ‘$name’ 님이 있어요';
-  }
+  String get mergeSuggestion => '같은 이름의 계정 없는 멤버가 있어요';
 
   @override
   String mergeSuggestionLabel(String name) {

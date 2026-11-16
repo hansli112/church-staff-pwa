@@ -3856,11 +3856,11 @@ abstract class L10n {
   /// **'已合併'**
   String get merged;
 
-  /// No description provided for @mergeSuggestion.
+  /// Under a member's name on 同工, when a pending member has the same name
   ///
   /// In zh, this message translates to:
-  /// **'沒有帳號的同工裡也有「{name}」'**
-  String mergeSuggestion(String name);
+  /// **'有同名、沒有帳號的同工'**
+  String get mergeSuggestion;
 
   /// No description provided for @mergeSuggestionLabel.
   ///

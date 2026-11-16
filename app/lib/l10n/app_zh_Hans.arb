@@ -652,7 +652,7 @@
   "mergePendingBody": "“{pending}”的事奉、聚会和小组会接到“{member}”",
   "mergePendingAction": "合并",
   "merged": "已合并",
-  "mergeSuggestion": "没有账号的同工里也有“{name}”",
+  "mergeSuggestion": "有同名、没有账号的同工",
   "mergeSuggestionLabel": "合并{name}",
   "fundingTitle": "这个月的支持",
   "fundingProgress": "{available} / {target}",

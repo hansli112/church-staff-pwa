@@ -1290,14 +1290,8 @@
   },
   "mergePendingAction": "合併",
   "merged": "已合併",
-  "mergeSuggestion": "沒有帳號的同工裡也有「{name}」",
-  "@mergeSuggestion": {
-    "placeholders": {
-      "name": {
-        "type": "String"
-      }
-    }
-  },
+  "mergeSuggestion": "有同名、沒有帳號的同工",
+  "@mergeSuggestion": {"description": "Under a member's name on 同工, when a pending member has the same name"},
   "mergeSuggestionLabel": "合併{name}",
   "@mergeSuggestionLabel": {
     "placeholders": {

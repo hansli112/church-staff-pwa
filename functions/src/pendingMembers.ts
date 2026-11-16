@@ -15,7 +15,7 @@ import type { Caller, Deps } from './common.js';
  */
 
 /** The email as the index keys it. */
-const emailHash = (email: string) => createHash('sha256').update(email.trim().toLowerCase()).digest('hex');
+export const emailKey = (email: string) => createHash('sha256').update(email.trim().toLowerCase()).digest('hex');
 
 const indexOf = (deps: Pick<Deps, 'db'>, hash: string) => deps.db.doc(`pendingIndex/${hash}`);
 
@@ -24,7 +24,7 @@ async function unindex(deps: Pick<Deps, 'db'>, cid: string, hash: unknown) {
 }
 
 /** The caller's verified email as the index keys it, or null: an unverified email finds nothing. */
-export const callerKey = (c: Caller) => (c.emailVerified && c.email ? emailHash(c.email) : null);
+export const callerKey = (c: Caller) => (c.emailVerified && c.email ? emailKey(c.email) : null);
 
 /** What claiming needs besides the database: the account's linked sign-ins. */
 export type ClaimDeps = Deps & { auth: Pick<Auth, 'getUser'> };
@@ -40,7 +40,7 @@ const vouching = new Set(['google.com', 'apple.com']);
 export async function callerKeys(deps: Pick<ClaimDeps, 'auth'>, c: Caller) {
   const own = callerKey(c);
   const user = await deps.auth.getUser(c.uid).catch(() => null);
-  const linked = (user?.providerData ?? []).filter((p) => vouching.has(p.providerId) && p.email).map((p) => emailHash(p.email!));
+  const linked = (user?.providerData ?? []).filter((p) => vouching.has(p.providerId) && p.email).map((p) => emailKey(p.email!));
   return [...new Set([...(own ? [own] : []), ...linked])];
 }
 
@@ -56,7 +56,7 @@ export interface NewPending {
 
 /** Adds [p] to church [cid], and to the index, with [w] (a move's writer). Its writes' results. */
 export function addPending(deps: Pick<Deps, 'db'>, w: BulkWriter, cid: string, p: NewPending) {
-  const hash = p.email ? emailHash(p.email) : null;
+  const hash = p.email ? emailKey(p.email) : null;
   return [
     w.set(deps.db.doc(`churches/${cid}/pendingMembers/${p.uid}`), { ...p.data, email: p.email, emailHash: hash }),
     ...(hash ? [w.set(indexOf(deps, hash), { churches: { [cid]: p.uid } }, { merge: true })] : []),

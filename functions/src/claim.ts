@@ -5,7 +5,7 @@ import { personName, TEXT_LIMITS } from './limits.js';
 import { nameKey } from './text.js';
 import { renameInChurch, rewriteDutiesOf } from './renames.js';
 import { dateKeyIn, timeZoneOf } from './timeZones.js';
-import { callerKeys, dropPending, waitingFor, waitsFor, type ClaimDeps } from './pendingMembers.js';
+import { callerKeys, dropPending, emailKey, waitingFor, waitsFor, type ClaimDeps } from './pendingMembers.js';
 import { claimedSmallGroups, smallGroupsByName } from './smallGroups.js';
 
 /**
@@ -203,10 +203,59 @@ export async function claimPending(deps: ClaimDeps, caller: Caller | null, data:
   const keys = await callerKeys(deps, c);
   // Not a member yet, most likely: anyone signed in, but the church open.
   const { cid } = await churchAccess(deps, c, data, 'anyone');
+  await take(deps, cid, c, pid, (member, pending) => {
+    if (waitsFor(pending, keys) || takesByName(member, pending)) return true;
+    if (!keys.length) fail('failed-precondition', 'unverifiedEmail');
+    return fail('permission-denied', 'permissionDenied');
+  });
+  return { churchId: cid };
+}
+
+/**
+ * Someone let into church [cid] by its admins (an invite, a request
+ * allowed) whose verified [email] a pending member there waits for: it is
+ * them, so they join as it, as a claim would, with nothing left to merge.
+ * Whether one was taken.
+ */
+export async function takeWaiting(
+  deps: Deps,
+  cid: string,
+  who: { uid: string; email: string; name?: string },
+  /** Read and written in the same transaction: false lets them join otherwise. */
+  still: (tx: FirebaseFirestore.Transaction) => Promise<boolean> = async () => true,
+) {
+  const key = emailKey(who.email);
+  const pid = (await waitingFor(deps, key)).find(([c]) => c === cid)?.[1];
+  if (!pid) return false;
+  try {
+    return await take(deps, cid, who, pid, async (member, pending, tx) => !member.exists && waitsFor(pending, [key]) && (await still(tx)));
+  } catch (e) {
+    // Taken or dropped meanwhile: they join as anyone else.
+    if ((e as { code?: string }).code === 'not-found') return false;
+    throw e;
+  }
+}
+
+/**
+ * Pending member [pid] of church [cid] becomes [who] if [check] says so
+ * (or throws why not): a new member with its role, or, already one, merged
+ * into them; the rosters then point at them and it goes. Whether it did.
+ */
+async function take(
+  deps: Deps,
+  cid: string,
+  who: { uid: string; email?: string; name?: string },
+  pid: string,
+  check: (
+    member: FirebaseFirestore.DocumentSnapshot,
+    pending: FirebaseFirestore.DocumentSnapshot,
+    tx: FirebaseFirestore.Transaction,
+  ) => boolean | Promise<boolean>,
+) {
   const pending = await deps.db.runTransaction(async (tx) => {
     const [church, member, pending] = await tx.getAll(
       deps.db.doc(`churches/${cid}`),
-      deps.db.doc(`churches/${cid}/members/${c.uid}`),
+      deps.db.doc(`churches/${cid}/members/${who.uid}`),
       deps.db.doc(`churches/${cid}/pendingMembers/${pid}`),
     );
     const byName = smallGroupsByName((await tx.get(deps.db.collection(`churches/${cid}/smallGroups`))).docs);
@@ -216,10 +265,7 @@ export async function claimPending(deps: ClaimDeps, caller: Caller | null, data:
       if (member.exists) return null;
       fail('not-found', 'notFound');
     }
-    if (!waitsFor(pending, keys) && !takesByName(member, pending)) {
-      if (!keys.length) fail('failed-precondition', 'unverifiedEmail');
-      fail('permission-denied', 'permissionDenied');
-    }
+    if (!(await check(member, pending, tx))) return null;
     if (member.exists) {
       // Read current preferences in the transaction: concurrent edits are kept.
       tx.update(member.ref, { ...mergedMember(member, pending, byName), claimedFrom: pid });
@@ -227,9 +273,9 @@ export async function claimPending(deps: ClaimDeps, caller: Caller | null, data:
       const role = pending.get('role') ?? 'member';
       const small = claimedSmallGroups(pending.get('zones'), role, byName);
       tx.create(member.ref, {
-        uid: c.uid,
-        name: personName(pending.get('name')) || personName(c.name),
-        email: c.email ?? '',
+        uid: who.uid,
+        name: personName(pending.get('name')) || personName(who.name),
+        email: who.email ?? '',
         ...withIdentities({ role }, [
           ...identitiesOf({ role }),
           ...claimedGroups(pending.get('groups'), pending.get('zoneTypes')),
@@ -245,10 +291,10 @@ export async function claimPending(deps: ClaimDeps, caller: Caller | null, data:
     }
     return pending;
   });
-  if (!pending) return { churchId: cid };
-  await repoint(deps, cid, pid, c.uid, (pending.get('rosterIds') as string[] | undefined) ?? []);
+  if (!pending) return false;
+  await repoint(deps, cid, pid, who.uid, (pending.get('rosterIds') as string[] | undefined) ?? []);
   await dropPending(deps, cid, pending);
-  return { churchId: cid };
+  return true;
 }
 
 /**

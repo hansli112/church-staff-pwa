@@ -77,6 +77,62 @@ void main() {
     ]);
   });
 
+  testWidgets('on the church URL, data waiting under my email is joined, not asked for', (tester) async {
+    final b = movedChurch();
+    b.churches['grace'] = b.churches['grace']!.copyWith(takesJoinRequests: true);
+    b.addChurch('希望堂', id: 'hope');
+    b.addMember('hope', const Member(uid: 'new-mei', name: '美玉'));
+    await pumpApp(tester, b);
+    await go(tester, '/c/grace');
+    expect(findShown('加入〈恩典堂〉？'), findsOneWidget);
+    expect(find.text('申請加入'), findsNothing, reason: 'theirs to take, no admin needed');
+    await tapText(tester, '加入');
+    expect(b.members['grace']!['new-mei']!.serves('sunday', '司琴'), isTrue);
+    expect(b.joinRequests['grace'] ?? const {}, isEmpty);
+    expect(find.byType(NavigationBar), findsOneWidget);
+  });
+
+  testWidgets('on the church URL, declined data leaves asking to join', (tester) async {
+    final b = movedChurch();
+    b.churches['grace'] = b.churches['grace']!.copyWith(takesJoinRequests: true);
+    b.addChurch('希望堂', id: 'hope');
+    b.addMember('hope', const Member(uid: 'new-mei', name: '美玉'));
+    await pumpApp(tester, b);
+    await go(tester, '/c/grace');
+    await tapText(tester, '不加入');
+    expect(findShown('申請加入'), findsWidgets);
+  });
+
+  testWidgets('joining by invite with the email of moved data joins as it: nothing left to merge', (tester) async {
+    final b = movedChurch();
+    b.invites['GRACE2026'] = Invite(
+      code: 'GRACE2026',
+      churchId: 'grace',
+      churchName: '恩典堂',
+      expiresAt: testNow.add(const Duration(days: 7)),
+    );
+    await pumpApp(tester, b);
+    await go(tester, '/c/grace/join/GRACE2026');
+    await tapText(tester, '加入');
+    final m = b.members['grace']!['new-mei']!;
+    expect(m.role, Role.leader);
+    expect(b.pendingMembers['grace'], isEmpty);
+    expect(b.rosters['grace']!.values.single.duties.single.uids, {'李美玉': 'new-mei'});
+  });
+
+  testWidgets('someone whose only church was deleted is still offered the data waiting for them', (tester) async {
+    final b = movedChurch();
+    final gone = b.addChurch('刪除堂');
+    b.addMember(gone, const Member(uid: 'new-mei', name: '美玉'));
+    b.churches[gone] = b.churches[gone]!.copyWith(status: ChurchStatus.deleted);
+    await pumpApp(tester, b);
+    expect(findShown('〈刪除堂〉已刪除'), findsOneWidget);
+    expect(findShown('加入〈恩典堂〉？'), findsOneWidget);
+    await tapText(tester, '加入');
+    expect(b.members['grace']!['new-mei'], isNotNull);
+    expect(find.byType(NavigationBar), findsOneWidget);
+  });
+
   testWidgets('joining is said once in, and not asked again while the rosters are still being pointed at them', (
     tester,
   ) async {
@@ -256,7 +312,7 @@ void main() {
     );
     await pumpApp(tester, b);
     await go(tester, '/me/members');
-    expect(findShownContaining('沒有帳號的同工裡也有「黃鎮台」'), findsOneWidget);
+    expect(findShownContaining('有同名、沒有帳號的同工'), findsOneWidget);
     await tester.tap(find.bySemanticsLabel('合併黃鎮台'));
     await settle(tester);
     expect(find.text('合併「黃鎮台」？'), findsOneWidget);
@@ -266,7 +322,7 @@ void main() {
     expect(b.pendingMembers['grace'], isEmpty);
     expect(b.members['grace']!['huang']!.serves('sunday', '招待'), isTrue);
     expect(b.rosters['grace']![Roster.idFor('sunday', Day(2026, 10, 18))]!.duties.single.uids, {'黃鎮台': 'huang'});
-    expect(find.textContaining('沒有帳號的同工裡也有'), findsNothing);
+    expect(find.textContaining('有同名、沒有帳號的同工'), findsNothing);
   });
 
   testWidgets('only admins are offered a merge on 同工', (tester) async {
@@ -277,7 +333,7 @@ void main() {
     b.pendingMembers['grace'] = {'old-huang': const PendingMember(id: 'old-huang', name: '黃鎮台')};
     await pumpApp(tester, b);
     await go(tester, '/me/members');
-    expect(find.textContaining('沒有帳號的同工裡也有'), findsNothing);
+    expect(find.textContaining('有同名、沒有帳號的同工'), findsNothing);
   });
 
   testWidgets('picking pending data to merge lists the same name first', (tester) async {

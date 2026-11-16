@@ -2242,9 +2242,7 @@ class L10nEn extends L10n {
   String get merged => 'Merged';
 
   @override
-  String mergeSuggestion(String name) {
-    return '“$name” is also listed without an account';
-  }
+  String get mergeSuggestion => 'Also listed by this name, without an account';
 
   @override
   String mergeSuggestionLabel(String name) {

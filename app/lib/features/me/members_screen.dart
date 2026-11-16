@@ -229,7 +229,7 @@ class _MembersScreenState extends ConsumerState<MembersScreen> {
                                 title: m.uid == uid ? l10n.nameIsYou(m.name) : m.name,
                                 subtitle: [
                                   details,
-                                  if (samePending != null) l10n.mergeSuggestion(samePending.name),
+                                  if (samePending != null) l10n.mergeSuggestion,
                                 ].nonNulls.join('\n').ifEmpty(null),
                                 trailing: samePending == null
                                     ? null

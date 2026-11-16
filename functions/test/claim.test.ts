@@ -1,12 +1,15 @@
 import assert from 'node:assert/strict';
 import { beforeEach, describe, test } from 'node:test';
 
+import { Timestamp } from 'firebase-admin/firestore';
 import { getStorage } from 'firebase-admin/storage';
 
 import { claimPending, mergePending, pendingClaims, renamePending } from '../src/claim.js';
+import { redeemInvite } from '../src/invites.js';
+import { answerJoinRequest, requestToJoin } from '../src/joinRequests.js';
 import { moveCommit, type MoveDeps } from '../src/move.js';
 import { callerKey, onPendingMemberDeleted, waitingFor } from '../src/pendingMembers.js';
-import { auth, caller, clearFirestore, db, deps, rejectsWith } from './support.js';
+import { auth, caller, clearFirestore, db, deps, fakePush, rejectsWith } from './support.js';
 
 const bucket = getStorage().bucket('demo-martha.appspot.com');
 const d: MoveDeps = { ...deps, bucket };
@@ -159,6 +162,43 @@ describe('claiming', () => {
     await db.doc(`churches/${cid}`).update({ status: 'suspended' });
     assert.deepEqual((await pendingClaims(cd, mei())).claims, []);
     await rejectsWith(claimPending(cd, mei(), { churchId: cid, pendingId: 'old-mei' }), 'churchClosed');
+  });
+});
+
+describe('let in under the email of pending data', () => {
+  const pd = () => ({ ...deps, messaging: fakePush().messaging, appUrl: 'https://app.example' });
+
+  /** Took 美玉's data as a claim does: her role, and the rosters point at her. */
+  async function tookMei(cid: string) {
+    const m = await db.doc(`churches/${cid}/members/new-mei`).get();
+    assert.equal(m.get('role'), 'leader');
+    assert.deepEqual(m.get('leadTypes'), ['sunday']);
+    assert.deepEqual(await uidsOn(cid, '2026-10-11'), [{ 李美玉: 'new-mei' }]);
+    assert.equal((await db.doc(`churches/${cid}/pendingMembers/old-mei`).get()).exists, false);
+    assert.deepEqual(await indexed('mei@example.com'), []);
+  }
+
+  test('joining by invite takes it, nothing left to merge', async () => {
+    const cid = await moved();
+    await db.doc('invites/MOVED2026').set({ cid, churchName: '恩典堂', expiresAt: Timestamp.fromDate(new Date('2099-01-01')), revoked: false });
+    assert.deepEqual(await redeemInvite(pd(), mei(), { code: 'MOVED2026' }), { churchId: cid });
+    await tookMei(cid);
+  });
+
+  test('an admin allowing their request takes it, nothing left to merge', async () => {
+    const cid = await moved();
+    await requestToJoin(pd(), mei(), { churchId: cid });
+    await answerJoinRequest(pd(), caller('mover'), { churchId: cid, uid: 'new-mei', allow: true });
+    await tookMei(cid);
+    assert.equal((await db.doc(`churches/${cid}/joinRequests/new-mei`).get()).exists, false);
+  });
+
+  test('someone else let in leaves it waiting', async () => {
+    const cid = await moved();
+    await requestToJoin(pd(), caller('carol'), { churchId: cid });
+    await answerJoinRequest(pd(), caller('mover'), { churchId: cid, uid: 'carol', allow: true });
+    assert.equal((await db.doc(`churches/${cid}/members/carol`).get()).get('role'), 'staff');
+    assert.equal((await db.doc(`churches/${cid}/pendingMembers/old-mei`).get()).exists, true);
   });
 });
 

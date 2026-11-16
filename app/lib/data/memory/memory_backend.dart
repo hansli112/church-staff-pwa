@@ -947,7 +947,10 @@ class MemoryChurchData implements ChurchData {
       if (r?.stateAt(_b.clock()) != JoinRequestState.pending) {
         throw const CloudException(CloudErrorCode.unknown, reason: CloudReason.requestGone);
       }
-      _b.addMember(churchId, Member(uid: uid, name: r!.name, email: r.email, joinedAt: _b.clock()));
+      // Asked with a verified email that moved data waits for: joins as it.
+      if (!_takeWaiting(_b, churchId, uid, r!.email)) {
+        _b.addMember(churchId, Member(uid: uid, name: r.name, email: r.email, joinedAt: _b.clock()));
+      }
     }
     requests.remove(uid);
     _b.notify();
@@ -2884,7 +2887,8 @@ class MemoryCloud implements CloudApi {
     }
     final invite = _invite(code);
     final cid = invite.churchId;
-    if (_b.memberOf(cid, user.uid) == null) {
+    final waiting = user.claimEmails.contains(user.email.trim().toLowerCase());
+    if (_b.memberOf(cid, user.uid) == null && !(waiting && _takeWaiting(_b, cid, user.uid, user.email))) {
       // The invite's 牧區 the church still has, each once (redeemInvite).
       final have = {for (final s in _b.services[cid]?.services ?? const <Service>[]) s.id};
       _b.addMember(
@@ -3294,6 +3298,31 @@ class MemoryCloud implements CloudApi {
     required String stack,
     String? churchId,
   }) async => loggedErrors.add(message);
+}
+
+/// Moved data in [cid] waiting for [email] becomes [uid], new to the
+/// church, as a claim does (claim.ts takeWaiting); whether there was one.
+bool _takeWaiting(MemoryBackend b, String cid, String uid, String email) {
+  final key = email.trim().toLowerCase();
+  if (key.isEmpty) return false;
+  final p = b.pendingMembers[cid]?.values.where((p) => p.email.trim().toLowerCase() == key).firstOrNull;
+  if (p == null) return false;
+  b.members[cid]![uid] = _withClaimedLeads(
+    Member(
+      uid: uid,
+      name: p.name,
+      email: email,
+      role: p.role,
+      zones: p.zones,
+      smallGroups: p.smallGroups,
+      mutedNotifications: p.mutedNotifications,
+      joinedAt: b.clock(),
+    ),
+    p,
+  );
+  _settlePending(b, cid, p.id, uid);
+  b.notify();
+  return true;
 }
 
 /// Points the rosters the move recorded for pending member [pid] at [uid]

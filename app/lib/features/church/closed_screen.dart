@@ -11,6 +11,7 @@ import '../../state/session.dart';
 import '../common/errors.dart';
 import '../common/time_zones.dart';
 import 'church_switcher.dart';
+import 'claims.dart';
 
 /// Shown instead of every other screen when the current church is
 /// suspended or deleted. No church data is requested while it shows.
@@ -74,6 +75,8 @@ class _ClosedScreenState extends ConsumerState<ClosedScreen> {
               shrinkWrap: true,
               padding: const EdgeInsets.all(Space.l),
               children: [
+                // Data moved under my email to another church: the way in.
+                if (claimsIn(ref, null).isNotEmpty) ...[const PendingClaimsCard(), const SizedBox(height: Space.l)],
                 BalancedText(title, style: AppText.title2),
                 if (body.isNotEmpty) ...[
                   const SizedBox(height: Space.s),

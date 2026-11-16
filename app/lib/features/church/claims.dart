@@ -47,11 +47,20 @@ final pendingClaimsProvider = FutureProvider<List<PendingClaim>>((ref) async {
   ];
 });
 
+/// The claims waiting for me, in church [churchId] only when given.
+List<PendingClaim> claimsIn(WidgetRef ref, String? churchId) => [
+  for (final c in ref.watch(pendingClaimsProvider).value ?? const <PendingClaim>[])
+    if (churchId == null || c.churchId == churchId) c,
+];
+
 /// 「加入〈恩典堂〉？」, one per claim, inline at the top of the welcome and
 /// home pages (never a dialog on launch); by name, on home only,
 /// 「服事表上的「黃鎮台」是你嗎？」.
 class PendingClaimsCard extends ConsumerStatefulWidget {
-  const PendingClaimsCard({super.key});
+  const PendingClaimsCard({super.key, this.churchId});
+
+  /// Only the claim in this church (its church URL), or every one.
+  final String? churchId;
 
   @override
   ConsumerState<PendingClaimsCard> createState() => _PendingClaimsCardState();
@@ -87,7 +96,7 @@ class _PendingClaimsCardState extends ConsumerState<PendingClaimsCard> {
   @override
   Widget build(BuildContext context) {
     final l10n = L10n.of(context);
-    final claims = ref.watch(pendingClaimsProvider).value ?? const [];
+    final claims = claimsIn(ref, widget.churchId);
     if (claims.isEmpty) return const SizedBox.shrink();
     return Column(
       children: [
