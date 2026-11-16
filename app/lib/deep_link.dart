@@ -17,7 +17,10 @@ LinkTarget _go(String location) => (location: location, church: null, notificati
 /// to before signing in (`from`).
 ///
 /// Pure: the router applies it, and switches church when asked.
-LinkTarget resolveLink(AppStage stage, List<Membership> memberships, Uri uri) {
+LinkTarget resolveLink(AppStage stage, List<Membership> memberships, Uri link) {
+  // Android opens the app with the whole URL (https://marthasit.com/c/…):
+  // its page is the path and query, kept in `from` while the app loads.
+  final uri = link.hasAuthority ? Uri(path: link.path, query: link.hasQuery ? link.query : null) : link;
   // A church URL of one of my churches opens that church, at `?to=` if
   // given (a notification's page, with the notification). Someone else sees
   // the church's page. So does an invite to a church I am already in:

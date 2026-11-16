@@ -84,6 +84,33 @@ void main() {
     expect(find.byType(TextField), findsOneWidget);
   });
 
+  testWidgets(
+    "an invite link that starts the app, as Android gives it, opens the invite past a deleted church's page",
+    (
+      tester,
+    ) async {
+      final b = MemoryBackend(clock: testClock);
+      final gone = b.addChurch('刪除堂');
+      b.addChurch('希望堂', id: 'hope');
+      b.invites['HOPE2026'] = Invite(
+        code: 'HOPE2026',
+        churchId: 'hope',
+        churchName: '希望堂',
+        expiresAt: testNow.add(const Duration(days: 7)),
+      );
+      final user = b.auth.signInAs('s@gmail.com');
+      b.addMember(gone, Member(uid: user.uid, name: '同工'));
+      b.churches[gone] = b.churches[gone]!.copyWith(status: ChurchStatus.deleted);
+      // The whole URL, not just its path.
+      tester.platformDispatcher.defaultRouteNameTestValue =
+          'https://marthasit-dev.web.app/c/hope/join/HOPE2026?openExternalBrowser=1';
+      await pumpApp(tester, b);
+      expect(find.text('〈刪除堂〉已刪除'), findsNothing);
+      expect(findShown('加入'), findsWidgets);
+      expect(find.textContaining('希望堂'), findsWidgets);
+    },
+  );
+
   testWidgets('an unknown or suspended church is not found, with a way home', (tester) async {
     final b = seededChurch();
     b.addChurch('關閉堂', id: 'closed', status: ChurchStatus.suspended);

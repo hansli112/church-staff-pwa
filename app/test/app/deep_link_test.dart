@@ -234,6 +234,14 @@ void main() {
     });
   });
 
+  test('a link Android opens the app with is the whole URL: once loaded, still the invite', () {
+    const url = 'https://marthasit.com/c/other/join/ABC?openExternalBrowser=1';
+    expect(go(loading, url), to('/loading?from=${e('/c/other/join/ABC?openExternalBrowser=1')}'));
+    expect(journey([loading, closed], url).at, '/c/other/join/ABC?openExternalBrowser=1');
+    expect(journey([loading, signedOut, loading, noChurch], url).at, '/c/other/join/ABC?openExternalBrowser=1');
+    expect(journey([loading, ready], 'https://marthasit.com/c/hope'), (at: '/home', church: 'hope'));
+  });
+
   test('a notification tapped while signed out lands on its page in its church', () {
     expect(journey([signedOut, loading, ready], '/c/hope?to=%2Fme'), (at: '/me', church: 'hope'));
     expect(journey([loading, signedOut, loading, ready], invite), (at: invite, church: null));
