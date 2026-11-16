@@ -577,10 +577,13 @@ class SwitchRow extends StatelessWidget {
   }
 }
 
-/// A row whose value is any of [options], ticked in a menu that opens
-/// from it and stays open while they are ticked; the row shows those
-/// ticked, or [none]. A tick shows at once; one that did not save
-/// ([onChanged] false) goes back.
+/// A row whose value is any of [options], ticked in a sheet that opens
+/// from it and stays open while they are ticked, 完成 closing it; the row
+/// shows those ticked, or [none]. A tick shows at once; one that did not
+/// save ([onChanged] false) goes back.
+///
+/// A sheet, as a selection list in Apple's Settings: Material's menu grew
+/// from the row's corner, cramped once a service had a dozen duties.
 class MultiSelectRow<T> extends StatefulWidget {
   const MultiSelectRow({
     super.key,
@@ -590,6 +593,7 @@ class MultiSelectRow<T> extends StatefulWidget {
     required this.label,
     required this.none,
     required this.onChanged,
+    this.valueBelow = false,
   });
 
   final String title;
@@ -598,6 +602,11 @@ class MultiSelectRow<T> extends StatefulWidget {
   final String Function(T option) label;
   final String none;
   final Future<bool> Function(T option, bool on) onChanged;
+
+  /// Those ticked always under the title, for a list that often runs long:
+  /// beside it when short and under it when long, rows of one page read
+  /// from either side.
+  final bool valueBelow;
 
   @override
   State<MultiSelectRow<T>> createState() => _MultiSelectRowState<T>();
@@ -608,20 +617,53 @@ class _MultiSelectRowState<T> extends State<MultiSelectRow<T>> {
   /// their way back.
   final _ticking = <T, bool>{};
 
+  /// Tells the open sheet what it shows changed. Not disposed: the sheet
+  /// may outlast the row (its section gone meanwhile) and still listen.
+  final _changed = ValueNotifier(0);
+
   @override
   void didUpdateWidget(MultiSelectRow<T> old) {
     super.didUpdateWidget(old);
     _ticking.removeWhere((option, on) => widget.selected.contains(option) == on);
+    // Saved elsewhere meanwhile, or come back from the server: the sheet
+    // shows it too, after this frame's build.
+    WidgetsBinding.instance.addPostFrameCallback((_) => _changed.value++);
   }
 
   bool _ticked(T option) => _ticking[option] ?? widget.selected.contains(option);
 
   Future<void> _tick(T option, bool on) async {
+    // Its section gone while the sheet was open: nothing left to tick.
+    if (!mounted) return;
     Haptics.selection();
-    setState(() => _ticking[option] = on);
+    _set(() => _ticking[option] = on);
     final saved = await widget.onChanged(option, on);
-    if (!saved && mounted) setState(() => _ticking.remove(option));
+    if (!saved) _set(() => _ticking.remove(option));
   }
+
+  void _set(VoidCallback change) {
+    if (!mounted) return;
+    setState(change);
+    _changed.value++;
+  }
+
+  Future<void> _open() => showAppSheet<void>(
+    context,
+    expand: widget.options.length > _listSheetFits,
+    builder: (context) => _ListSheet(
+      title: widget.title,
+      done: true,
+      rows: ValueListenableBuilder(
+        valueListenable: _changed,
+        builder: (context, _, _) => ListSection(
+          children: [
+            for (final o in widget.options)
+              ListRow(title: widget.label(o), selected: _ticked(o), onTap: () => _tick(o, !_ticked(o))),
+          ],
+        ),
+      ),
+    ),
+  );
 
   @override
   Widget build(BuildContext context) {
@@ -629,28 +671,20 @@ class _MultiSelectRowState<T> extends State<MultiSelectRow<T>> {
       for (final o in widget.options)
         if (_ticked(o)) widget.label(o),
     ];
-    return MenuAnchor(
-      menuChildren: [
-        for (final o in widget.options)
-          CheckboxMenuButton(
-            value: _ticked(o),
-            closeOnActivate: false,
-            onChanged: (on) => _tick(o, on ?? false),
-            child: Text(widget.label(o)),
-          ),
-      ],
-      builder: (context, menu, _) => ListRow(
-        title: widget.title,
-        value: ticked.isEmpty ? widget.none : ticked.join(L10n.of(context).listSeparator),
-        trailing: Icon(Symbols.unfold_more_rounded, color: AppColors.of(context).tertiaryLabel, size: 20),
-        onTap: () => menu.isOpen ? menu.close() : menu.open(),
-      ),
+    final shown = ticked.isEmpty ? widget.none : ticked.join(L10n.of(context).listSeparator);
+    return ListRow(
+      title: widget.title,
+      value: widget.valueBelow ? null : shown,
+      subtitle: widget.valueBelow ? shown : null,
+      trailing: Icon(Symbols.unfold_more_rounded, color: AppColors.of(context).tertiaryLabel, size: 20),
+      onTap: _open,
     );
   }
 }
 
-/// A row that opens a menu of [options], one to pick: e.g. 加入聚會.
-class MenuRow<T> extends StatelessWidget {
+/// A row that opens a sheet of [options], one to pick, which closes it:
+/// e.g. 加入聚會.
+class MenuRow<T extends Object> extends StatelessWidget {
   const MenuRow({
     super.key,
     required this.title,
@@ -666,16 +700,56 @@ class MenuRow<T> extends StatelessWidget {
   final String Function(T option) label;
   final ValueChanged<T> onPicked;
 
+  Future<void> _open(BuildContext context) async {
+    final picked = await showAppSheet<T>(
+      context,
+      expand: options.length > _listSheetFits,
+      builder: (context) => _ListSheet(
+        title: title,
+        rows: ListSection(
+          children: [
+            for (final o in options) ListRow(title: label(o), chevron: false, onTap: () => Navigator.pop(context, o)),
+          ],
+        ),
+      ),
+    );
+    if (picked != null) onPicked(picked);
+  }
+
   @override
-  Widget build(BuildContext context) => MenuAnchor(
-    menuChildren: [
-      for (final o in options) MenuItemButton(onPressed: () => onPicked(o), child: Text(label(o))),
-    ],
-    builder: (context, menu, _) => ListRow(
-      title: title,
-      leading: leading,
-      chevron: false,
-      onTap: () => menu.isOpen ? menu.close() : menu.open(),
+  Widget build(BuildContext context) =>
+      ListRow(title: title, leading: leading, chevron: false, onTap: () => _open(context));
+}
+
+/// Options a list sheet shows without being as tall as a sheet gets.
+const _listSheetFits = 8;
+
+/// A sheet of options under [title]: with [done], ticked ones saved at
+/// once and 完成 to close; without, a pick closes it. Nothing to discard
+/// either way, so no 取消; swiping down closes it too.
+class _ListSheet extends StatelessWidget {
+  const _ListSheet({required this.title, required this.rows, this.done = false});
+
+  final String title;
+  final Widget rows;
+  final bool done;
+
+  @override
+  Widget build(BuildContext context) => SafeArea(
+    child: Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        SheetBar(
+          title: title,
+          cancel: false,
+          actions: [
+            if (done) SecondaryButton(label: L10n.of(context).done, onPressed: () => Navigator.pop(context)),
+          ],
+        ),
+        Flexible(
+          child: ListView(shrinkWrap: true, children: [rows]),
+        ),
+      ],
     ),
   );
 }

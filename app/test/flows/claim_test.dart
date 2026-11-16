@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
+import 'package:martha/core/design/components.dart';
 import 'package:martha/core/languages.dart';
 import 'package:martha/data/backend.dart';
 import 'package:martha/data/memory/memory_backend.dart';
@@ -287,6 +288,37 @@ void main() {
     expect(b.pendingMembers['grace'], isEmpty);
     expect(find.text('已合併'), findsOneWidget);
     expect(find.text('合併沒有帳號的同工'), findsNothing, reason: 'nothing left to merge');
+  });
+
+  testWidgets('合併 says their 小組 on a line, then each service on its own', (tester) async {
+    final b = seededChurch(
+      extra: const [Member(uid: 'mei-google', name: '美玉', email: 'mei@gmail.com')],
+    );
+    b.smallGroups['grace'] = {
+      'joy': const SmallGroupDetails(id: 'joy', name: '喜樂小組', service: 'sunday'),
+      'faith': const SmallGroupDetails(id: 'faith', name: '信實小組', service: 'sunday'),
+    };
+    b.addPending(
+      'grace',
+      meiPending.copyWith(
+        zones: const [
+          Zone(serviceType: 'sunday', duties: ['司琴', '招待']),
+          Zone(serviceType: 'youth', duties: ['司會']),
+        ],
+        smallGroups: {'joy', 'faith'},
+      ),
+    );
+    await pumpApp(tester, b);
+    await go(tester, '/me/members/mei-google');
+    await tester.scrollUntilVisible(find.text('合併沒有帳號的同工'), 200, scrollable: find.byType(Scrollable).last);
+    await tapText(tester, '合併沒有帳號的同工');
+    await tapText(tester, '李美玉');
+    expect(
+      find.byWidgetPredicate(
+        (w) => w is BalancedText && w.text.startsWith('信實小組、喜樂小組\n主日崇拜・司琴、招待\n青年崇拜・司會\n\n'),
+      ),
+      findsOneWidget,
+    );
   });
 
   testWidgets('someone without an email who joined by invite is offered to merge on 同工, by the same name', (

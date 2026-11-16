@@ -75,22 +75,32 @@ void main() {
       await go(tester, '/me/members/john');
       expect(find.text('主日崇拜'), findsNothing, reason: 'in no service yet');
       await tapText(tester, '加入聚會');
+      expect(find.text('加入聚會'), findsNWidgets(2), reason: 'a sheet headed by the row it opened from');
       await tapText(tester, '青年崇拜');
       expect(b.members['grace']!['john']!.zoneTypes, ['youth']);
+      expect(find.text('加入聚會'), findsOneWidget, reason: 'picking one closes the sheet');
       expect(find.text('移出青年崇拜'), findsOneWidget);
     });
 
-    testWidgets("a member's page has only their services, what they serve there ticked in a menu", (tester) async {
+    testWidgets("a member's page has only their services, what they serve there ticked in a list", (tester) async {
       final b = seededChurch();
       await pumpApp(tester, b);
       await go(tester, '/me/members/mei');
       expect(find.text('青年崇拜'), findsNothing, reason: 'not one of hers');
-      expect(find.text('司琴、招待'), findsOneWidget);
+      expect(findShown('司琴、招待'), findsOneWidget);
+      expect(
+        tester.getTopLeft(findShown('司琴、招待')).dx,
+        tester.getTopLeft(find.text('服事項目')).dx,
+        reason: 'under 服事項目, short or long, never beside it',
+      );
       await tapText(tester, '服事項目');
       await tapText(tester, '司會');
       expect(b.members['grace']!['mei']!.zones.single.duties, ['司琴', '招待', '司會']);
       await tapText(tester, '司琴');
-      expect(b.members['grace']!['mei']!.zones.single.duties, ['招待', '司會'], reason: 'the menu stays open');
+      expect(b.members['grace']!['mei']!.zones.single.duties, ['招待', '司會'], reason: 'the list stays open');
+      await tapText(tester, '完成');
+      expect(find.text('完成'), findsNothing);
+      expect(findShownContaining('招待'), findsOneWidget, reason: 'the row says what is ticked now');
     });
 
     testWidgets('leaving a 牧區 clears its duties, and undo brings both back', (tester) async {

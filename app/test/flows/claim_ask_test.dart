@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
+import 'package:martha/core/design/components.dart';
 import 'package:martha/data/memory/memory_backend.dart';
 import 'package:martha/domain/day.dart';
 import 'package:martha/domain/models.dart';
@@ -69,6 +70,26 @@ void main() {
     await tapText(tester, '取消');
     expect(b.claimAsks['grace']!['ming'], isNull);
     expect(findShown('服事表上已經有你了嗎？'), findsOneWidget);
+  });
+
+  testWidgets('each one they may be says their 小組 on a line, then each service once, on its own', (tester) async {
+    final b = seededChurch(as: ming, extra: const [ming]);
+    b.smallGroups['grace'] = {'joy': const SmallGroupDetails(id: 'joy', name: '喜樂小組', service: 'sunday')};
+    b.addPending(
+      'grace',
+      wang.copyWith(
+        zones: const [
+          Zone(serviceType: 'sunday', duties: ['招待', '司會']),
+          Zone(serviceType: 'youth', duties: ['司會']),
+        ],
+      ),
+    );
+    await pumpApp(tester, b);
+    await tapText(tester, '服事表上已經有你了嗎？');
+    expect(
+      find.byWidgetPredicate((w) => w is BalancedText && w.text == '喜樂小組\n主日崇拜・招待、司會\n青年崇拜・司會'),
+      findsOneWidget,
+    );
   });
 
   testWidgets('with nobody without an account, there is nobody to be', (tester) async {

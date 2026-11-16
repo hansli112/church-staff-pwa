@@ -6,7 +6,7 @@ import '../../l10n/app_localizations.dart';
 import '../common/errors.dart';
 
 /// One person as one of [service]'s 同工 (#94): the duties they serve
-/// there and their 小組 in it, each ticked in a menu, and, with [onLeave],
+/// there and their 小組 in it, each ticked in a list, and, with [onLeave],
 /// 移出. How each saves is the caller's: an admin writes the member, a
 /// 負責人 asks the backend. [header] is the service's name, or on a page of
 /// one service the person's.
@@ -49,6 +49,7 @@ class ServiceStaffSection extends StatelessWidget {
             label: (d) => d,
             none: l10n.noneChosen,
             onChanged: onDuty,
+            valueBelow: true,
           ),
         if (smallGroups.isNotEmpty)
           MultiSelectRow<String>(
@@ -65,7 +66,7 @@ class ServiceStaffSection extends StatelessWidget {
   }
 }
 
-/// Whether [write] saved; one that did not says why, and a menu tick goes
+/// Whether [write] saved; one that did not says why, and a tick goes
 /// back.
 Future<bool> savedOrSaid(BuildContext context, Future<void> write) async {
   final l10n = L10n.of(context);

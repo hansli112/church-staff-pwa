@@ -6,25 +6,35 @@ import '../../domain/models.dart';
 import '../../domain/text.dart';
 import '../../l10n/app_localizations.dart';
 
-/// What one of the 同工 without an account is known by: their 小組, then
-/// what they serve, 「喜樂小組 · 主日崇拜・招待、司琴」.
+/// What one of the 同工 without an account is known by, a line each:
+/// their 小組, then each service with what they serve there,
+/// 「喜樂小組、信實小組」「主日崇拜・招待、司琴」. One line of them all
+/// read as a paragraph.
 String noAccountDetails(L10n l10n, PendingMember p, ServiceSettings? services, List<SmallGroupDetails> smallGroups) {
   final groups = p.asMember(smallGroups).smallGroups;
   return [
-    for (final g in smallGroups)
-      if (groups.contains(g.id)) g.name,
+    [
+      for (final g in smallGroups)
+        if (groups.contains(g.id)) g.name,
+    ].join(l10n.listSeparator),
     for (final z in p.zones)
       if (services?.byId(z.serviceType)?.name case final service?)
         z.duties.isEmpty ? service : l10n.claimServe(service, z.duties.join(l10n.listSeparator)),
-  ].join(l10n.dotSeparator);
+  ].where((line) => line.isNotEmpty).join('\n');
 }
 
-/// The same for one a member may be: their 小組, then the duties the
-/// backend gave, each once, 「喜樂小組 · 主日崇拜・招待」.
-String candidateDetails(L10n l10n, ClaimCandidate c) => [
-  ...c.smallGroups,
-  ...{for (final s in c.serves) l10n.claimServe(s.service, s.duty)},
-].join(l10n.dotSeparator);
+/// The same for one a member may be: their 小組, then each service once
+/// with the duties the backend gave, 「主日崇拜・招待、司會」.
+String candidateDetails(L10n l10n, ClaimCandidate c) {
+  final duties = <String, Set<String>>{};
+  for (final s in c.serves) {
+    (duties[s.service] ??= {}).add(s.duty);
+  }
+  return [
+    c.smallGroups.join(l10n.listSeparator),
+    for (final MapEntry(key: service, value: d) in duties.entries) l10n.claimServe(service, d.join(l10n.listSeparator)),
+  ].where((line) => line.isNotEmpty).join('\n');
+}
 
 /// A sheet headed [title] to pick one of [people] (同工 without an
 /// account): those named like [name] first (the same name, then one inside

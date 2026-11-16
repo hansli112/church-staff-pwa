@@ -324,7 +324,7 @@ void main() {
     await tapText(tester, '服事項目');
     await tapText(tester, '司會');
     expect(b.members['grace']!['mei']!.serves('sunday', '司會'), isTrue);
-    await tapText(tester, '服事項目');
+    await tapText(tester, '完成');
     await tapText(tester, '小組');
     await tapText(tester, '喜樂小組');
     expect(b.members['grace']!['mei']!.smallGroups, {'joy'});
