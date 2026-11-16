@@ -47,10 +47,8 @@ enum AppStore {
 }
 
 /// Whether both stores list the app publicly, so its page opens for anyone
-/// (支持頁's 評分支持我們). Not until the App Store approves it and Google
-/// Play has it in production: before that the page is not there, and an App
-/// Store reviewer would find a dead link. Turned on by a hot fix.
-final storePagesPublicProvider = Provider<bool>((_) => false);
+/// (支持頁's 評分支持我們). Both have since 2026-11-11 (1.0.1).
+final storePagesPublicProvider = Provider<bool>((_) => true);
 
 /// The app's Apple ID in the App Store (App Store Connect → App Information).
 /// Its page only opens once the app is listed (#40), so raise `minBuild.ios`

@@ -48,6 +48,20 @@
     "description": "On the login page when it was opened from an invite link",
     "placeholders": { "church": { "type": "String" } }
   },
+  "getAppInvited": "邀請你加入〈{church}〉",
+  "@getAppInvited": {
+    "description": "On a phone's browser, an invite link first offers the app: the heading",
+    "placeholders": { "church": { "type": "String" } }
+  },
+  "getAppFrom": "從 {store} 下載",
+  "@getAppFrom": {
+    "description": "The button to the phone's store; store is App Store or Google Play",
+    "placeholders": { "store": { "type": "String" } }
+  },
+  "getAppThenInvite": "裝好後，再點一次邀請連結",
+  "getAppThenChurch": "裝好後，再點一次教會網址",
+  "useWebVersion": "用網頁版",
+  "@useWebVersion": {"description": "Goes on in the browser instead of getting the app"},
   "email": "Email",
   "password": "密碼",
   "yourName": "你的名字",

@@ -106,6 +106,25 @@ class L10nZh extends L10n {
   }
 
   @override
+  String getAppInvited(String church) {
+    return '邀請你加入〈$church〉';
+  }
+
+  @override
+  String getAppFrom(String store) {
+    return '從 $store 下載';
+  }
+
+  @override
+  String get getAppThenInvite => '裝好後，再點一次邀請連結';
+
+  @override
+  String get getAppThenChurch => '裝好後，再點一次教會網址';
+
+  @override
+  String get useWebVersion => '用網頁版';
+
+  @override
   String get email => 'Email';
 
   @override
@@ -3646,6 +3665,25 @@ class L10nZhHans extends L10nZh {
   String loginInvitedTo(String church) {
     return '受邀加入“$church”';
   }
+
+  @override
+  String getAppInvited(String church) {
+    return '邀请你加入“$church”';
+  }
+
+  @override
+  String getAppFrom(String store) {
+    return '从 $store 下载';
+  }
+
+  @override
+  String get getAppThenInvite => '装好后，再点一次邀请链接';
+
+  @override
+  String get getAppThenChurch => '装好后，再点一次教会网址';
+
+  @override
+  String get useWebVersion => '用网页版';
 
   @override
   String get email => '邮箱';

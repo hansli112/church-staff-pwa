@@ -107,6 +107,25 @@ class L10nKo extends L10n {
   }
 
   @override
+  String getAppInvited(String church) {
+    return '$church에 초대합니다';
+  }
+
+  @override
+  String getAppFrom(String store) {
+    return '$store에서 다운로드';
+  }
+
+  @override
+  String get getAppThenInvite => '설치한 뒤 초대 링크를 다시 눌러 주세요';
+
+  @override
+  String get getAppThenChurch => '설치한 뒤 교회 주소를 다시 눌러 주세요';
+
+  @override
+  String get useWebVersion => '웹 버전 사용';
+
+  @override
   String get email => '이메일';
 
   @override

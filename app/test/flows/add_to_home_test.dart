@@ -98,6 +98,8 @@ Future<(MemoryBackend, String)> invited(
   );
   routerOf(tester).go('/c/$cid/join/WELCOME26');
   await settle(tester);
+  // A phone's browser offers the app first (get_the_app_test.dart).
+  if (findShown('用網頁版').evaluate().isNotEmpty) await tapText(tester, '用網頁版');
   await tapText(tester, '使用 Google 登入');
   return (b, cid);
 }

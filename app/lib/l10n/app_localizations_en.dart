@@ -107,6 +107,25 @@ class L10nEn extends L10n {
   }
 
   @override
+  String getAppInvited(String church) {
+    return 'You’re invited to join $church';
+  }
+
+  @override
+  String getAppFrom(String store) {
+    return 'Get it on $store';
+  }
+
+  @override
+  String get getAppThenInvite => 'Once it’s installed, tap the invite link again';
+
+  @override
+  String get getAppThenChurch => 'Once it’s installed, tap the church URL again';
+
+  @override
+  String get useWebVersion => 'Use the web version';
+
+  @override
   String get email => 'Email';
 
   @override

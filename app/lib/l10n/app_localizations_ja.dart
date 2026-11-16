@@ -106,6 +106,25 @@ class L10nJa extends L10n {
   }
 
   @override
+  String getAppInvited(String church) {
+    return '「$church」へのご招待です';
+  }
+
+  @override
+  String getAppFrom(String store) {
+    return '$store からダウンロード';
+  }
+
+  @override
+  String get getAppThenInvite => 'インストールしたら、もう一度招待リンクをタップしてください';
+
+  @override
+  String get getAppThenChurch => 'インストールしたら、もう一度教会の URL をタップしてください';
+
+  @override
+  String get useWebVersion => 'Web 版を使う';
+
+  @override
   String get email => 'メールアドレス';
 
   @override

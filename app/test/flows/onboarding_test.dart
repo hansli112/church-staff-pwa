@@ -454,6 +454,7 @@ void main() {
     final out = captureOutbox(tester);
     GoRouter.of(tester.element(find.byType(Scaffold).first)).go('/c/$cid/join/LINE2026?openExternalBrowser=1');
     await settle(tester);
+    await tapText(tester, '用網頁版');
     await tapText(tester, '複製連結');
     expect(out.copied.single, endsWith('/c/$cid/join/LINE2026?openExternalBrowser=1'));
   });

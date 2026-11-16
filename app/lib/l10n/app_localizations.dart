@@ -286,6 +286,36 @@ abstract class L10n {
   /// **'受邀加入〈{church}〉'**
   String loginInvitedTo(String church);
 
+  /// On a phone's browser, an invite link first offers the app: the heading
+  ///
+  /// In zh, this message translates to:
+  /// **'邀請你加入〈{church}〉'**
+  String getAppInvited(String church);
+
+  /// The button to the phone's store; store is App Store or Google Play
+  ///
+  /// In zh, this message translates to:
+  /// **'從 {store} 下載'**
+  String getAppFrom(String store);
+
+  /// No description provided for @getAppThenInvite.
+  ///
+  /// In zh, this message translates to:
+  /// **'裝好後，再點一次邀請連結'**
+  String get getAppThenInvite;
+
+  /// No description provided for @getAppThenChurch.
+  ///
+  /// In zh, this message translates to:
+  /// **'裝好後，再點一次教會網址'**
+  String get getAppThenChurch;
+
+  /// Goes on in the browser instead of getting the app
+  ///
+  /// In zh, this message translates to:
+  /// **'用網頁版'**
+  String get useWebVersion;
+
   /// No description provided for @email.
   ///
   /// In zh, this message translates to:

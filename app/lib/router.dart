@@ -14,6 +14,7 @@ import 'features/calendar/calendar_screen.dart';
 import 'features/church/add_to_home.dart';
 import 'features/church/church_entry_screen.dart';
 import 'features/church/closed_screen.dart';
+import 'features/church/get_the_app.dart';
 import 'features/church/join_screen.dart';
 import 'features/church/welcome_screen.dart';
 import 'features/dev/component_gallery.dart';
@@ -111,7 +112,14 @@ final routerProvider = Provider<GoRouter>((ref) {
     },
     routes: [
       page('/loading', (_) => const LoadingScreen(), fade: true),
-      page('/login', (s) => LoginScreen(from: s.uri.queryParameters['from']), fade: true),
+      page(
+        '/login',
+        (s) => GetTheAppFirst(
+          link: s.uri.queryParameters['from'],
+          child: LoginScreen(from: s.uri.queryParameters['from']),
+        ),
+        fade: true,
+      ),
       page('/verify', (_) => const VerifyEmailScreen(), fade: true),
       page(
         '/welcome',
@@ -131,14 +139,20 @@ final routerProvider = Provider<GoRouter>((ref) {
       ),
       page(
         '/c/:churchId',
-        (s) => WarmUpOnOpen(WarmUp.askToJoin, child: ChurchEntryScreen(churchId: s.pathParameters['churchId']!)),
+        (s) => GetTheAppFirst(
+          link: s.uri.path,
+          child: WarmUpOnOpen(WarmUp.askToJoin, child: ChurchEntryScreen(churchId: s.pathParameters['churchId']!)),
+        ),
         fade: true,
         // An invite link. The code decides the church, not the URL.
         routes: [
           // Opened from the link itself, not from a page here.
           page(
             'join/:code',
-            (s) => WarmUpOnOpen(WarmUp.joinChurch, child: JoinScreen(code: s.pathParameters['code']!)),
+            (s) => GetTheAppFirst(
+              link: s.uri.path,
+              child: WarmUpOnOpen(WarmUp.joinChurch, child: JoinScreen(code: s.pathParameters['code']!)),
+            ),
             fade: true,
           ),
         ],
