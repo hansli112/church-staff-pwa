@@ -1060,7 +1060,8 @@
   "swapStatusVoided": "This request no longer stands: the schedule changed, or the day has passed",
   "swapStatusDeclined": "You said you can't",
   "errSwapClosed": "This request has closed",
-  "errNobodyToAsk": "Nobody else on the list is free that day; ask your lead",
   "swapOutCover": "Cover asked",
+  "swapOutTold": "Told",
+  "swapToldCover": "Told the leads and the team that day",
   "swapOutSwap": "Swap asked"
 }

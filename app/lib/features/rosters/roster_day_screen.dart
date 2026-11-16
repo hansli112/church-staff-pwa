@@ -123,7 +123,7 @@ class RosterDayScreen extends ConsumerWidget {
                   : (duty) => showMyDutyMenu(context, ref, roster, duty.role),
               asked: {
                 for (final r in ref.watch(myOpenSwapRequestsProvider).value ?? const <SwapRequest>[])
-                  if (r.rosterId == roster.id) r.duty: r.kind == SwapKind.cover ? l10n.swapOutCover : l10n.swapOutSwap,
+                  if (r.rosterId == roster.id) r.duty: myOpenAskTag(l10n, r),
               },
             )
           else

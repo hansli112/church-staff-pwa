@@ -111,7 +111,7 @@ void main() {
     expect(find.text('你的服事'), findsNothing);
   });
 
-  testWidgets('nobody free on the list: says to ask the lead, and asks nobody', (tester) async {
+  testWidgets('nobody free on the list: the leads and those serving that day are told instead', (tester) async {
     final b = church();
     b.unavailable['grace'] = {'yu': const UnavailableDays().add(Day(2026, 10, 4), Day(2026, 10, 4))};
     await pumpApp(tester, b);
@@ -120,8 +120,15 @@ void main() {
     await settle(tester);
     await tester.tap(find.text('請人代'));
     await settle(tester);
-    expect(find.text('名單上那天沒有其他有空的同工，請找負責人'), findsOneWidget);
-    expect(requests(b), isEmpty);
+    expect(find.text('已告訴負責人和當天的同工'), findsNWidgets(2), reason: 'the toast, and my row');
+    final r = requests(b).single;
+    expect((r.kind, r.asked.length, r.isOpen), (SwapKind.cover, 0, true));
+
+    expect(find.text('已告知'), findsOneWidget, reason: 'said on the row');
+    expect(onMine('司琴', '已告訴負責人和當天的同工'), findsOneWidget);
+    await tester.tap(onMine('司琴', '收回'));
+    await settle(tester);
+    expect(requests(b).single.status, SwapStatus.withdrawn);
   });
 
   testWidgets('和別週交換 lists who is on it on later days, and asks the one picked', (tester) async {

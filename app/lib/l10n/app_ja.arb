@@ -1060,7 +1060,8 @@
   "swapStatusVoided": "この依頼は無効になりました。奉仕表が変わったか、日付が過ぎました。",
   "swapStatusDeclined": "都合が悪いと返事しました",
   "errSwapClosed": "この依頼はもう終わっています",
-  "errNobodyToAsk": "その日に空いているリストのメンバーがいません。リーダーに相談してください。",
   "swapOutCover": "代わりを依頼中",
+  "swapOutTold": "伝達済み",
+  "swapToldCover": "リーダーとその日のメンバーに伝えました",
   "swapOutSwap": "交換を依頼中"
 }

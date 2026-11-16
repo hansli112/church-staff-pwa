@@ -3563,10 +3563,13 @@ class L10nJa extends L10n {
   String get errSwapClosed => 'この依頼はもう終わっています';
 
   @override
-  String get errNobodyToAsk => 'その日に空いているリストのメンバーがいません。リーダーに相談してください。';
+  String get swapOutCover => '代わりを依頼中';
 
   @override
-  String get swapOutCover => '代わりを依頼中';
+  String get swapOutTold => '伝達済み';
+
+  @override
+  String get swapToldCover => 'リーダーとその日のメンバーに伝えました';
 
   @override
   String get swapOutSwap => '交換を依頼中';

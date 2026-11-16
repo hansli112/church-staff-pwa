@@ -373,8 +373,8 @@ abstract interface class ChurchData {
 
   /// 請人代 for my [duty] on [roster], a service's day from today on:
   /// everyone on the duty's list free that day ([coverAsked]). How many it
-  /// asked; with nobody, [CloudReason.nobodyToAsk]. One open request per
-  /// duty and day.
+  /// asked; with nobody, the leads and those serving that day are told
+  /// instead and it is 0. One open request per duty and day.
   Future<int> askCover(Roster roster, String duty);
 
   /// 和別週交換: my [duty] on [roster] for [uid]'s on [other], a day of the
@@ -719,10 +719,7 @@ enum CloudReason {
   /// …or the one answered is no longer waiting.
   requestGone,
 
-  /// 請人代 found nobody on the list free that day (#92)…
-  nobodyToAsk,
-
-  /// …or the request answered is no longer open: taken, taken back, or
+  /// The request answered is no longer open (#92): taken, taken back, or
   /// void now that the roster changed.
   swapClosed,
 

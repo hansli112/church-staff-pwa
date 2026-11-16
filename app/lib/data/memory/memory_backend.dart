@@ -1434,7 +1434,6 @@ class MemoryChurchData implements ChurchData {
         me.uid,
         unavailable: _b.unavailable[churchId] ?? const {},
       );
-      if (who.isEmpty) throw const CloudException(CloudErrorCode.unknown, reason: CloudReason.nobodyToAsk);
       final id = 'swap${++_b._swapIds}';
       (_b.swapRequests[churchId] ??= {})[id] = SwapRequest(
         id: id,

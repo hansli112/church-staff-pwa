@@ -2452,8 +2452,10 @@
   "swapStatusVoided": "這個請求已經不算了：服事表改過，或日子已經過了",
   "swapStatusDeclined": "你說了不方便",
   "errSwapClosed": "這個請求已經結束了",
-  "errNobodyToAsk": "名單上那天沒有其他有空的同工，請找負責人",
   "swapOutCover": "已請人代",
   "@swapOutCover": {"description": "At the end of my duty's row on a roster: a request of mine is out (#92)"},
+  "swapOutTold": "已告知",
+  "@swapOutTold": {"description": "At the end of my duty's row: nobody on the list could be asked, so the leads and those serving that day were told (#92)"},
+  "swapToldCover": "已告訴負責人和當天的同工",
   "swapOutSwap": "已請交換"
 }

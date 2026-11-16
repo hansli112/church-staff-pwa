@@ -1060,7 +1060,8 @@
   "swapStatusVoided": "이 요청은 더 이상 유효하지 않아요. 봉사표가 바뀌었거나 날짜가 지났어요.",
   "swapStatusDeclined": "어렵다고 답했어요",
   "errSwapClosed": "이 요청은 이미 끝났어요",
-  "errNobodyToAsk": "그날 시간이 되는 명단의 다른 멤버가 없어요. 리더에게 문의하세요.",
   "swapOutCover": "대신 봉사 요청 중",
+  "swapOutTold": "알림 보냄",
+  "swapToldCover": "리더와 그날 멤버에게 알렸어요",
   "swapOutSwap": "교환 요청 중"
 }

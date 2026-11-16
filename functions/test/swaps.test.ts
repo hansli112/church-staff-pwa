@@ -103,18 +103,44 @@ describe('請人代 (askCover)', () => {
     await rejectsWith(answer(id, 'lead', true), 'permissionDenied');
   });
 
-  test('only for one of your own days still to come, once at a time, and not with nobody to ask', async () => {
+  test('only for one of your own days still to come, once at a time', async () => {
     await church();
     await rejectsWith(cover('mei'), 'unknown');
     await cover();
     await rejectsWith(cover(), 'unknown');
-    await day('2026-11-08', [duty('司琴', ['王小明'])]);
-    await db.doc('churches/C1/unavailable/mei').set({ spans: [{ from: '2026-11-08', to: '2026-11-08', note: '' }] });
-    await db.doc('churches/C1/unavailable/hao').set({ spans: [{ from: '2026-11-01', to: '2026-11-30', note: '' }] });
-    const nobody = askCover(d(), caller('wang'), { churchId: 'C1', serviceId: 'sunday', dateKey: '2026-11-08', duty: '司琴' });
-    await assert.rejects(nobody, (e: { details?: { detail?: string } }) => e.details?.detail === 'nobodyToAsk');
     setNow(new Date('2026-11-16T10:00:00+08:00'));
     await rejectsWith(askCover(d(), caller('wang'), { churchId: 'C1', serviceId: 'sunday', dateKey: '2026-11-15', duty: '司琴' }), 'unknown');
+  });
+
+  test('with nobody on the list free that day, the leads and the others serving that day hear it, and not again three days before', async () => {
+    await church();
+    await day('2026-11-08', [duty('司琴', ['王小明']), duty('招待', ['陳志豪', '張三'])]);
+    await db.doc('churches/C1/unavailable/mei').set({ spans: [{ from: '2026-11-08', to: '2026-11-08', note: '' }] });
+    await db.doc('churches/C1/unavailable/hao').set({ spans: [{ from: '2026-11-01', to: '2026-11-30', note: '' }] });
+    const { id, asked } = await askCover(d(), caller('wang'), { churchId: 'C1', serviceId: 'sunday', dateKey: '2026-11-08', duty: '司琴' });
+    assert.equal(asked, 0);
+    const told = '11/8（週日）主日崇拜 司琴：「王小明」不行';
+    const link = '/c/C1?to=%2Frosters%2Fsunday%2F2026-11-08';
+    assert.deepEqual(said(), [['tok-hao', told, link], ['tok-lead', told, link]]);
+    assert.deepEqual([(await request(id)).status, (await request(id)).asked], ['open', []]);
+    await rejectsWith(answer(id, 'hao', true), 'permissionDenied');
+
+    pushed.length = 0;
+    setNow(new Date('2026-11-05T19:00:00+08:00'));
+    await sendSwapPushes(d());
+    assert.deepEqual(pushed, [], 'the leads know already');
+  });
+
+  test('with nobody to ask in the night, they hear at 7:00', async () => {
+    await church();
+    await db.doc('churches/C1/members/mei').update({ zones: [] });
+    await db.doc('churches/C1/members/hao').update({ zones: [] });
+    setNow(new Date('2026-11-02T23:30:00+08:00'));
+    await cover();
+    assert.deepEqual(pushed, []);
+    setNow(new Date('2026-11-03T07:00:00+08:00'));
+    await sendSwapPushes(d());
+    assert.deepEqual(said().map(([t]) => t), ['tok-lead']);
   });
 
   test('asked in the night, it goes out at 7:00', async () => {

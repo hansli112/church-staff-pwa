@@ -179,15 +179,32 @@ async function sendOrHold(deps: Deps & PushDeps, church: DocumentSnapshot, ref: 
   return sendRequest(deps, church, await ref.get());
 }
 
+/** Everyone bound to a duty on [list] whose name is still there. */
+const servingOn = (list: unknown) =>
+  dutiesOf(list).flatMap((d) => Object.entries(d.uids ?? {}).filter(([n]) => names(d.people).includes(n)).map(([, u]) => u));
+
 /**
  * The push asking for [request]: to everyone 請人代 asked who has not said
- * 不方便, or 交換's one person.
+ * 不方便, or 交換's one person. A 請人代 that asked nobody tells the leads
+ * and the others serving that day instead.
  */
 async function sendRequest(deps: PushDeps, church: DocumentSnapshot, request: DocumentSnapshot) {
   const r = request.data()!;
   const say = await readable(deps, church.id, r);
   const link = `/rosters/request/${request.id}`;
   const title = church.get('name') as string;
+  if (r.kind === 'cover' && strings(r.asked).length === 0) {
+    const [leads, roster] = await Promise.all([
+      leadsFor(deps, church.id, r.serviceId, r.duty),
+      rosterOf(deps, church.id, r.rosterId).get(),
+    ]);
+    const told = [...new Set([...leads, ...servingOn(roster.get('duties'))])].filter((u) => u !== r.from);
+    return notifyMembers(deps, church.id, told, 'swap', (w) => ({
+      title,
+      body: w.cannotServe(say(w).day, say(w).line, r.fromName),
+      link: `/rosters/${r.serviceId}/${r.dateKey}`,
+    }));
+  }
   if (r.kind === 'cover') {
     const passed = strings(r.passed);
     return notifyMembers(deps, church.id, strings(r.asked).filter((u) => !passed.includes(u)), 'swap', (w) => ({
@@ -243,8 +260,9 @@ async function asker(deps: Deps, caller: Caller | null, data: unknown) {
 /**
  * 請人代 (#92): `data` names the service, the day and the duty of the
  * caller's. Asks everyone on the duty's list free that day ([coverAsked]),
- * at once or at 7:00 after a night. Returns how many; none asked fails
- * (detail `nobodyToAsk`), and nothing is kept.
+ * at once or at 7:00 after a night. Returns how many; with none to ask,
+ * the leads and the others serving that day hear the caller cannot
+ * ([sendRequest]), and three days before nobody hears it again.
  */
 export async function askCover(deps: Deps & PushDeps, caller: Caller | null, data: unknown) {
   const a = await asker(deps, caller, data);
@@ -262,8 +280,7 @@ export async function askCover(deps: Deps & PushDeps, caller: Caller | null, dat
     a.caller.uid,
     Object.fromEntries(unavailable.docs.map((d) => [d.id, d.get('spans') as Spans | undefined ?? []])),
   );
-  if (asked.length === 0) fail('failed-precondition', 'unknown', 'nobodyToAsk');
-  const ref = await a.create({ kind: 'cover', asked, passed: [], nudged: false });
+  const ref = await a.create({ kind: 'cover', asked, passed: [], nudged: asked.length === 0 });
   await sendOrHold(deps, a.church, ref);
   return { id: ref.id, asked: asked.length };
 }

@@ -6274,17 +6274,23 @@ abstract class L10n {
   /// **'這個請求已經結束了'**
   String get errSwapClosed;
 
-  /// No description provided for @errNobodyToAsk.
-  ///
-  /// In zh, this message translates to:
-  /// **'名單上那天沒有其他有空的同工，請找負責人'**
-  String get errNobodyToAsk;
-
   /// At the end of my duty's row on a roster: a request of mine is out (#92)
   ///
   /// In zh, this message translates to:
   /// **'已請人代'**
   String get swapOutCover;
+
+  /// At the end of my duty's row: nobody on the list could be asked, so the leads and those serving that day were told (#92)
+  ///
+  /// In zh, this message translates to:
+  /// **'已告知'**
+  String get swapOutTold;
+
+  /// No description provided for @swapToldCover.
+  ///
+  /// In zh, this message translates to:
+  /// **'已告訴負責人和當天的同工'**
+  String get swapToldCover;
 
   /// No description provided for @swapOutSwap.
   ///

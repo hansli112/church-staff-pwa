@@ -146,6 +146,8 @@ export interface Words {
   covered(day: string, line: string, from: string, taker: string): string;
   swapped(line: string, from: string, fromDay: string, to: string, toDay: string): string;
   uncovered(day: string, line: string): string;
+  /** To the leads and the others serving that day: [name] cannot serve and nobody on the list could be asked. */
+  cannotServe(day: string, line: string, name: string): string;
 
   /** The church page before the app starts (churchPage.ts). */
   appName: string;
@@ -242,6 +244,7 @@ const zhHant: Words = {
   covered: (day, line, from, taker) => `${day}${line}：「${from}」→「${taker}」`,
   swapped: (line, from, fromDay, to, toDay) => `${line}：「${from}」${fromDay}和「${to}」${toDay}交換了`,
   uncovered: (day, line) => `${day}${line}還沒人代`,
+  cannotServe: (day, line, name) => `${day}${line}：「${name}」不行`,
   appName: '馬大別忙',
   supportItem: '支持馬大別忙的雲端費用',
   description:
@@ -302,6 +305,7 @@ const zhHans: Words = {
   covered: (day, line, from, taker) => `${day}${line}：“${from}”→“${taker}”`,
   swapped: (line, from, fromDay, to, toDay) => `${line}：“${from}”${fromDay}和“${to}”${toDay}交换了`,
   uncovered: (day, line) => `${day}${line}还没人代`,
+  cannotServe: (day, line, name) => `${day}${line}：“${name}”不行`,
   appName: '马大别忙',
   supportItem: '支持马大别忙的云端费用',
   description:
@@ -365,6 +369,7 @@ const en: Words = {
   covered: (day, line, from, taker) => `${line} on ${day}: ${from} → ${taker}`,
   swapped: (line, from, fromDay, to, toDay) => `${line}: ${from} (${fromDay}) and ${to} (${toDay}) swapped`,
   uncovered: (day, line) => `Nobody has covered ${line} on ${day} yet`,
+  cannotServe: (day, line, name) => `${line} on ${day}: ${name} can't make it`,
   appName: 'Martha, sit',
   supportItem: 'Support for the server costs of Martha, sit',
   description:
@@ -426,6 +431,7 @@ const ja: Words = {
   covered: (day, line, from, taker) => `${day}の${line}：${from} → ${taker}`,
   swapped: (line, from, fromDay, to, toDay) => `${line}：${from}（${fromDay}）と${to}（${toDay}）が交換しました`,
   uncovered: (day, line) => `${day}の${line}はまだ代わりが見つかっていません`,
+  cannotServe: (day, line, name) => `${day}の${line}：${name}さんは都合がつきません`,
   appName: 'マルタ、ひと休み',
   supportItem: 'Martha, sit サーバー費用の応援',
   description: '「マルタ、マルタ、あなたは多くのことに思い悩み、心を乱している。しかし、必要なことはただ一つだけである。マリアは良い方を選んだ。それを取り上げてはならない。」（ルカによる福音書 10:41–42）',
@@ -487,6 +493,7 @@ const ko: Words = {
   covered: (day, line, from, taker) => `${day} ${line}: ${from} → ${taker}`,
   swapped: (line, from, fromDay, to, toDay) => `${line}: ${from}(${fromDay})와 ${to}(${toDay})가 교환했어요`,
   uncovered: (day, line) => `${day} ${line}은(는) 아직 대신할 사람이 없어요`,
+  cannotServe: (day, line, name) => `${day} ${line}: ${name} 님이 못 하게 됐어요`,
   appName: '마르다의 쉼표',
   supportItem: '마르다의 쉼표 서버 비용 후원',
   description: '마르다야 마르다야 네가 많은 일로 염려하고 근심하나 몇 가지만 하든지 혹은 한 가지만이라도 족하니라 마리아는 이 좋은 편을 택하였으니 빼앗기지 아니하리라 (누가복음 10:41–42)',

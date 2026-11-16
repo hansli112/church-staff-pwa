@@ -31,12 +31,24 @@ SwapRequest? myOpenAsk(WidgetRef ref, Roster roster, String duty) =>
         .where((r) => r.rosterId == roster.id && r.duty == duty)
         .firstOrNull;
 
-/// How my open request [r] stands: no one has it yet.
-String myOpenAskLabel(L10n l10n, SwapRequest r) =>
-    r.kind == SwapKind.cover ? l10n.swapPendingCover : l10n.swapPendingSwap(r.toName ?? '');
+/// How my open request [r] stands: no one has it yet, or, with nobody on
+/// the list to ask, the leads and those serving that day were told.
+String myOpenAskLabel(L10n l10n, SwapRequest r) => switch (r.kind) {
+  SwapKind.cover when r.asked.isEmpty => l10n.swapToldCover,
+  SwapKind.cover => l10n.swapPendingCover,
+  SwapKind.swap => l10n.swapPendingSwap(r.toName ?? ''),
+};
+
+/// [r] said at the end of my duty's row on its roster.
+String myOpenAskTag(L10n l10n, SwapRequest r) => switch (r.kind) {
+  SwapKind.cover when r.asked.isEmpty => l10n.swapOutTold,
+  SwapKind.cover => l10n.swapOutCover,
+  SwapKind.swap => l10n.swapOutSwap,
+};
 
 /// 請人代 for my [duty] on [roster], once I say so: asks, and says how
-/// many were asked.
+/// many were asked, or that the leads and those serving that day were told
+/// when nobody could be.
 Future<void> askForCover(BuildContext context, WidgetRef ref, Roster roster, String duty) async {
   final l10n = L10n.of(context);
   final ok = await askChoice(
@@ -52,7 +64,9 @@ Future<void> askForCover(BuildContext context, WidgetRef ref, Roster roster, Str
     final asked = await ref.churchData.askCover(roster, duty);
     telemetry.logEvent('swap_ask', {'kind': 'cover'});
     Haptics.success();
-    if (context.mounted) showToast(context, L10n.of(context).swapAskedCover(asked));
+    if (!context.mounted) return;
+    final l10n = L10n.of(context);
+    showToast(context, asked == 0 ? l10n.swapToldCover : l10n.swapAskedCover(asked));
   });
 }
 

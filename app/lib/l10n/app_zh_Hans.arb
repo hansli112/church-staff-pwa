@@ -1060,7 +1060,8 @@
   "swapStatusVoided": "这个请求已经不算了：事奉表改过，或日子已经过了",
   "swapStatusDeclined": "你说了不方便",
   "errSwapClosed": "这个请求已经结束了",
-  "errNobodyToAsk": "名单上那天没有其他有空的同工，请找负责人",
   "swapOutCover": "已请人代",
+  "swapOutTold": "已告知",
+  "swapToldCover": "已告诉负责人和当天的同工",
   "swapOutSwap": "已请交换"
 }

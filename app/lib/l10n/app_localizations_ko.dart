@@ -3565,10 +3565,13 @@ class L10nKo extends L10n {
   String get errSwapClosed => '이 요청은 이미 끝났어요';
 
   @override
-  String get errNobodyToAsk => '그날 시간이 되는 명단의 다른 멤버가 없어요. 리더에게 문의하세요.';
+  String get swapOutCover => '대신 봉사 요청 중';
 
   @override
-  String get swapOutCover => '대신 봉사 요청 중';
+  String get swapOutTold => '알림 보냄';
+
+  @override
+  String get swapToldCover => '리더와 그날 멤버에게 알렸어요';
 
   @override
   String get swapOutSwap => '교환 요청 중';

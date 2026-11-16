@@ -3770,10 +3770,13 @@ class L10nEn extends L10n {
   String get errSwapClosed => 'This request has closed';
 
   @override
-  String get errNobodyToAsk => 'Nobody else on the list is free that day; ask your lead';
+  String get swapOutCover => 'Cover asked';
 
   @override
-  String get swapOutCover => 'Cover asked';
+  String get swapOutTold => 'Told';
+
+  @override
+  String get swapToldCover => 'Told the leads and the team that day';
 
   @override
   String get swapOutSwap => 'Swap asked';

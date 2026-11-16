@@ -3559,10 +3559,13 @@ class L10nZh extends L10n {
   String get errSwapClosed => '這個請求已經結束了';
 
   @override
-  String get errNobodyToAsk => '名單上那天沒有其他有空的同工，請找負責人';
+  String get swapOutCover => '已請人代';
 
   @override
-  String get swapOutCover => '已請人代';
+  String get swapOutTold => '已告知';
+
+  @override
+  String get swapToldCover => '已告訴負責人和當天的同工';
 
   @override
   String get swapOutSwap => '已請交換';
@@ -7123,10 +7126,13 @@ class L10nZhHans extends L10nZh {
   String get errSwapClosed => '这个请求已经结束了';
 
   @override
-  String get errNobodyToAsk => '名单上那天没有其他有空的同工，请找负责人';
+  String get swapOutCover => '已请人代';
 
   @override
-  String get swapOutCover => '已请人代';
+  String get swapOutTold => '已告知';
+
+  @override
+  String get swapToldCover => '已告诉负责人和当天的同工';
 
   @override
   String get swapOutSwap => '已请交换';
