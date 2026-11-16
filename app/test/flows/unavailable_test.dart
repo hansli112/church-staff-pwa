@@ -169,7 +169,7 @@ void main() {
     await tester.tap(find.text('李美玉').last);
     await settle(tester);
     expect(peopleOn(b, 11, '司琴'), ['李美玉'], reason: 'still to be picked');
-    expect(find.text('已更新司琴・李美玉這天不行'), findsOneWidget);
+    expect(find.text('已更新司琴 · 李美玉這天不行'), findsOneWidget);
   });
 
   testWidgets("a day's own picker says so too, opened first thing", (tester) async {

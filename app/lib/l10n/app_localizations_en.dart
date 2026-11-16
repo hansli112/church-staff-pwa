@@ -668,11 +668,11 @@ class L10nEn extends L10n {
   String get identityPastor => 'Pastor';
 
   @override
-  String get identityPastorChurch => 'Pastor · Whole church';
+  String get identityPastorChurch => 'Whole church pastor';
 
   @override
   String identityPastorOf(String services) {
-    return 'Pastor · $services';
+    return '$services pastor';
   }
 
   @override
@@ -2118,8 +2118,13 @@ class L10nEn extends L10n {
   }
 
   @override
+  String claimSmallGroups(String groups) {
+    return 'Small groups: $groups';
+  }
+
+  @override
   String claimServe(String service, String duty) {
-    return '$service · $duty';
+    return '$service: $duty';
   }
 
   @override

@@ -652,11 +652,11 @@ class L10nKo extends L10n {
   String get identityPastor => '목회자';
 
   @override
-  String get identityPastorChurch => '목회자 · 교회 전체';
+  String get identityPastorChurch => '교회 전체 목회자';
 
   @override
   String identityPastorOf(String services) {
-    return '목회자 · $services';
+    return '$services 목회자';
   }
 
   @override
@@ -2001,8 +2001,13 @@ class L10nKo extends L10n {
   }
 
   @override
+  String claimSmallGroups(String groups) {
+    return '소그룹: $groups';
+  }
+
+  @override
   String claimServe(String service, String duty) {
-    return '$service · $duty';
+    return '$service: $duty';
   }
 
   @override

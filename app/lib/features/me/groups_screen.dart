@@ -124,7 +124,7 @@ String _newMinistryId(List<String> taken) {
 }
 
 /// Under a 事工 in 聚會與事工: who leads it and the duties it leads, as
-/// 「芳伶・敬拜、Vocal、司琴、鼓」; null when it has neither.
+/// 「芳伶 · 敬拜、Vocal、司琴、鼓」; null when it has neither.
 String? ministryLine(L10n l10n, Ministry ministry, List<Service> services, List<Member> members) {
   final leads = [
     for (final m in members)
@@ -1058,7 +1058,7 @@ class _MinistryDuties extends ConsumerWidget {
         if (!admin)
           for (final d in duties)
             ListRow(
-              title: places > 1 ? '${d.service.name}${l10n.dotSeparator}${d.duty}' : d.duty,
+              title: places > 1 ? l10n.claimServe(d.service.name, d.duty) : d.duty,
               value: dutyPeopleLabel(ref, l10n, d.service.id, d.duty),
               onTap: () => context.push(dutyPage(d.service.id, d.duty)),
             ),

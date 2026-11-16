@@ -57,7 +57,7 @@ void main() {
     await tapText(tester, '服事表上已經有你了嗎？');
     expect(findShown('服事表上哪一位是你？'), findsOneWidget);
     expect(findShownContaining('喜樂小組'), findsOneWidget, reason: 'their 小組, to know them by');
-    expect(findShownContaining('主日崇拜・招待'), findsOneWidget);
+    expect(findShownContaining('主日崇拜：招待'), findsOneWidget);
     await tapText(tester, '王小明');
     expect(find.text('你是「王小明」嗎？'), findsOneWidget);
     expect(findShownContaining('管理員確認後，「王小明」的服事和所屬聚會就會接過來'), findsOneWidget);
@@ -87,7 +87,7 @@ void main() {
     await pumpApp(tester, b);
     await tapText(tester, '服事表上已經有你了嗎？');
     expect(
-      find.byWidgetPredicate((w) => w is BalancedText && w.text == '喜樂小組\n主日崇拜・招待、司會\n青年崇拜・司會'),
+      find.byWidgetPredicate((w) => w is BalancedText && w.text == '小組：喜樂小組\n主日崇拜：招待、司會\n青年崇拜：司會'),
       findsOneWidget,
     );
   });

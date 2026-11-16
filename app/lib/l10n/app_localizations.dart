@@ -1267,13 +1267,13 @@ abstract class L10n {
   /// A pastor of the whole church, as a row on a member's page
   ///
   /// In zh, this message translates to:
-  /// **'牧者 · 全教會'**
+  /// **'全教會 牧者'**
   String get identityPastorChurch;
 
   /// A pastor of some services; services is their names joined
   ///
   /// In zh, this message translates to:
-  /// **'牧者 · {services}'**
+  /// **'{services} 牧者'**
   String identityPastorOf(String services);
 
   /// A service's or ministry's lead, e.g. 敬拜團 負責人
@@ -3670,10 +3670,16 @@ abstract class L10n {
   /// **'是的話，「{name}」的服事和所屬聚會都會接過來'**
   String claimByNameBody(String name);
 
+  /// Their 小組 on a line of their own, above what they serve, so 小組 named after people do not read as people
+  ///
+  /// In zh, this message translates to:
+  /// **'小組：{groups}'**
+  String claimSmallGroups(String groups);
+
   /// No description provided for @claimServe.
   ///
   /// In zh, this message translates to:
-  /// **'{service}・{duty}'**
+  /// **'{service}：{duty}'**
   String claimServe(String service, String duty);
 
   /// No description provided for @claimByNameYes.
@@ -6007,7 +6013,7 @@ abstract class L10n {
   /// Toast after picking someone who marked the day as one they can't serve
   ///
   /// In zh, this message translates to:
-  /// **'已更新{duty}・{names}這天不行'**
+  /// **'已更新{duty} · {names}這天不行'**
   String dutyUpdatedUnavailable(String duty, String names);
 
   /// Menu on 安排服事 (#91): pushes the people on the lists to mark the days they can't serve

@@ -8,15 +8,15 @@ import '../../l10n/app_localizations.dart';
 
 /// What one of the 同工 without an account is known by, a line each:
 /// their 小組, then each service with what they serve there,
-/// 「喜樂小組、信實小組」「主日崇拜・招待、司琴」. One line of them all
+/// 「小組：喜樂、信實」「主日崇拜：招待、司琴」. One line of them all
 /// read as a paragraph.
 String noAccountDetails(L10n l10n, PendingMember p, ServiceSettings? services, List<SmallGroupDetails> smallGroups) {
   final groups = p.asMember(smallGroups).smallGroups;
   return [
-    [
+    _smallGroupsLine(l10n, [
       for (final g in smallGroups)
         if (groups.contains(g.id)) g.name,
-    ].join(l10n.listSeparator),
+    ]),
     for (final z in p.zones)
       if (services?.byId(z.serviceType)?.name case final service?)
         z.duties.isEmpty ? service : l10n.claimServe(service, z.duties.join(l10n.listSeparator)),
@@ -24,17 +24,22 @@ String noAccountDetails(L10n l10n, PendingMember p, ServiceSettings? services, L
 }
 
 /// The same for one a member may be: their 小組, then each service once
-/// with the duties the backend gave, 「主日崇拜・招待、司會」.
+/// with the duties the backend gave, 「主日崇拜：招待、司會」.
 String candidateDetails(L10n l10n, ClaimCandidate c) {
   final duties = <String, Set<String>>{};
   for (final s in c.serves) {
     (duties[s.service] ??= {}).add(s.duty);
   }
   return [
-    c.smallGroups.join(l10n.listSeparator),
+    _smallGroupsLine(l10n, c.smallGroups),
     for (final MapEntry(key: service, value: d) in duties.entries) l10n.claimServe(service, d.join(l10n.listSeparator)),
   ].where((line) => line.isNotEmpty).join('\n');
 }
+
+/// 「小組：保羅、信實」, said so: 小組 are often named after people. Empty
+/// with none.
+String _smallGroupsLine(L10n l10n, List<String> names) =>
+    names.isEmpty ? '' : l10n.claimSmallGroups(names.join(l10n.listSeparator));
 
 /// A sheet headed [title] to pick one of [people] (同工 without an
 /// account): those named like [name] first (the same name, then one inside

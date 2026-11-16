@@ -158,8 +158,8 @@ class _PendingClaimsCardState extends ConsumerState<PendingClaimsCard> {
   }
 }
 
-/// A few of their duties to know them by: 「11/8　主日崇拜・招待」, the days
-/// in a column of their own; or with no days, 「主日崇拜・招待」.
+/// A few of their duties to know them by: 「11/8　主日崇拜：招待」, the days
+/// in a column of their own; or with no days, 「主日崇拜：招待」.
 class _Serves extends StatelessWidget {
   const _Serves(this.serves);
 

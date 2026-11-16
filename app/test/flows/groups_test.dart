@@ -159,8 +159,8 @@ void main() {
       findShown('李美玉、陳志豪都可以排主日崇拜、活動的司琴、司會；青年崇拜的司會，也可以改這幾項的名單'),
       findsOneWidget,
     );
-    expect(find.text('主日崇拜 · 司會'), findsOneWidget, reason: 'in more than one service: named with it');
-    expect(find.text('青年崇拜 · 司會'), findsOneWidget);
+    expect(find.text('主日崇拜：司會'), findsOneWidget, reason: 'in more than one service: named with it');
+    expect(find.text('青年崇拜：司會'), findsOneWidget);
   });
 
   testWidgets("a 事工's 負責人 puts anyone on the list of its duty, who becomes the service's 同工 (#94)", (tester) async {

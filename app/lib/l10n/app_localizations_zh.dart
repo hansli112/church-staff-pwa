@@ -651,11 +651,11 @@ class L10nZh extends L10n {
   String get identityPastor => '牧者';
 
   @override
-  String get identityPastorChurch => '牧者 · 全教會';
+  String get identityPastorChurch => '全教會 牧者';
 
   @override
   String identityPastorOf(String services) {
-    return '牧者 · $services';
+    return '$services 牧者';
   }
 
   @override
@@ -1997,8 +1997,13 @@ class L10nZh extends L10n {
   }
 
   @override
+  String claimSmallGroups(String groups) {
+    return '小組：$groups';
+  }
+
+  @override
   String claimServe(String service, String duty) {
-    return '$service・$duty';
+    return '$service：$duty';
   }
 
   @override
@@ -3395,7 +3400,7 @@ class L10nZh extends L10n {
 
   @override
   String dutyUpdatedUnavailable(String duty, String names) {
-    return '已更新$duty・$names這天不行';
+    return '已更新$duty · $names這天不行';
   }
 
   @override
@@ -4210,11 +4215,11 @@ class L10nZhHans extends L10nZh {
   String get identityPastor => '牧者';
 
   @override
-  String get identityPastorChurch => '牧者 · 全教会';
+  String get identityPastorChurch => '全教会 牧者';
 
   @override
   String identityPastorOf(String services) {
-    return '牧者 · $services';
+    return '$services 牧者';
   }
 
   @override
@@ -5556,8 +5561,13 @@ class L10nZhHans extends L10nZh {
   }
 
   @override
+  String claimSmallGroups(String groups) {
+    return '小组：$groups';
+  }
+
+  @override
   String claimServe(String service, String duty) {
-    return '$service・$duty';
+    return '$service：$duty';
   }
 
   @override
@@ -6954,7 +6964,7 @@ class L10nZhHans extends L10nZh {
 
   @override
   String dutyUpdatedUnavailable(String duty, String names) {
-    return '已更新$duty・$names这天不行';
+    return '已更新$duty · $names这天不行';
   }
 
   @override

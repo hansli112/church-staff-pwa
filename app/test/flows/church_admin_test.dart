@@ -60,7 +60,7 @@ void main() {
       await tapText(tester, '牧者');
       await tapText(tester, '青年崇拜');
       expect(b.members['grace']!['mei']!.leadTypes, ['youth']);
-      expect(find.text('牧者 · 青年崇拜'), findsOneWidget);
+      expect(find.text('青年崇拜 牧者'), findsOneWidget);
       await tapText(tester, '再加一個');
       await tapText(tester, '牧者');
       await tapText(tester, '全教會');

@@ -48,7 +48,7 @@ String identityCan(
   };
 }
 
-/// [member]'s 身分 in a line, e.g. 「牧者 · 全教會、敬拜團 負責人」; empty for a
+/// [member]'s 身分 in a line, e.g. 「全教會 牧者、敬拜團 負責人」; empty for a
 /// plain 同工.
 String identitiesLine(
   L10n l10n,

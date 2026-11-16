@@ -136,6 +136,7 @@ const _startupKeys = {
   'claimByNameBody',
   'claimByNameYes',
   'claimByNameNo',
+  'claimSmallGroups',
   'claimServe',
   'claimJoin',
   'claimDecline',

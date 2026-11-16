@@ -182,7 +182,7 @@ void main() {
       await pumpApp(tester, b);
       expect(findShown('服事表上的「黃鎮台」是你嗎？'), findsOneWidget);
       expect(findShown('10/18'), findsOneWidget, reason: 'a day of theirs to know them by');
-      expect(findShown('主日崇拜・招待'), findsOneWidget);
+      expect(findShown('主日崇拜：招待'), findsOneWidget);
       expect(findShown('是的話，「黃鎮台」的服事和所屬聚會都會接過來'), findsOneWidget);
       await tapText(tester, '是我');
 
@@ -197,7 +197,7 @@ void main() {
       final b = joinedByInvite();
       b.pendingRosterIds['grace']!['old-huang'] = [];
       await pumpApp(tester, b);
-      expect(findShown('主日崇拜・招待'), findsOneWidget);
+      expect(findShown('主日崇拜：招待'), findsOneWidget);
     });
 
     testWidgets('no keeps it for the admin, and does not ask again on this device', (tester) async {
@@ -272,7 +272,7 @@ void main() {
     await tapText(tester, '李美玉');
     expect(find.text('合併「李美玉」？'), findsOneWidget);
     expect(findShownContaining('「李美玉」的服事、聚會和小組會接到「美玉」'), findsOneWidget);
-    expect(findShownContaining('主日崇拜・司琴'), findsOneWidget, reason: 'what they serve, to be sure of them');
+    expect(findShownContaining('主日崇拜：司琴'), findsOneWidget, reason: 'what they serve, to be sure of them');
     b.mergeHeld = Completer();
     await tapText(tester, '合併');
     expect(find.text('儲存中…'), findsOneWidget, reason: 'a merge takes seconds: it shows it is on its way');
@@ -315,7 +315,7 @@ void main() {
     await tapText(tester, '李美玉');
     expect(
       find.byWidgetPredicate(
-        (w) => w is BalancedText && w.text.startsWith('信實小組、喜樂小組\n主日崇拜・司琴、招待\n青年崇拜・司會\n\n'),
+        (w) => w is BalancedText && w.text.startsWith('小組：信實小組、喜樂小組\n主日崇拜：司琴、招待\n青年崇拜：司會\n\n'),
       ),
       findsOneWidget,
     );
@@ -429,7 +429,7 @@ void main() {
       expect(find.text('選一位沒有帳號的同工'), findsOneWidget);
       expect(tester.getTopLeft(findShown('王小明')).dy, lessThan(tester.getTopLeft(findShown('陳大華')).dy));
       expect(findShownContaining('喜樂小組'), findsOneWidget);
-      expect(findShownContaining('主日崇拜・招待'), findsOneWidget);
+      expect(findShownContaining('主日崇拜：招待'), findsOneWidget);
     });
 
     testWidgets('the list can be searched', (tester) async {

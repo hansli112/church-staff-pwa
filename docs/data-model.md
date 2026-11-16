@@ -91,8 +91,8 @@ App 與 Functions 各寫一次的教會資料規則也一樣：新教會的預�
 | 身分（`identities` 裡的一項） | 存法 | 能做什麼 |
 |---|---|---|
 | 管理員 | `{kind: 'admin'}`，`role: 'admin'` | 全部 |
-| 牧者 · 全教會 | `{kind: 'pastor'}`，`role: 'admin'` | 等於管理員 |
-| 牧者 · 某幾個聚會 | `{kind: 'pastor', services: [...]}`，那幾個進 `leadTypes` | 等於那幾個聚會的負責人 |
+| 全教會 牧者 | `{kind: 'pastor'}`，`role: 'admin'` | 等於管理員 |
+| 某幾個聚會的 牧者（「主日崇拜、青年崇拜 牧者」） | `{kind: 'pastor', services: [...]}`，那幾個進 `leadTypes` | 等於那幾個聚會的負責人 |
 | 行政 | `{kind: 'office'}`，`groups` 是 `roster-editors` 和 `calendar-editors` | 排所有服事表（含活動的）、改所有活動；不能管同工和設定 |
 | 聚會負責人 | `{kind: 'lead', service}`，進 `leadTypes` | 排那個聚會的服事表、加入和移出它的同工、改它每個服事項目的名單 |
 | 事工負責人 | `{kind: 'lead', ministry}`，進 `leadMinistries` | 在任何聚會和活動排那個事工連到的服事項目（經 `editLedDuties`）、改這些服事項目的名單（#94） |
