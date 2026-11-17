@@ -3776,7 +3776,7 @@ class L10nEn extends L10n {
   String get swapOutTold => 'Can\'t make it';
 
   @override
-  String get swapToldCover => 'Told the leads and the team that day you can\'t make it';
+  String get swapToldCover => 'Told the leads and team you can\'t make it';
 
   @override
   String get swapOutSwap => 'Swap asked';

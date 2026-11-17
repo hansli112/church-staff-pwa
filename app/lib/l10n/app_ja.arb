@@ -1062,6 +1062,6 @@
   "errSwapClosed": "この依頼はもう終わっています",
   "swapOutCover": "代わりを依頼中",
   "swapOutTold": "行けないと伝えた",
-  "swapToldCover": "リーダーとその日のメンバーに、この日は行けないと伝えました",
+  "swapToldCover": "リーダーとメンバーに行けないと伝えました",
   "swapOutSwap": "交換を依頼中"
 }

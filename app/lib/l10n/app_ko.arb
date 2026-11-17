@@ -1062,6 +1062,6 @@
   "errSwapClosed": "이 요청은 이미 끝났어요",
   "swapOutCover": "대신 봉사 요청 중",
   "swapOutTold": "못 간다고 알림",
-  "swapToldCover": "리더와 그날 멤버에게 이날 못 간다고 알렸어요",
+  "swapToldCover": "리더와 멤버에게 못 간다고 알렸어요",
   "swapOutSwap": "교환 요청 중"
 }

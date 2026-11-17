@@ -1062,6 +1062,6 @@
   "errSwapClosed": "This request has closed",
   "swapOutCover": "Cover asked",
   "swapOutTold": "Can't make it",
-  "swapToldCover": "Told the leads and the team that day you can't make it",
+  "swapToldCover": "Told the leads and team you can't make it",
   "swapOutSwap": "Swap asked"
 }

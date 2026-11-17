@@ -6289,7 +6289,7 @@ abstract class L10n {
   /// No description provided for @swapToldCover.
   ///
   /// In zh, this message translates to:
-  /// **'已告訴負責人和當天的同工：你這天不行'**
+  /// **'已告訴負責人和同工你不行'**
   String get swapToldCover;
 
   /// No description provided for @swapOutSwap.

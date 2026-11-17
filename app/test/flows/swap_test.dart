@@ -120,12 +120,12 @@ void main() {
     await settle(tester);
     await tester.tap(find.text('請人代'));
     await settle(tester);
-    expect(find.text('已告訴負責人和當天的同工：你這天不行'), findsNWidgets(2), reason: 'the toast, and my row');
+    expect(find.text('已告訴負責人和同工你不行'), findsNWidgets(2), reason: 'the toast, and my row');
     final r = requests(b).single;
     expect((r.kind, r.asked.length, r.isOpen), (SwapKind.cover, 0, true));
 
     expect(find.text('已說不行'), findsOneWidget, reason: 'said on the row');
-    expect(onMine('司琴', '已告訴負責人和當天的同工：你這天不行'), findsOneWidget);
+    expect(onMine('司琴', '已告訴負責人和同工你不行'), findsOneWidget);
     await tester.tap(onMine('司琴', '收回'));
     await settle(tester);
     expect(requests(b).single.status, SwapStatus.withdrawn);
