@@ -3566,10 +3566,10 @@ class L10nJa extends L10n {
   String get swapOutCover => '代わりを依頼中';
 
   @override
-  String get swapOutTold => '伝達済み';
+  String get swapOutTold => '行けないと伝えた';
 
   @override
-  String get swapToldCover => 'リーダーとその日のメンバーに伝えました';
+  String get swapToldCover => 'リーダーとその日のメンバーに、この日は行けないと伝えました';
 
   @override
   String get swapOutSwap => '交換を依頼中';

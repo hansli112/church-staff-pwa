@@ -1061,7 +1061,7 @@
   "swapStatusDeclined": "都合が悪いと返事しました",
   "errSwapClosed": "この依頼はもう終わっています",
   "swapOutCover": "代わりを依頼中",
-  "swapOutTold": "伝達済み",
-  "swapToldCover": "リーダーとその日のメンバーに伝えました",
+  "swapOutTold": "行けないと伝えた",
+  "swapToldCover": "リーダーとその日のメンバーに、この日は行けないと伝えました",
   "swapOutSwap": "交換を依頼中"
 }

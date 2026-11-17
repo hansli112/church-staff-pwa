@@ -3568,10 +3568,10 @@ class L10nKo extends L10n {
   String get swapOutCover => '대신 봉사 요청 중';
 
   @override
-  String get swapOutTold => '알림 보냄';
+  String get swapOutTold => '못 간다고 알림';
 
   @override
-  String get swapToldCover => '리더와 그날 멤버에게 알렸어요';
+  String get swapToldCover => '리더와 그날 멤버에게 이날 못 간다고 알렸어요';
 
   @override
   String get swapOutSwap => '교환 요청 중';

@@ -3562,10 +3562,10 @@ class L10nZh extends L10n {
   String get swapOutCover => '已請人代';
 
   @override
-  String get swapOutTold => '已告知';
+  String get swapOutTold => '已說不行';
 
   @override
-  String get swapToldCover => '已告訴負責人和當天的同工';
+  String get swapToldCover => '已告訴負責人和當天的同工：你這天不行';
 
   @override
   String get swapOutSwap => '已請交換';
@@ -7129,10 +7129,10 @@ class L10nZhHans extends L10nZh {
   String get swapOutCover => '已请人代';
 
   @override
-  String get swapOutTold => '已告知';
+  String get swapOutTold => '已说不行';
 
   @override
-  String get swapToldCover => '已告诉负责人和当天的同工';
+  String get swapToldCover => '已告诉负责人和当天的同工：你这天不行';
 
   @override
   String get swapOutSwap => '已请交换';
