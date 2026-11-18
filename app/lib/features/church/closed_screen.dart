@@ -7,9 +7,9 @@ import '../../core/design/tokens.dart';
 import '../../domain/models.dart';
 import '../../l10n/app_localizations.dart';
 import '../../state/providers.dart';
-import '../../state/session.dart';
 import '../common/errors.dart';
 import '../common/time_zones.dart';
+import 'account_menu.dart';
 import 'church_switcher.dart';
 import 'claims.dart';
 
@@ -67,6 +67,9 @@ class _ClosedScreenState extends ConsumerState<ClosedScreen> {
     final canRestore = restorable && (me?.isAdmin ?? false);
 
     return Scaffold(
+      extendBodyBehindAppBar: true,
+      // 登出 and 刪除帳號 under 帳號, as on the welcome page.
+      appBar: accountBar(),
       body: SafeArea(
         child: Center(
           child: ConstrainedBox(
@@ -103,11 +106,6 @@ class _ClosedScreenState extends ConsumerState<ClosedScreen> {
                   label: l10n.enterInviteCode,
                   expand: true,
                   onPressed: () => context.push('/welcome/join'),
-                ),
-                SecondaryButton(
-                  label: l10n.signOut,
-                  expand: true,
-                  onPressed: () => signOut(ref),
                 ),
               ],
             ),

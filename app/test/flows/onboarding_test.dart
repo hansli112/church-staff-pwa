@@ -145,8 +145,25 @@ void main() {
     final b = MemoryBackend(clock: testClock);
     await b.auth.registerWithEmail('小明', 'ming@example.com', 'secret123', AppLanguage.zhHant);
     await pumpApp(tester, b);
+    expect(find.text('登出'), findsNothing, reason: 'under 帳號, as on the welcome page');
+    await tester.tap(find.byTooltip('帳號'));
+    await settle(tester);
+    expect(find.text('ming@example.com'), findsWidgets, reason: 'whom I am signed in as');
     await tapText(tester, '登出');
     expect(findShown('用 email 登入'), findsOneWidget);
+  });
+
+  testWidgets('on a closed church\'s page, 登出 and 刪除帳號 are under 帳號', (tester) async {
+    final b = seededChurch();
+    b.churches['grace'] = b.churches['grace']!.copyWith(status: ChurchStatus.suspended);
+    await pumpApp(tester, b);
+    expect(findShown('〈恩典堂〉已停用'), findsOneWidget);
+    expect(find.text('登出'), findsNothing);
+    await tester.tap(find.byTooltip('帳號'));
+    await settle(tester);
+    expect(find.text('刪除帳號'), findsOneWidget);
+    await tapText(tester, '登出');
+    expect(b.auth.currentUser, isNull);
   });
 
   testWidgets('an invite opened before signing up with email opens once the email is verified', (tester) async {
@@ -213,6 +230,8 @@ void main() {
     await tester.enterText(fields.at(2), 'secret123');
     await tapText(tester, '註冊');
 
+    await tester.tap(find.byTooltip('帳號'));
+    await settle(tester);
     await tapText(tester, '刪除帳號');
     await tester.tap(find.widgetWithText(TextButton, '刪除帳號'));
     await settle(tester);

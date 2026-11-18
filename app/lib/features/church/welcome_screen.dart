@@ -3,7 +3,6 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import 'package:material_symbols_icons/symbols.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import '../../core/design/components.dart';
@@ -17,6 +16,7 @@ import '../../state/providers.dart';
 import '../../state/session.dart';
 import '../common/errors.dart';
 import '../common/time_zones.dart';
+import 'account_menu.dart';
 import 'add_to_home.dart';
 import 'church_entry_screen.dart';
 import 'church_logo.dart';
@@ -54,11 +54,7 @@ class WelcomeScreen extends ConsumerWidget {
       // 登出 and 刪除帳號 behind 帳號, in a menu from it: the page is for
       // getting into a church, and in no church there is no 設定, where
       // they are otherwise.
-      appBar: AppBar(
-        automaticallyImplyLeading: false,
-        backgroundColor: Colors.transparent,
-        actions: const [_AccountMenu()],
-      ),
+      appBar: accountBar(),
       body: SafeArea(
         child: Center(
           child: ConstrainedBox(
@@ -100,46 +96,6 @@ class WelcomeScreen extends ConsumerWidget {
     );
   }
 }
-
-/// 帳號 at the top corner: whom I am signed in as (someone here is often in
-/// the wrong account), 登出, 刪除帳號. A menu from the button, as Apple's
-/// pull-down buttons and the app's other top-bar menus.
-class _AccountMenu extends ConsumerWidget {
-  const _AccountMenu();
-
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final l10n = L10n.of(context);
-    final c = AppColors.of(context);
-    final email = ref.watch(authUserProvider.select((u) => u.value?.email ?? ''));
-    return PopupMenuButton<_AccountAction>(
-      icon: const Icon(Symbols.account_circle_rounded),
-      tooltip: l10n.account,
-      // Below the button, as it was pulled down from it.
-      position: PopupMenuPosition.under,
-      onSelected: (action) => switch (action) {
-        _AccountAction.signOut => signOut(ref),
-        _AccountAction.delete => context.push('/account'),
-      },
-      itemBuilder: (context) => [
-        if (email.isNotEmpty) ...[
-          PopupMenuItem<_AccountAction>(
-            enabled: false,
-            child: Text(email, style: AppText.footnote.copyWith(color: c.secondaryLabel)),
-          ),
-          const PopupMenuDivider(),
-        ],
-        PopupMenuItem(value: _AccountAction.signOut, child: Text(l10n.signOut)),
-        PopupMenuItem(
-          value: _AccountAction.delete,
-          child: Text(l10n.deleteAccount, style: TextStyle(color: c.destructive)),
-        ),
-      ],
-    );
-  }
-}
-
-enum _AccountAction { signOut, delete }
 
 /// 「已申請加入〈希望堂〉，等管理員允許」 on the welcome page, one row a
 /// church still waited on, opening its church URL (to take it back, say).
@@ -226,6 +182,10 @@ class _VerifyEmailScreenState extends ConsumerState<VerifyEmailScreen> with _Ver
     final c = AppColors.of(context);
     final email = ref.watch(authUserProvider.select((u) => u.value?.email ?? ''));
     return Scaffold(
+      extendBodyBehindAppBar: true,
+      // 登出 (to use another email) and 刪除帳號 under 帳號, as on the
+      // welcome page.
+      appBar: accountBar(),
       body: SafeArea(
         child: Center(
           child: ConstrainedBox(
@@ -241,14 +201,6 @@ class _VerifyEmailScreenState extends ConsumerState<VerifyEmailScreen> with _Ver
                 BalancedText(l10n.verifyEmailNoMail, style: AppText.footnote.copyWith(color: c.secondaryLabel)),
                 const SizedBox(height: Space.xl),
                 SecondaryButton(label: l10n.verifyResend, expand: true, onPressed: resend),
-                const SizedBox(height: Space.xl),
-                SecondaryButton(label: l10n.signOut, expand: true, onPressed: () => signOut(ref)),
-                SecondaryButton(
-                  label: l10n.deleteAccount,
-                  expand: true,
-                  destructive: true,
-                  onPressed: () => context.push('/account'),
-                ),
               ],
             ),
           ),
