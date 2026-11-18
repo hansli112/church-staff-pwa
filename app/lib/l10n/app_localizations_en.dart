@@ -964,9 +964,6 @@ class L10nEn extends L10n {
   String get serviceEnabled => 'Active';
 
   @override
-  String get serviceDisabledFooter => 'Inactive services won’t get new schedules';
-
-  @override
   String dutyPeopleCount(int count) {
     String _temp0 = intl.Intl.pluralLogic(
       count,
@@ -3199,6 +3196,11 @@ class L10nEn extends L10n {
 
   @override
   String get attendanceRemindNobody => 'No one to remind; contact them directly';
+
+  @override
+  String attendanceRemindSomeNobody(String names) {
+    return 'Reminded. No one to remind for $names; contact them directly.';
+  }
 
   @override
   String get attendanceTogether => 'Met together with';

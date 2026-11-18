@@ -420,7 +420,7 @@ void main() {
       await settle(tester);
       expect(find.text('10月11日 – 10月17日'), findsOneWidget);
       expect(inRow('主日崇拜', '未填'), findsOneWidget, reason: 'today, still to fill in');
-      expect(inRow('主日崇拜', '提醒'), findsNothing, reason: "today's reminder is still to come");
+      expect(find.text('提醒'), findsNothing, reason: "today's reminder is still to come");
       expect(find.textContaining('個未填'), findsNothing, reason: "today's not counted, as on 首頁");
       expect(at(inRow('主日崇拜', '未填')), lessThan(at(find.text('喜樂小組'))), reason: 'the same order every week');
       expect(arrow(Symbols.chevron_right_rounded).onPressed, isNull, reason: 'this week is the last');
@@ -487,17 +487,28 @@ void main() {
       expect(find.text('盼望小組'), findsNothing, reason: 'it meets next week');
     });
 
-    testWidgets('提醒 asks the 小組長, once a day', (tester) async {
+    testWidgets('one 提醒 beside 還有 N 個未填 asks for them all, once a day', (tester) async {
       final b = church();
+      b.attendance['grace']!['service:youth'] = const AttendanceRecord(time: MeetingTime(), fillers: ['mei']);
+      // Nobody fills it in yet.
+      b.gatherings['grace'] = {
+        'meal': Gathering(
+          id: 'meal',
+          name: '長者共餐',
+          time: MeetingTime(weekday: DateTime.wednesday, startsOn: Day(2026, 10, 7)),
+        ),
+      };
       await pumpApp(tester, b);
       await go(tester, '/me/attendance');
-      await tester.tap(inRow('喜樂小組', '提醒'));
-      await settle(tester);
-      expect(find.text('已提醒'), findsOneWidget);
+      expect(find.text('提醒'), findsOneWidget, reason: 'not one a row');
+      double right(Finder f) => tester.getTopRight(f).dx;
+      expect(right(inRow('喜樂小組', '未填')), right(inRow('主日崇拜', '120 人')), reason: '未填 lines up with the counts');
+      await tapText(tester, '提醒');
+      expect(findShown('已提醒。長者共餐沒有可以提醒的人，請直接聯絡。'), findsOneWidget);
       expect(b.attendanceReminders['grace']!['small:joy']!.told, ['hao']);
+      expect(b.attendanceReminders['grace']!['service:youth']!.told, ['mei']);
       await tester.pump(const Duration(seconds: 5));
-      await tester.tap(inRow('喜樂小組', '提醒'));
-      await settle(tester);
+      await tapText(tester, '提醒');
       expect(find.text('今天已經提醒過了'), findsOneWidget);
     });
 
@@ -528,8 +539,7 @@ void main() {
       expect(find.byType(Switch), findsNothing);
       expect(find.text('主日崇拜'), findsWidgets);
       expect(find.text('青年崇拜'), findsNothing, reason: 'not theirs');
-      await tester.tap(inRow('喜樂小組', '提醒'));
-      await settle(tester);
+      await tapText(tester, '提醒');
       expect(b.attendanceReminders['grace']!['small:joy']!.told, ['hao']);
     });
 
@@ -649,7 +659,7 @@ void main() {
       expect(at('平安小組'), lessThan(at('喜樂小組')));
     });
 
-    testWidgets('其他聚會 are dragged in order on 回報人數, and listed so', (tester) async {
+    testWidgets('其他聚會 are dragged in order on their page from 回報人數, and listed so', (tester) async {
       final b = withAttendance(seededChurch(clock: eveningOf(Day(2026, 10, 11))));
       b.gatherings['grace'] = {
         'kids': const Gathering(id: 'kids', name: '兒童學習天地'),
@@ -657,7 +667,13 @@ void main() {
       };
       await pumpApp(tester, b);
       await go(tester, '/me/attendance');
-      await tester.scrollUntilVisible(find.text('新增其他聚會'), 200, scrollable: find.byType(Scrollable).last);
+      expect(
+        find.text('兒童學習天地'),
+        findsNothing,
+        reason: 'neither meets this week: not on the week, nor listed below it',
+      );
+      await tester.scrollUntilVisible(find.text('其他聚會'), 200, scrollable: find.byType(Scrollable).last);
+      await tapText(tester, '其他聚會');
       double at(String text) => tester.getTopLeft(find.text(text).last).dy;
       expect(at('兒童學習天地'), lessThan(at('長者共餐')));
       await dragRow(tester, '長者共餐', -1);
@@ -761,10 +777,10 @@ void main() {
       };
       await pumpApp(tester, b);
       await go(tester, '/home');
-      expect(inRow('聚會人數', '還有 2 個未填'), findsOneWidget, reason: '喜樂小組 on 10/2 and 10/9');
-      await tapText(tester, '聚會人數');
-      expect(find.text('回報人數'), findsWidgets);
+      expect(inRow('回報人數', '還有 1 個未填'), findsOneWidget, reason: '喜樂小組 on 10/9: the week the page opens on');
+      await tapText(tester, '回報人數');
       expect(find.text('10月4日 – 10月10日'), findsOneWidget, reason: 'the latest week anyone filled in');
+      expect(findShown('還有 1 個未填'), findsOneWidget, reason: 'as 首頁 said');
     });
 
     testWidgets('a 小組長 sets its 聚會時間 from its 人數 page: 每月第 1、3 個週五', (tester) async {
@@ -792,7 +808,8 @@ void main() {
       final b = withAttendance(seededChurch(clock: eveningOf(Day(2026, 10, 11))));
       await pumpApp(tester, b);
       await go(tester, '/me/attendance');
-      await tester.scrollUntilVisible(find.text('新增其他聚會'), 200, scrollable: find.byType(Scrollable).last);
+      await tester.scrollUntilVisible(find.text('其他聚會'), 200, scrollable: find.byType(Scrollable).last);
+      await tapText(tester, '其他聚會');
       await tapText(tester, '新增其他聚會');
       await tester.enterText(find.byType(TextField), '長者共餐');
       await tapText(tester, '新增');
@@ -824,12 +841,11 @@ void main() {
       };
       await pumpApp(tester, b);
       await go(tester, '/me/attendance');
-      expect(find.text('其他聚會'), findsOneWidget, reason: 'its own section, after the services');
-      await tester.scrollUntilVisible(inRow('長者共餐', '每週三'), 200, scrollable: find.byType(Scrollable).last);
-      expect(inRow('長者共餐', '每週三'), findsOneWidget, reason: 'listed to set, below the week');
-      await tester.scrollUntilVisible(inRow('長者共餐', '提醒'), -200, scrollable: find.byType(Scrollable).last);
-      await tester.tap(inRow('長者共餐', '提醒'));
-      await settle(tester);
+      await scrollToShow(tester, inRow('長者共餐', '未填'));
+      expect(inRow('長者共餐', '未填'), findsOneWidget, reason: 'its own section, after the services');
+      expect(find.text('長者共餐'), findsOneWidget, reason: 'once: its settings are a page below');
+      await tester.scrollUntilVisible(find.text('提醒'), -200, scrollable: find.byType(Scrollable).last);
+      await tapText(tester, '提醒');
       expect(b.attendanceReminders['grace']!['gathering:meal']!.told, ['mei']);
     });
   });

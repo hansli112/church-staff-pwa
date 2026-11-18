@@ -184,6 +184,7 @@ class _ChurchLinkScreenState extends ConsumerState<ChurchLinkScreen> {
                 TextField(
                   controller: _title,
                   maxLength: TextLimits.linkTitle,
+                  buildCounter: nearLimitCounter,
                   textInputAction: TextInputAction.next,
                   decoration: InputDecoration(labelText: l10n.churchLinkTitle, errorText: _tried ? _titleError : null),
                   onChanged: (_) => setState(() {}),
@@ -192,6 +193,7 @@ class _ChurchLinkScreenState extends ConsumerState<ChurchLinkScreen> {
                 TextField(
                   controller: _body,
                   maxLength: TextLimits.linkBody,
+                  buildCounter: nearLimitCounter,
                   minLines: 2,
                   maxLines: 4,
                   decoration: InputDecoration(labelText: l10n.churchLinkBody),

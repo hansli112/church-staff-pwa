@@ -196,20 +196,16 @@ final attendanceDueProvider = Provider.autoDispose<List<AttendanceDue>>((ref) {
   ];
 });
 
-/// For admins and 行政 on 首頁: how many meetings of the last
-/// [attendanceDueDays] days, before today, are still 未填; null until read.
+/// For admins and 行政 on 首頁: how many meetings are still 未填 in the
+/// week 回報人數 opens on, so the page says the same; null until read.
 final attendanceMissingCountProvider = Provider.autoDispose<int?>((ref) {
-  final since = ref.watch(churchProvider.select((c) => c.value?.attendanceSince));
   final me = ref.watch(meProvider).value;
-  if (since == null || me == null || !me.overseesAttendance) return 0;
-  final records = ref.watch(_overviewRecordsProvider);
-  if (records == null) return null;
-  final today = ref.watch(todayProvider);
-  return records.fold<int>(
-    0,
-    (n, r) =>
-        n + attendanceMissing(r.group, since: since, record: r.record, today: today).where((d) => d != today).length,
-  );
+  if (me == null || !me.overseesAttendance) return 0;
+  final since = ref.watch(churchProvider.select((c) => c.value?.attendanceSince));
+  if (since == null) return 0;
+  final range = ref.watch(attendanceOverviewWeeksProvider);
+  if (range == null) return null;
+  return ref.watch(attendanceOverviewProvider(range.opens))?.missing;
 });
 
 /// The Sunday of [day]'s week: 人數總覽 shows a week, Sunday to Saturday,
@@ -262,6 +258,16 @@ class AttendanceWeek {
 
   /// Whether a meeting of it is listed, filled in or not.
   bool get met => rows.any((r) => r.day != null);
+
+  /// Whether a meeting of it was filled in or is 未填: not 沒聚會 marked
+  /// ahead, for a break, nor today's still to fill in.
+  bool get reported => rows.any(
+    (r) => switch ((r.day, r.value)) {
+      (null, _) => false,
+      (_, final v?) => !v.none,
+      (final day?, null) => day != today,
+    },
+  );
 }
 
 /// A group and its 人數 filled in.
@@ -289,8 +295,8 @@ final _overviewRecordsProvider = Provider.autoDispose<List<AttendanceOf>?>((ref)
 
 /// The weeks 人數總覽 turns through (#95): from the one 回報人數 came on in,
 /// at most [attendanceWeeks] back, whose rosters are read, to this one; it
-/// opens on the latest with anything filled in, so not on a Sunday's week
-/// of nothing yet. Null until read.
+/// opens on the latest with anything filled in or 未填, so not on a
+/// Sunday's week of nothing yet. Null until read.
 final attendanceOverviewWeeksProvider = Provider.autoDispose<({Day first, Day last, Day opens})?>((ref) {
   final since = ref.watch(churchProvider.select((c) => c.value?.attendanceSince));
   final records = ref.watch(_overviewRecordsProvider);
@@ -300,11 +306,9 @@ final attendanceOverviewWeeksProvider = Provider.autoDispose<({Day first, Day la
   final back = weekOf(today.addDays(-7 * (attendanceWeeks - 1)));
   final first = weekOf(since).isBefore(back) ? back : weekOf(since);
   for (var w = last; !w.isBefore(first); w = w.addDays(-7)) {
-    final end = w.addDays(7);
-    // 沒聚會 marked ahead, for a break, is not anyone filling in.
-    bool filled(MapEntry<Day, AttendanceDay> e) =>
-        !e.key.isBefore(w) && e.key.isBefore(end) && !e.key.isAfter(today) && !e.value.none;
-    if (records.any((r) => r.record.days.entries.any(filled))) return (first: first, last: last, opens: w);
+    if (attendanceWeek(records, sunday: w, since: since, today: today).reported) {
+      return (first: first, last: last, opens: w);
+    }
   }
   return (first: first, last: last, opens: last);
 });

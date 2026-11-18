@@ -504,6 +504,7 @@ class _FillSheetState extends State<_FillSheet> {
                           TextField(
                             controller: _note,
                             maxLength: TextLimits.attendanceNote,
+                            buildCounter: nearLimitCounter,
                             decoration: InputDecoration(labelText: l10n.attendanceNote),
                           ),
                         ],
@@ -557,8 +558,8 @@ class _FillSheetState extends State<_FillSheet> {
   }
 }
 
-/// 聚會人數 on 首頁, for admins and 行政: how many meetings of the last two
-/// weeks are still 未填, opening 回報人數.
+/// 回報人數 on 首頁, for admins and 行政: how many meetings of the week it
+/// opens on are still 未填, opening it, named as the page it opens.
 class AttendanceMissingRow extends ConsumerWidget {
   const AttendanceMissingRow({super.key});
 
@@ -574,7 +575,7 @@ class AttendanceMissingRow extends ConsumerWidget {
       children: [
         ListRow(
           leading: const Icon(Symbols.groups_rounded),
-          title: l10n.attendanceHeader,
+          title: l10n.attendance,
           value: l10n.attendanceOverviewMissing(missing),
           onTap: () => context.push('/me/attendance'),
         ),

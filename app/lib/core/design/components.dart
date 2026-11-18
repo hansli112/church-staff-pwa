@@ -101,6 +101,21 @@ class SecondaryButton extends StatelessWidget {
   }
 }
 
+/// A text field's count toward its maxLength, only once it is near: an
+/// empty 0/200 under every field is text nobody needs. For buildCounter.
+Widget? nearLimitCounter(
+  BuildContext context, {
+  required int currentLength,
+  required bool isFocused,
+  required int? maxLength,
+}) {
+  if (maxLength == null || currentLength < maxLength * 0.8) return null;
+  return Text(
+    '$currentLength/$maxLength',
+    style: AppText.footnote.copyWith(color: AppColors.of(context).secondaryLabel),
+  );
+}
+
 /// A small action beside a row's text, e.g. 加為同工: neutral, since the
 /// accent is for a page's main action and for state. [semanticsLabel] is
 /// read out instead of [label] when the label alone does not say whom it
@@ -1090,6 +1105,7 @@ class _PromptDialogState extends State<_PromptDialog> {
         controller: _controller,
         autofocus: true,
         maxLength: widget.maxLength,
+        buildCounter: nearLimitCounter,
         minLines: 1,
         maxLines: widget.maxLines,
         decoration: InputDecoration(

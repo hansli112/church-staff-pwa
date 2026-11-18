@@ -52,7 +52,6 @@ class ServiceListSection extends ConsumerWidget {
 
     return ReorderableSection<Service>(
       header: l10n.servicesTitle,
-      footer: l10n.serviceDisabledFooter,
       items: list,
       keyOf: (s) => s.id,
       onReorder: save,

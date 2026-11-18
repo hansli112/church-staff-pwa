@@ -935,9 +935,6 @@ class L10nJa extends L10n {
   String get serviceEnabled => '実施中';
 
   @override
-  String get serviceDisabledFooter => '停止した集会には新しい奉仕表が作られません';
-
-  @override
   String dutyPeopleCount(int count) {
     return '$count人';
   }
@@ -3043,6 +3040,11 @@ class L10nJa extends L10n {
 
   @override
   String get attendanceRemindNobody => '知らせる人がいません。直接連絡してください';
+
+  @override
+  String attendanceRemindSomeNobody(String names) {
+    return '知らせました。$namesは知らせる人がいません。直接連絡してください。';
+  }
 
   @override
   String get attendanceTogether => '一緒に集まった小グループ';

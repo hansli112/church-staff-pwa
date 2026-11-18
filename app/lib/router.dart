@@ -264,6 +264,7 @@ final routerProvider = Provider<GoRouter>((ref) {
                     'attendance',
                     (_) => const WarmUpOnOpen(WarmUp.attendanceRemind, child: AttendanceOverviewScreen()),
                     routes: [
+                      page('gatherings', (_) => const GatheringsScreen()),
                       page(
                         'gathering/:id',
                         (s) => GroupAttendanceScreen(group: GatheringGroup(s.pathParameters['id']!)),

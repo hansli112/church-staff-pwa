@@ -936,9 +936,6 @@ class L10nKo extends L10n {
   String get serviceEnabled => '진행 중';
 
   @override
-  String get serviceDisabledFooter => '중지된 예배에는 새 봉사표가 생기지 않아요';
-
-  @override
   String dutyPeopleCount(int count) {
     return '$count명';
   }
@@ -3044,6 +3041,11 @@ class L10nKo extends L10n {
 
   @override
   String get attendanceRemindNobody => '알릴 사람이 없어요. 직접 연락해 주세요';
+
+  @override
+  String attendanceRemindSomeNobody(String names) {
+    return '알렸어요. $names에는 알릴 사람이 없어요. 직접 연락해 주세요.';
+  }
 
   @override
   String get attendanceTogether => '함께 모인 소그룹';

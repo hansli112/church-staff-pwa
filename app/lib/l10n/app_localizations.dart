@@ -1744,12 +1744,6 @@ abstract class L10n {
   /// **'啟用'**
   String get serviceEnabled;
 
-  /// No description provided for @serviceDisabledFooter.
-  ///
-  /// In zh, this message translates to:
-  /// **'停用的聚會不會再出現新的服事表'**
-  String get serviceDisabledFooter;
-
   /// Beside a duty: how many are on its list
   ///
   /// In zh, this message translates to:
@@ -5404,7 +5398,7 @@ abstract class L10n {
   /// **'都填好了'**
   String get attendanceOverviewDone;
 
-  /// Button beside a 未填 row of 人數總覽: pushes its 負責人 or 小組長
+  /// Button beside 還有 N 個未填 on 人數總覽: pushes whoever fills in each 未填
   ///
   /// In zh, this message translates to:
   /// **'提醒'**
@@ -5421,6 +5415,12 @@ abstract class L10n {
   /// In zh, this message translates to:
   /// **'沒有可以提醒的人，請直接聯絡'**
   String get attendanceRemindNobody;
+
+  /// Toast after 提醒 on 人數總覽 when some were reminded but the groups named have nobody to remind
+  ///
+  /// In zh, this message translates to:
+  /// **'已提醒。{names}沒有可以提醒的人，請直接聯絡。'**
+  String attendanceRemindSomeNobody(String names);
 
   /// Section in the fill-in sheet of a 小組 (#93): the others it met with this time
   ///

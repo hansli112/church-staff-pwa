@@ -20,12 +20,13 @@ import 'attendance.dart';
 import 'groups_screen.dart' show attendancePage;
 
 /// 回報人數, for admins and 行政, and a service's 負責人 and 牧者, theirs
-/// (#95). An admin turns it on here (#85), from today, or off. Once on, a
-/// week of 人數總覽 (#93), Sunday to Saturday, to copy into the bulletin by
-/// eye: how many are still 未填, and 提醒 beside each, not added up, as
-/// people come to more than one; each service, then its 小組, in
-/// the church's order, the 其他聚會 last. A row opens its 填寫人數, which opens the group's 人數
-/// page. Admins and 行政 list the 其他聚會 below, and add one.
+/// (#95). Once on, a week of 人數總覽 (#93), Sunday to Saturday, to copy
+/// into the bulletin by eye: how many are still 未填, with one 提醒 for
+/// them all, not added up, as people come to more than one; each service,
+/// then its 小組, in the church's order, the 其他聚會 last. A row opens its
+/// 填寫人數, which opens the group's 人數 page. Below, admins and 行政 open
+/// the 其他聚會 to set, and an admin turns it on (#85), from today, or off:
+/// with it off, that is all there is.
 class AttendanceOverviewScreen extends ConsumerStatefulWidget {
   const AttendanceOverviewScreen({super.key});
 
@@ -50,19 +51,59 @@ class _AttendanceOverviewScreenState extends ConsumerState<AttendanceOverviewScr
     final nameOf = attendanceGroupName(ref);
     final groups = ref.watch(attendanceGroupsProvider);
     final oversees = ref.watch(meProvider).value?.overseesAttendance ?? false;
-    final gatherings = ref.watch(gatheringsProvider).value ?? const <Gathering>[];
     final summary = week == null ? null : _summary(l10n, week);
     return Scaffold(
       appBar: AppBar(title: Text(l10n.attendance)),
       body: church == null
           ? const SizedBox.shrink()
-          : CustomScrollView(
-              slivers: [
-                for (final child in [
-                  if (admin)
+          : ListView(
+              padding: const EdgeInsets.only(bottom: Space.xl),
+              children: [
+                if (on && range != null && week != null) ...[
+                  _WeekBar(
+                    sunday: week.sunday,
+                    today: today,
+                    onShift: (by) => setState(() => _sunday = week.sunday.addDays(7 * by)),
+                    earlier: week.sunday.isAfter(range.first),
+                    later: week.sunday.isBefore(range.last),
+                  ),
+                  if (summary != null)
+                    Padding(
+                      padding: const EdgeInsets.fromLTRB(Space.m, 0, Space.m, Space.s),
+                      child: Wrap(
+                        alignment: WrapAlignment.center,
+                        crossAxisAlignment: WrapCrossAlignment.center,
+                        spacing: Space.s,
+                        children: [
+                          Text(
+                            summary,
+                            textAlign: TextAlign.center,
+                            style: AppText.footnote.copyWith(color: AppColors.of(context).secondaryLabel),
+                          ),
+                          if (week.missing > 0)
+                            RowButton(label: l10n.attendanceRemind, onPressed: () => _remind(context, week)),
+                        ],
+                      ),
+                    ),
+                  if (week.rows.isEmpty) ListSection(children: [ListRow(title: l10n.attendanceNoDays, chevron: false)]),
+                  for (final section in _sections(week.sections(groups)))
                     ListSection(
-                      footer: l10n.attendanceSub,
-                      children: [
+                      header: switch (section) {
+                        (service: final id?, rows: _, :final named) when named => nameOf('service:$id'),
+                        (service: null, rows: _, named: _) => l10n.gatherings,
+                        _ => null,
+                      },
+                      children: [for (final r in section.rows) _row(context, r, today, nameOf)],
+                    ),
+                ],
+                // Set once, so below the week: with it off, alone on the page.
+                if ((on && oversees) || admin)
+                  ListSection(
+                    footer: admin ? l10n.attendanceSub : null,
+                    children: [
+                      if (on && oversees)
+                        ListRow(title: l10n.gatherings, onTap: () => context.push('/me/attendance/gatherings')),
+                      if (admin)
                         SwitchRow(
                           title: l10n.attendance,
                           value: on,
@@ -74,69 +115,8 @@ class _AttendanceOverviewScreenState extends ConsumerState<AttendanceOverviewScr
                             }
                           },
                         ),
-                      ],
-                    ),
-                  if (on && range != null && week != null) ...[
-                    _WeekBar(
-                      sunday: week.sunday,
-                      today: today,
-                      onShift: (by) => setState(() => _sunday = week.sunday.addDays(7 * by)),
-                      earlier: week.sunday.isAfter(range.first),
-                      later: week.sunday.isBefore(range.last),
-                    ),
-                    if (summary != null)
-                      Padding(
-                        padding: const EdgeInsets.fromLTRB(Space.m, 0, Space.m, Space.s),
-                        child: Text(
-                          summary,
-                          textAlign: TextAlign.center,
-                          style: AppText.footnote.copyWith(color: AppColors.of(context).secondaryLabel),
-                        ),
-                      ),
-                    if (week.rows.isEmpty)
-                      ListSection(children: [ListRow(title: l10n.attendanceNoDays, chevron: false)]),
-                    for (final section in _sections(week.sections(groups)))
-                      ListSection(
-                        header: switch (section) {
-                          (service: final id?, rows: _, :final named) when named => nameOf('service:$id'),
-                          (service: null, rows: _, named: _) => l10n.gatherings,
-                          _ => null,
-                        },
-                        children: [for (final r in section.rows) _row(context, r, today, nameOf)],
-                      ),
-                  ],
-                ])
-                  SliverToBoxAdapter(child: child),
-                // The 其他聚會 themselves, to set, order or add one: one may not meet this week.
-                if (on && oversees)
-                  ReorderableSection<Gathering>(
-                    header: week?.rows.any((r) => r.group.group is GatheringGroup) ?? false ? null : l10n.gatherings,
-                    items: gatherings,
-                    keyOf: (g) => g.id,
-                    row: (g, handle) => ListRow(
-                      title: g.name,
-                      value: meetingTimeLabel(l10n, g.time),
-                      trailing: handle,
-                      chevron: true,
-                      onTap: () => context.push(attendancePage(GatheringGroup(g.id))),
-                    ),
-                    onReorder: (next) async {
-                      try {
-                        await ref.churchData.attendance.orderGatherings([for (final g in next) g.id]);
-                      } catch (e) {
-                        if (context.mounted) showToast(context, saveErrorText(l10n, e));
-                      }
-                    },
-                    after: [
-                      ListRow(
-                        title: l10n.addGathering,
-                        leading: const Icon(Symbols.add_rounded),
-                        chevron: false,
-                        onTap: () => _addGathering(context),
-                      ),
                     ],
                   ),
-                const SliverPadding(padding: EdgeInsets.only(bottom: Space.xl)),
               ],
             ),
     );
@@ -159,8 +139,7 @@ class _AttendanceOverviewScreenState extends ConsumerState<AttendanceOverviewScr
     return out;
   }
 
-  /// A meeting of [week]: its 人數, 未填 with 提醒 (today's without), or
-  /// when it next meets.
+  /// A meeting of [week]: its 人數, 未填, or when it next meets.
   Widget _row(BuildContext context, AttendanceRow r, Day today, String Function(String key) nameOf) {
     final l10n = L10n.of(context);
     return ListRow(
@@ -171,10 +150,6 @@ class _AttendanceOverviewScreenState extends ConsumerState<AttendanceOverviewScr
         null => attendanceNotYet(l10n, attendanceTimeOf(ref, r.group.group)),
       },
       value: r.day == null ? null : attendanceValue(l10n, r.value, nameOf),
-      // Today's is 未填 till filled in, but its reminder is still to come.
-      trailing: r.day != null && r.day != today && r.value == null
-          ? RowButton(label: l10n.attendanceRemind, onPressed: () => _remind(context, r))
-          : null,
       onTap: switch (r.day) {
         final day? => () => fillAttendance(context, ref, r.group, day, r.value, linksPage: true),
         null => () => context.push(attendancePage(r.group.group)),
@@ -182,8 +157,99 @@ class _AttendanceOverviewScreenState extends ConsumerState<AttendanceOverviewScr
     );
   }
 
+  /// 「還有 2 個未填」, or 都填好了; today's not counted, as on 首頁.
+  /// Nothing for a week with no meeting in it yet, nor with only today's
+  /// still to fill in.
+  String? _summary(L10n l10n, AttendanceWeek week) {
+    if (!week.met) return null;
+    if (week.missing > 0) return l10n.attendanceOverviewMissing(week.missing);
+    return week.waiting ? null : l10n.attendanceOverviewDone;
+  }
+
+  /// 提醒: whoever fills in each group 未填 in [week] (not today's) is
+  /// asked for its latest, a group once a day; then what came of it, the
+  /// groups with nobody to ask by name.
+  Future<void> _remind(BuildContext context, AttendanceWeek week) async {
+    final l10n = L10n.of(context);
+    final attendance = ref.churchData.attendance;
+    final latest = <String, ({String name, Day day})>{};
+    for (final r in week.rows) {
+      if (r.day case final day? when day != week.today && r.value == null) {
+        if (latest[r.group.group.key] case final was? when was.day.isAfter(day)) continue;
+        latest[r.group.group.key] = (name: r.group.name, day: day);
+      }
+    }
+    // Each on its own: one already reminded today does not stop the rest.
+    final results = await Future.wait([
+      for (final MapEntry(:key, :value) in latest.entries)
+        attendance
+            .remind(key, value.day)
+            .then<Object>((told) => told > 0 ? true : value.name, onError: (Object e) => e),
+    ]);
+    if (!context.mounted) return;
+    final nobody = results.whereType<String>().toList();
+    final failed = results.where((r) => r is! bool && r is! String).toList();
+    showToast(context, switch (results.contains(true)) {
+      true when nobody.isNotEmpty => l10n.attendanceRemindSomeNobody(nobody.join(l10n.listSeparator)),
+      true => l10n.attendanceRemindSent,
+      false when failed.isNotEmpty => saveErrorText(l10n, failed.first),
+      false => l10n.attendanceRemindNobody,
+    });
+  }
+}
+
+/// 其他聚會, from 回報人數, for admins and 行政: each opens its 人數 page
+/// to set when it meets and who fills it in; dragged in order, and added.
+/// One may not meet this week, so not only on the week's list.
+class GatheringsScreen extends ConsumerWidget {
+  const GatheringsScreen({super.key});
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final l10n = L10n.of(context);
+    final gatherings = ref.watch(gatheringsProvider).value ?? const <Gathering>[];
+    // Kept up to date here, the 回報人數 below being out of sight: a new
+    // one's page, opened from here, reads them, and would otherwise bring
+    // them up to date while it builds, which riverpod refuses.
+    ref.watch(attendanceGroupsProvider);
+    return Scaffold(
+      appBar: AppBar(title: Text(l10n.gatherings)),
+      body: CustomScrollView(
+        slivers: [
+          ReorderableSection<Gathering>(
+            items: gatherings,
+            keyOf: (g) => g.id,
+            row: (g, handle) => ListRow(
+              title: g.name,
+              value: meetingTimeLabel(l10n, g.time),
+              trailing: handle,
+              chevron: true,
+              onTap: () => context.push(attendancePage(GatheringGroup(g.id))),
+            ),
+            onReorder: (next) async {
+              try {
+                await ref.churchData.attendance.orderGatherings([for (final g in next) g.id]);
+              } catch (e) {
+                if (context.mounted) showToast(context, saveErrorText(l10n, e));
+              }
+            },
+            after: [
+              ListRow(
+                title: l10n.addGathering,
+                leading: const Icon(Symbols.add_rounded),
+                chevron: false,
+                onTap: () => _addGathering(context, ref),
+              ),
+            ],
+          ),
+          const SliverPadding(padding: EdgeInsets.only(bottom: Space.xl)),
+        ],
+      ),
+    );
+  }
+
   /// 新增其他聚會: named, then its 人數 page, to set when it meets and who fills it in.
-  Future<void> _addGathering(BuildContext context) async {
+  Future<void> _addGathering(BuildContext context, WidgetRef ref) async {
     final l10n = L10n.of(context);
     final name = await promptText(
       context,
@@ -196,25 +262,6 @@ class _AttendanceOverviewScreenState extends ConsumerState<AttendanceOverviewScr
     try {
       final id = await ref.churchData.attendance.saveGathering(Gathering(id: '', name: name));
       if (context.mounted) unawaited(context.push(attendancePage(GatheringGroup(id))));
-    } catch (e) {
-      if (context.mounted) showToast(context, saveErrorText(l10n, e));
-    }
-  }
-
-  /// 「還有 2 個未填」, or 都填好了; today's not counted, as on 首頁.
-  /// Nothing for a week with no meeting in it yet, nor with only today's
-  /// still to fill in.
-  String? _summary(L10n l10n, AttendanceWeek week) {
-    if (!week.met) return null;
-    if (week.missing > 0) return l10n.attendanceOverviewMissing(week.missing);
-    return week.waiting ? null : l10n.attendanceOverviewDone;
-  }
-
-  Future<void> _remind(BuildContext context, AttendanceRow r) async {
-    final l10n = L10n.of(context);
-    try {
-      final people = await ref.churchData.attendance.remind(r.group.group.key, r.day!);
-      if (context.mounted) showToast(context, people > 0 ? l10n.attendanceRemindSent : l10n.attendanceRemindNobody);
     } catch (e) {
       if (context.mounted) showToast(context, saveErrorText(l10n, e));
     }

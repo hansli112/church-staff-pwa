@@ -935,9 +935,6 @@ class L10nZh extends L10n {
   String get serviceEnabled => '啟用';
 
   @override
-  String get serviceDisabledFooter => '停用的聚會不會再出現新的服事表';
-
-  @override
   String dutyPeopleCount(int count) {
     return '$count 人';
   }
@@ -3041,6 +3038,11 @@ class L10nZh extends L10n {
   String get attendanceRemindNobody => '沒有可以提醒的人，請直接聯絡';
 
   @override
+  String attendanceRemindSomeNobody(String names) {
+    return '已提醒。$names沒有可以提醒的人，請直接聯絡。';
+  }
+
+  @override
   String get attendanceTogether => '和其他小組一起';
 
   @override
@@ -4500,9 +4502,6 @@ class L10nZhHans extends L10nZh {
 
   @override
   String get serviceEnabled => '启用';
-
-  @override
-  String get serviceDisabledFooter => '停用的聚会不会再出现新的事奉表';
 
   @override
   String dutyPeopleCount(int count) {
@@ -6606,6 +6605,11 @@ class L10nZhHans extends L10nZh {
 
   @override
   String get attendanceRemindNobody => '没有可以提醒的人，请直接联络';
+
+  @override
+  String attendanceRemindSomeNobody(String names) {
+    return '已提醒。$names没有可以提醒的人，请直接联络。';
+  }
 
   @override
   String get attendanceTogether => '和其他小组一起';
