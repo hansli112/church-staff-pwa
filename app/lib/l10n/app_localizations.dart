@@ -4609,13 +4609,13 @@ abstract class L10n {
   /// 服事表 tab: shows the saved day before the ones listed, one at a time
   ///
   /// In zh, this message translates to:
-  /// **'顯示上一次'**
+  /// **'之前的服事表'**
   String get rosterShowPrevious;
 
   /// 服事表 tab: in place of rosterShowPrevious once no earlier day is saved
   ///
   /// In zh, this message translates to:
-  /// **'沒有更早的服事表'**
+  /// **'沒有之前的服事表了'**
   String get rosterNoEarlier;
 
   /// No description provided for @pickerGuestNames.

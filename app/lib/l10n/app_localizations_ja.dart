@@ -2575,7 +2575,7 @@ class L10nJa extends L10n {
   String get rosterShowMore => 'さらに表示';
 
   @override
-  String get rosterShowPrevious => '前回を表示';
+  String get rosterShowPrevious => '前の奉仕表';
 
   @override
   String get rosterNoEarlier => 'これより前の奉仕表はありません';

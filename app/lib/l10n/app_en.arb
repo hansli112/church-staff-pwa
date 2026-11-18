@@ -777,7 +777,7 @@
   "importExamplePerson": "Grace Lee",
   "importExampleEvent": "Communion",
   "rosterShowMore": "Show more",
-  "rosterShowPrevious": "Show previous",
+  "rosterShowPrevious": "Earlier schedules",
   "rosterNoEarlier": "No earlier schedules",
   "pickerGuestNames": "Filled in before",
   "serviceSettingsSaved": "Service updated",

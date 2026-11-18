@@ -2576,7 +2576,7 @@ class L10nKo extends L10n {
   String get rosterShowMore => '더 보기';
 
   @override
-  String get rosterShowPrevious => '지난번 보기';
+  String get rosterShowPrevious => '이전 봉사표';
 
   @override
   String get rosterNoEarlier => '이전 봉사표가 없어요';

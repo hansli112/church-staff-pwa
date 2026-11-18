@@ -2709,7 +2709,7 @@ class L10nEn extends L10n {
   String get rosterShowMore => 'Show more';
 
   @override
-  String get rosterShowPrevious => 'Show previous';
+  String get rosterShowPrevious => 'Earlier schedules';
 
   @override
   String get rosterNoEarlier => 'No earlier schedules';

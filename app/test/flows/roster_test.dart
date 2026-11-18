@@ -122,18 +122,18 @@ void main() {
       await tapText(tester, '服事表');
       expect(findDay('9月27日'), findsNothing, reason: 'from today on until asked');
 
-      await tapText(tester, '顯示上一次');
+      await tapText(tester, '之前的服事表');
       expect(findDay('9月27日'), findsOneWidget);
       expect(find.text('上週的司會'), findsOneWidget);
       expect(findDay('10月4日'), findsOneWidget, reason: 'the days ahead stay');
 
-      await tapText(tester, '顯示上一次');
+      await tapText(tester, '之前的服事表');
       expect(find.text('青年的司會'), findsNothing, reason: "another service's day is not this one's");
       expect(findDay('9月13日'), findsOneWidget, reason: 'the week nobody was arranged is skipped');
 
-      await tapText(tester, '顯示上一次');
-      expect(find.text('沒有更早的服事表'), findsOneWidget);
-      expect(find.text('顯示上一次'), findsNothing);
+      await tapText(tester, '之前的服事表');
+      expect(find.text('沒有之前的服事表了'), findsOneWidget);
+      expect(find.text('之前的服事表'), findsNothing);
 
       await tester.tap(find.text('上週的司會'));
       await settle(tester);
