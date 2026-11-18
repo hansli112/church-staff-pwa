@@ -57,10 +57,15 @@ List<PendingClaim> claimsIn(WidgetRef ref, String? churchId) => [
 /// home pages (never a dialog on launch); by name, on home only,
 /// 「服事表上的「黃鎮台」是你嗎？」.
 class PendingClaimsCard extends ConsumerStatefulWidget {
-  const PendingClaimsCard({super.key, this.churchId});
+  const PendingClaimsCard({super.key, this.churchId, this.asPage = false});
 
   /// Only the claim in this church (its church URL), or every one.
   final String? churchId;
+
+  /// The first claim as the whole page asks it, centered, 加入 the page's
+  /// one main action: on the welcome page, where it is the way in. The
+  /// next one, if any, once it is answered.
+  final bool asPage;
 
   @override
   ConsumerState<PendingClaimsCard> createState() => _PendingClaimsCardState();
@@ -98,6 +103,7 @@ class _PendingClaimsCardState extends ConsumerState<PendingClaimsCard> {
     final l10n = L10n.of(context);
     final claims = claimsIn(ref, widget.churchId);
     if (claims.isEmpty) return const SizedBox.shrink();
+    if (widget.asPage) return _page(context, claims.first);
     return Column(
       children: [
         for (final claim in claims)
@@ -153,6 +159,40 @@ class _PendingClaimsCardState extends ConsumerState<PendingClaimsCard> {
               ),
             ),
           ),
+      ],
+    );
+  }
+
+  Widget _page(BuildContext context, PendingClaim claim) {
+    final l10n = L10n.of(context);
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        BalancedText(
+          claim.byName ? l10n.claimByNameTitle(claim.name) : l10n.claimTitle(claim.churchName),
+          style: AppText.title,
+        ),
+        if (claim.serves.isNotEmpty) ...[
+          const SizedBox(height: Space.m),
+          Center(child: _Serves(claim.serves)),
+        ],
+        const SizedBox(height: Space.s),
+        BalancedText(
+          claim.byName ? l10n.claimByNameBody(claim.name) : l10n.claimBody,
+          style: AppText.body.copyWith(color: AppColors.of(context).secondaryLabel),
+        ),
+        const SizedBox(height: Space.xl),
+        PrimaryButton(
+          label: claim.byName ? l10n.claimByNameYes : l10n.claimJoin,
+          busy: _busy == claim.key,
+          onPressed: _busy != null ? null : () => _join(claim),
+        ),
+        const SizedBox(height: Space.s),
+        SecondaryButton(
+          label: claim.byName ? l10n.claimByNameNo : l10n.claimDecline,
+          expand: true,
+          onPressed: _busy != null ? null : () => ref.read(declinedClaimsProvider.notifier).decline(claim),
+        ),
       ],
     );
   }

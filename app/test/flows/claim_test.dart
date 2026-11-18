@@ -93,6 +93,16 @@ void main() {
     expect(find.byType(NavigationBar), findsOneWidget);
   });
 
+  testWidgets('on the welcome page, declined data leaves the other ways in', (tester) async {
+    await pumpApp(tester, movedChurch());
+    expect(findShown('加入〈恩典堂〉？'), findsOneWidget);
+    expect(findShown('加入你的教會'), findsNothing);
+    await tapText(tester, '不加入');
+    expect(findShown('加入〈恩典堂〉？'), findsNothing);
+    expect(find.widgetWithText(FilledButton, '輸入邀請碼'), findsOneWidget);
+    expect(findShown('建立新教會'), findsOneWidget);
+  });
+
   testWidgets('on the church URL, declined data leaves asking to join', (tester) async {
     final b = movedChurch();
     b.churches['grace'] = b.churches['grace']!.copyWith(takesJoinRequests: true);
@@ -140,9 +150,10 @@ void main() {
     final b = movedChurch();
     final repoint = b.claimRepointHeld = Completer<void>();
     await pumpApp(tester, b);
-    // With 加入 to say yes to, entering a code is the other way in, not the first.
-    expect(find.widgetWithText(FilledButton, '輸入邀請碼'), findsNothing);
-    expect(findShown('輸入邀請碼'), findsOneWidget);
+    // With 加入 to say yes to, the question is the page: the other ways in
+    // once it is answered.
+    expect(find.widgetWithText(FilledButton, '加入'), findsOneWidget);
+    expect(findShown('輸入邀請碼'), findsNothing);
     await tapText(tester, '加入');
 
     expect(find.byType(NavigationBar), findsOneWidget, reason: 'in the church already');

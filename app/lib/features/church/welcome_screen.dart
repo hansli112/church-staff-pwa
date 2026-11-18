@@ -49,17 +49,15 @@ class WelcomeScreen extends ConsumerWidget {
     // 加入 on moved data is the way in then; a code, the other one.
     final claiming = (ref.watch(pendingClaimsProvider).value ?? const []).isNotEmpty;
     return Scaffold(
-      // 登出 and 刪除帳號 behind 帳號: the page is for getting into a church,
-      // and in no church there is no 設定, where they are otherwise.
+      // Centered on the whole screen, not the part under the bar.
+      extendBodyBehindAppBar: true,
+      // 登出 and 刪除帳號 behind 帳號, in a menu from it: the page is for
+      // getting into a church, and in no church there is no 設定, where
+      // they are otherwise.
       appBar: AppBar(
         automaticallyImplyLeading: false,
-        actions: [
-          IconButton(
-            icon: const Icon(Symbols.account_circle_rounded),
-            tooltip: l10n.account,
-            onPressed: () => _openAccount(context, ref),
-          ),
-        ],
+        backgroundColor: Colors.transparent,
+        actions: const [_AccountMenu()],
       ),
       body: SafeArea(
         child: Center(
@@ -70,33 +68,30 @@ class WelcomeScreen extends ConsumerWidget {
               padding: const EdgeInsets.all(Space.l),
               children: [
                 const VerifyEmailBanner(),
-                const PendingClaimsCard(),
-                if (claiming) const SizedBox(height: Space.l),
-                const AskedToJoinRows(),
-                BalancedText(
-                  l10n.welcomeTitle,
-                  style: AppText.title,
-                ),
-                const SizedBox(height: Space.s),
-                BalancedText(l10n.welcomeBody, style: AppText.body.copyWith(color: c.secondaryLabel)),
-                const SizedBox(height: Space.xl),
+                // Moved data is the way in then: its question is the page,
+                // the rest once it is answered.
                 if (claiming)
-                  SecondaryButton(
-                    label: l10n.enterInviteCode,
-                    expand: true,
-                    onPressed: () => context.push('/welcome/join'),
-                  )
-                else
+                  const PendingClaimsCard(asPage: true)
+                else ...[
+                  const AskedToJoinRows(),
+                  BalancedText(
+                    l10n.welcomeTitle,
+                    style: AppText.title,
+                  ),
+                  const SizedBox(height: Space.s),
+                  BalancedText(l10n.welcomeBody, style: AppText.body.copyWith(color: c.secondaryLabel)),
+                  const SizedBox(height: Space.xl),
                   PrimaryButton(
                     label: l10n.enterInviteCode,
                     onPressed: () => context.push('/welcome/join'),
                   ),
-                const SizedBox(height: Space.s),
-                SecondaryButton(
-                  label: l10n.createChurch,
-                  expand: true,
-                  onPressed: () => context.push('/welcome/create'),
-                ),
+                  const SizedBox(height: Space.s),
+                  SecondaryButton(
+                    label: l10n.createChurch,
+                    expand: true,
+                    onPressed: () => context.push('/welcome/create'),
+                  ),
+                ],
               ],
             ),
           ),
@@ -104,42 +99,43 @@ class WelcomeScreen extends ConsumerWidget {
       ),
     );
   }
+}
 
-  Future<void> _openAccount(BuildContext context, WidgetRef ref) async {
+/// 帳號 at the top corner: whom I am signed in as (someone here is often in
+/// the wrong account), 登出, 刪除帳號. A menu from the button, as Apple's
+/// pull-down buttons and the app's other top-bar menus.
+class _AccountMenu extends ConsumerWidget {
+  const _AccountMenu();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
     final l10n = L10n.of(context);
-    final picked = await showAppSheet<_AccountAction>(
-      context,
-      builder: (context) => SafeArea(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            SheetBar(title: l10n.account, cancel: false, actions: const []),
-            ListSection(
-              children: [
-                ListRow(
-                  title: l10n.signOut,
-                  tinted: true,
-                  onTap: () => Navigator.pop(context, _AccountAction.signOut),
-                ),
-                ListRow(
-                  title: l10n.deleteAccount,
-                  destructive: true,
-                  onTap: () => Navigator.pop(context, _AccountAction.delete),
-                ),
-              ],
-            ),
-          ],
+    final c = AppColors.of(context);
+    final email = ref.watch(authUserProvider.select((u) => u.value?.email ?? ''));
+    return PopupMenuButton<_AccountAction>(
+      icon: const Icon(Symbols.account_circle_rounded),
+      tooltip: l10n.account,
+      // Below the button, as it was pulled down from it.
+      position: PopupMenuPosition.under,
+      onSelected: (action) => switch (action) {
+        _AccountAction.signOut => signOut(ref),
+        _AccountAction.delete => context.push('/account'),
+      },
+      itemBuilder: (context) => [
+        if (email.isNotEmpty) ...[
+          PopupMenuItem<_AccountAction>(
+            enabled: false,
+            child: Text(email, style: AppText.footnote.copyWith(color: c.secondaryLabel)),
+          ),
+          const PopupMenuDivider(),
+        ],
+        PopupMenuItem(value: _AccountAction.signOut, child: Text(l10n.signOut)),
+        PopupMenuItem(
+          value: _AccountAction.delete,
+          child: Text(l10n.deleteAccount, style: TextStyle(color: c.destructive)),
         ),
-      ),
+      ],
     );
-    if (!context.mounted) return;
-    switch (picked) {
-      case _AccountAction.signOut:
-        await signOut(ref);
-      case _AccountAction.delete:
-        unawaited(context.push('/account'));
-      case null:
-    }
   }
 }
 
