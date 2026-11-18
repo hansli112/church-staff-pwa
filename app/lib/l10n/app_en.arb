@@ -617,7 +617,7 @@
   "noAccount": "No account",
   "noAccountCount": "{count, plural, =1{1 person has no account} other{{count} people have no account}}",
   "claimTitle": "Join {church}?",
-  "claimBody": "Your church now uses this app. Your schedules are already here.",
+  "claimBody": "Your serving from before has moved to Martha, sit.",
   "claimByNameTitle": "Are you “{name}” on the schedules?",
   "claimByNameBody": "If so, what’s scheduled for “{name}”, and their services, become yours",
   "claimSmallGroups": "Small groups: {groups}",

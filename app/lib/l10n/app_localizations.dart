@@ -3649,7 +3649,7 @@ abstract class L10n {
   /// No description provided for @claimBody.
   ///
   /// In zh, this message translates to:
-  /// **'教會搬到馬大別忙了，你之前的服事都在這裡'**
+  /// **'你之前的服事資料已經搬到馬大別忙了'**
   String get claimBody;
 
   /// No description provided for @claimByNameTitle.

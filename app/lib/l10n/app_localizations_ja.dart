@@ -1985,7 +1985,7 @@ class L10nJa extends L10n {
   }
 
   @override
-  String get claimBody => '教会がこのアプリに移りました。これまでの奉仕はもうここにあります。';
+  String get claimBody => 'これまでの奉仕のデータは「マルタ、ひと休み」に移してあります。';
 
   @override
   String claimByNameTitle(String name) {

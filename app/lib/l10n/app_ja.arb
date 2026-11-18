@@ -617,7 +617,7 @@
   "noAccount": "アカウントなし",
   "noAccountCount": "{count}人はアカウントがありません",
   "claimTitle": "{church}に参加しますか？",
-  "claimBody": "教会がこのアプリに移りました。これまでの奉仕はもうここにあります。",
+  "claimBody": "これまでの奉仕のデータは「マルタ、ひと休み」に移してあります。",
   "claimByNameTitle": "奉仕表の「{name}」はあなたですか？",
   "claimByNameBody": "そうであれば、「{name}」の奉仕と所属集会があなたに引き継がれます",
   "claimSmallGroups": "小グループ：{groups}",

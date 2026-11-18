@@ -1187,7 +1187,7 @@
       }
     }
   },
-  "claimBody": "教會搬到馬大別忙了，你之前的服事都在這裡",
+  "claimBody": "你之前的服事資料已經搬到馬大別忙了",
   "claimByNameTitle": "服事表上的「{name}」是你嗎？",
   "@claimByNameTitle": {
     "placeholders": {

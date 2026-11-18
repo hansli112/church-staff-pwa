@@ -617,7 +617,7 @@
   "noAccount": "계정 없음",
   "noAccountCount": "{count}명은 계정이 없어요",
   "claimTitle": "{church}에 가입할까요?",
-  "claimBody": "교회가 이 앱으로 옮겨 왔어요. 그동안의 봉사가 이미 여기 있어요.",
+  "claimBody": "그동안의 봉사 기록은 마르다의 쉼표로 옮겨 왔어요.",
   "claimByNameTitle": "봉사표의 ‘{name}’ 님이 맞나요?",
   "claimByNameBody": "맞다면 ‘{name}’ 님에게 배정된 봉사와 소속 예배를 이어받아요",
   "claimSmallGroups": "소그룹: {groups}",

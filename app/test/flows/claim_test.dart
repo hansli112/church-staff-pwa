@@ -60,7 +60,7 @@ void main() {
     final telemetry = RecordingTelemetry();
     await pumpApp(tester, b, overrides: [telemetryProvider.overrideWithValue(telemetry)]);
     expect(findShown('加入〈恩典堂〉？'), findsOneWidget);
-    expect(findShown('教會搬到馬大別忙了，你之前的服事都在這裡'), findsOneWidget);
+    expect(findShown('你之前的服事資料已經搬到馬大別忙了'), findsOneWidget);
     await tapText(tester, '加入');
 
     final m = b.members['grace']!['new-mei']!;

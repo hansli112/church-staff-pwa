@@ -1981,7 +1981,7 @@ class L10nZh extends L10n {
   }
 
   @override
-  String get claimBody => '教會搬到馬大別忙了，你之前的服事都在這裡';
+  String get claimBody => '你之前的服事資料已經搬到馬大別忙了';
 
   @override
   String claimByNameTitle(String name) {
@@ -5550,7 +5550,7 @@ class L10nZhHans extends L10nZh {
   }
 
   @override
-  String get claimBody => '教会搬到马大别忙了，你之前的事奉都在这里';
+  String get claimBody => '你之前的事奉资料已经搬到马大别忙了';
 
   @override
   String claimByNameTitle(String name) {

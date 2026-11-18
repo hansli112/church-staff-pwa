@@ -2102,7 +2102,7 @@ class L10nEn extends L10n {
   }
 
   @override
-  String get claimBody => 'Your church now uses this app. Your schedules are already here.';
+  String get claimBody => 'Your serving from before has moved to Martha, sit.';
 
   @override
   String claimByNameTitle(String name) {
