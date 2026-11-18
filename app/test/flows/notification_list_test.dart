@@ -109,6 +109,11 @@ void main() {
 
     GoRouter.of(tester.element(find.byType(RosterDayScreen))).pop();
     await settle(tester);
+    expect(
+      find.byWidgetPredicate((w) => w is Semantics && w.properties.label == '未讀'),
+      findsOneWidget,
+      reason: 'back from the one opened, its dot is gone; the other keeps its own',
+    );
     await tester.tap(findShown('平安 李美玉，這週的服事'));
     await settle(tester);
     expect(find.byTooltip('通知'), findsOneWidget, reason: '首頁, its bell');

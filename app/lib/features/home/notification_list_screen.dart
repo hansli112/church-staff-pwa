@@ -46,8 +46,8 @@ class NotificationBell extends ConsumerWidget {
 
 /// 通知列表 (#89): what was sent to me in this church over the last 30 days,
 /// newest first, the kinds I muted too. Opening it reads them all, here and
-/// on the app icon; those unread when it opened keep a dot while it is open.
-/// Each opens the page its push opens.
+/// on the app icon; those unread when it opened keep a dot while it is open,
+/// until opened themselves. Each opens the page its push opens.
 class NotificationListScreen extends ConsumerStatefulWidget {
   const NotificationListScreen({super.key});
 
@@ -58,6 +58,9 @@ class NotificationListScreen extends ConsumerStatefulWidget {
 class _NotificationListScreenState extends ConsumerState<NotificationListScreen> {
   /// How far this church's list was seen before it opened.
   DateTime? _seenBefore;
+
+  /// Opened from here: no dot when back.
+  final _opened = <String>{};
 
   @override
   void initState() {
@@ -77,6 +80,7 @@ class _NotificationListScreenState extends ConsumerState<NotificationListScreen>
   }
 
   void _open(NotificationItem n) {
+    setState(() => _opened.add(n.id));
     final location = appLocation(n.link);
     if (location == null || location == '/home') {
       context.pop();
@@ -131,7 +135,7 @@ class _NotificationListScreenState extends ConsumerState<NotificationListScreen>
                         // which this list is already about.
                         headline: n.title.isEmpty || n.title == churchName ? n.body : n.title,
                         when: clock.ago(n.at, now),
-                        unread: opened.isUnread(n),
+                        unread: opened.isUnread(n) && !_opened.contains(n.id),
                       ),
                   ],
                 ),
