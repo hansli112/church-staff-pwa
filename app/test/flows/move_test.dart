@@ -91,8 +91,8 @@ void main() {
 
     await go(tester, '/me/members');
     expect(find.text('2 位沒有帳號'), findsOneWidget);
-    expect(findShown('沒有帳號 · mei@example.com'), findsOneWidget);
-    expect(findShown('沒有帳號'), findsOneWidget, reason: '陳志豪 has no email');
+    expect(findShown('mei@example.com'), findsOneWidget);
+    expect(find.text('沒有帳號'), findsNothing, reason: 'the section says it, not each row');
   });
 
   testWidgets('the church name sits right above the button it unlocks, after who I am', (tester) async {

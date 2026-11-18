@@ -259,11 +259,11 @@ class _MembersScreenState extends ConsumerState<MembersScreen> {
                             last: j == pending.length - 1,
                             child: ListRow(
                               title: p.name.isEmpty ? p.email : p.name,
+                              // Under 「N 位沒有帳號」, which says it for them all.
                               subtitle: [
-                                l10n.noAccount,
                                 if (p.email.isNotEmpty && p.name.isNotEmpty) p.email,
                                 ...smallGroupLabels(p),
-                              ].join(l10n.dotSeparator),
+                              ].join(l10n.dotSeparator).ifEmpty(null),
                               value: p.role == Role.admin ? l10n.roleAdmin : null,
                               onTap: isAdmin ? () => context.push('/me/members/${p.id}') : null,
                             ),

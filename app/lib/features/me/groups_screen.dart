@@ -271,7 +271,6 @@ class GroupStaffSections extends ConsumerWidget {
     final l10n = L10n.of(context);
     final me = ref.watch(meProvider).value;
     final members = ref.watch(staffProvider).value;
-    final noAccount = ref.watch(noAccountProvider);
     if (me == null || members == null) return const SizedBox.shrink();
     String? lineOf(List<String> parts) => parts.isEmpty ? null : parts.join(l10n.dotSeparator);
     final (:staff, :addable, :candidates) = groupPeople(ref, me, members, group);
@@ -313,7 +312,6 @@ class GroupStaffSections extends ConsumerWidget {
                     if (m.zones.where((z) => z.serviceType == id).firstOrNull?.duties case final duties?
                         when duties.isNotEmpty)
                       duties.join(l10n.listSeparator),
-                  if (noAccount.contains(m.uid)) l10n.noAccount,
                 ]),
                 chevron: false,
                 // What they serve there and their 小組, for who may move them.

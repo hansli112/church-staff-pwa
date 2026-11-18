@@ -42,7 +42,8 @@ void main() {
     await pumpApp(tester, b);
     await go(tester, '/rosters/sunday/2026-10-11');
     await tapText(tester, '招待');
-    expect(find.text('沒有帳號'), findsOneWidget, reason: 'under his name: tell him yourself');
+    expect(find.text('黃鎮台'), findsOneWidget);
+    expect(find.text('沒有帳號'), findsNothing, reason: 'picked like anyone: it is no reason to pick him or not');
     await tapText(tester, '黃鎮台');
     await tapText(tester, '完成');
     final duty = savedDay(b, 11).duties.firstWhere((d) => d.role == '招待');
