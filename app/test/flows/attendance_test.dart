@@ -151,21 +151,22 @@ void main() {
     expect(inRow('聚會時間', '未設定'), findsOneWidget, reason: 'set from here');
   });
 
-  testWidgets('a 小組 that has not met since 回報人數 came on says when it meets, there too', (tester) async {
+  testWidgets('a 小組 that has not met since 回報人數 came on says which day, there by when it meets', (tester) async {
     // Monday: it meets on Friday, this week.
     final b = withJoy(seededChurch(clock: eveningOf(Day(2026, 10, 5))));
     b.churches['grace'] = b.churches['grace']!.copyWith(attendanceSince: () => Day(2026, 10, 5));
     await pumpApp(tester, b);
     await go(tester, '/me/attendance');
-    final next = find.text('每週五');
     expect(
       find.descendant(
         of: find.ancestor(of: find.text('喜樂小組'), matching: find.byType(ListRow)),
-        matching: next,
+        matching: find.text('10月9日 週五'),
       ),
       findsOneWidget,
+      reason: 'the day, as the meetings already met say theirs',
     );
     await go(tester, '/me/groups/small/joy');
+    final next = find.text('每週五');
     expect(inRow('聚會時間', '每週五'), findsOneWidget);
     await tester.scrollUntilVisible(find.text('聚會人數'), 200, scrollable: find.byType(Scrollable).last);
     expect(next, findsOneWidget, reason: 'said once, by 聚會時間');

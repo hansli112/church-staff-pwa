@@ -154,7 +154,7 @@ class _AttendanceOverviewScreenState extends ConsumerState<AttendanceOverviewScr
     onTap: () => _addGathering(context, ref),
   );
 
-  /// A meeting of [week]: its 人數, 未填, or when it next meets.
+  /// A meeting of [week]: its 人數, 未填, or the day it next meets.
   Widget _row(BuildContext context, AttendanceRow r, Day today, String Function(String key) nameOf) {
     final l10n = L10n.of(context);
     return ListRow(
@@ -162,7 +162,12 @@ class _AttendanceOverviewScreenState extends ConsumerState<AttendanceOverviewScr
       dimmed: r.value?.none ?? false,
       subtitle: switch (r.day) {
         final day? => [dayLabel(l10n, day, today), ?attendanceDetail(l10n, r.value, nameOf)].join(l10n.dotSeparator),
-        null => attendanceNotYet(l10n, attendanceTimeOf(ref, r.group.group)),
+        // The day, as the meetings already met say theirs; the rule is for
+        // where it is set.
+        null => switch (r.next) {
+          final next? => dayLabel(l10n, next, today),
+          null => attendanceNotYet(l10n, attendanceTimeOf(ref, r.group.group)),
+        },
       },
       value: r.day == null ? null : attendanceValue(l10n, r.value, nameOf),
       onTap: switch (r.day) {
