@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:material_symbols_icons/symbols.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import '../../core/design/components.dart';
@@ -48,6 +49,18 @@ class WelcomeScreen extends ConsumerWidget {
     // 加入 on moved data is the way in then; a code, the other one.
     final claiming = (ref.watch(pendingClaimsProvider).value ?? const []).isNotEmpty;
     return Scaffold(
+      // 登出 and 刪除帳號 behind 帳號: the page is for getting into a church,
+      // and in no church there is no 設定, where they are otherwise.
+      appBar: AppBar(
+        automaticallyImplyLeading: false,
+        actions: [
+          IconButton(
+            icon: const Icon(Symbols.account_circle_rounded),
+            tooltip: l10n.account,
+            onPressed: () => _openAccount(context, ref),
+          ),
+        ],
+      ),
       body: SafeArea(
         child: Center(
           child: ConstrainedBox(
@@ -84,19 +97,6 @@ class WelcomeScreen extends ConsumerWidget {
                   expand: true,
                   onPressed: () => context.push('/welcome/create'),
                 ),
-                const SizedBox(height: Space.xl),
-                SecondaryButton(
-                  label: l10n.signOut,
-                  expand: true,
-                  onPressed: () => signOut(ref),
-                ),
-                // In no church there is no 設定, where it is otherwise.
-                SecondaryButton(
-                  label: l10n.deleteAccount,
-                  expand: true,
-                  destructive: true,
-                  onPressed: () => context.push('/account'),
-                ),
               ],
             ),
           ),
@@ -104,7 +104,46 @@ class WelcomeScreen extends ConsumerWidget {
       ),
     );
   }
+
+  Future<void> _openAccount(BuildContext context, WidgetRef ref) async {
+    final l10n = L10n.of(context);
+    final picked = await showAppSheet<_AccountAction>(
+      context,
+      builder: (context) => SafeArea(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            SheetBar(title: l10n.account, cancel: false, actions: const []),
+            ListSection(
+              children: [
+                ListRow(
+                  title: l10n.signOut,
+                  tinted: true,
+                  onTap: () => Navigator.pop(context, _AccountAction.signOut),
+                ),
+                ListRow(
+                  title: l10n.deleteAccount,
+                  destructive: true,
+                  onTap: () => Navigator.pop(context, _AccountAction.delete),
+                ),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+    if (!context.mounted) return;
+    switch (picked) {
+      case _AccountAction.signOut:
+        await signOut(ref);
+      case _AccountAction.delete:
+        unawaited(context.push('/account'));
+      case null:
+    }
+  }
 }
+
+enum _AccountAction { signOut, delete }
 
 /// 「已申請加入〈希望堂〉，等管理員允許」 on the welcome page, one row a
 /// church still waited on, opening its church URL (to take it back, say).

@@ -70,6 +70,31 @@ void main() {
     expect(find.text('建立邀請連結'), findsOneWidget);
   });
 
+  testWidgets('in no church yet, 登出 and 刪除帳號 are under 帳號, not on the welcome page', (tester) async {
+    final b = MemoryBackend(clock: testClock)..auth.googleAccount = 'alice@gmail.com';
+    await pumpApp(tester, b);
+    await tapText(tester, '使用 Google 登入');
+    expect(find.text('加入你的教會'), findsOneWidget);
+    expect(find.text('登出'), findsNothing);
+    expect(find.text('刪除帳號'), findsNothing);
+    expect(find.widgetWithText(FilledButton, '輸入邀請碼'), findsOneWidget, reason: 'the one main action');
+
+    await tester.tap(find.byTooltip('帳號'));
+    await settle(tester);
+    await tapText(tester, '刪除帳號');
+    expect(find.widgetWithText(TextButton, '刪除帳號'), findsOneWidget, reason: 'the 刪除帳號 page');
+  });
+
+  testWidgets('in no church yet, 登出 is under 帳號', (tester) async {
+    final b = MemoryBackend(clock: testClock)..auth.googleAccount = 'alice@gmail.com';
+    await pumpApp(tester, b);
+    await tapText(tester, '使用 Google 登入');
+    await tester.tap(find.byTooltip('帳號'));
+    await settle(tester);
+    await tapText(tester, '登出');
+    expect(findShown('使用 Google 登入'), findsOneWidget, reason: 'signed out');
+  });
+
   testWidgets('getting started is gone once someone else has joined', (tester) async {
     await pumpApp(tester, seededChurch());
     expect(find.text('開始使用'), findsNothing);
