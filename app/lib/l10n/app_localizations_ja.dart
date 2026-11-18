@@ -1933,6 +1933,9 @@ class L10nJa extends L10n {
   String get movePickFile => '移行ファイルを選択';
 
   @override
+  String get moveHowTo => '移行ファイルの作り方';
+
+  @override
   String get moveReading => '移行ファイルを読み込み中…';
 
   @override
@@ -3098,7 +3101,7 @@ class L10nJa extends L10n {
   String get notifAttendanceSub => '集まりの日と翌日の21時に、まだ誰も記録していないとき';
 
   @override
-  String get churchEntryCanAsk => 'まだこの教会のメンバーではありません。参加を申請すると、管理者が承認したときに参加できます。';
+  String get churchEntryCanAsk => '参加を申請すると、管理者が承認したときに参加できます。';
 
   @override
   String get askToJoin => '参加を申請';

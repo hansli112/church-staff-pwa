@@ -3562,6 +3562,12 @@ abstract class L10n {
   /// **'選擇搬家檔'**
   String get movePickFile;
 
+  /// Button on 從舊版搬過來 under 選擇搬家檔: opens the website's guide to making the move file in the old version's Cloud Shell
+  ///
+  /// In zh, this message translates to:
+  /// **'怎麼產生搬家檔'**
+  String get moveHowTo;
+
   /// No description provided for @moveReading.
   ///
   /// In zh, this message translates to:
@@ -5515,7 +5521,7 @@ abstract class L10n {
   /// Church URL page for a non-member when the church takes requests to join (#88)
   ///
   /// In zh, this message translates to:
-  /// **'你還不是這間教會的同工，申請後管理員允許就會加入'**
+  /// **'申請後，管理員允許就會加入'**
   String get churchEntryCanAsk;
 
   /// No description provided for @askToJoin.

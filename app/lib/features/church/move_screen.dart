@@ -13,6 +13,7 @@ import '../../domain/text.dart';
 import '../../l10n/app_localizations.dart';
 import '../../state/providers.dart';
 import '../common/errors.dart';
+import '../common/site_pages.dart';
 import '../common/time_zones.dart';
 import 'welcome_screen.dart' show VerifyEmailBanner;
 import '../../state/session.dart';
@@ -171,6 +172,14 @@ class _MoveScreenState extends ConsumerState<MoveScreen> {
                   ),
                   const SizedBox(height: Space.l),
                   PrimaryButton(label: l10n.movePickFile, busy: _busy, onPressed: verified ? _pick : null),
+                  const SizedBox(height: Space.s),
+                  // The file is made in the old version's Cloud Shell: no
+                  // getting further without the guide.
+                  SecondaryButton(
+                    label: l10n.moveHowTo,
+                    expand: true,
+                    onPressed: () => openGuide(context, ref, Guide.moveFromSelfHost),
+                  ),
                 ],
               ),
             ),

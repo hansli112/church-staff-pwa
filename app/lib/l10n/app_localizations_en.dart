@@ -2031,6 +2031,9 @@ class L10nEn extends L10n {
   String get movePickFile => 'Choose move file';
 
   @override
+  String get moveHowTo => 'How to make the move file';
+
+  @override
   String get moveReading => 'Reading move file…';
 
   @override
@@ -3254,8 +3257,7 @@ class L10nEn extends L10n {
   String get notifAttendanceSub => 'At 9 PM on a meeting day and the day after, when nobody has filled it in';
 
   @override
-  String get churchEntryCanAsk =>
-      'You’re not a team member of this church yet. Ask to join, and you’re in once an admin accepts.';
+  String get churchEntryCanAsk => 'Ask to join, and you’re in once an admin accepts.';
 
   @override
   String get askToJoin => 'Ask to join';

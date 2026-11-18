@@ -1929,6 +1929,9 @@ class L10nZh extends L10n {
   String get movePickFile => '選擇搬家檔';
 
   @override
+  String get moveHowTo => '怎麼產生搬家檔';
+
+  @override
   String get moveReading => '讀取搬家檔…';
 
   @override
@@ -3094,7 +3097,7 @@ class L10nZh extends L10n {
   String get notifAttendanceSub => '聚會當天和隔天 21:00 還沒人填時';
 
   @override
-  String get churchEntryCanAsk => '你還不是這間教會的同工，申請後管理員允許就會加入';
+  String get churchEntryCanAsk => '申請後，管理員允許就會加入';
 
   @override
   String get askToJoin => '申請加入';
@@ -5498,6 +5501,9 @@ class L10nZhHans extends L10nZh {
   String get movePickFile => '选择迁移文件';
 
   @override
+  String get moveHowTo => '怎么生成迁移文件';
+
+  @override
   String get moveReading => '读取迁移文件…';
 
   @override
@@ -6663,7 +6669,7 @@ class L10nZhHans extends L10nZh {
   String get notifAttendanceSub => '聚会当天和隔天 21:00 还没人填时';
 
   @override
-  String get churchEntryCanAsk => '你还不是这间教会的同工，申请后管理员允许就会加入';
+  String get churchEntryCanAsk => '申请后，管理员允许就会加入';
 
   @override
   String get askToJoin => '申请加入';

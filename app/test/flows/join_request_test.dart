@@ -55,7 +55,7 @@ void main() {
     final telemetry = RecordingTelemetry();
     await pumpApp(tester, b, overrides: [telemetryProvider.overrideWithValue(telemetry)]);
     await go(tester, '/c/hope');
-    expect(findShown('你還不是這間教會的同工，申請後管理員允許就會加入'), findsOneWidget);
+    expect(findShown('申請後，管理員允許就會加入'), findsOneWidget);
     expect(findShown('輸入邀請碼'), findsOneWidget);
     expect(b.warmedUp, contains(WarmUp.askToJoin));
 

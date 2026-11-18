@@ -23,7 +23,8 @@ void openSitePage(BuildContext context, WidgetRef ref, String page) => launchUrl
 enum Guide {
   planWeeks('plan-weeks'),
   smallGroups('small-groups'),
-  notifications('notifications')
+  notifications('notifications'),
+  moveFromSelfHost('move-from-self-host')
   ;
 
   const Guide(this.slug);

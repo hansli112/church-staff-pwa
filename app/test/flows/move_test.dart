@@ -60,6 +60,13 @@ Future<MemoryBackend> start(
 }
 
 void main() {
+  testWidgets('怎麼產生搬家檔 opens the guide to making it in the old version', (tester) async {
+    final launches = captureLaunches();
+    await start(tester, preview);
+    await tapText(tester, '怎麼產生搬家檔');
+    expect(launches.opened.single, contains('/blog/move-from-self-host/?'));
+  });
+
   testWidgets('upload, preview, pick who I am, and the church is made', (tester) async {
     final telemetry = RecordingTelemetry();
     final b = await start(tester, preview, telemetry: telemetry);
