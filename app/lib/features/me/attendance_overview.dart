@@ -23,10 +23,10 @@ import 'groups_screen.dart' show attendancePage;
 /// (#95). Once on, a week of 人數總覽 (#93), Sunday to Saturday, to copy
 /// into the bulletin by eye: how many are still 未填, with one 提醒 for
 /// them all, not added up, as people come to more than one; each service,
-/// then its 小組, in the church's order, the 其他聚會 last. A row opens its
-/// 填寫人數, which opens the group's 人數 page. Below, admins and 行政 open
-/// the 其他聚會 to set, and an admin turns it on (#85), from today, or off:
-/// with it off, that is all there is.
+/// then its 小組, in the church's order, the 其他聚會 last, where admins
+/// and 行政 add one, and 編輯 them all. A row opens its 填寫人數, which
+/// opens the group's 人數 page. Below, an admin turns it on (#85), from
+/// today, or off: with it off, that is all there is.
 class AttendanceOverviewScreen extends ConsumerStatefulWidget {
   const AttendanceOverviewScreen({super.key});
 
@@ -86,35 +86,39 @@ class _AttendanceOverviewScreenState extends ConsumerState<AttendanceOverviewScr
                       ),
                     ),
                   if (week.rows.isEmpty) ListSection(children: [ListRow(title: l10n.attendanceNoDays, chevron: false)]),
-                  for (final section in _sections(week.sections(groups)))
+                  for (final section in _sections(week.sections(groups), gatherings: oversees))
                     ListSection(
                       header: switch (section) {
                         (service: final id?, rows: _, :final named) when named => nameOf('service:$id'),
                         (service: null, rows: _, named: _) => l10n.gatherings,
                         _ => null,
                       },
-                      children: [for (final r in section.rows) _row(context, r, today, nameOf)],
+                      // All of them, the week listing only those that meet in it.
+                      headerAction: section.service == null && oversees
+                          ? (label: l10n.edit, onPressed: () => context.push('/me/attendance/gatherings'))
+                          : null,
+                      children: [
+                        for (final r in section.rows) _row(context, r, today, nameOf),
+                        if (section.service == null && oversees) _addGatheringRow(context, ref),
+                      ],
                     ),
                 ],
                 // Set once, so below the week: with it off, alone on the page.
-                if ((on && oversees) || admin)
+                if (admin)
                   ListSection(
-                    footer: admin ? l10n.attendanceSub : null,
+                    footer: l10n.attendanceSub,
                     children: [
-                      if (on && oversees)
-                        ListRow(title: l10n.gatherings, onTap: () => context.push('/me/attendance/gatherings')),
-                      if (admin)
-                        SwitchRow(
-                          title: l10n.attendance,
-                          value: on,
-                          onChanged: (on) async {
-                            try {
-                              await ref.churchData.attendance.saveSince(on ? ref.read(todayProvider) : null);
-                            } catch (e) {
-                              if (context.mounted) showToast(context, saveErrorText(l10n, e));
-                            }
-                          },
-                        ),
+                      SwitchRow(
+                        title: l10n.attendance,
+                        value: on,
+                        onChanged: (on) async {
+                          try {
+                            await ref.churchData.attendance.saveSince(on ? ref.read(todayProvider) : null);
+                          } catch (e) {
+                            if (context.mounted) showToast(context, saveErrorText(l10n, e));
+                          }
+                        },
+                      ),
                     ],
                   ),
               ],
@@ -123,10 +127,13 @@ class _AttendanceOverviewScreenState extends ConsumerState<AttendanceOverviewScr
   }
 
   /// [sections] as listed: a service with its 小組 under its name; those
-  /// with no 小組 that week together, the row saying the name already.
+  /// with no 小組 that week together, the row saying the name already. The
+  /// 其他聚會 too when none meets that week, for [gatherings]: whoever sets
+  /// them, to add one.
   List<({String? service, List<AttendanceRow> rows, bool named})> _sections(
-    List<({String? service, List<AttendanceRow> rows})> sections,
-  ) {
+    List<({String? service, List<AttendanceRow> rows})> sections, {
+    required bool gatherings,
+  }) {
     final out = <({String? service, List<AttendanceRow> rows, bool named})>[];
     for (final s in sections) {
       final named = s.service == null || s.rows.any((r) => r.group.group is! ServiceGroup);
@@ -136,8 +143,16 @@ class _AttendanceOverviewScreenState extends ConsumerState<AttendanceOverviewScr
         out.add((service: s.service, rows: [...s.rows], named: named));
       }
     }
+    if (gatherings && !out.any((s) => s.service == null)) out.add((service: null, rows: [], named: true));
     return out;
   }
+
+  Widget _addGatheringRow(BuildContext context, WidgetRef ref) => ListRow(
+    title: L10n.of(context).addGathering,
+    leading: const Icon(Symbols.add_rounded),
+    chevron: false,
+    onTap: () => _addGathering(context, ref),
+  );
 
   /// A meeting of [week]: its 人數, 未填, or when it next meets.
   Widget _row(BuildContext context, AttendanceRow r, Day today, String Function(String key) nameOf) {
@@ -198,7 +213,7 @@ class _AttendanceOverviewScreenState extends ConsumerState<AttendanceOverviewScr
   }
 }
 
-/// 其他聚會, from 回報人數, for admins and 行政: each opens its 人數 page
+/// 其他聚會, from 回報人數's 編輯, for admins and 行政: each opens its 人數 page
 /// to set when it meets and who fills it in; dragged in order, and added.
 /// One may not meet this week, so not only on the week's list.
 class GatheringsScreen extends ConsumerWidget {
@@ -247,24 +262,24 @@ class GatheringsScreen extends ConsumerWidget {
       ),
     );
   }
+}
 
-  /// 新增其他聚會: named, then its 人數 page, to set when it meets and who fills it in.
-  Future<void> _addGathering(BuildContext context, WidgetRef ref) async {
-    final l10n = L10n.of(context);
-    final name = await promptText(
-      context,
-      title: l10n.addGathering,
-      hint: l10n.gatheringName,
-      maxLength: TextLimits.profileName,
-      action: l10n.add,
-    );
-    if (name == null || !context.mounted) return;
-    try {
-      final id = await ref.churchData.attendance.saveGathering(Gathering(id: '', name: name));
-      if (context.mounted) unawaited(context.push(attendancePage(GatheringGroup(id))));
-    } catch (e) {
-      if (context.mounted) showToast(context, saveErrorText(l10n, e));
-    }
+/// 新增其他聚會: named, then its 人數 page, to set when it meets and who fills it in.
+Future<void> _addGathering(BuildContext context, WidgetRef ref) async {
+  final l10n = L10n.of(context);
+  final name = await promptText(
+    context,
+    title: l10n.addGathering,
+    hint: l10n.gatheringName,
+    maxLength: TextLimits.profileName,
+    action: l10n.add,
+  );
+  if (name == null || !context.mounted) return;
+  try {
+    final id = await ref.churchData.attendance.saveGathering(Gathering(id: '', name: name));
+    if (context.mounted) unawaited(context.push(attendancePage(GatheringGroup(id))));
+  } catch (e) {
+    if (context.mounted) showToast(context, saveErrorText(l10n, e));
   }
 }
 

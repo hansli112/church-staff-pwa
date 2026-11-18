@@ -148,16 +148,19 @@ class RowButton extends StatelessWidget {
 }
 
 /// A grouped list section with an optional header and footer, inset with
-/// rounded corners like iOS Settings.
+/// rounded corners like iOS Settings. [headerAction], e.g. 編輯, sits at
+/// the header's end, as iOS Health has it over 釘選; only with [header].
 class ListSection extends StatelessWidget {
   const ListSection({
     super.key,
     this.header,
+    this.headerAction,
     this.footer,
     required this.children,
   });
 
   final String? header;
+  final ({String label, VoidCallback onPressed})? headerAction;
   final String? footer;
   final List<Widget> children;
 
@@ -174,7 +177,7 @@ class ListSection extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          if (header != null) _SectionHeader(header!),
+          if (header != null) _SectionHeader(header!, action: headerAction),
           ClipRRect(
             borderRadius: BorderRadius.circular(Radii.m),
             child: Material(
@@ -200,22 +203,46 @@ double _leadingInset(Widget row) => switch (row) {
 };
 
 class _SectionHeader extends StatelessWidget {
-  const _SectionHeader(this.text);
+  const _SectionHeader(this.text, {this.action});
 
   final String text;
+  final ({String label, VoidCallback onPressed})? action;
 
   @override
-  Widget build(BuildContext context) => Padding(
-    padding: const EdgeInsets.fromLTRB(Space.m, Space.s, Space.m, Space.s),
-    child: Semantics(
+  Widget build(BuildContext context) {
+    final c = AppColors.of(context);
+    final title = Semantics(
       header: true,
       child: BalancedText(
         text,
         textAlign: TextAlign.start,
-        style: AppText.footnote.copyWith(color: AppColors.of(context).secondaryLabel),
+        style: AppText.footnote.copyWith(color: c.secondaryLabel),
       ),
-    ),
-  );
+    );
+    final action = this.action;
+    if (action == null) {
+      return Padding(padding: const EdgeInsets.fromLTRB(Space.m, Space.s, Space.m, Space.s), child: title);
+    }
+    // The button's own padding makes up the header's at the end, so its
+    // text lines up with the rows' values.
+    return Padding(
+      padding: const EdgeInsets.only(left: Space.m),
+      child: Row(
+        children: [
+          Expanded(child: title),
+          TextButton(
+            onPressed: action.onPressed,
+            style: TextButton.styleFrom(
+              foregroundColor: c.accent,
+              textStyle: AppText.subheadline,
+              padding: const EdgeInsets.symmetric(horizontal: Space.m),
+            ),
+            child: Text(action.label),
+          ),
+        ],
+      ),
+    );
+  }
 }
 
 class _SectionFooter extends StatelessWidget {
