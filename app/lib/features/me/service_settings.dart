@@ -197,7 +197,7 @@ class ServiceEdits {
                 if (x != d) x,
             ],
     ),
-    message: _l10n.dutyRemoved(d),
+    message: _l10n.deletedName(d),
   );
 
   /// 多人服事 for duty [d]: set for every duty of the service at once,
@@ -295,7 +295,7 @@ class ServiceEdits {
           if (x.name != e.name) x,
       ],
     ),
-    message: _l10n.removed(e.name),
+    message: _l10n.deletedName(e.name),
   );
 
   /// Tapping a 常用特別活動: rename it, its color, bring the rosters after
@@ -447,6 +447,7 @@ Widget serviceDutiesSliver(BuildContext context, WidgetRef ref, Service service,
   final edits = ServiceEdits(context, ref, service);
   return ReorderableSection<String>(
     header: l10n.templateDuties,
+    footer: service.duties.isEmpty ? null : l10n.swipeToDelete,
     items: service.duties,
     keyOf: (d) => 'duty/$d',
     onReorder: (next) => edits.save(service.copyWith(duties: next)),
@@ -488,6 +489,7 @@ Widget serviceEventsSliver(BuildContext context, WidgetRef ref, Service service,
   ).events;
   return ReorderableSection<EventTag>(
     header: l10n.commonEvents,
+    footer: service.events.isEmpty ? null : l10n.swipeToDelete,
     items: service.events,
     keyOf: (e) => 'event/${e.name}',
     onReorder: (next) => edits.save(service.copyWith(events: next)),

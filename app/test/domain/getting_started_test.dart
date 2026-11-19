@@ -67,38 +67,56 @@ void main() {
   const admin = Member(uid: 'a', name: '王牧師', role: Role.admin);
   const staff = Member(uid: 's', name: '李美玉');
 
-  test('a new church: its admin sets the services, invites, puts them in, and arranges, in that order', () {
+  test('a new church: its admin sets the services, arranges by name, then invites and puts them in', () {
     const todo = StartState.todo, done = StartState.done;
-    expect(states(of(admin, smallGroups: const [], hasLogo: false)), [
-      (StartStep.services, todo),
-      (StartStep.logo, todo),
-      (StartStep.invite, todo),
-      (StartStep.addStaff, StartState.locked),
-      (StartStep.smallGroups, todo),
-      (StartStep.arrange, todo),
-    ], reason: 'nobody to put in a service before someone joins');
-    expect(states(of(admin))[1], (StartStep.logo, done));
-    expect(states(of(admin))[4], (StartStep.smallGroups, done));
+    expect(
+      states(of(admin, smallGroups: const [], hasLogo: false)),
+      [
+        (StartStep.services, todo),
+        (StartStep.arrange, todo),
+        (StartStep.logo, todo),
+        (StartStep.invite, todo),
+        (StartStep.addStaff, todo),
+        (StartStep.smallGroups, todo),
+      ],
+      reason: 'a name typed is on the roster before anyone joins (2026-11-20)',
+    );
+    expect(states(of(admin))[2], (StartStep.logo, done));
+    expect(states(of(admin))[5], (StartStep.smallGroups, done));
     expect(
       of(admin, hasLogo: false, servicesSeen: true).single.next?.step,
-      StartStep.invite,
+      StartStep.arrange,
       reason: 'a logo is optional',
     );
     expect(of(admin).single.next?.step, StartStep.services);
 
     final seen = of(admin, servicesSeen: true, invited: true);
-    expect(states(seen).take(3), [
+    expect(states(seen).take(4), [
       (StartStep.services, done),
+      (StartStep.arrange, todo),
       (StartStep.logo, done),
       (StartStep.invite, StartState.waiting),
     ]);
-    expect(seen.single.next?.step, StartStep.arrange, reason: 'waiting on invites, 小組 optional');
+    expect(seen.single.next?.step, StartStep.arrange);
     expect(seen.single.after(seen.single.steps.first)?.step, StartStep.arrange);
+    final arranged = [
+      day('sunday', {
+        '司會': ['王牧師'],
+      }),
+    ];
+    expect(
+      of(admin, servicesSeen: true, invited: true, rosters: arranged).single.next,
+      isNull,
+      reason: 'waiting on invites, 小組 optional; who is arranged is in the service',
+    );
 
     final joined = of(admin, others: [staff], servicesSeen: true);
-    expect(states(joined)[2], (StartStep.invite, done));
-    expect(joined.single.next, (step: StartStep.addStaff, group: const ServiceGroup('sunday'), state: todo));
-    final moved = of(admin, pending: [movedMei], servicesSeen: true);
+    expect(states(joined)[3], (StartStep.invite, done));
+    expect(
+      joined.single.steps[4],
+      (step: StartStep.addStaff, group: const ServiceGroup('sunday'), state: todo),
+    );
+    final moved = of(admin, pending: [movedMei], servicesSeen: true, rosters: arranged);
     expect(moved.single.next?.step, StartStep.invite, reason: 'moved from self-host, nobody has signed in yet');
     expect(
       moved.single.steps.firstWhere((s) => s.step == StartStep.addStaff).state,
@@ -121,7 +139,7 @@ void main() {
       zones: [Zone(serviceType: 'sunday')],
     );
     expect(
-      of(admin, others: [inSunday], servicesSeen: true).single.steps[3],
+      of(admin, others: [inSunday], servicesSeen: true).single.steps[4],
       (step: StartStep.addStaff, group: const ServiceGroup('youth'), state: done),
       reason: 'someone in any service will do; it opens one with nobody yet',
     );
@@ -134,7 +152,7 @@ void main() {
             day('sunday', {'司會': []}),
           ],
         ),
-      ).last,
+      )[1],
       (StartStep.arrange, todo),
       reason: 'a day with nobody on it is not arranged yet',
     );
@@ -181,7 +199,7 @@ void main() {
     ]);
     expect(moved.single.next?.step, StartStep.invite);
     expect(
-      states(of(admin, pending: [movedMei], rosters: arranged, invited: true))[2],
+      states(of(admin, pending: [movedMei], rosters: arranged, invited: true))[3],
       (StartStep.invite, StartState.waiting),
       reason: 'until one of them signs in',
     );

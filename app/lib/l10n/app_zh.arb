@@ -18,6 +18,8 @@
   "delete": "刪除",
   "edit": "編輯",
   "deleted": "已刪除",
+  "deletedName": "已刪除「{name}」",
+  "@deletedName": {"description": "Toast after deleting a 服事項目 or 常用特別活動 from a service, with 復原", "placeholders": {"name": {"type": "String"}}},
   "loadFailed": "載入失敗，請檢查網路後再試一次",
   "saveFailed": "沒有儲存成功，請檢查網路後再試一次",
   "noPermission": "你沒有權限做這件事",
@@ -226,6 +228,8 @@
       }
     }
   },
+  "swipeToDelete": "左滑刪除",
+  "@swipeToDelete": {"description": "Footnote under a list whose rows an admin swipes left to delete: 服事項目, 常用特別活動"},
   "dutyUpdated": "已更新{duty}",
   "@dutyUpdated": {
     "placeholders": {
@@ -2327,6 +2331,8 @@
   "@gettingStartedArrange": {"description": "開始使用 step for an admin or 行政: opens the 服事表 tab"},
   "gettingStartedArrangeBody": "幾週一起排，排完再一次通知同工",
   "@gettingStartedArrangeBody": {"description": "Under gettingStartedArrange; one sentence"},
+  "gettingStartedArrangeByName": "同工還沒加入，也能打名字先排",
+  "@gettingStartedArrangeByName": {"description": "Under gettingStartedArrange for an admin: a name typed in the picker can be a 同工 without an account, so arranging needs no one to have joined (2026-11-20)"},
   "gettingStartedAddStaff": "加入{group}的同工",
   "@gettingStartedAddStaff": {"description": "開始使用 step for a lead: opens the group page to add its 同工", "placeholders": {"group": {"type": "String", "example": "青年崇拜"}}},
   "gettingStartedPlan": "排{service}的服事",
@@ -2343,8 +2349,6 @@
   "@gettingStartedLogoBody": {"description": "Under 上傳 logo in 開始使用 (admin, optional): where the logo shows"},
   "gettingStartedInviteWaiting": "已發出邀請，等同工加入",
   "@gettingStartedInviteWaiting": {"description": "Under 邀請同工 once an invite works and nobody has joined yet"},
-  "gettingStartedAfterJoin": "同工加入後就能做",
-  "@gettingStartedAfterJoin": {"description": "Under a 開始使用 step that needs someone else to have joined first"},
   "gettingStartedDone": "已完成",
   "@gettingStartedDone": {"description": "Screen-reader label of the check on a 開始使用 step done"},
   "gettingStartedNext": "下一步：{step}",

@@ -20,7 +20,7 @@ Whoever creates the church becomes its admin. Your new church comes with a Sunda
 
 ## 3. Set up services
 
-At the top of Home, **Get started** lists what to do next, in order, and checks off what is done. Start with **Set up services** and check which days you have services each week and which roles need people, such as Host, Piano, and Sound. When you're done, tap **Next: Invite team members** at the bottom of the page to go on.
+At the top of Home, **Get started** lists what to do next, in order, and checks off what is done. Start with **Set up services** and check which days you have services each week and which roles need people, such as Host, Piano, and Sound. When you’re done, tap **Next: Arrange the schedule** at the bottom of the page to go on. You can arrange people before they join: type their name when picking and add them as a team member, and what’s arranged is theirs once they join.
 
 To change these later, go to **Settings** → **Services & ministries**.
 
@@ -47,5 +47,5 @@ Team members who join from a phone’s browser will then see how to **Add to Hom
 
 ## What’s next
 
-- Back in **Get started**, tap **Arrange the schedule**, then tap **Arrange serving** at the top right of **Schedule** to arrange several weeks at once and notify your team when you’re done. See [Arrange serving: several weeks at once, drag to swap](/en/blog/plan-weeks/).
+- To arrange several weeks at once, tap **Arrange serving** at the top right of **Schedule**, and notify your team when you’re done. See [Arrange serving: several weeks at once, drag to swap](/en/blog/plan-weeks/).
 - Want your worship team and sound team leads to arrange their own serving? Give them a church role in **Settings** → **Team members**. See [Leads: add team members and arrange the serving you lead](/en/blog/for-leads/).

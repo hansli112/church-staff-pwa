@@ -9,6 +9,10 @@ enum StartStep {
   /// 服事設定: which days, which duties.
   services,
 
+  /// The first roster with someone on it (管理員, 行政): before anyone
+  /// joins, as a name typed is a 同工 without an account.
+  arrange,
+
   /// The church's logo (an admin's, optional): on the invite page, the
   /// home page's title, and the link and icon the web app shares.
   logo,
@@ -21,9 +25,6 @@ enum StartStep {
 
   /// 小組 (an admin's, optional): a church may have none.
   smallGroups,
-
-  /// The first roster with someone on it (管理員, 行政).
-  arrange,
 
   /// 安排服事 of the service, until a day of it has someone on a duty they arrange.
   planWeeks,
@@ -44,9 +45,6 @@ enum StartState {
 
   /// Done on this side, waiting on others: invites out, nobody joined yet.
   waiting,
-
-  /// Not yet: it needs someone else to have joined.
-  locked,
 
   done,
 }
@@ -116,7 +114,6 @@ List<GettingStarted> gettingStarted({
       rosters.any((r) => r.duties.any((d) => d.people.isNotEmpty && counts(r, d)));
   final anyArranged = arranged((_, _) => true);
   final joined = members.any((m) => m.uid != me.uid);
-  final someoneToPutIn = joined || pending.isNotEmpty;
   bool open(String service) => services.byId(service)?.enabled ?? false;
   StartState doneIf(bool done) => done ? StartState.done : StartState.todo;
   GettingStartedStep step(StartStep step, bool done, [ChurchGroup? group]) =>
@@ -130,8 +127,11 @@ List<GettingStarted> gettingStarted({
   List<GettingStartedStep> forAdmin() {
     final opened = [for (final s in services.enabled) ServiceGroup(s.id)];
     final staffed = anyArranged || opened.any(someoneElseIn);
+    // Arranging comes before inviting (2026-11-20): a name typed is a 同工
+    // without an account, who takes their days on joining.
     return [
       step(StartStep.services, servicesSeen || anyArranged),
+      step(StartStep.arrange, anyArranged),
       step(StartStep.logo, hasLogo),
       (
         step: StartStep.invite,
@@ -142,17 +142,12 @@ List<GettingStarted> gettingStarted({
             ? StartState.waiting
             : StartState.todo,
       ),
-      (
-        step: StartStep.addStaff,
-        group: opened.where((g) => !someoneElseIn(g)).firstOrNull ?? opened.firstOrNull,
-        state: staffed
-            ? StartState.done
-            : someoneToPutIn
-            ? StartState.todo
-            : StartState.locked,
+      step(
+        StartStep.addStaff,
+        staffed,
+        opened.where((g) => !someoneElseIn(g)).firstOrNull ?? opened.firstOrNull,
       ),
       step(StartStep.smallGroups, smallGroups.isNotEmpty, opened.firstOrNull),
-      step(StartStep.arrange, anyArranged),
     ];
   }
 

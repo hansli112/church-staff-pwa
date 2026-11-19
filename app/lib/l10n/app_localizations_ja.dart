@@ -63,6 +63,11 @@ class L10nJa extends L10n {
   String get deleted => '削除しました';
 
   @override
+  String deletedName(String name) {
+    return '$nameを削除しました';
+  }
+
+  @override
   String get loadFailed => '読み込めませんでした。接続を確認して、もう一度お試しください。';
 
   @override
@@ -383,6 +388,9 @@ class L10nJa extends L10n {
   String dutyRemoved(String duty) {
     return '$dutyを外しました';
   }
+
+  @override
+  String get swipeToDelete => '左にスワイプして削除';
 
   @override
   String dutyUpdated(String duty) {
@@ -3276,6 +3284,9 @@ class L10nJa extends L10n {
   String get gettingStartedArrangeBody => '数週間分をまとめて組み、最後に一度だけ通知しましょう';
 
   @override
+  String get gettingStartedArrangeByName => 'メンバーが参加する前でも、名前を入力して組めます';
+
+  @override
   String gettingStartedAddStaff(String group) {
     return '$groupにメンバーを加える';
   }
@@ -3304,9 +3315,6 @@ class L10nJa extends L10n {
 
   @override
   String get gettingStartedInviteWaiting => '招待済み、メンバーの参加待ち';
-
-  @override
-  String get gettingStartedAfterJoin => 'メンバーが参加してからできます';
 
   @override
   String get gettingStartedDone => '完了';

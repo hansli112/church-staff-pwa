@@ -133,6 +133,40 @@ void main() {
     expect(b.ministries['grace']!.ministries.single.duties, const [MinistryDuty('sunday', 'Vocal')]);
   });
 
+  testWidgets('a duty added there by mistake is swiped away, from its service too, and comes back with 復原', (
+    tester,
+  ) async {
+    final b = seededChurch();
+    b.ministries['grace'] = const MinistrySettings(
+      ministries: [
+        Ministry(id: 'worship', name: '敬拜團', duties: [MinistryDuty('sunday', '司琴')]),
+      ],
+      ids: ['worship'],
+    );
+    await pumpApp(tester, b);
+    await go(tester, '/me/groups/ministry/worship');
+    await tapText(tester, '選服事項目');
+    expect(findShown('左滑刪除'), findsOneWidget);
+    await tester.drag(find.text('司琴').last, const Offset(-500, 0));
+    await settle(tester);
+    expect(b.services['grace']!.byId('sunday')!.duties, ['司會', '招待']);
+    expect(find.text('司琴'), findsNothing);
+    await tapText(tester, '復原');
+    expect(b.services['grace']!.byId('sunday')!.duties, ['司會', '司琴', '招待']);
+    await tapText(tester, '完成');
+    expect(
+      b.ministries['grace']!.ministries.single.duties,
+      const [MinistryDuty('sunday', '司琴')],
+      reason: 'back ticked, as it was',
+    );
+    await tapText(tester, '選服事項目');
+
+    await tester.drag(find.text('司琴').last, const Offset(-500, 0));
+    await settle(tester);
+    await tapText(tester, '完成');
+    expect(b.ministries['grace']!.ministries.single.duties, isEmpty, reason: 'no longer ticked');
+  });
+
   testWidgets("a 事工's duties that differ by service are said place by place, the same ones together; its 負責人 alike", (
     tester,
   ) async {

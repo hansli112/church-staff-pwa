@@ -63,6 +63,11 @@ class L10nZh extends L10n {
   String get deleted => '已刪除';
 
   @override
+  String deletedName(String name) {
+    return '已刪除「$name」';
+  }
+
+  @override
   String get loadFailed => '載入失敗，請檢查網路後再試一次';
 
   @override
@@ -383,6 +388,9 @@ class L10nZh extends L10n {
   String dutyRemoved(String duty) {
     return '已移除$duty';
   }
+
+  @override
+  String get swipeToDelete => '左滑刪除';
 
   @override
   String dutyUpdated(String duty) {
@@ -3272,6 +3280,9 @@ class L10nZh extends L10n {
   String get gettingStartedArrangeBody => '幾週一起排，排完再一次通知同工';
 
   @override
+  String get gettingStartedArrangeByName => '同工還沒加入，也能打名字先排';
+
+  @override
   String gettingStartedAddStaff(String group) {
     return '加入$group的同工';
   }
@@ -3300,9 +3311,6 @@ class L10nZh extends L10n {
 
   @override
   String get gettingStartedInviteWaiting => '已發出邀請，等同工加入';
-
-  @override
-  String get gettingStartedAfterJoin => '同工加入後就能做';
 
   @override
   String get gettingStartedDone => '已完成';
@@ -3638,6 +3646,11 @@ class L10nZhHans extends L10nZh {
   String get deleted => '已删除';
 
   @override
+  String deletedName(String name) {
+    return '已删除“$name”';
+  }
+
+  @override
   String get loadFailed => '加载失败，请检查网络后再试一次';
 
   @override
@@ -3958,6 +3971,9 @@ class L10nZhHans extends L10nZh {
   String dutyRemoved(String duty) {
     return '已移除$duty';
   }
+
+  @override
+  String get swipeToDelete => '左滑删除';
 
   @override
   String dutyUpdated(String duty) {
@@ -6847,6 +6863,9 @@ class L10nZhHans extends L10nZh {
   String get gettingStartedArrangeBody => '几周一起排，排完再一次通知同工';
 
   @override
+  String get gettingStartedArrangeByName => '同工还没加入，也能打名字先排';
+
+  @override
   String gettingStartedAddStaff(String group) {
     return '加入$group的同工';
   }
@@ -6875,9 +6894,6 @@ class L10nZhHans extends L10nZh {
 
   @override
   String get gettingStartedInviteWaiting => '已发出邀请，等同工加入';
-
-  @override
-  String get gettingStartedAfterJoin => '同工加入后就能做';
 
   @override
   String get gettingStartedDone => '已完成';

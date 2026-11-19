@@ -208,6 +208,12 @@ abstract class L10n {
   /// **'已刪除'**
   String get deleted;
 
+  /// Toast after deleting a 服事項目 or 常用特別活動 from a service, with 復原
+  ///
+  /// In zh, this message translates to:
+  /// **'已刪除「{name}」'**
+  String deletedName(String name);
+
   /// No description provided for @loadFailed.
   ///
   /// In zh, this message translates to:
@@ -795,6 +801,12 @@ abstract class L10n {
   /// In zh, this message translates to:
   /// **'已移除{duty}'**
   String dutyRemoved(String duty);
+
+  /// Footnote under a list whose rows an admin swipes left to delete: 服事項目, 常用特別活動
+  ///
+  /// In zh, this message translates to:
+  /// **'左滑刪除'**
+  String get swipeToDelete;
 
   /// No description provided for @dutyUpdated.
   ///
@@ -5788,6 +5800,12 @@ abstract class L10n {
   /// **'幾週一起排，排完再一次通知同工'**
   String get gettingStartedArrangeBody;
 
+  /// Under gettingStartedArrange for an admin: a name typed in the picker can be a 同工 without an account, so arranging needs no one to have joined (2026-11-20)
+  ///
+  /// In zh, this message translates to:
+  /// **'同工還沒加入，也能打名字先排'**
+  String get gettingStartedArrangeByName;
+
   /// 開始使用 step for a lead: opens the group page to add its 同工
   ///
   /// In zh, this message translates to:
@@ -5835,12 +5853,6 @@ abstract class L10n {
   /// In zh, this message translates to:
   /// **'已發出邀請，等同工加入'**
   String get gettingStartedInviteWaiting;
-
-  /// Under a 開始使用 step that needs someone else to have joined first
-  ///
-  /// In zh, this message translates to:
-  /// **'同工加入後就能做'**
-  String get gettingStartedAfterJoin;
 
   /// Screen-reader label of the check on a 開始使用 step done
   ///

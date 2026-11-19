@@ -63,6 +63,11 @@ class L10nKo extends L10n {
   String get deleted => '삭제했어요';
 
   @override
+  String deletedName(String name) {
+    return '‘$name’을(를) 삭제했어요';
+  }
+
+  @override
   String get loadFailed => '불러오지 못했어요. 네트워크를 확인하고 다시 시도해 주세요.';
 
   @override
@@ -384,6 +389,9 @@ class L10nKo extends L10n {
   String dutyRemoved(String duty) {
     return '$duty 담당을 뺐어요';
   }
+
+  @override
+  String get swipeToDelete => '왼쪽으로 밀어서 삭제';
 
   @override
   String dutyUpdated(String duty) {
@@ -3275,6 +3283,9 @@ class L10nKo extends L10n {
   String get gettingStartedArrangeBody => '몇 주를 한꺼번에 배정하고 마지막에 한 번만 알려요';
 
   @override
+  String get gettingStartedArrangeByName => '멤버가 들어오기 전에도 이름을 입력해 배정할 수 있어요';
+
+  @override
   String gettingStartedAddStaff(String group) {
     return '$group에 멤버 추가';
   }
@@ -3303,9 +3314,6 @@ class L10nKo extends L10n {
 
   @override
   String get gettingStartedInviteWaiting => '초대를 보냈어요. 멤버가 들어오기를 기다리는 중';
-
-  @override
-  String get gettingStartedAfterJoin => '멤버가 들어온 뒤에 할 수 있어요';
 
   @override
   String get gettingStartedDone => '완료';

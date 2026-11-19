@@ -216,14 +216,16 @@ String _title(L10n l10n, GettingStartedStep s, String Function(ChurchGroup?) nam
   StartStep.meets => l10n.gettingStartedMeets(name(s.group)),
 };
 
-String? _subtitle(L10n l10n, GettingStartedStep s) => switch ((s.step, s.state)) {
+/// What [s] needs, under its title. Only an admin's 安排服事表 says a name
+/// typed will do: 行政 and a 事工's 負責人 cannot add a 同工 that way.
+String? _subtitle(L10n l10n, GettingStartedStep s, Identity identity) => switch ((s.step, s.state)) {
   (_, StartState.done) => null,
-  (_, StartState.locked) => l10n.gettingStartedAfterJoin,
   (StartStep.services, _) => l10n.gettingStartedServicesBody,
   (StartStep.invite, StartState.waiting) => l10n.gettingStartedInviteWaiting,
   (StartStep.invite, _) => l10n.gettingStartedInviteBody,
   (StartStep.smallGroups, _) => l10n.gettingStartedSmallGroupsBody,
   (StartStep.logo, _) => l10n.gettingStartedLogoBody,
+  (StartStep.arrange, _) when identity is! OfficeIdentity => l10n.gettingStartedArrangeByName,
   (StartStep.arrange || StartStep.planWeeks, _) => l10n.gettingStartedArrangeBody,
   _ => null,
 };
@@ -259,11 +261,10 @@ class GettingStartedSection extends ConsumerWidget {
         for (final (i, s) in start.steps.indexed)
           ListRow(
             title: _title(l10n, s, name),
-            subtitle: _subtitle(l10n, s),
+            subtitle: _subtitle(l10n, s, start.identity),
             leading: _StepMark(i + 1, s.state, isNext: s == next),
-            // A step done still opens its page, to change what was set;
-            // one locked has nothing there yet.
-            onTap: s.state == StartState.locked ? null : () => openStartStep(context, ref, s),
+            // A step done still opens its page, to change what was set.
+            onTap: () => openStartStep(context, ref, s),
           ),
         ListRow(
           title: l10n.gettingStartedHide,
@@ -295,7 +296,6 @@ class _StepMark extends StatelessWidget {
         semanticLabel: L10n.of(context).gettingStartedDone,
       );
     }
-    final color = state == StartState.locked ? c.tertiaryLabel : c.secondaryLabel;
     return Container(
       width: 22,
       height: 22,
@@ -303,13 +303,13 @@ class _StepMark extends StatelessWidget {
       decoration: BoxDecoration(
         shape: BoxShape.circle,
         color: isNext ? c.accent : null,
-        border: isNext ? null : Border.all(color: color, width: 1.5),
+        border: isNext ? null : Border.all(color: c.secondaryLabel, width: 1.5),
       ),
       child: Text(
         '$number',
         textScaler: TextScaler.noScaling,
         style: AppText.caption.copyWith(
-          color: isNext ? c.onAccent : color,
+          color: isNext ? c.onAccent : c.secondaryLabel,
           fontWeight: FontWeight.w600,
           height: 1,
         ),

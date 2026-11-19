@@ -63,6 +63,11 @@ class L10nEn extends L10n {
   String get deleted => 'Deleted';
 
   @override
+  String deletedName(String name) {
+    return 'Deleted $name';
+  }
+
+  @override
   String get loadFailed => 'Couldn’t load. Check your connection and try again.';
 
   @override
@@ -393,6 +398,9 @@ class L10nEn extends L10n {
   String dutyRemoved(String duty) {
     return 'Removed $duty';
   }
+
+  @override
+  String get swipeToDelete => 'Swipe left to delete';
 
   @override
   String dutyUpdated(String duty) {
@@ -3466,6 +3474,9 @@ class L10nEn extends L10n {
   String get gettingStartedArrangeBody => 'Arrange several weeks, then tell your team once';
 
   @override
+  String get gettingStartedArrangeByName => 'Type names in, even before your team has joined';
+
+  @override
   String gettingStartedAddStaff(String group) {
     return 'Add team members to $group';
   }
@@ -3494,9 +3505,6 @@ class L10nEn extends L10n {
 
   @override
   String get gettingStartedInviteWaiting => 'Invite sent, waiting for your team to join';
-
-  @override
-  String get gettingStartedAfterJoin => 'Once your team has joined';
 
   @override
   String get gettingStartedDone => 'Done';

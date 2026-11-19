@@ -182,25 +182,29 @@ void main() {
   testWidgets("a new church's admin goes step by step: a step's page offers the next once it is done", (tester) async {
     final b = newChurch();
     await pumpApp(tester, b);
-    expect(find.text('同工加入後就能做'), findsOneWidget, reason: 'nobody to put in a service yet');
-    await tester.tap(find.text('加入主日崇拜的同工'));
-    await settle(tester);
-    expect(find.text('開始使用'), findsOneWidget, reason: 'not open before anyone joins');
+    expect(
+      find.text('同工還沒加入，也能打名字先排'),
+      findsOneWidget,
+      reason: 'a name typed is on the roster before anyone joins (2026-11-20)',
+    );
 
     await tapText(tester, '設定聚會');
     expect(find.text('聚會與事工'), findsWidgets);
-    await tapText(tester, '下一步：邀請同工');
-    expect(find.text('建立邀請連結'), findsOneWidget);
-    expect(findShown('下一步：安排服事表'), findsNothing, reason: 'nobody invited yet');
+    await tapText(tester, '下一步：安排服事表');
+    expect(find.text('還沒有安排任何人'), findsOneWidget);
 
+    GoRouter.of(tester.element(find.byType(Scaffold).first)).go('/home');
+    await settle(tester);
+    expect(find.bySemanticsLabel(RegExp('已完成')), findsOneWidget, reason: 'the services, looked at');
+    await tapText(tester, '邀請同工');
+    expect(find.text('建立邀請連結'), findsOneWidget);
+    expect(findShown('下一步：加入主日崇拜的同工'), findsNothing, reason: 'nobody invited yet');
     await b.church('living').createInvite(validFor: const Duration(days: 7));
     b.notify();
     await settle(tester);
-    expect(find.text('下一步：安排服事表'), findsOneWidget, reason: 'waiting on them; 小組 is optional');
+    expect(find.text('下一步：加入主日崇拜的同工'), findsOneWidget, reason: 'waiting on them');
     await back(tester);
-    expect(find.text('開始使用'), findsOneWidget, reason: 'the services page gave way to the invites');
     expect(find.text('已發出邀請，等同工加入'), findsOneWidget);
-    expect(find.bySemanticsLabel(RegExp('已完成')), findsOneWidget, reason: 'the services, looked at');
 
     b.addMember('living', const Member(uid: 'john', name: 'John Chen'));
     b.notify();
@@ -208,15 +212,5 @@ void main() {
     expect(find.text('1 位同工還沒加入任何聚會'), findsNothing, reason: 'the step says it');
     await tapText(tester, '加入主日崇拜的同工');
     expect(find.text('主日崇拜的同工'), findsOneWidget);
-    expect(findShown('下一步：安排服事表'), findsNothing);
-    b.members['living']!['john'] = const Member(
-      uid: 'john',
-      name: 'John Chen',
-      zones: [Zone(serviceType: 'sunday')],
-    );
-    b.notify();
-    await settle(tester);
-    await tapText(tester, '下一步：安排服事表');
-    expect(find.text('還沒有安排任何人'), findsOneWidget);
   });
 }

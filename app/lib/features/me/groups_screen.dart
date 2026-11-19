@@ -1184,49 +1184,83 @@ class _DutyPickerState extends ConsumerState<_DutyPicker> {
     if (!_picked.remove(duty)) _picked.add(duty);
   });
 
+  /// What is ticked, less a duty deleted here since: ticked still, so
+  /// 復原 brings it back ticked.
+  List<MinistryDuty> _done() {
+    final services = ref.read(servicesProvider).value;
+    return [
+      for (final d in _picked)
+        if (services?.byId(d.service)?.duties.contains(d.duty) ?? true) d,
+    ];
+  }
+
   @override
   Widget build(BuildContext context) {
     final l10n = L10n.of(context);
     final services = ref.watch(servicesProvider).value?.enabled ?? const <Service>[];
+    final anyDuty = services.any((s) => s.duties.isNotEmpty);
     return UnsavedChanges(
-      changed: () => !setEquals(_picked.toSet(), widget.initial.toSet()),
-      child: Column(
-        children: [
-          SheetBar(
-            title: l10n.ministryDuties,
-            actions: [SecondaryButton(label: l10n.done, onPressed: () => Navigator.pop(context, _picked))],
-          ),
-          Expanded(
-            child: ListView(
-              children: [
-                for (final s in services)
-                  ListSection(
-                    header: s.name,
-                    children: [
-                      for (final d in s.duties)
-                        ListRow(
-                          title: d,
-                          selected: _picked.contains(MinistryDuty(s.id, d)),
-                          onTap: () => _toggle(MinistryDuty(s.id, d)),
-                        ),
-                      ListRow(
-                        title: l10n.addDuty,
-                        leading: const Icon(Symbols.add_rounded),
-                        chevron: false,
-                        onTap: () async {
-                          final name = await ServiceEdits(context, ref, s).addDuty();
-                          if (name != null && mounted && !_picked.contains(MinistryDuty(s.id, name))) {
-                            _toggle(MinistryDuty(s.id, name));
-                          }
-                        },
-                      ),
-                    ],
-                  ),
-              ],
+      changed: () => !setEquals(_done().toSet(), widget.initial.toSet()),
+      // A Scaffold of its own, so 已刪除 and its 復原 show over the sheet,
+      // not under it on the page.
+      child: Scaffold(
+        backgroundColor: Colors.transparent,
+        body: Column(
+          children: [
+            SheetBar(
+              title: l10n.ministryDuties,
+              actions: [SecondaryButton(label: l10n.done, onPressed: () => Navigator.pop(context, _done()))],
+            ),
+            Expanded(
+              child: ListView(
+                children: [
+                  for (final service in services)
+                    _section(context, l10n, service, footer: anyDuty && service == services.last),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  /// [service]'s duties to tick, each swiped left to delete it from the
+  /// service, as on its page: one added here by mistake (2026-11-20).
+  /// [footer]: says so, once, under the last.
+  Widget _section(BuildContext context, L10n l10n, Service service, {required bool footer}) {
+    final edits = ServiceEdits(context, ref, service);
+    return ListSection(
+      header: service.name,
+      footer: footer ? l10n.swipeToDelete : null,
+      children: [
+        for (final d in service.duties)
+          Dismissible(
+            key: ValueKey('duty/${service.id}/$d'),
+            direction: DismissDirection.endToStart,
+            background: const SwipeDeleteBackground(),
+            confirmDismiss: (_) async {
+              await edits.removeDuty(d);
+              return false; // The successful server change removes the row.
+            },
+            child: ListRow(
+              title: d,
+              selected: _picked.contains(MinistryDuty(service.id, d)),
+              onTap: () => _toggle(MinistryDuty(service.id, d)),
             ),
           ),
-        ],
-      ),
+        ListRow(
+          title: l10n.addDuty,
+          leading: const Icon(Symbols.add_rounded),
+          chevron: false,
+          onTap: () async {
+            final name = await edits.addDuty();
+            if (name != null && mounted && !_picked.contains(MinistryDuty(service.id, name))) {
+              _toggle(MinistryDuty(service.id, name));
+            }
+          },
+        ),
+      ],
     );
   }
 }
