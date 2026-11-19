@@ -26,7 +26,7 @@ Future<void> go(WidgetTester tester, String location) async {
 }
 
 Future<void> tapText(WidgetTester tester, String text) async {
-  await tester.tap(find.text(text).last);
+  await tester.tap(shownText(text).last);
   await settle(tester);
 }
 
@@ -36,9 +36,23 @@ const calendarEditor = Member(uid: 'cal', name: '行事曆同工', groups: {Grou
 Finder gridDay(int n) => find.descendant(of: find.byType(MonthGrid), matching: find.text('$n'));
 
 /// [text] in the agenda below the month grid.
-Finder inAgenda(String text) => find.descendant(of: find.byType(ListSection), matching: find.text(text));
+Finder inAgenda(String text) => find.descendant(of: find.byType(ListSection), matching: shownText(text));
 
 void main() {
+  testWidgets("the month's events are one list, each day's date beside its first", (tester) async {
+    final b = seededChurch()..connectCalendar('grace', calendarName: '教會行事曆');
+    b.calendarEvents['grace'] = [
+      CalendarEvent(id: 'a', title: '禱告會', start: DateTime(2026, 10, 9, 19), end: DateTime(2026, 10, 9, 21)),
+      CalendarEvent(id: 'b', title: '同工會', start: DateTime(2026, 10, 9, 21), end: DateTime(2026, 10, 9, 22)),
+      CalendarEvent(id: 'c', title: '洗禮班', start: DateTime(2026, 10, 17, 10), end: DateTime(2026, 10, 17, 12)),
+    ];
+    await pumpApp(tester, b);
+    await go(tester, '/calendar');
+    expect(find.byType(ListSection), findsOneWidget, reason: 'no heading and card a day');
+    expect(find.byType(DateBlock), findsNWidgets(2), reason: "the 9th's once, the 17th's");
+    expect(inAgenda('同工會'), findsOneWidget);
+  });
+
   testWidgets('not connected: staff see one sentence, the admin gets a way to connect', (tester) async {
     await pumpApp(tester, seededChurch(as: staffMei));
     await go(tester, '/calendar');

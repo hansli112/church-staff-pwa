@@ -198,6 +198,8 @@ double _leadingInset(Widget row) => switch (row) {
   ListRow(leading: IconTile()) => IconTile.size + Space.m,
   ListRow(leading: Avatar()) => Avatar.size + Space.m,
   ListRow(leading: DateBlock()) => DateBlock.minWidth + Space.m,
+  // In place of a DateBlock: a day's second event, under its first.
+  ListRow(leading: SizedBox(:final width?)) => width + Space.m,
   ListRow(leading: Icon()) => 22 + Space.m,
   _ => 0,
 };

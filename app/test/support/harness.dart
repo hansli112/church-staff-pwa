@@ -246,3 +246,10 @@ Finder findDay(String date) => find.byWidgetPredicate(
   (w) => w is DateBlock && w.semanticLabel.contains(date),
   description: 'the day $date',
 );
+
+/// [text] as shown, whether or not a wrapped line joined its phrases
+/// with invisible WORD JOINERs (BalancedText).
+Finder shownText(String text) => find.byWidgetPredicate(
+  (w) => w is Text && (w.data ?? w.textSpan?.toPlainText())?.replaceAll('⁠', '') == text,
+  description: 'text "$text"',
+);

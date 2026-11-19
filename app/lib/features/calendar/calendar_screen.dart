@@ -15,6 +15,7 @@ import '../../state/calendar.dart';
 import '../../state/providers.dart';
 import '../common/calendar_read_notice.dart';
 import '../common/time_zones.dart';
+import '../rosters/day_block.dart';
 import '../rosters/format.dart';
 import 'event_sheet.dart';
 import 'month_grid.dart';
@@ -365,7 +366,8 @@ class _AgendaState extends ConsumerState<_Agenda> {
       onShift: shift,
     );
 
-    Widget row(CalendarEvent e) => ListRow(
+    Widget row(CalendarEvent e, {Widget? leading}) => ListRow(
+      leading: leading,
       title: e.title,
       // One line: the whole address is on the event's page.
       subtitle: e.location,
@@ -421,12 +423,16 @@ class _AgendaState extends ConsumerState<_Agenda> {
         final listed = e.daysWithin(shownMonth, shownMonth.lastOfMonth)?.first;
         if (listed != null) byDay.putIfAbsent(listed, () => []).add(e);
       }
+      // One list, the day beside its first event as on the 服事表 tab: a
+      // heading and a card a day made a month of one-event days long.
       agenda = [
-        for (final d in byDay.keys.toList()..sort())
-          ListSection(
-            header: dayLabel(l10n, d, today),
-            children: [for (final e in byDay[d]!) row(e)],
-          ),
+        ListSection(
+          children: [
+            for (final d in byDay.keys.toList()..sort())
+              for (final (i, e) in byDay[d]!.indexed)
+                row(e, leading: i == 0 ? dayBlock(d, today) : const SizedBox(width: DateBlock.minWidth)),
+          ],
+        ),
       ];
     }
     // In place of the agenda, centred in the room left: loading, an error,

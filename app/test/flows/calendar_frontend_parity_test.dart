@@ -14,7 +14,7 @@ Future<void> go(WidgetTester tester, String location) async {
 }
 
 Future<void> tapText(WidgetTester tester, String text) async {
-  final target = find.text(text).last;
+  final target = shownText(text).last;
   await tester.ensureVisible(target);
   await tester.tap(target);
   await settle(tester);
@@ -166,7 +166,9 @@ void main() {
     ];
     await pumpApp(tester, b);
     await go(tester, '/calendar');
-    await tapText(tester, '9');
+    // The month's day, not the agenda's date beside the event.
+    await tester.tap(find.text('9').first);
+    await settle(tester);
     final line = tester.getSize(find.text('同工會').last).height;
     expect(tester.getSize(find.text(address)).height, lessThan(line * 1.5), reason: 'the rest is on the event');
 
