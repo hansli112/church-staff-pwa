@@ -112,6 +112,7 @@
   "offlineShowingCached": "오프라인이에요. 마지막으로 불러온 내용을 보여 드려요.",
   "dutyCount": "담당 {count}개",
   "addDuty": "담당 추가",
+  "addDutyFirst": "추가하기",
   "dutyName": "담당 이름",
   "removeDuty": "이날은 이 담당 없음",
   "dutyRemoved": "{duty} 담당을 뺐어요",

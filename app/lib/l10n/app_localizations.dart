@@ -772,6 +772,12 @@ abstract class L10n {
   /// **'新增服事項目'**
   String get addDuty;
 
+  /// An empty event roster's button under 還沒有服事項目, so the words are not said twice
+  ///
+  /// In zh, this message translates to:
+  /// **'新增項目'**
+  String get addDutyFirst;
+
   /// No description provided for @dutyName.
   ///
   /// In zh, this message translates to:

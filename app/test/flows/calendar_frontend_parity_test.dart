@@ -170,7 +170,11 @@ void main() {
     await tester.tap(find.text('9').first);
     await settle(tester);
     final line = tester.getSize(find.text('同工會').last).height;
-    expect(tester.getSize(find.text(address)).height, lessThan(line * 1.5), reason: 'the rest is on the event');
+    expect(
+      tester.getSize(shownText('19:00 – 21:00 · $address')).height,
+      lessThan(line * 1.5),
+      reason: 'the rest is on the event',
+    );
 
     // Wider than a phone: the test font's square glyphs would put the time
     // under the date, as large text does.

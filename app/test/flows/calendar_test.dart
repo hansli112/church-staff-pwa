@@ -110,7 +110,7 @@ void main() {
     expect(telemetry.named('calendar_connect'), [null]);
     await go(tester, '/calendar');
     expect(inAgenda('同工會'), findsOneWidget);
-    expect(find.text('19:30'), findsOneWidget);
+    expect(find.text('19:30 – 21:00'), findsOneWidget);
   });
 
   testWidgets('the calendar picked shows as picked at once, while the backend wakes up', (tester) async {

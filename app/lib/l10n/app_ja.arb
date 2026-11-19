@@ -112,6 +112,7 @@
   "offlineShowingCached": "オフラインです。前回のデータを表示しています。",
   "dutyCount": "担当{count}件",
   "addDuty": "担当を追加",
+  "addDutyFirst": "追加する",
   "dutyName": "担当名",
   "removeDuty": "この日はこの担当なし",
   "dutyRemoved": "{duty}を外しました",

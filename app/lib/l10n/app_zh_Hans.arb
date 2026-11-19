@@ -112,6 +112,7 @@
   "offlineShowingCached": "离线中，显示上次的数据",
   "dutyCount": "{count} 项事奉",
   "addDuty": "添加事奉项目",
+  "addDutyFirst": "添加项目",
   "dutyName": "事奉项目名称",
   "removeDuty": "这一天没有这项事奉",
   "dutyRemoved": "已移除{duty}",

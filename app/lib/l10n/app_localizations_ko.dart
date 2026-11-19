@@ -372,6 +372,9 @@ class L10nKo extends L10n {
   String get addDuty => '담당 추가';
 
   @override
+  String get addDutyFirst => '추가하기';
+
+  @override
   String get dutyName => '담당 이름';
 
   @override

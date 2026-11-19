@@ -367,23 +367,16 @@ class _AgendaState extends ConsumerState<_Agenda> {
     );
 
     Widget row(CalendarEvent e, {Widget? leading}) {
-      final span = _span(l10n, e);
       final place = e.location?.trim() ?? '';
       return ListRow(
         leading: leading,
         title: e.title,
-        // Over several days, the span under the title on one line; beside
-        // it, it took two lines and read as two times. The address on one
-        // line: the whole of it is on the event's page.
-        subtitle: span == null && place.isEmpty ? null : [?span, if (place.isNotEmpty) place].join('\n'),
-        subtitleLines: span != null && place.isNotEmpty ? 2 : 1,
-        trailing: span != null
-            ? null
-            : Text(
-                e.allDay ? l10n.calAllDay : DateFormat.Hm().format(e.start),
-                textAlign: TextAlign.end,
-                style: AppText.body.copyWith(color: AppColors.of(context).secondaryLabel),
-              ),
+        // When, always under the title, then where: one place for the time
+        // whether it is one day or several (2026-11-19, the time beside a
+        // day's event and under a span read as two layouts). One line: the
+        // rest of a long address is on the event's page.
+        subtitle: [_when(l10n, e), if (place.isNotEmpty) place].join(' · '),
+        subtitleLines: 1,
         // Opens the event either way: to edit, or to read. A new one shows
         // while it is saved, and opens once it has an id.
         chevron: true,
@@ -577,11 +570,13 @@ class _FoldingState extends State<_Folding> with SingleTickerProviderStateMixin 
   );
 }
 
-/// When an event over several days is, under its title, on one line:
-/// the days, with the times when it has them; null for one day.
-String? _span(L10n l10n, CalendarEvent e) {
-  if (e.lastDay == e.day) return null;
+/// When [e] is, under its title: 09:00 – 11:00, 整天, or over several
+/// days the days, with the times when it has them.
+String _when(L10n l10n, CalendarEvent e) {
   final time = DateFormat.Hm();
+  if (e.lastDay == e.day) {
+    return e.allDay ? l10n.calAllDay : '${time.format(e.start)} – ${time.format(e.end)}';
+  }
   final day = shortMonthDay(l10n);
   if (e.allDay) return '${day.format(e.start)} – ${day.format(e.lastDay.midnight)}';
   return '${day.format(e.start)} ${time.format(e.start)} – ${day.format(e.end)} ${time.format(e.end)}';

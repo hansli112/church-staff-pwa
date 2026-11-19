@@ -371,6 +371,9 @@ class L10nJa extends L10n {
   String get addDuty => '担当を追加';
 
   @override
+  String get addDutyFirst => '追加する';
+
+  @override
   String get dutyName => '担当名';
 
   @override

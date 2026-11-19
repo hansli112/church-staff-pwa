@@ -381,6 +381,9 @@ class L10nEn extends L10n {
   String get addDuty => 'Add role';
 
   @override
+  String get addDutyFirst => 'Add one';
+
+  @override
   String get dutyName => 'Role name';
 
   @override

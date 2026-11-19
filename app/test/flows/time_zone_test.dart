@@ -81,7 +81,7 @@ void main() {
     expect(find.text('教會當地時間（台北）'), findsNothing);
     await calendarWith(const Duration(hours: -7));
     expect(find.text('教會當地時間（台北）'), findsOneWidget);
-    expect(find.text('19:00'), findsOneWidget, reason: "the church's 7 pm, not the phone's");
+    expect(find.text('19:00 – 21:00'), findsOneWidget, reason: "the church's 7 pm, not the phone's");
   });
 
   testWidgets('picking a calendar kept in another time zone says so', (tester) async {

@@ -112,6 +112,7 @@
   "offlineShowingCached": "Offline. Showing what was last loaded.",
   "dutyCount": "{count, plural, =1{1 role} other{{count} roles}}",
   "addDuty": "Add role",
+  "addDutyFirst": "Add one",
   "dutyName": "Role name",
   "removeDuty": "Not needed this day",
   "dutyRemoved": "Removed {duty}",

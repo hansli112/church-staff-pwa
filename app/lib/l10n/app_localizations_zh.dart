@@ -371,6 +371,9 @@ class L10nZh extends L10n {
   String get addDuty => '新增服事項目';
 
   @override
+  String get addDutyFirst => '新增項目';
+
+  @override
   String get dutyName => '服事項目名稱';
 
   @override
@@ -3926,6 +3929,9 @@ class L10nZhHans extends L10nZh {
 
   @override
   String get addDuty => '添加事奉项目';
+
+  @override
+  String get addDutyFirst => '添加项目';
 
   @override
   String get dutyName => '事奉项目名称';

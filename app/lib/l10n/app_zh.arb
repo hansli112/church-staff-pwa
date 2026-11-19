@@ -212,6 +212,10 @@
     }
   },
   "addDuty": "新增服事項目",
+  "addDutyFirst": "新增項目",
+  "@addDutyFirst": {
+    "description": "An empty event roster's button under 還沒有服事項目, so the words are not said twice"
+  },
   "dutyName": "服事項目名稱",
   "removeDuty": "這一天沒有這項服事",
   "dutyRemoved": "已移除{duty}",

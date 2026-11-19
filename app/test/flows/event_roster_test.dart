@@ -54,7 +54,7 @@ void main() {
     expect(find.text('沿用其他活動'), findsOneWidget, reason: 'an empty roster starts from another event too');
     expect(b.rosters['grace']!.containsKey('ev_xmas'), isFalse, reason: 'nothing saved until a change');
 
-    await tapText(tester, '新增服事項目');
+    await tapText(tester, '新增項目');
     // Every service's duties are offered.
     expect(find.text('司琴'), findsOneWidget);
     await tapText(tester, '司琴');
@@ -228,8 +228,8 @@ void main() {
     await tester.pump();
     await tapText(tester, '安排服事');
     final saved = b.calendarEvents['grace']!.singleWhere((e) => e.title == '同工會');
-    expect(find.text('新增服事項目'), findsOneWidget);
-    await tapText(tester, '新增服事項目');
+    expect(find.text('新增項目'), findsOneWidget);
+    await tapText(tester, '新增項目');
     await tapText(tester, '司琴');
     expect(b.rosters['grace']![Roster.idForEvent(saved.id!)]!.forEvent!.title, '同工會');
   });
