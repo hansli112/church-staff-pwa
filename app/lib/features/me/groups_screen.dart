@@ -43,9 +43,10 @@ String groupStaffPage(ChurchGroup group) => switch (group) {
 };
 
 /// 聚會與事工 (#82, #94), for admins: every service, put in order and
-/// added here, and the 事工 of no one service, with who leads them and
-/// what; each opens its page. A service's own 事工 (most: each its own
-/// 敬拜團) are on its page, as 服事設定 is.
+/// added here, and every 事工, with who leads them and what; each opens
+/// its page. A service's own 事工 (most: each its own 敬拜團) are here too,
+/// named with its service beside another of its name: a service's page
+/// has its 服事項目 only, one place for 事工 (2026-11-19).
 class GroupsScreen extends ConsumerWidget {
   const GroupsScreen({super.key});
 
@@ -62,15 +63,14 @@ class GroupsScreen extends ConsumerWidget {
           const ServiceListSection(),
           SliverToBoxAdapter(
             child: ListSection(
-              header: l10n.ministriesChurchWide,
+              header: l10n.ministries,
               children: [
                 for (final m in ministries?.ministries ?? const <Ministry>[])
-                  if (m.service == null || services?.byId(m.service!) == null)
-                    ListRow(
-                      title: m.name,
-                      subtitle: ministryLine(l10n, m, services?.enabled ?? const [], members),
-                      onTap: () => context.push('/me/groups/ministry/${m.id}'),
-                    ),
+                  ListRow(
+                    title: ministries!.nameOf(m.id, services),
+                    subtitle: ministryLine(l10n, m, services?.enabled ?? const [], members),
+                    onTap: () => context.push('/me/groups/ministry/${m.id}'),
+                  ),
                 ListRow(
                   title: l10n.addMinistry,
                   leading: const Icon(Symbols.add_rounded),
@@ -87,10 +87,9 @@ class GroupsScreen extends ConsumerWidget {
   }
 }
 
-/// 新增事工, on 聚會與事工 or on the page of the service it is [addedIn]:
-/// named, its 負責人 assigned, then its page, where its duties are picked.
-/// 取消 leaves the 負責人 for its page too.
-Future<void> addMinistry(BuildContext context, WidgetRef ref, MinistrySettings settings, {String? addedIn}) async {
+/// 新增事工, on 聚會與事工: named, its 負責人 assigned, then its page,
+/// where its duties are picked. 取消 leaves the 負責人 for its page too.
+Future<void> addMinistry(BuildContext context, WidgetRef ref, MinistrySettings settings) async {
   final l10n = L10n.of(context);
   final name = await promptText(
     context,
@@ -106,7 +105,7 @@ Future<void> addMinistry(BuildContext context, WidgetRef ref, MinistrySettings s
     l10n.saved,
     () => ref.read(churchWritesProvider).ministries(before, [
       ...before,
-      Ministry(id: id, name: name, addedIn: addedIn),
+      Ministry(id: id, name: name),
     ]),
   );
   if (!ok || !context.mounted) return;
@@ -639,7 +638,6 @@ class GroupScreen extends ConsumerWidget {
             ),
           if (service != null) ...[
             serviceDutiesSliver(context, ref, service, admin: me.editsServiceSettings),
-            if (ministries != null) box(_ServiceMinistries(service: service, settings: ministries, members: members)),
             serviceEventsSliver(context, ref, service, admin: me.editsServiceSettings),
           ],
           if (ministry != null)
@@ -893,49 +891,6 @@ class GroupScreen extends ConsumerWidget {
       () => ref.read(churchWritesProvider).ministries(before, [
         for (final m in before) m.id == was.id ? next : m,
       ]),
-    );
-  }
-}
-
-/// A service's own 事工 (Ministry.service), each with who leads it and
-/// what, opening its page for whoever manages it; an admin adds one here.
-class _ServiceMinistries extends ConsumerWidget {
-  const _ServiceMinistries({required this.service, required this.settings, required this.members});
-
-  final Service service;
-  final MinistrySettings settings;
-  final List<Member> members;
-
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final l10n = L10n.of(context);
-    final me = ref.watch(meProvider).value;
-    final admin = me?.isAdmin ?? false;
-    final own = [
-      for (final m in settings.ministries)
-        if (m.service == service.id) m,
-    ];
-    if (own.isEmpty && !admin) return const SizedBox.shrink();
-    return ListSection(
-      header: l10n.ministries,
-      children: [
-        for (final m in own)
-          ListRow(
-            title: m.name,
-            subtitle: ministryLine(l10n, m, [service], members),
-            chevron: me?.managesGroup(MinistryGroup(m.id)) ?? false,
-            onTap: me?.managesGroup(MinistryGroup(m.id)) ?? false
-                ? () => context.push('/me/groups/ministry/${m.id}')
-                : null,
-          ),
-        if (admin)
-          ListRow(
-            title: l10n.addMinistry,
-            leading: const Icon(Symbols.add_rounded),
-            chevron: false,
-            onTap: () => addMinistry(context, ref, settings, addedIn: service.id),
-          ),
-      ],
     );
   }
 }

@@ -1741,7 +1741,10 @@ class L10nZh extends L10n {
   String get linkFetchTime => '每天更新時間';
 
   @override
-  String get linkSourceFooter => '每天在設定的時間抓一次，換上當天的標題、敘述和連結。JSON 要有 date（YYYY-MM-DD）、title、body、link';
+  String get linkSourceFooter => '每天在設定的時間換成當天的內容。';
+
+  @override
+  String get linkSourceFormat => '格式說明';
 
   @override
   String linkSourceUpdated(String time) {
@@ -3310,9 +3313,6 @@ class L10nZh extends L10n {
 
   @override
   String get keepEditing => '繼續編輯';
-
-  @override
-  String get ministriesChurchWide => '全教會的事工';
 
   @override
   String get ministryNeedsDuties => '選好服事項目，負責人就能在聚會和活動排這些項目';
@@ -5300,7 +5300,10 @@ class L10nZhHans extends L10nZh {
   String get linkFetchTime => '每天更新时间';
 
   @override
-  String get linkSourceFooter => '每天在设置的时间抓一次，换上当天的标题、描述和链接。JSON 要有 date（YYYY-MM-DD）、title、body、link';
+  String get linkSourceFooter => '每天在设置的时间换成当天的内容。';
+
+  @override
+  String get linkSourceFormat => '格式说明';
 
   @override
   String linkSourceUpdated(String time) {
@@ -6869,9 +6872,6 @@ class L10nZhHans extends L10nZh {
 
   @override
   String get keepEditing => '继续编辑';
-
-  @override
-  String get ministriesChurchWide => '全教会的事工';
 
   @override
   String get ministryNeedsDuties => '选好事奉项目，负责人就能在聚会和活动排这些项目';

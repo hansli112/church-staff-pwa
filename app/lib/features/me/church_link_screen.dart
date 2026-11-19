@@ -9,6 +9,7 @@ import '../../domain/limits.dart';
 import '../../domain/models.dart';
 import '../../l10n/app_localizations.dart';
 import '../../state/providers.dart';
+import '../common/site_pages.dart';
 import '../common/errors.dart';
 import '../common/link_errors.dart';
 import '../common/time_zones.dart';
@@ -236,6 +237,22 @@ class _ChurchLinkScreenState extends ConsumerState<ChurchLinkScreen> {
                   l10n.linkSourceFooter,
                   textAlign: TextAlign.start,
                   style: AppText.footnote.copyWith(color: c.secondaryLabel),
+                ),
+                // The JSON it takes is on the site, for whoever writes it
+                // (2026-11-19: spelled out here, it read as nothing).
+                Align(
+                  alignment: AlignmentDirectional.centerStart,
+                  child: InkWell(
+                    onTap: () => openGuide(context, ref, Guide.homeLink),
+                    child: ConstrainedBox(
+                      constraints: const BoxConstraints(minHeight: 32),
+                      child: Align(
+                        widthFactor: 1,
+                        heightFactor: 1,
+                        child: Text(l10n.linkSourceFormat, style: AppText.footnote.copyWith(color: c.accent)),
+                      ),
+                    ),
+                  ),
                 ),
                 if (link?.source != null)
                   SecondaryButton(

@@ -1021,7 +1021,9 @@
   "linkSource": "每天自動換內容（選填）",
   "linkSourceUrl": "內容網址（JSON）",
   "linkFetchTime": "每天更新時間",
-  "linkSourceFooter": "每天在設定的時間抓一次，換上當天的標題、敘述和連結。JSON 要有 date（YYYY-MM-DD）、title、body、link",
+  "linkSourceFooter": "每天在設定的時間換成當天的內容。",
+  "linkSourceFormat": "格式說明",
+  "@linkSourceFormat": { "description": "Link under 每天自動換內容 to the site's guide with the JSON it takes" },
   "linkSourceUpdated": "上次更新：{time}",
   "@linkSourceUpdated": {
     "placeholders": {
@@ -2340,8 +2342,6 @@
   "@discardChanges": { "description": "Destructive answer: close the sheet without saving" },
   "keepEditing": "繼續編輯",
   "@keepEditing": { "description": "Answer: stay in the sheet" },
-  "ministriesChurchWide": "全教會的事工",
-  "@ministriesChurchWide": {"description": "Header on 聚會與事工 over the 事工 of no one service: in several, or none"},
   "ministryNeedsDuties": "選好服事項目，負責人就能在聚會和活動排這些項目",
   "@ministryNeedsDuties": {"description": "On a ministry's page while it links no roles: what linking them does"},
   "ministryLeadsCan": "{count, plural, =1{{leads}可以排{duties}，也可以改這幾項的名單} other{{leads}都可以排{duties}，也可以改這幾項的名單}}",

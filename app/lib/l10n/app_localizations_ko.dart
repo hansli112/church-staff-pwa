@@ -1743,8 +1743,10 @@ class L10nKo extends L10n {
   String get linkFetchTime => '매일 업데이트 시간';
 
   @override
-  String get linkSourceFooter =>
-      '정한 시각에 하루 한 번 가져와서 그날의 제목, 설명, 링크로 바꿔요. JSON에는 date(YYYY-MM-DD), title, body, link가 있어야 해요';
+  String get linkSourceFooter => '정한 시각에 매일 그날의 내용으로 바꿔요.';
+
+  @override
+  String get linkSourceFormat => '형식 안내';
 
   @override
   String linkSourceUpdated(String time) {
@@ -3314,9 +3316,6 @@ class L10nKo extends L10n {
 
   @override
   String get keepEditing => '계속 편집';
-
-  @override
-  String get ministriesChurchWide => '교회 전체 사역팀';
 
   @override
   String get ministryNeedsDuties => '담당을 고르면 리더가 예배와 행사에서 배정할 수 있어요';

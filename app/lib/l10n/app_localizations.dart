@@ -3217,8 +3217,14 @@ abstract class L10n {
   /// No description provided for @linkSourceFooter.
   ///
   /// In zh, this message translates to:
-  /// **'每天在設定的時間抓一次，換上當天的標題、敘述和連結。JSON 要有 date（YYYY-MM-DD）、title、body、link'**
+  /// **'每天在設定的時間換成當天的內容。'**
   String get linkSourceFooter;
+
+  /// Link under 每天自動換內容 to the site's guide with the JSON it takes
+  ///
+  /// In zh, this message translates to:
+  /// **'格式說明'**
+  String get linkSourceFormat;
 
   /// No description provided for @linkSourceUpdated.
   ///
@@ -5859,12 +5865,6 @@ abstract class L10n {
   /// In zh, this message translates to:
   /// **'繼續編輯'**
   String get keepEditing;
-
-  /// Header on 聚會與事工 over the 事工 of no one service: in several, or none
-  ///
-  /// In zh, this message translates to:
-  /// **'全教會的事工'**
-  String get ministriesChurchWide;
 
   /// On a ministry's page while it links no roles: what linking them does
   ///

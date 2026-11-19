@@ -62,4 +62,14 @@ void main() {
     await settle(tester);
     expect(launches.opened.single, contains('/blog/notifications/?'));
   });
+
+  testWidgets("首頁連結's 格式說明 opens the guide with the JSON a daily source returns", (tester) async {
+    final launches = captureLaunches();
+    await pumpApp(tester, seededChurch());
+    await go(tester, '/me/link');
+    await tester.scrollUntilVisible(find.text('格式說明'), 200, scrollable: find.byType(Scrollable).first);
+    await tester.tap(find.text('格式說明'));
+    await settle(tester);
+    expect(launches.opened.single, contains('/blog/home-link/?'));
+  });
 }

@@ -1838,8 +1838,10 @@ class L10nEn extends L10n {
   String get linkFetchTime => 'Daily update time';
 
   @override
-  String get linkSourceFooter =>
-      'Fetched once a day at the time set, replacing the title, description, and link with that day’s. The JSON needs date (YYYY-MM-DD), title, body, and link';
+  String get linkSourceFooter => 'Replaced with that day’s once a day, at the time set.';
+
+  @override
+  String get linkSourceFormat => 'About the format';
 
   @override
   String linkSourceUpdated(String time) {
@@ -3505,9 +3507,6 @@ class L10nEn extends L10n {
 
   @override
   String get keepEditing => 'Keep editing';
-
-  @override
-  String get ministriesChurchWide => 'Church-wide ministries';
 
   @override
   String get ministryNeedsDuties => 'Pick its roles, and its leads can arrange them in services and at events';

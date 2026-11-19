@@ -24,6 +24,7 @@ enum Guide {
   planWeeks('plan-weeks'),
   smallGroups('small-groups'),
   notifications('notifications'),
+  homeLink('home-link'),
   moveFromSelfHost('move-from-self-host')
   ;
 

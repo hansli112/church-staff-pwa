@@ -1742,7 +1742,10 @@ class L10nJa extends L10n {
   String get linkFetchTime => '毎日の更新時刻';
 
   @override
-  String get linkSourceFooter => '設定した時刻に毎日取得し、その日のタイトル・説明・リンクに置き換えます。JSON には date（YYYY-MM-DD）、title、body、link が必要です';
+  String get linkSourceFooter => '設定した時刻に毎日、その日の内容に置き換えます。';
+
+  @override
+  String get linkSourceFormat => '形式の説明';
 
   @override
   String linkSourceUpdated(String time) {
@@ -3314,9 +3317,6 @@ class L10nJa extends L10n {
 
   @override
   String get keepEditing => '編集を続ける';
-
-  @override
-  String get ministriesChurchWide => '教会全体のミニストリー';
 
   @override
   String get ministryNeedsDuties => '担当を選ぶと、リーダーが集会や行事でそれを割り当てられます';
