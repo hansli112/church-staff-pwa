@@ -49,7 +49,7 @@ class IdentitySection extends ConsumerWidget {
                 : null,
           ),
         ListRow(
-          title: held.isEmpty ? l10n.addIdentity : l10n.addAnotherIdentity,
+          title: l10n.addIdentity,
           leading: const Icon(Symbols.add_rounded),
           chevron: false,
           onTap: () async {

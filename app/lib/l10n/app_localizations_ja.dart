@@ -681,9 +681,6 @@ class L10nJa extends L10n {
   String get addIdentity => '役割を追加';
 
   @override
-  String get addAnotherIdentity => 'もう1つ追加';
-
-  @override
   String identityRemoved(String identity) {
     return '「$identity」を外しました';
   }
@@ -3356,7 +3353,7 @@ class L10nJa extends L10n {
   String get unavailableTitle => '奉仕できない日';
 
   @override
-  String get unavailableHint => '日をタップすると奉仕できない日になり、もう一度タップで解除。数日なぞると、まとめて入力・解除できます。奉仕を割り当てる人だけが見られます。';
+  String get unavailableHint => '日をタップして印をつけます。なぞると数日まとめて。奉仕を割り当てる人だけが見られます。';
 
   @override
   String get unavailableMarked => '入力した日';

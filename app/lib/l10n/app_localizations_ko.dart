@@ -682,9 +682,6 @@ class L10nKo extends L10n {
   String get addIdentity => '역할 추가';
 
   @override
-  String get addAnotherIdentity => '하나 더 추가';
-
-  @override
   String identityRemoved(String identity) {
     return '‘$identity’ 뺐어요';
   }
@@ -3356,8 +3353,7 @@ class L10nKo extends L10n {
   String get unavailableTitle => '봉사할 수 없는 날';
 
   @override
-  String get unavailableHint =>
-      '날짜를 누르면 봉사할 수 없는 날로 표시되고, 다시 누르면 지워져요. 여러 날을 끌면 한 번에 표시하거나 지울 수 있어요. 봉사를 배정하는 사람만 볼 수 있어요.';
+  String get unavailableHint => '날짜를 눌러 표시하고, 끌면 여러 날을 한 번에 표시해요. 봉사를 배정하는 사람만 볼 수 있어요.';
 
   @override
   String get unavailableMarked => '표시한 날';

@@ -40,7 +40,7 @@ void main() {
       expect(find.text('主日崇拜 負責人'), findsOneWidget);
       expect(findShown('排主日崇拜的服事表、加入和移出它的同工'), findsNothing, reason: 'the name says it');
 
-      await tapText(tester, '再加一個');
+      await tapText(tester, '新增身分');
       await tapText(tester, '行政');
       expect(b.members['grace']!['mei']!.groups, {Group.rosterEditors, Group.calendarEditors});
 
@@ -61,7 +61,7 @@ void main() {
       await tapText(tester, '青年崇拜');
       expect(b.members['grace']!['mei']!.leadTypes, ['youth']);
       expect(find.text('青年崇拜 牧者'), findsOneWidget);
-      await tapText(tester, '再加一個');
+      await tapText(tester, '新增身分');
       await tapText(tester, '牧者');
       await tapText(tester, '全教會');
       final mei = b.members['grace']!['mei']!;

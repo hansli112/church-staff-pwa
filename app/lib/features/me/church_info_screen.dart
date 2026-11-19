@@ -13,6 +13,7 @@ import '../../state/export.dart';
 import '../../state/providers.dart';
 import '../../state/session.dart';
 import '../church/add_to_home.dart';
+import '../church/church_switcher.dart';
 import '../common/errors.dart';
 import '../common/time_zones.dart';
 
@@ -223,6 +224,12 @@ class _ChurchInfoScreenState extends ConsumerState<ChurchInfoScreen> {
                 ),
               ],
             ),
+          // Also with one church: joining or starting another starts here.
+          ListSection(
+            children: [
+              ListRow(title: l10n.switchChurch, onTap: () => showChurchSwitcher(context, ref)),
+            ],
+          ),
           if (admin)
             ListSection(
               footer: l10n.adminCannotLeave,

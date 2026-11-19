@@ -698,9 +698,6 @@ class L10nEn extends L10n {
   String get addIdentity => 'Add a church role';
 
   @override
-  String get addAnotherIdentity => 'Add another';
-
-  @override
   String identityRemoved(String identity) {
     return 'Removed “$identity”';
   }
@@ -3548,7 +3545,7 @@ class L10nEn extends L10n {
 
   @override
   String get unavailableHint =>
-      'Tap a day to mark it, tap it again to clear it; drag across days to mark or clear them all at once. Only those who arrange serving see them.';
+      'Tap a day to mark it, or drag across several. Only those who arrange serving see them.';
 
   @override
   String get unavailableMarked => 'Marked';

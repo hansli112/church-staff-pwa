@@ -14,7 +14,6 @@ import '../../domain/models.dart';
 import '../../l10n/app_localizations.dart';
 import '../../state/providers.dart';
 import '../../state/session.dart';
-import '../church/church_switcher.dart';
 import '../common/labels.dart';
 import '../common/site_pages.dart';
 import 'groups_screen.dart';
@@ -127,12 +126,8 @@ class SettingsScreen extends ConsumerWidget {
                 title: l10n.unavailableTitle,
                 onTap: () => context.push('/me/unavailable'),
               ),
-              // Also with one church: joining or starting another starts here.
-              ListRow(
-                leading: const IconTile(Symbols.swap_horiz_rounded, color: TileColors.church),
-                title: l10n.switchChurch,
-                onTap: () => showChurchSwitcher(context, ref),
-              ),
+              // The church I am in; 切換教會 is on its page (2026-11-19: one
+              // row about the church, not two).
               ListRow(
                 leading: const IconTile(Symbols.church_rounded, color: TileColors.church),
                 title: l10n.churchInfo,

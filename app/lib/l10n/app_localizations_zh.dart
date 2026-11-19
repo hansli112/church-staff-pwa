@@ -681,9 +681,6 @@ class L10nZh extends L10n {
   String get addIdentity => '新增身分';
 
   @override
-  String get addAnotherIdentity => '再加一個';
-
-  @override
   String identityRemoved(String identity) {
     return '已移除「$identity」';
   }
@@ -3352,7 +3349,7 @@ class L10nZh extends L10n {
   String get unavailableTitle => '不能服事的日子';
 
   @override
-  String get unavailableHint => '點一天標記，再點一次取消；拖過幾天，一次標好或取消。只有排服事的人看得到。';
+  String get unavailableHint => '點一天標記，拖過去可以一次標好幾天。只有排服事的人看得到。';
 
   @override
   String get unavailableMarked => '已填的日子';
@@ -4239,9 +4236,6 @@ class L10nZhHans extends L10nZh {
 
   @override
   String get addIdentity => '新增身份';
-
-  @override
-  String get addAnotherIdentity => '再加一个';
 
   @override
   String identityRemoved(String identity) {
@@ -6912,7 +6906,7 @@ class L10nZhHans extends L10nZh {
   String get unavailableTitle => '不能事奉的日子';
 
   @override
-  String get unavailableHint => '点一天标记，再点一次取消；拖过几天，一次标好或取消。只有排事奉的人看得到。';
+  String get unavailableHint => '点一天标记，拖过去可以一次标好几天。只有排事奉的人看得到。';
 
   @override
   String get unavailableMarked => '已填的日子';

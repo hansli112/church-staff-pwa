@@ -14,6 +14,14 @@ Future<void> tapText(WidgetTester tester, String text) async {
   await settle(tester);
 }
 
+/// 設定 › 教會資訊 › 切換教會: the switcher is on the church's page.
+Future<void> openChurchSwitcher(WidgetTester tester) async {
+  await tapText(tester, '設定');
+  await tapText(tester, '教會資訊');
+  await tester.scrollUntilVisible(find.text('切換教會'), 300, scrollable: find.byType(Scrollable).last);
+  await tapText(tester, '切換教會');
+}
+
 Future<void> go(WidgetTester tester, String location) async {
   GoRouter.of(tester.element(find.byType(Scaffold).first)).go(location);
   await settle(tester);
@@ -31,8 +39,7 @@ void main() {
     expect(find.byType(NavigationBar), findsOneWidget);
     expect(find.text('希望堂'), findsOneWidget);
 
-    await tapText(tester, '設定');
-    await tapText(tester, '切換教會');
+    await openChurchSwitcher(tester);
     await tapText(tester, '恩典堂');
     expect(find.text('恩典堂'), findsOneWidget);
   });

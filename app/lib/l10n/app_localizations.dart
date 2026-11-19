@@ -1312,12 +1312,6 @@ abstract class L10n {
   /// **'新增身分'**
   String get addIdentity;
 
-  /// Button under 身分 when they hold one already
-  ///
-  /// In zh, this message translates to:
-  /// **'再加一個'**
-  String get addAnotherIdentity;
-
   /// Toast after taking a 身分 away, with undo
   ///
   /// In zh, this message translates to:
@@ -5923,7 +5917,7 @@ abstract class L10n {
   /// Under the month on the page of days a member can't serve
   ///
   /// In zh, this message translates to:
-  /// **'點一天標記，再點一次取消；拖過幾天，一次標好或取消。只有排服事的人看得到。'**
+  /// **'點一天標記，拖過去可以一次標好幾天。只有排服事的人看得到。'**
   String get unavailableHint;
 
   /// Header over the stretches a member has marked
