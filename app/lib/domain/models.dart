@@ -432,11 +432,11 @@ class Member {
 
   /// Whether this member may put anyone on the list of [duty] in
   /// [serviceType], or take them off it (testdata/church_rules.json,
-  /// dutyListEditing, #94): admins any; a service's 負責人 and 牧者 its
-  /// duties; a 事工's 負責人 those the 事工 in [ministries] they lead link
+  /// dutyListEditing, #94): admins and 行政 any; a service's 負責人 and
+  /// 牧者 its duties; a 事工's 負責人 those the 事工 in [ministries] they lead link
   /// there. Being on a list gives nothing, so anyone may be put on it.
   bool editsDutyList(List<Ministry> ministries, String serviceType, String duty) =>
-      isAdmin || leadTypes.contains(serviceType) || ledDuties(ministries, serviceType).contains(duty);
+      canEditRosters(serviceType) || ledDuties(ministries, serviceType).contains(duty);
 
   /// This member added to [group] ([member] true; a service with [duties]
   /// and [smallGroups]) or taken out, as setGroupMember writes it; a 事工

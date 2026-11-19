@@ -239,7 +239,7 @@
     { "why": "not another duty", "caller": {"leadMinistries": ["worship"]}, "ministries": [{"id": "worship", "duties": [{"service": "sunday", "duty": "司琴"}]}], "service": "sunday", "duty": "招待", "may": false },
     { "why": "nor the same duty in a service it does not link", "caller": {"leadMinistries": ["worship"]}, "ministries": [{"id": "worship", "duties": [{"service": "sunday", "duty": "司琴"}]}], "service": "youth", "duty": "司琴", "may": false },
     { "why": "nor one another 事工 links", "caller": {"leadMinistries": ["care"]}, "ministries": [{"id": "worship", "duties": [{"service": "sunday", "duty": "司琴"}]}], "service": "sunday", "duty": "司琴", "may": false },
-    { "why": "行政 arranges every roster but leaves the lists to who leads them", "caller": {"groups": ["roster-editors", "calendar-editors"]}, "ministries": [], "service": "sunday", "duty": "司琴", "may": false },
+    { "why": "行政 any duty's too: they arrange every roster and order its staff (2026-11-19)", "caller": {"groups": ["roster-editors", "calendar-editors"]}, "ministries": [], "service": "sunday", "duty": "司琴", "may": true },
     { "why": "a 同工 edits none", "caller": {}, "ministries": [{"id": "worship", "duties": [{"service": "sunday", "duty": "司琴"}]}], "service": "sunday", "duty": "司琴", "may": false }
   ],
   "eventWriting": [

@@ -77,6 +77,7 @@ class PeoplePicker extends StatefulWidget {
     required this.members,
     required this.order,
     required this.canEditDutyList,
+    this.canTakeOffList = false,
     required this.canReorder,
     this.canRemove = false,
     this.canSwapDay = false,
@@ -102,9 +103,14 @@ class PeoplePicker extends StatefulWidget {
   final Set<String> initialGuests;
   final List<String> guestSuggestions;
 
-  /// Admins edit who is on the duty's list (picking someone puts them on,
-  /// a swipe takes them off); roster editors may not.
+  /// Whoever arranges all of the day and edits the duty's list: picking
+  /// someone puts them on it, a swipe takes them off.
   final bool canEditDutyList;
+
+  /// Swiping takes someone off the duty's list, for a 事工's 負責人 too,
+  /// who arranges only its duties: taking off moves no one in the staff
+  /// order, while putting on would (#94).
+  final bool canTakeOffList;
   final bool canReorder;
 
   /// Offer 「這一天沒有這項服事」 at the end of the list (the row also swipes away).
@@ -223,8 +229,8 @@ class _PeoplePickerState extends State<PeoplePicker> {
   }
 
   void _pickOther(Member m) {
-    if (widget.canEditDutyList && _takeOff.contains(m)) {
-      // Taken off in 編輯 and tapped again: back on the list, and picked.
+    if (_swipesOff && _takeOff.contains(m)) {
+      // Swiped off the list and tapped again: back on it, and picked.
       _takeOff.remove(m);
       _putOnList(m);
       if (!_selected.contains(m.name)) return _choose(m.name);
@@ -245,7 +251,10 @@ class _PeoplePickerState extends State<PeoplePicker> {
   /// Puts [m] last on the duty's list, and its staff order with it.
   void _putOnList(Member m) {
     (_servingMembers[m.name] ??= []).add(m);
-    setState(() => _serving = _ranking = [..._serving, m.name]);
+    setState(() {
+      _serving = [..._serving, m.name];
+      if (widget.canReorder || widget.canEditDutyList) _ranking = _serving;
+    });
   }
 
   /// Takes [name] off the duty's list, and its staff order: listed with
@@ -257,11 +266,15 @@ class _PeoplePickerState extends State<PeoplePicker> {
       if (!_others.contains(m)) _others.add(m);
     }
     _others.sort((a, b) => a.name.compareTo(b.name));
-    _serving = _ranking = [
+    _serving = [
       for (final n in _serving)
         if (n != name) n,
     ];
+    // The staff order is the whole service's: not a 事工 leader's to write.
+    if (widget.canReorder || widget.canEditDutyList) _ranking = _serving;
   }
+
+  bool get _swipesOff => widget.canEditDutyList || widget.canTakeOffList;
 
   /// Swiped off the list: [name] listed with everyone else, still picked
   /// for this day.
@@ -404,7 +417,7 @@ class _PeoplePickerState extends State<PeoplePicker> {
           note: widget.notes[n],
           onTap: () => _choose(n),
           dragAt: drags ? i : null,
-          swipesOff: widget.canEditDutyList,
+          swipesOff: _swipesOff,
         ),
         name: n,
         part: drags ? part : null,

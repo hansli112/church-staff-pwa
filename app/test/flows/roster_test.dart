@@ -513,7 +513,7 @@ void main() {
       expect(mei < john, isTrue);
     });
 
-    testWidgets("its 負責人 edits the duty's list while arranging too (#94); 行政 only reorders", (tester) async {
+    testWidgets("its 負責人 edits the duty's list while arranging too (#94)", (tester) async {
       await pumpApp(tester, seededChurch(as: editor));
       await go(tester, '/rosters/sunday/2026-10-11');
       await tapText(tester, '招待');
@@ -521,12 +521,12 @@ void main() {
       expect(find.byIcon(Symbols.drag_handle_rounded), findsWidgets);
     });
 
-    testWidgets('行政 arranges every roster but leaves the lists to who leads them', (tester) async {
+    testWidgets("行政 arranges every roster and edits the duties' lists too", (tester) async {
       await pumpApp(tester, seededChurch(as: office, extra: [office]));
       await go(tester, '/rosters/sunday/2026-10-11');
       await tapText(tester, '招待');
       expect(find.byIcon(Symbols.drag_handle_rounded), findsWidgets, reason: 'reorders');
-      expect(find.byKey(const ValueKey('off/李美玉')), findsNothing);
+      expect(find.byKey(const ValueKey('off/李美玉')), findsOneWidget, reason: 'swipes off the list');
     });
 
     testWidgets('no search results is one sentence; a typed name can be used', (tester) async {

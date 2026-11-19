@@ -151,13 +151,13 @@ export function powersOf(m: MemberFields) {
 
     /**
      * Whether they may put anyone on the list of [duty] in service
-     * [service], or take them off it (dutyListEditing, #94): admins any; a
-     * service's 負責人 and 牧者 its duties; a 事工's 負責人 the duties
+     * [service], or take them off it (dutyListEditing, #94): admins and 行政
+     * any; a service's 負責人 and 牧者 its duties; a 事工's 負責人 the duties
      * [linked] 事工 they lead link there. Being on a list gives nothing, so
      * whoever is put on it may hold a 身分.
      */
     editsDutyList: (linked: Ministry[], service: string, duty: string) =>
-      admin || services.includes(service) || ledDuties(linked, ministries, service).has(duty),
+      self.editsRosters(service) || ledDuties(linked, ministries, service).has(duty),
 
     /**
      * Whether they see every group's 人數 and put them together (人數總覽,

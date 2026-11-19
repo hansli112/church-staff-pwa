@@ -71,11 +71,13 @@ Future<void> pickPeople(
   // An event is in no service to add the duty to, and has no staff order
   // of its own to drag; a duty only this day has, no list. Putting someone
   // on the list moves the staff order too, so only whoever arranges all of
-  // the day; a 事工's 負責人 does it on the duty's page (#94).
-  final canEditDutyList =
-      arrangesAll &&
+  // the day; a 事工's 負責人 only takes off, and puts on from the duty's
+  // page (#94).
+  final editsList =
+      !roster.isEvent &&
       (ref.read(servicesProvider).value?.byId(roster.type)?.duties.contains(duty.role) ?? false) &&
       (me?.editsDutyList(ref.read(ministriesProvider).value?.ministries ?? const [], roster.type, duty.role) ?? false);
+  final canEditDutyList = arrangesAll && editsList;
   final onePerson = actions.takesOnePerson(roster, duty.role);
   final result = await showAppSheet<PickerResult>(
     context,
@@ -92,6 +94,7 @@ Future<void> pickPeople(
       members: members,
       order: order,
       canEditDutyList: canEditDutyList,
+      canTakeOffList: editsList,
       // The staff order is the whole service's: not a 事工 leader's.
       canReorder: arrangesAll,
       canRemove: true,
@@ -258,7 +261,32 @@ Future<void> _savePicked(
     );
   }
   final changed = pickChanges(duty, result.people, guestNames: result.guestNames);
-  if (!context.mounted || (!changed && result.ranking == null)) return;
+  if (!context.mounted) return;
+  if (changed || result.ranking != null) {
+    await _savePick(context, actions, roster, duty, result, changed, unavailable, via);
+  }
+  // Taken off the list alone: say so, with a way back. With the day
+  // changed too, the day's 復原 comes first.
+  if (result.takeDutyFrom.isEmpty || changed || !context.mounted) return;
+  final taken = result.takeDutyFrom;
+  showToast(
+    context,
+    l10n.dutyListRemoved(duty.role, {for (final m in taken) m.name}.join(l10n.listSeparator)),
+    onUndo: () => Future.wait([for (final m in taken) actions.grantDuty(m, roster.type, duty.role)]),
+  );
+}
+
+Future<void> _savePick(
+  BuildContext context,
+  RosterActions actions,
+  Roster roster,
+  Duty duty,
+  PickerResult result,
+  bool changed,
+  Set<String> unavailable,
+  RosterVia via,
+) async {
+  final l10n = L10n.of(context);
   // Picked though they marked the day as one they cannot serve: said, so
   // it is not missed (#91).
   final unavailablePicked = [
@@ -280,15 +308,6 @@ Future<void> _savePicked(
       ranking: result.ranking,
       via: via,
     ),
-  );
-  // Taken off the list alone: say so, with a way back. With the day
-  // changed too, the day's 復原 comes first.
-  if (result.takeDutyFrom.isEmpty || changed || !context.mounted) return;
-  final taken = result.takeDutyFrom;
-  showToast(
-    context,
-    l10n.dutyListRemoved(duty.role, {for (final m in taken) m.name}.join(l10n.listSeparator)),
-    onUndo: () => Future.wait([for (final m in taken) actions.grantDuty(m, roster.type, duty.role)]),
   );
 }
 

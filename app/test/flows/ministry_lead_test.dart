@@ -6,6 +6,7 @@ import 'package:go_router/go_router.dart';
 import 'package:martha/data/memory/memory_backend.dart';
 import 'package:martha/domain/day.dart';
 import 'package:martha/domain/models.dart';
+import 'package:material_symbols_icons/symbols.dart';
 
 import '../support/harness.dart';
 import '../support/seed.dart';
@@ -52,6 +53,20 @@ void main() {
     expect(peopleOn(b, 11, '司琴'), ['陳志豪']);
     expect(find.text('已更新司琴'), findsOneWidget);
     expect(peopleOn(b, 11, '司會'), ['王牧師'], reason: 'untouched');
+  });
+
+  testWidgets("swipes someone off its duty's list, but leaves the staff order alone", (tester) async {
+    final b = withWorship();
+    await pumpApp(tester, b);
+    await go(tester, '/rosters/sunday/2026-10-11');
+    await tapText(tester, '司琴');
+    await tapText(tester, '選取');
+    expect(find.byIcon(Symbols.drag_handle_rounded), findsNothing, reason: "the order is the service's");
+    await tester.drag(find.byKey(const ValueKey('off/李美玉')), const Offset(-500, 0));
+    await settle(tester);
+    await tapText(tester, '完成');
+    expect(b.members['grace']!['mei']!.zones.single.duties, ['招待']);
+    expect(find.text('已從司琴名單移除李美玉'), findsOneWidget);
   });
 
   testWidgets('adds only the duties it leads, and does not tag the day', (tester) async {
