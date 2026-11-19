@@ -1,3 +1,5 @@
+import { FieldPath } from 'firebase-admin/firestore';
+
 import { churchAccess, churchClosed, isChurchOpen } from './access.js';
 import { fail, id, record, requireCaller, serverTime, text, type Caller, type Deps } from './common.js';
 import { identitiesOf, withIdentities, type Identity } from './identities.js';
@@ -64,12 +66,27 @@ export async function pendingClaims(deps: ClaimDeps, caller: Caller | null) {
 /** One line of what a pending member serves: a day on a roster, or (no day) a duty they are down for. */
 export type Serve = { dateKey?: string; service: string; duty: string };
 
+/** A roster's ID starts with its day; the ones with none aren't for a day. */
+const DAY_ID = /^\d{4}-\d{2}-\d{2}_/;
+
+/** The next rosters of church [cid] from [today] on, a few months' worth: read once for many pending members. */
+export async function rostersAhead(deps: Deps, cid: string, today: string) {
+  const s = await deps.db.collection(`churches/${cid}/rosters`).where(FieldPath.documentId(), '>=', today).orderBy(FieldPath.documentId()).limit(150).get();
+  return s.docs.filter((r) => DAY_ID.test(r.id));
+}
+
 /**
  * A few of [pending]'s duties, for whoever is asked to know them by: their
  * next three days on the rosters, or with none ahead the last three; with no
- * days at all, the duties of the services they are in.
+ * days at all, the duties of the services they are in. [ahead]: the church's
+ * [rostersAhead], when already read.
  */
-export async function servesOf(deps: Deps, church: FirebaseFirestore.DocumentSnapshot, pending: FirebaseFirestore.DocumentSnapshot): Promise<Serve[]> {
+export async function servesOf(
+  deps: Deps,
+  church: FirebaseFirestore.DocumentSnapshot,
+  pending: FirebaseFirestore.DocumentSnapshot,
+  ahead?: FirebaseFirestore.QueryDocumentSnapshot[],
+): Promise<Serve[]> {
   const cid = church.id;
   const pid = pending.id;
   const settings = await deps.db.doc(`churches/${cid}/settings/services`).get();
@@ -79,20 +96,28 @@ export async function servesOf(deps: Deps, church: FirebaseFirestore.DocumentSna
       .map((s) => [s.id as string, typeof s.name === 'string' ? s.name : '']),
   );
   const today = dateKeyIn(timeZoneOf(church), deps.now());
-  // A moved roster's ID starts with its day; the ones with none aren't from the move.
+  const serveOn = (r: FirebaseFirestore.DocumentSnapshot): Serve | null => {
+    const duty = ((r.get('duties') as { role?: unknown; uids?: Record<string, unknown> }[] | undefined) ?? [])
+      .find((d) => Object.values(d?.uids ?? {}).includes(pid));
+    if (!r.exists || r.get('cancelledAt') !== undefined || typeof duty?.role !== 'string') return null;
+    return { dateKey: r.id.slice(0, 10), service: services.get(r.get('type') as string) ?? '', duty: duty.role };
+  };
+  // The days ahead, whether recorded or not: one put on a day in the app
+  // (added by name) has none recorded.
+  const next = (ahead ?? (await rostersAhead(deps, cid, today))).map(serveOn).filter((s) => s !== null).slice(0, 3);
+  if (next.length) return next;
+  // The days recorded by the move: ahead past the ones read, or gone by.
   const days = ((pending.get('rosterIds') as unknown[] | undefined) ?? [])
-    .filter((id): id is string => typeof id === 'string' && /^\d{4}-\d{2}-\d{2}_/.test(id))
+    .filter((id): id is string => typeof id === 'string' && DAY_ID.test(id))
     .sort();
-  const ahead = days.filter((id) => id.slice(0, 10) >= today);
-  const order = ahead.length ? ahead : days.reverse();
+  const later = days.filter((id) => id.slice(0, 10) >= today);
+  const order = later.length ? later : days.reverse();
   const serves: Serve[] = [];
   // A day may have been changed since: read a few more than shown.
   for (let i = 0; i < order.length && i < 12 && serves.length < 3; i += 6) {
     for (const r of await deps.db.getAll(...order.slice(i, i + 6).map((id) => deps.db.doc(`churches/${cid}/rosters/${id}`)))) {
-      const duty = ((r.get('duties') as { role?: unknown; uids?: Record<string, unknown> }[] | undefined) ?? [])
-        .find((d) => Object.values(d?.uids ?? {}).includes(pid));
-      if (!r.exists || r.get('cancelledAt') !== undefined || typeof duty?.role !== 'string' || serves.length >= 3) continue;
-      serves.push({ dateKey: r.id.slice(0, 10), service: services.get(r.get('type') as string) ?? '', duty: duty.role });
+      const serve = serveOn(r);
+      if (serve && serves.length < 3) serves.push(serve);
     }
   }
   if (serves.length) return serves;

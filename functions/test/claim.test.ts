@@ -267,6 +267,11 @@ describe('claiming by name, a pending member with no email', () => {
     await pending.update({ rosterIds: days.map((day) => `${day}_sunday`) });
     const serves = async () => (await pendingClaims(cd, caller('huang'))).claims[0].serves.map((s) => s.dateKey ?? `${s.service}・${s.duty}`);
     assert.deepEqual(await serves(), ['2026-10-11', '2026-10-25', '2026-11-01']);
+    // Put on the days in the app, not moved: none recorded, found all the same.
+    await pending.update({ rosterIds: [] });
+    assert.deepEqual(await serves(), ['2026-10-11', '2026-10-25', '2026-11-01']);
+    // None ahead any more.
+    for (const day of ['2026-10-11', '2026-10-25', '2026-11-01']) await db.doc(`churches/${cid}/rosters/${day}_sunday`).delete();
     await pending.update({ rosterIds: ['2026-09-20_sunday', '2026-09-27_sunday'] });
     assert.deepEqual(await serves(), ['2026-09-27', '2026-09-20']);
     await pending.update({ rosterIds: [] });

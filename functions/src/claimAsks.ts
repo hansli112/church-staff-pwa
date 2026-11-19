@@ -1,7 +1,8 @@
 import { churchAccess } from './access.js';
-import { mergeInto, servesOf, type Serve } from './claim.js';
+import { mergeInto, rostersAhead, servesOf, type Serve } from './claim.js';
 import { fail, id, record, serverTime, type Caller, type Deps } from './common.js';
 import { adminUids, notifyMembers, type PushDeps } from './push.js';
+import { dateKeyIn, timeZoneOf } from './timeZones.js';
 
 /**
  * 認領申請: someone who joined and is in no service yet says which of the
@@ -22,9 +23,10 @@ const askOf = (deps: Pick<Deps, 'db'>, cid: string, uid: string) => deps.db.doc(
  */
 export async function claimCandidates(deps: Deps, caller: Caller | null, data: unknown) {
   const { cid, church } = await churchAccess(deps, caller, data, 'member');
-  const [pending, groups] = await Promise.all([
+  const [pending, groups, ahead] = await Promise.all([
     deps.db.collection(`churches/${cid}/pendingMembers`).get(),
     deps.db.collection(`churches/${cid}/smallGroups`).get(),
+    rostersAhead(deps, cid, dateKeyIn(timeZoneOf(church), deps.now())),
   ]);
   const groupName = new Map(groups.docs.map((g) => [g.id, String(g.get('name') ?? '')]));
   const candidates: { pendingId: string; name: string; smallGroups: string[]; serves: Serve[] }[] = [];
@@ -37,7 +39,7 @@ export async function claimCandidates(deps: Deps, caller: Caller | null, data: u
     const byId = ((p.get('smallGroups') as unknown[] | undefined) ?? [])
       .map((g) => (typeof g === 'string' ? groupName.get(g) : undefined))
       .filter((n): n is string => !!n);
-    candidates.push({ pendingId: p.id, name, smallGroups: [...new Set([...byId, ...named])], serves: await servesOf(deps, church, p) });
+    candidates.push({ pendingId: p.id, name, smallGroups: [...new Set([...byId, ...named])], serves: await servesOf(deps, church, p, ahead) });
   }
   return { candidates };
 }
