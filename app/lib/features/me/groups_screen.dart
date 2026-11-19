@@ -578,6 +578,12 @@ class GroupScreen extends ConsumerWidget {
           if (small != null)
             box(
               ListSection(
+                // Which service, over the rows: one without ＞ among those
+                // with it read as broken (2026-11-19).
+                header: switch (services?.byId(small.service)?.name) {
+                  final s? => l10n.smallGroupOfService(s),
+                  null => null,
+                },
                 children: [
                   ListRow(
                     title: l10n.smallGroupName,
@@ -593,7 +599,6 @@ class GroupScreen extends ConsumerWidget {
                     chevron: editsSmall,
                     onTap: editsSmall ? () => _assignSmallLead(context, ref, small, members, leaders, name) : null,
                   ),
-                  ListRow(title: l10n.smallGroupService, value: services?.byId(small.service)?.name, chevron: false),
                   // When it meets matters only to 回報人數; its 小組長 set it too.
                   if (attendanceOn)
                     ListRow(

@@ -5140,11 +5140,17 @@ abstract class L10n {
   /// **'小組名稱'**
   String get smallGroupName;
 
-  /// Row on a 小組's page: the service it is in
+  /// Header over a small group's name and 小組長: the service it is part of
   ///
   /// In zh, this message translates to:
-  /// **'屬於'**
-  String get smallGroupService;
+  /// **'{service}的小組'**
+  String smallGroupOfService(String service);
+
+  /// Under 換新的密鑰: the secret is shown once only
+  ///
+  /// In zh, this message translates to:
+  /// **'密鑰只顯示一次，忘了就換一個'**
+  String get webhookRotateSub;
 
   /// Row and sheet title on a 小組's page: when it meets, for 回報人數
   ///

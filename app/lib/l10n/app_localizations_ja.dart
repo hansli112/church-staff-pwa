@@ -2884,7 +2884,12 @@ class L10nJa extends L10n {
   String get smallGroupName => '小グループ名';
 
   @override
-  String get smallGroupService => '所属';
+  String smallGroupOfService(String service) {
+    return '$serviceの小グループ';
+  }
+
+  @override
+  String get webhookRotateSub => 'シークレットは一度しか表示されません。忘れたら新しくしてください';
 
   @override
   String get smallGroupMeets => '集まる日';

@@ -2880,7 +2880,12 @@ class L10nZh extends L10n {
   String get smallGroupName => '小組名稱';
 
   @override
-  String get smallGroupService => '屬於';
+  String smallGroupOfService(String service) {
+    return '$service的小組';
+  }
+
+  @override
+  String get webhookRotateSub => '密鑰只顯示一次，忘了就換一個';
 
   @override
   String get smallGroupMeets => '聚會時間';
@@ -6434,7 +6439,12 @@ class L10nZhHans extends L10nZh {
   String get smallGroupName => '小组名称';
 
   @override
-  String get smallGroupService => '属于';
+  String smallGroupOfService(String service) {
+    return '$service的小组';
+  }
+
+  @override
+  String get webhookRotateSub => '密钥只显示一次，忘了就换一个';
 
   @override
   String get smallGroupMeets => '聚会时间';

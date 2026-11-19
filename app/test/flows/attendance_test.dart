@@ -513,7 +513,7 @@ void main() {
       expect(find.text('今天已經提醒過了'), findsOneWidget);
     });
 
-    testWidgets("a row opens that meeting's 填寫人數, whose last row opens the group's 人數 page", (tester) async {
+    testWidgets("a row opens that meeting's 填寫人數, with no row to the group's 人數 page", (tester) async {
       final b = church();
       await pumpApp(tester, b);
       await go(tester, '/me/attendance');
@@ -525,9 +525,7 @@ void main() {
       expect(findShown('都填好了'), findsOneWidget);
 
       await tapText(tester, '喜樂小組');
-      await tapText(tester, '喜樂小組的聚會人數');
-      expect(find.text('新增一次聚會'), findsOneWidget);
-      expect(find.text('9 人'), findsOneWidget);
+      expect(find.text('喜樂小組的聚會人數'), findsNothing, reason: 'filling in, nothing to look up');
     });
 
     testWidgets("a service's 負責人 finds its 人數 and its 小組' under 我負責的, and reminds them (#95)", (tester) async {

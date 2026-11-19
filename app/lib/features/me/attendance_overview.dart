@@ -171,7 +171,7 @@ class _AttendanceOverviewScreenState extends ConsumerState<AttendanceOverviewScr
       },
       value: r.day == null ? null : attendanceValue(l10n, r.value, nameOf),
       onTap: switch (r.day) {
-        final day? => () => fillAttendance(context, ref, r.group, day, r.value, linksPage: true),
+        final day? => () => fillAttendance(context, ref, r.group, day, r.value),
         null => () => context.push(attendancePage(r.group.group)),
       },
     );

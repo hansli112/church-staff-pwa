@@ -323,7 +323,13 @@ class _ConfiguredState extends ConsumerState<_Configured> {
                   : null,
               onTap: _testing ? null : _test,
             ),
-            ListRow(title: l10n.webhookRotate, chevron: false, onTap: _rotate),
+            ListRow(
+              title: l10n.webhookRotate,
+              // Not shown again after it is set: no row to read it.
+              subtitle: l10n.webhookRotateSub,
+              chevron: false,
+              onTap: _rotate,
+            ),
           ],
         ),
         ListSection(

@@ -345,16 +345,15 @@ String? attendanceDetail(L10n l10n, AttendanceDay? d, String Function(String key
 
 /// Fills in [group]'s 人數 of [day], [was] what it had: how many came and a
 /// note, or 這次沒聚會; a 小組, with the others of its service meeting that
-/// day it met with (聯合小組, #93). With [linksPage], from 人數總覽 or 首頁, its last
-/// row opens the group's 人數 page (#95).
+/// day it met with (聯合小組, #93). Only that: no row to the group's 人數
+/// page, whoever fills it in has no need of it (2026-11-19).
 Future<void> fillAttendance(
   BuildContext context,
   WidgetRef ref,
   AttendanceGroup group,
   Day day,
-  AttendanceDay? was, {
-  bool linksPage = false,
-}) async {
+  AttendanceDay? was,
+) async {
   final l10n = L10n.of(context);
   final since = ref.read(churchProvider).value?.attendanceSince;
   final others = switch (group.group) {
@@ -370,24 +369,16 @@ Future<void> fillAttendance(
     ref.read(backendProvider).warmUp(WarmUp.attendanceTogether);
   }
   final title = [group.name, dayLabel(l10n, day, ref.read(todayProvider))].join(l10n.dotSeparator);
-  // Set when its 人數 page is asked for; closing first asks to discard
-  // what was typed, as any close does.
-  final toPage = ValueNotifier(false);
   final value = await showAppSheet<AttendanceDay>(
     context,
     builder: (_) => _FillSheet(
       title: title,
       was: was,
       others: others,
-      pageTitle: linksPage ? l10n.attendanceOf(group.name) : null,
-      toPage: toPage,
     ),
   );
   if (!context.mounted) return;
-  if (value == null) {
-    if (toPage.value) unawaited(context.push(attendancePage(group.group)));
-    return;
-  }
+  if (value == null) return;
   final attendance = ref.churchData.attendance;
   final telemetry = ref.read(telemetryProvider);
   try {
@@ -408,16 +399,10 @@ class _FillSheet extends StatefulWidget {
     required this.title,
     required this.was,
     required this.others,
-    required this.pageTitle,
-    required this.toPage,
   });
 
   final String title;
   final AttendanceDay? was;
-
-  /// The last row's title, opening the group's 人數 page; null for none.
-  final String? pageTitle;
-  final ValueNotifier<bool> toPage;
 
   /// The 小組 it may have met with, by key.
   final List<({String key, String name})> others;
@@ -535,18 +520,6 @@ class _FillSheetState extends State<_FillSheet> {
                         onPressed: () => Navigator.pop(context, const AttendanceDay.none()),
                       ),
                     ),
-                    if (widget.pageTitle case final title?)
-                      ListSection(
-                        children: [
-                          ListRow(
-                            title: title,
-                            onTap: () {
-                              widget.toPage.value = true;
-                              Navigator.pop(context);
-                            },
-                          ),
-                        ],
-                      ),
                   ],
                 ),
               ),
@@ -606,7 +579,7 @@ class AttendanceDueCard extends ConsumerWidget {
             leading: const Icon(Symbols.groups_rounded),
             title: d.group.name,
             subtitle: dayLabel(l10n, d.day, today),
-            onTap: () => fillAttendance(context, ref, d.group, d.day, null, linksPage: true),
+            onTap: () => fillAttendance(context, ref, d.group, d.day, null),
           ),
       ],
     );

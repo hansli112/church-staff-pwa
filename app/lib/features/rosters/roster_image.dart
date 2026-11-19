@@ -1,6 +1,6 @@
 /// 分享成圖片 (2026-11-19): a month of a service's roster as a picture to
-/// send to a group chat, from 安排服事's ⋯. One row a day and one column a
-/// duty, as 安排服事 lays them out; only the names arranged, nothing of
+/// send to a group chat, from 安排服事's ⋯. One row a duty and one column a
+/// day, so it is tall like a phone; only the names arranged, nothing of
 /// who cannot serve.
 library;
 
@@ -184,6 +184,9 @@ class RosterImage extends StatelessWidget {
                     if (church.isNotEmpty) Text(church, style: AppText.subheadline.copyWith(color: c.secondaryLabel)),
                     Text(title, style: AppText.title2),
                     const SizedBox(height: Space.m),
+                    // A duty a row and a day a column (2026-11-19): a month
+                    // is 4 or 5 days, so as many duties as a church has
+                    // make it longer, not wider, and it reads on a phone.
                     Table(
                       defaultColumnWidth: const IntrinsicColumnWidth(),
                       defaultVerticalAlignment: TableCellVerticalAlignment.top,
@@ -192,8 +195,15 @@ class RosterImage extends StatelessWidget {
                           decoration: BoxDecoration(border: Border(bottom: line)),
                           children: [
                             const SizedBox.shrink(),
-                            for (final duty in duties)
+                            for (final day in days) cell(_DayLabel(day)),
+                          ],
+                        ),
+                        for (final duty in duties)
+                          TableRow(
+                            decoration: BoxDecoration(border: Border(bottom: line)),
+                            children: [
                               cell(
+                                first: true,
                                 Text(
                                   duty,
                                   style: AppText.footnote.copyWith(
@@ -202,14 +212,7 @@ class RosterImage extends StatelessWidget {
                                   ),
                                 ),
                               ),
-                          ],
-                        ),
-                        for (final day in days)
-                          TableRow(
-                            decoration: BoxDecoration(border: Border(bottom: line)),
-                            children: [
-                              cell(first: true, _DayLabel(day)),
-                              for (final duty in duties)
+                              for (final day in days)
                                 cell(
                                   Text(
                                     (day.duties.where((d) => d.role == duty).firstOrNull?.people ?? const []).join(

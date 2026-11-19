@@ -3033,7 +3033,12 @@ class L10nEn extends L10n {
   String get smallGroupName => 'Small group name';
 
   @override
-  String get smallGroupService => 'Part of';
+  String smallGroupOfService(String service) {
+    return 'A small group of $service';
+  }
+
+  @override
+  String get webhookRotateSub => 'The secret shows only once; lost it, replace it';
 
   @override
   String get smallGroupMeets => 'Meets';

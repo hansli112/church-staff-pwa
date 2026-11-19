@@ -2884,7 +2884,12 @@ class L10nKo extends L10n {
   String get smallGroupName => '소그룹 이름';
 
   @override
-  String get smallGroupService => '소속';
+  String smallGroupOfService(String service) {
+    return '$service의 소그룹';
+  }
+
+  @override
+  String get webhookRotateSub => '비밀 키는 한 번만 보여요. 잊었으면 교체하세요';
 
   @override
   String get smallGroupMeets => '모이는 날';
