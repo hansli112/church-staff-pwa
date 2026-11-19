@@ -24,6 +24,7 @@ import '../common/site_pages.dart';
 import '../common/saving_indicator.dart';
 import 'duty_picking.dart';
 import 'format.dart';
+import 'roster_image.dart';
 
 /// 安排服事 (#90): one service's days a month at a time, a row a day and a
 /// column a duty I arrange. Tapping a cell picks its people as on the
@@ -284,6 +285,7 @@ class _PlanWeeksScreenState extends ConsumerState<PlanWeeksScreen> with SingleTi
       icon: const Icon(Symbols.more_horiz_rounded),
       onSelected: (v) => switch (v) {
         'ask' => _askUnavailable(type, from),
+        'image' => showRosterImage(context, serviceType: type, month: from),
         'photo' => context.push('/rosters/import/$type'),
         'guide' => openGuide(context, ref, Guide.planWeeks),
         _ => null,
@@ -301,6 +303,7 @@ class _PlanWeeksScreenState extends ConsumerState<PlanWeeksScreen> with SingleTi
             ],
           ),
         ),
+        PopupMenuItem(value: 'image', child: Text(l10n.rosterShareImage)),
         PopupMenuItem(value: 'photo', child: Text(l10n.photoImportAction)),
         const PopupMenuDivider(),
         PopupMenuItem(value: 'guide', child: Text(l10n.howToUse)),

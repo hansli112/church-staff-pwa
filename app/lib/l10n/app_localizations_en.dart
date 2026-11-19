@@ -3603,6 +3603,17 @@ class L10nEn extends L10n {
   String get planAskNobody => 'No one to ask yet';
 
   @override
+  String get rosterShareImage => 'Share as image';
+
+  @override
+  String rosterImageTitle(String service, String month) {
+    return '$service · $month';
+  }
+
+  @override
+  String get share => 'Share';
+
+  @override
   String get planAskUntil => 'Through which month?';
 
   @override

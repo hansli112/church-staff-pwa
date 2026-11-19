@@ -3412,6 +3412,17 @@ class L10nKo extends L10n {
   String get planAskNobody => '아직 요청할 멤버가 없어요';
 
   @override
+  String get rosterShareImage => '이미지로 공유';
+
+  @override
+  String rosterImageTitle(String service, String month) {
+    return '$service $month';
+  }
+
+  @override
+  String get share => '공유';
+
+  @override
   String get planAskUntil => '몇 월까지인가요?';
 
   @override

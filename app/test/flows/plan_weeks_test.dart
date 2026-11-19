@@ -11,6 +11,8 @@ import 'package:martha/data/backend.dart';
 import 'package:martha/data/memory/memory_backend.dart';
 import 'package:martha/domain/day.dart';
 import 'package:martha/domain/models.dart';
+import 'package:martha/features/rosters/roster_image.dart';
+import 'package:martha/state/export.dart';
 import 'package:martha/state/session.dart';
 
 import 'package:martha/features/rosters/people_picker.dart';
@@ -98,7 +100,52 @@ Future<void> drag(WidgetTester tester, Finder from, Finder to) async {
   await settle(tester);
 }
 
+class _Saver implements FileSaver {
+  final files = <(String, Uint8List, String)>[];
+
+  @override
+  Future<bool> save(String name, Uint8List bytes, String mimeType) async {
+    files.add((name, bytes, mimeType));
+    return true;
+  }
+}
+
 void main() {
+  testWidgets('⋯ 分享成圖片: a month of the roster as a picture, the months around it a tap away', (tester) async {
+    final saver = _Saver();
+    await pumpApp(tester, seededChurch(), overrides: [fileSaverProvider.overrideWithValue(saver)]);
+    await go(tester, '/rosters/plan/sunday');
+    await tester.tap(find.byIcon(Symbols.more_horiz_rounded));
+    await settle(tester);
+    await tester.tap(find.text('分享成圖片'));
+    await settle(tester);
+    final picture = find.byType(RosterImage);
+    expect(find.descendant(of: picture, matching: find.text('主日崇拜 2026年10月')), findsOneWidget);
+    expect(find.descendant(of: picture, matching: find.text('恩典堂')), findsOneWidget);
+    expect(
+      find.descendant(of: picture, matching: find.text('聖餐')),
+      findsOneWidget,
+      reason: "the day's 特別活動",
+    );
+    expect(
+      find.descendant(of: picture, matching: find.text('待定')),
+      findsNothing,
+      reason: 'only who is arranged',
+    );
+
+    await tester.tap(find.byTooltip('下個月'));
+    await settle(tester);
+    expect(find.descendant(of: picture, matching: find.text('主日崇拜 2026年11月')), findsOneWidget);
+
+    await tester.tap(find.text('分享'));
+    await tester.runAsync(() => Future<void>.delayed(const Duration(milliseconds: 200)));
+    await settle(tester);
+    final (name, bytes, mime) = saver.files.single;
+    expect(name, '主日崇拜 2026年11月.png');
+    expect(mime, 'image/png');
+    expect(bytes.take(4), [0x89, 0x50, 0x4E, 0x47]);
+  });
+
   testWidgets('a cell picks its people at once; nobody is told until 完成, once, which goes back', (tester) async {
     final b = seededChurch();
     final telemetry = RecordingTelemetry();

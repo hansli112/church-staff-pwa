@@ -3410,6 +3410,17 @@ class L10nJa extends L10n {
   String get planAskNobody => '依頼できるメンバーがまだいません';
 
   @override
+  String get rosterShareImage => '画像で共有';
+
+  @override
+  String rosterImageTitle(String service, String month) {
+    return '$service $month';
+  }
+
+  @override
+  String get share => '共有';
+
+  @override
   String get planAskUntil => '何月までの分ですか？';
 
   @override

@@ -6016,6 +6016,24 @@ abstract class L10n {
   /// **'還沒有同工可以通知'**
   String get planAskNobody;
 
+  /// Menu on 安排服事: a month of the service's roster as a picture to send to a group chat
+  ///
+  /// In zh, this message translates to:
+  /// **'分享成圖片'**
+  String get rosterShareImage;
+
+  /// Title on the roster picture: the service's name and the month
+  ///
+  /// In zh, this message translates to:
+  /// **'{service} {month}'**
+  String rosterImageTitle(String service, String month);
+
+  /// No description provided for @share.
+  ///
+  /// In zh, this message translates to:
+  /// **'分享'**
+  String get share;
+
   /// No description provided for @planAskUntil.
   ///
   /// In zh, this message translates to:

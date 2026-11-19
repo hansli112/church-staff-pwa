@@ -3406,6 +3406,17 @@ class L10nZh extends L10n {
   String get planAskNobody => '還沒有同工可以通知';
 
   @override
+  String get rosterShareImage => '分享成圖片';
+
+  @override
+  String rosterImageTitle(String service, String month) {
+    return '$service $month';
+  }
+
+  @override
+  String get share => '分享';
+
+  @override
   String get planAskUntil => '要填到哪個月？';
 
   @override
@@ -6962,6 +6973,17 @@ class L10nZhHans extends L10nZh {
 
   @override
   String get planAskNobody => '还没有同工可以通知';
+
+  @override
+  String get rosterShareImage => '分享为图片';
+
+  @override
+  String rosterImageTitle(String service, String month) {
+    return '$service $month';
+  }
+
+  @override
+  String get share => '分享';
 
   @override
   String get planAskUntil => '要填到哪个月？';
