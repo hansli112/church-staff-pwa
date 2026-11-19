@@ -2,7 +2,6 @@ import 'dart:async';
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
-import 'package:material_symbols_icons/symbols.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../core/design/components.dart';
@@ -79,34 +78,15 @@ class RosterDayScreen extends ConsumerWidget {
     final led = ref.watch(arrangesProvider(serviceType));
     final whole = led.all;
     final canEdit = !past && led.any;
-    // Keeps what editing reads loaded, so the picker opens at once and
-    // writes see the church as it is.
-    final editable = canEdit && ref.watch(rosterEditingProvider(serviceType));
     final title = dayLabel(l10n, day, today);
     final addable = addableDuties(roster, service.duties, led);
-    // From the menu or the day's tags, for who changes the whole day.
+    // From the day's tags, or 「＋ 特別活動」, for who changes the whole day.
     final editEvents = whole ? () => _editEvents(context, ref, roster, service) : null;
 
     return Scaffold(
       appBar: AppBar(
         title: Text(service.name),
-        actions: savingActions([
-          if (canEdit && (whole || addable.isNotEmpty))
-            PopupMenuButton<String>(
-              enabled: editable,
-              tooltip: l10n.edit,
-              icon: const Icon(Symbols.more_horiz_rounded),
-              onSelected: (v) => switch (v) {
-                'duty' => _addDuty(context, ref, roster, addable, any: whole),
-                'events' => editEvents?.call(),
-                _ => null,
-              },
-              itemBuilder: (_) => [
-                PopupMenuItem(value: 'duty', child: Text(l10n.addDuty)),
-                if (editEvents != null) PopupMenuItem(value: 'events', child: Text(l10n.events)),
-              ],
-            ),
-        ]),
+        actions: savingActions(const []),
       ),
       body: ListView(
         padding: const EdgeInsets.only(bottom: Space.xl),
@@ -132,6 +112,7 @@ class RosterDayScreen extends ConsumerWidget {
               title: title,
               arranges: led,
               onEditEvents: editEvents,
+              onAddDuty: whole || addable.isNotEmpty ? () => _addDuty(context, ref, roster, addable, any: whole) : null,
             ),
         ],
       ),

@@ -149,7 +149,7 @@ void main() {
       await settle(tester);
       expect(find.text('上週的司會'), findsOneWidget);
       expect(find.byType(EditableRoster), findsNothing, reason: 'even an admin only looks at a past day');
-      expect(find.byTooltip('編輯'), findsNothing);
+      expect(find.text('新增服事項目'), findsNothing);
     });
 
     testWidgets('a past day opened on its own shows what was saved', (tester) async {
@@ -187,7 +187,7 @@ void main() {
     testWidgets('staff without permission get no edit controls', (tester) async {
       await pumpApp(tester, seededChurch(as: staffMei));
       await go(tester, '/rosters/sunday/2026-10-04');
-      expect(find.byTooltip('編輯'), findsNothing);
+      expect(find.text('新增服事項目'), findsNothing);
       expect(find.textContaining('陳志豪', findRichText: true), findsOneWidget);
       await tester.tap(find.textContaining('陳志豪', findRichText: true));
       await settle(tester);
@@ -197,9 +197,9 @@ void main() {
     testWidgets("a service's 負責人 edits only its rosters", (tester) async {
       await pumpApp(tester, seededChurch(as: editor));
       await go(tester, '/rosters/sunday/2026-10-04');
-      expect(find.byTooltip('編輯'), findsOneWidget);
+      expect(find.text('新增服事項目'), findsOneWidget);
       await go(tester, '/rosters/youth/2026-10-03');
-      expect(find.byTooltip('編輯'), findsNothing);
+      expect(find.text('新增服事項目'), findsNothing);
     });
   });
 
@@ -694,7 +694,7 @@ void main() {
       expect(find.text('已更新司琴'), findsOneWidget);
     });
 
-    testWidgets("on an iPhone the day's title stays centred beside 儲存中 and the menu", (tester) async {
+    testWidgets("on an iPhone the day's title stays centred beside 儲存中", (tester) async {
       debugDefaultTargetPlatformOverride = TargetPlatform.iOS;
       try {
         final b = seededChurch();
@@ -773,7 +773,7 @@ void main() {
       expect(find.text('用照片匯入'), findsOneWidget);
       await tapText(tester, '開始安排');
       expect(find.textContaining('10月4日'), findsOneWidget, reason: 'the first day, to arrange');
-      expect(find.byTooltip('編輯'), findsOneWidget);
+      expect(find.text('新增服事項目'), findsOneWidget);
     });
 
     testWidgets('removing a duty can be undone', (tester) async {
@@ -904,8 +904,6 @@ void main() {
       final b = seededChurch();
       await pumpApp(tester, b);
       await go(tester, '/rosters/sunday/2026-10-11');
-      await tester.tap(find.byTooltip('編輯'));
-      await settle(tester);
       await tapText(tester, '特別活動');
       await tapText(tester, '聖餐');
       await tester.enterText(find.byType(TextField), '特會');
@@ -917,11 +915,22 @@ void main() {
       expect(find.text('已更新特別活動'), findsOneWidget);
     });
 
+    testWidgets('a day with none has 特別活動 under its date; no menu up top', (tester) async {
+      await pumpApp(tester, seededChurch());
+      await go(tester, '/rosters/sunday/2026-10-11');
+      expect(find.byIcon(Symbols.more_horiz_rounded), findsNothing);
+      expect(
+        tester.getTopLeft(find.text('新增服事項目')).dy > tester.getTopLeft(find.text('司會').first).dy,
+        isTrue,
+        reason: "新增服事項目 is the list's last row",
+      );
+      await tapText(tester, '特別活動');
+      expect(find.text('自訂特別活動'), findsOneWidget, reason: 'the sheet');
+    });
+
     testWidgets('closing the sheet without a change saves nothing', (tester) async {
       await pumpApp(tester, seededChurch());
-      await go(tester, '/rosters/sunday/2026-10-04');
-      await tester.tap(find.byTooltip('編輯'));
-      await settle(tester);
+      await go(tester, '/rosters/sunday/2026-10-11');
       await tapText(tester, '特別活動');
       await tapText(tester, '完成');
       expect(find.text('復原'), findsNothing);
@@ -934,9 +943,8 @@ void main() {
       b.rosters['grace']![day.id] = day.copyWith(events: events);
       await pumpApp(tester, b);
       await go(tester, '/rosters/sunday/2026-10-04');
-      await tester.tap(find.byTooltip('編輯'));
-      await settle(tester);
-      await tapText(tester, '特別活動');
+      expect(find.text('特別活動'), findsNothing, reason: 'the tags open it');
+      await tapText(tester, '浸禮');
       await tapText(tester, '聖餐');
       await tapText(tester, '聖餐');
       await tapText(tester, '完成');
@@ -944,7 +952,7 @@ void main() {
       expect(savedDay(b, 4).events, events);
     });
 
-    testWidgets('tapping the day\'s tags opens 特別活動, as the menu does', (tester) async {
+    testWidgets('tapping the day\'s tags opens 特別活動', (tester) async {
       final b = seededChurch();
       final day = savedDay(b, 4);
       b.rosters['grace']![day.id] = day.copyWith(events: const [EventTag(name: '聖餐', color: 0)]);

@@ -131,20 +131,16 @@ class EventRosterScreen extends ConsumerWidget {
       appBar: AppBar(
         title: Text(roster?.forEvent?.title ?? ''),
         actions: savingActions([
-          if (canEdit && roster != null && (whole || addable.isNotEmpty))
+          if (canEdit && roster != null && whole)
             PopupMenuButton<String>(
               enabled: editable,
               tooltip: l10n.edit,
               icon: const Icon(Symbols.more_horiz_rounded),
               onSelected: (v) => switch (v) {
-                'duty' => _addDuty(context, ref, roster, addable, any: whole),
                 'copy' => _copyDuties(context, ref, roster),
                 _ => null,
               },
-              itemBuilder: (_) => [
-                PopupMenuItem(value: 'duty', child: Text(l10n.addDuty)),
-                if (whole) PopupMenuItem(value: 'copy', child: Text(l10n.copyDuties)),
-              ],
+              itemBuilder: (_) => [PopupMenuItem(value: 'copy', child: Text(l10n.copyDuties))],
             ),
         ]),
       ),
@@ -161,6 +157,9 @@ class EventRosterScreen extends ConsumerWidget {
                 roster: roster,
                 title: eventDaysLabel(l10n, roster, today),
                 arranges: led,
+                onAddDuty: whole || addable.isNotEmpty
+                    ? () => _addDuty(context, ref, roster, addable, any: whole)
+                    : null,
                 whenEmpty: EmptyState(
                   message: l10n.eventRosterEmpty,
                   actionLabel: editable && (whole || addable.isNotEmpty) ? l10n.addDuty : null,

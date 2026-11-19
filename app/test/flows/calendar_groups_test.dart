@@ -115,8 +115,6 @@ void main() {
     await tester.ensureVisible(find.text('安排服事').last);
     await tester.pump();
     await tapText(tester, '安排服事');
-    await tester.tap(find.byTooltip('編輯'));
-    await settle(tester);
     await tapText(tester, '新增服事項目');
     expect(find.byType(TextField), findsOneWidget, reason: 'any duty, typed in too');
   });

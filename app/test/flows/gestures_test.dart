@@ -102,8 +102,6 @@ void main() {
     expect(find.text('這次沒聚會'), findsNothing, reason: 'closed');
 
     await go(tester, '/rosters/sunday/2026-10-11');
-    await tester.tap(find.byTooltip('編輯'));
-    await settle(tester);
     await tapText(tester, '特別活動');
     await back(tester);
     expect(find.text('放棄變更？'), findsNothing);
@@ -130,8 +128,6 @@ void main() {
     expect(b.attendance['grace']!['small:joy']!.days.values, contains(const AttendanceDay.count(8)));
 
     await go(tester, '/rosters/sunday/2026-10-11');
-    await tester.tap(find.byTooltip('編輯'));
-    await settle(tester);
     await tapText(tester, '特別活動');
     await tapText(tester, '聖餐');
     await back(tester);
@@ -139,8 +135,6 @@ void main() {
     await tapText(tester, '放棄變更');
 
     Future<void> addDuty() async {
-      await tester.tap(find.byTooltip('編輯'));
-      await settle(tester);
       await tapText(tester, '新增服事項目');
     }
 

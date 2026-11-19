@@ -64,8 +64,6 @@ void main() {
     );
     await pumpApp(tester, b);
     await go(tester, '/rosters/sunday/2026-10-11');
-    await tester.tap(find.byTooltip('編輯'));
-    await settle(tester);
     expect(find.text('特別活動'), findsNothing);
     await tapText(tester, '新增服事項目');
     expect(find.byType(TextField), findsNothing, reason: 'only what 敬拜團 leads');

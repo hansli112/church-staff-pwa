@@ -31,6 +31,7 @@ class EditableRoster extends ConsumerWidget {
     this.whenEmpty,
     this.arranges = const Arranges.all(),
     this.onEditEvents,
+    this.onAddDuty,
   });
 
   final Roster roster;
@@ -43,8 +44,12 @@ class EditableRoster extends ConsumerWidget {
   /// Shown while it has no duties; by default a hint to add one.
   final Widget? whenEmpty;
 
-  /// Opens 特別活動 from the day's tags; null for who may not change them.
+  /// Opens 特別活動 from the day's tags, or from 「＋ 特別活動」 where it
+  /// has none; null for who may not change them.
   final VoidCallback? onEditEvents;
+
+  /// 新增服事項目, the list's last row; null for who may add none.
+  final VoidCallback? onAddDuty;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -61,15 +66,15 @@ class EditableRoster extends ConsumerWidget {
           padding: const EdgeInsets.fromLTRB(Space.l, Space.s, Space.l, 0),
           child: Text(title, style: AppText.title2),
         ),
-        if (roster.events.isNotEmpty)
+        if (roster.events.isNotEmpty || onEditEvents != null)
           Padding(
             // Space.s less at the sides, given back inside: the tags line
             // up with the title, the ink reaches a little past them.
             padding: const EdgeInsets.fromLTRB(Space.l - Space.s, Space.xs, Space.l - Space.s, 0),
-            // The tags open what they say, as 特別活動 in the menu does.
+            // The tags open what they say; with none, 「＋ 特別活動」 does.
             child: Semantics(
               button: onEditEvents != null,
-              hint: onEditEvents == null ? null : l10n.events,
+              hint: onEditEvents == null || roster.events.isEmpty ? null : l10n.events,
               child: InkWell(
                 onTap: ready ? onEditEvents : null,
                 borderRadius: BorderRadius.circular(Radii.s),
@@ -79,13 +84,15 @@ class EditableRoster extends ConsumerWidget {
                     padding: const EdgeInsets.symmetric(horizontal: Space.s, vertical: Space.xs),
                     child: Align(
                       alignment: AlignmentDirectional.centerStart,
-                      child: Wrap(
-                        spacing: Space.xs,
-                        runSpacing: Space.xs,
-                        children: [
-                          for (final e in roster.events) Tag.event(context, e.name, e.color),
-                        ],
-                      ),
+                      child: roster.events.isEmpty
+                          ? const _AddEventTag()
+                          : Wrap(
+                              spacing: Space.xs,
+                              runSpacing: Space.xs,
+                              children: [
+                                for (final e in roster.events) Tag.event(context, e.name, e.color),
+                              ],
+                            ),
                     ),
                   ),
                 ),
@@ -109,10 +116,40 @@ class EditableRoster extends ConsumerWidget {
                 },
                 child: _DutyRow(roster: roster, duty: duty, editable: arranges.has(duty.role)),
               ),
+            if (onAddDuty != null && (roster.duties.isNotEmpty || whenEmpty == null))
+              ListRow(
+                title: l10n.addDuty,
+                leading: const Icon(Symbols.add_rounded),
+                onTap: ready ? onAddDuty : null,
+              ),
           ],
         ),
-        if (roster.duties.isEmpty) whenEmpty ?? EmptyState(message: l10n.addDuty),
+        if (roster.duties.isEmpty && (whenEmpty != null || onAddDuty == null))
+          whenEmpty ?? EmptyState(message: l10n.addDuty),
       ],
+    );
+  }
+}
+
+/// Where a day has no 特別活動 yet: a grey tag to add one.
+class _AddEventTag extends StatelessWidget {
+  const _AddEventTag();
+
+  @override
+  Widget build(BuildContext context) {
+    final c = AppColors.of(context);
+    final style = AppText.footnote.copyWith(color: c.secondaryLabel, fontWeight: FontWeight.w600);
+    return Container(
+      padding: const EdgeInsetsDirectional.fromSTEB(Space.xs, 2, Space.s, 2),
+      decoration: BoxDecoration(color: c.fill, borderRadius: BorderRadius.circular(Radii.s)),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(Symbols.add_rounded, size: 16, color: c.secondaryLabel),
+          const SizedBox(width: 2),
+          Text(L10n.of(context).events, style: style),
+        ],
+      ),
     );
   }
 }
