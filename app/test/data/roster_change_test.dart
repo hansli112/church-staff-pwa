@@ -17,16 +17,6 @@ void main() {
     expect(() => RosterChange(before: {'a/b': null}, after: {'a/b': null}), throwsArgumentError);
   });
 
-  test('alongside rosters, a service may only gain or lose common events', () {
-    final renamed = sunday.copyWith(name: '主日崇拜');
-    expect(
-      () => RosterChange(before: const {}, after: const {}, serviceChange: (before: sunday, after: renamed)),
-      throwsArgumentError,
-    );
-    final tagged = sunday.copyWith(events: const [EventTag(name: '聖餐', color: 0)]);
-    RosterChange(before: const {}, after: const {}, serviceChange: (before: sunday, after: tagged));
-  });
-
   test('more than one transaction can hold is refused before reaching a backend', () {
     final days = [for (var i = 0; i < 500; i++) Roster(type: 'sunday', day: Day(2027, 1, 1).addDays(i))];
     final before = {for (final r in days) r.id: null};
@@ -42,9 +32,8 @@ void main() {
     );
   });
 
-  test('its reverse puts back every document, the staff order and the service', () {
+  test('its reverse puts back every document and the staff order', () {
     final a = sundayOn(4);
-    final tagged = sunday.copyWith(events: const [EventTag(name: '聖餐', color: 0)]);
     final ranked = StaffOrder({
       '司琴': ['甲'],
     });
@@ -53,14 +42,12 @@ void main() {
       after: {a.id: a},
       via: RosterVia.import,
       staffOrder: (serviceType: 'sunday', before: StaffOrder(), after: ranked),
-      serviceChange: (before: sunday, after: tagged),
     );
     final back = change.reversed;
     expect(back.before, {a.id: a});
     expect(back.after, {a.id: null});
     expect(back.via, RosterVia.import);
     expect((back.staffOrder!.before, back.staffOrder!.after), (ranked, StaffOrder()));
-    expect((back.serviceChange!.before, back.serviceChange!.after), (tagged, sunday));
   });
 
   test('a caller changing its maps afterwards does not change the write', () {

@@ -104,11 +104,10 @@ class MemberEditorScreen extends ConsumerWidget {
     ];
     Future<bool> save(Member next) => _save(context, ref, member, next);
     final mergeFirst = member.waitsForZone(services.enabled);
-    // Just joined, in no service: likely someone the rosters already have.
-    // Only then: once in a service they are no longer one to merge, and
-    // nothing says who was merged already (2026-11-19). The 同工 list
-    // still offers 合併 by a pending one of the same name.
-    final merge = pending.isEmpty || !mergeFirst
+    // Just joined, in no service: likely someone the rosters already have,
+    // so first. In a service already, last (2026-11-19): nothing says who
+    // was merged, but one put on a duty before being merged still can be.
+    final merge = pending.isEmpty
         ? null
         : ListSection(
             footer: l10n.mergePendingFooter,
@@ -121,7 +120,7 @@ class MemberEditorScreen extends ConsumerWidget {
       appBar: AppBar(title: Text(member.name), actions: const [SavingIndicator()]),
       body: ListView(
         children: [
-          ?merge,
+          if (mergeFirst) ?merge,
           IdentitySection(member: member, self: self),
           for (final s in services.services)
             if (zoneTypes.contains(s.id))
@@ -153,6 +152,7 @@ class MemberEditorScreen extends ConsumerWidget {
                 ),
               ],
             ),
+          if (!mergeFirst) ?merge,
           if (!self)
             ListSection(
               children: [

@@ -1180,7 +1180,7 @@ class MemoryChurchData implements ChurchData {
 
   @override
   Future<void> compareAndSetRosters(RosterChange change) async {
-    final RosterChange(:staffOrder, :serviceChange) = change;
+    final RosterChange(:staffOrder) = change;
     final uid = _uid;
     await _b.write(() {
       if (_uid != uid) throw const CloudException(CloudErrorCode.permissionDenied);
@@ -1194,12 +1194,6 @@ class MemoryChurchData implements ChurchData {
       if (staffOrder case final order?) {
         _requireRosterEditor(order.serviceType);
         if ((_b.staffOrders[churchId]![order.serviceType] ?? StaffOrder()) != order.before) {
-          throw const CloudException(CloudErrorCode.conflict);
-        }
-      }
-      if (serviceChange case final service?) {
-        _requireAdmin();
-        if (_b.services[churchId]!.byId(service.before.id) != service.before) {
           throw const CloudException(CloudErrorCode.conflict);
         }
       }
@@ -1222,18 +1216,12 @@ class MemoryChurchData implements ChurchData {
       }
       _plan(change);
       if (staffOrder case final order?) _b.staffOrders[churchId]![order.serviceType] = order.after;
-      if (serviceChange case final service?) {
-        final settings = _b.services[churchId]!;
-        _b.services[churchId] = settings.withServices([
-          for (final s in settings.services) s.id == service.before.id ? service.after : s,
-        ]);
-      }
     });
   }
 
   @override
   Future<void> compareAndSetLedDuties(RosterChange change) async {
-    if (change.staffOrder != null || change.serviceChange != null) throw ArgumentError('only rosters');
+    if (change.staffOrder != null) throw ArgumentError('only rosters');
     final uid = _uid;
     await _b.write(() {
       // As functions/src/ledDuties.ts: compared first, then only the duties

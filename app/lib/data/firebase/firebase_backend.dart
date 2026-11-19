@@ -890,26 +890,12 @@ class FirestoreChurchData implements ChurchData {
 
   @override
   Future<void> compareAndSetRosters(RosterChange change) async {
-    final RosterChange(:before, :after, :via, :staffOrder, :serviceChange) = change;
+    final RosterChange(:before, :after, :via, :staffOrder) = change;
     final next = {
       for (final entry in after.entries)
         entry.key: entry.value == null ? null : {..._rosterDoc(entry.value!), 'via': via.name},
     };
     await _transaction((tx) async {
-      Json? serviceDoc;
-      if (serviceChange case final edit?) {
-        final settingsRef = _col('settings').doc('services');
-        final settings = serviceSettingsFromJson((await tx.get(settingsRef)).data());
-        if (settings.byId(edit.before.id) != edit.before) throw const CloudException(CloudErrorCode.conflict);
-        final nextSettings = settings.withServices([
-          for (final service in settings.services) service.id == edit.before.id ? edit.after : service,
-        ]);
-        serviceDoc = {
-          'services': [for (final service in nextSettings.services) serviceToJson(service)],
-          'ids': nextSettings.ids,
-          'updatedAt': FieldValue.serverTimestamp(),
-        };
-      }
       if (before.isEmpty) await tx.get(_church);
       // Every day read at once: one at a time, a change to a whole
       // service waited a round trip per day.
@@ -936,13 +922,12 @@ class FirestoreChurchData implements ChurchData {
         }
       }
       if (staffOrder case final order?) tx.set(_col('staff_orders').doc(order.serviceType), order.after.toJson());
-      if (serviceDoc != null) tx.set(_col('settings').doc('services'), serviceDoc);
     });
   }
 
   @override
   Future<void> compareAndSetLedDuties(RosterChange change) async {
-    if (change.staffOrder != null || change.serviceChange != null) throw ArgumentError('only rosters');
+    if (change.staffOrder != null) throw ArgumentError('only rosters');
     await _call('editLedDuties', {
       'before': {for (final e in change.before.entries) e.key: e.value == null ? null : rosterToJson(e.value!)},
       'after': {for (final e in change.after.entries) e.key: e.value == null ? null : rosterToJson(e.value!)},

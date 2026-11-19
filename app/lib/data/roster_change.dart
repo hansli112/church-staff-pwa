@@ -8,15 +8,13 @@ import 'backend.dart';
 ///
 /// Building one checks it, so a malformed change never reaches a backend:
 /// the maps must have identical keys, each non-null roster must match its
-/// key, a [serviceChange] may only change common events, and the whole
-/// write must fit in one transaction ([CloudReason.tooManyChanges]).
+/// key, and the whole write must fit in one transaction ([CloudReason.tooManyChanges]).
 final class RosterChange {
   RosterChange({
     required Map<String, Roster?> before,
     required Map<String, Roster?> after,
     this.via = RosterVia.app,
     this.staffOrder,
-    this.serviceChange,
   }) : before = Map.unmodifiable(before),
        after = Map.unmodifiable(after) {
     if (before.length != after.length || before.keys.any((key) => !after.containsKey(key))) {
@@ -27,10 +25,7 @@ final class RosterChange {
         throw ArgumentError('roster key must match the document id');
       }
     }
-    if (serviceChange case final change? when change.after.copyWith(events: change.before.events) != change.before) {
-      throw ArgumentError('roster serviceChange may only change common events');
-    }
-    if (after.length + (staffOrder == null ? 0 : 1) + (serviceChange == null ? 0 : 1) > maxWrites) {
+    if (after.length + (staffOrder == null ? 0 : 1) > maxWrites) {
       throw const CloudException(CloudErrorCode.quotaExceeded, reason: CloudReason.tooManyChanges);
     }
   }
@@ -46,9 +41,6 @@ final class RosterChange {
 
   final ({String serviceType, StaffOrder before, StaffOrder after})? staffOrder;
 
-  /// The only settings change allowed alongside rosters: common events.
-  final ({Service before, Service after})? serviceChange;
-
   /// The change that takes this one back, refused if anything it wrote has
   /// changed since.
   RosterChange get reversed => RosterChange(
@@ -57,10 +49,6 @@ final class RosterChange {
     via: via,
     staffOrder: switch (staffOrder) {
       final o? => (serviceType: o.serviceType, before: o.after, after: o.before),
-      null => null,
-    },
-    serviceChange: switch (serviceChange) {
-      final s? => (before: s.after, after: s.before),
       null => null,
     },
   );

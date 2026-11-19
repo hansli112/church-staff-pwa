@@ -275,26 +275,13 @@ class RosterActions {
     );
   }
 
-  /// Sets the day's tags and, when requested, its common-event options in
-  /// one events-only transaction. Any newer settings/day baseline refuses
-  /// the whole write; undo reverses both baselines in the same transaction.
-  ChurchWrite setEvents(Roster roster, List<EventTag> events, {List<EventTag> addToCommon = const []}) {
+  /// Sets the day's tags (特別活動). A newer day refuses the write.
+  ChurchWrite setEvents(Roster roster, List<EventTag> events) {
     final next = roster.copyWith(events: events);
     // Ticking a tag off and on again only moves it to the end: the day
     // stays as it is (a draft stays a draft).
-    final changed = !setEquals(events.toSet(), roster.events.toSet());
-    final service = _services.byId(roster.type);
-    final common = addToCommon.isEmpty || service == null
-        ? null
-        : service.copyWith(events: [...service.events, ...addToCommon]);
-    if (!changed && common == null) return (done: Future<void>.value(), undo: () async {});
-    return _writes.rosters(
-      RosterChange(
-        before: {if (changed) roster.id: _persisted(roster)},
-        after: {if (changed) next.id: next},
-        serviceChange: common == null ? null : (before: service!, after: common),
-      ),
-    );
+    if (setEquals(events.toSet(), roster.events.toSet())) return (done: Future<void>.value(), undo: () async {});
+    return _writes.rosters(RosterChange(before: {roster.id: _persisted(roster)}, after: {next.id: next}));
   }
 
   /// Swaps two people in [role] in one batch; undo puts both days' [role]

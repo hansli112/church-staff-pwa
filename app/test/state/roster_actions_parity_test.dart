@@ -230,22 +230,6 @@ void main() {
     expect(container.read(rosterWeeksProvider('sunday')), 13);
   });
 
-  test('a stale common-event option refuses both its replacement and the day arrangement', () async {
-    final b = seededChurch();
-    final day = savedDay(b, 11);
-    final (_, actions) = await open(b);
-    final newer = sundayService.copyWith(events: const [EventTag(name: '聖餐', color: 4)]);
-    b.services['grace'] = b.services['grace']!.withServices([newer, youthService]);
-    const retreat = EventTag(name: '退修會', color: 2);
-
-    await expectLater(
-      actions.setEvents(day, const [retreat], addToCommon: const [retreat]).done,
-      throwsA(isA<CloudException>().having((e) => e.code, 'code', CloudErrorCode.conflict)),
-    );
-    expect(b.services['grace']!.byId('sunday'), newer);
-    expect(savedDay(b, 11), day);
-  });
-
   test('a same-text guest does not count as my service; only an explicit uid binding does', () async {
     final b = seededChurch(as: john);
     b.rosters['grace']![savedDay(b, 4).id] = savedDay(b, 4).copyWith(
@@ -266,38 +250,22 @@ void main() {
     expect(mine.single.duties, ['招待']);
   });
 
-  for (final changed in ['common option', 'arranged day']) {
-    test('combined event undo refuses a newer $changed without reverting either part', () async {
-      final b = seededChurch();
-      final (_, actions) = await open(b);
-      const retreat = EventTag(name: '退修會', color: 2);
-      final write = actions.setEvents(savedDay(b, 11), const [retreat], addToCommon: const [retreat]);
-      await write.done;
-      await pumpEventQueue();
-      if (changed == 'common option') {
-        final newer = b.services['grace']!
-            .byId('sunday')!
-            .copyWith(
-              events: const [
-                EventTag(name: '聖餐', color: 4),
-                retreat,
-              ],
-            );
-        b.services['grace'] = b.services['grace']!.withServices([newer, youthService]);
-      } else {
-        b.rosters['grace']![savedDay(b, 11).id] = savedDay(b, 11).copyWith(duties: const [Duty(role: '新安排')]);
-      }
-      b.notify();
-      await pumpEventQueue();
-      final currentService = b.services['grace']!.byId('sunday');
-      final currentDay = savedDay(b, 11);
+  test("a day's 特別活動 undo refuses a newer arrangement without reverting it", () async {
+    final b = seededChurch();
+    final (_, actions) = await open(b);
+    const retreat = EventTag(name: '退修會', color: 2);
+    final write = actions.setEvents(savedDay(b, 11), const [retreat]);
+    await write.done;
+    await pumpEventQueue();
+    b.rosters['grace']![savedDay(b, 11).id] = savedDay(b, 11).copyWith(duties: const [Duty(role: '新安排')]);
+    b.notify();
+    await pumpEventQueue();
+    final currentDay = savedDay(b, 11);
 
-      await expectLater(
-        write.undo(),
-        throwsA(isA<CloudException>().having((e) => e.code, 'code', CloudErrorCode.conflict)),
-      );
-      expect(b.services['grace']!.byId('sunday'), currentService);
-      expect(savedDay(b, 11), currentDay);
-    });
-  }
+    await expectLater(
+      write.undo(),
+      throwsA(isA<CloudException>().having((e) => e.code, 'code', CloudErrorCode.conflict)),
+    );
+    expect(savedDay(b, 11), currentDay);
+  });
 }

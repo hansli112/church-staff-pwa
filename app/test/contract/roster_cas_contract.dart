@@ -9,39 +9,6 @@ import 'world.dart';
 
 /// The same public atomic-write contract runs on memory and Firebase.
 void rosterCasContractTests(Future<ContractWorld> Function() open) {
-  test('stale common options reject the entire day edit and ordinary editors cannot mutate settings', () async {
-    final w = await open();
-    final g = await Grace.open(w);
-    final roster = sundayOn(18, events: const [EventTag(name: '特會', color: 3)]);
-    final next = sunday.copyWith(
-      events: [
-        ...sunday.events,
-        const EventTag(name: '特會', color: 3),
-      ],
-    );
-    await g.church.putServices([sunday.copyWith(name: '別人改的聚會'), youth]);
-    await expectLater(
-      g.church.compareAndSetRosters(
-        RosterChange(
-          before: {roster.id: null},
-          after: {roster.id: roster},
-          serviceChange: (before: sunday, after: next),
-        ),
-      ),
-      fails(CloudErrorCode.conflict),
-    );
-    expect(await g.church.readOnce.rosters(), isEmpty);
-    await g.church.putServices([sunday, youth]);
-    await w.signIn(Grace.editorEmail);
-    await expectLater(
-      g.church.compareAndSetRosters(
-        RosterChange(before: const {}, after: const {}, serviceChange: (before: sunday, after: next)),
-      ),
-      denied(),
-    );
-    expect((await g.church.services().first).byId('sunday'), sunday);
-  });
-
   test('a stale staff order rejects the entire import without saving any roster', () async {
     final g = await Grace.open(await open());
     final roster = sundayOn(

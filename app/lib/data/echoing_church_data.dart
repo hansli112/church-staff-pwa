@@ -270,10 +270,6 @@ class EchoingChurchData implements ChurchData {
     _Echo(
       rosters: {for (final e in change.after.entries) e.key: e.value?.copyWith(saved: true)},
       staffOrders: {if (change.staffOrder case final o?) o.serviceType: o.after},
-      services: switch (change.serviceChange) {
-        final s? => (settings) => _withService(settings, s.after),
-        null => null,
-      },
     ),
     () => _inner.compareAndSetRosters(change),
   );

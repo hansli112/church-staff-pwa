@@ -32,32 +32,6 @@ void main() {
     expect(savedDay(b, 11).duties.firstWhere((d) => d.role == '司琴').uids, {'李美玉': 'mei'});
   });
 
-  test('new common events and the day’s events are taken back together', () async {
-    final b = seededChurch();
-    final (_, actions) = await open(b);
-    const retreat = EventTag(name: '退修會', color: 2);
-    final day = savedDay(b, 11);
-    final write = actions.setEvents(day, const [retreat], addToCommon: const [retreat]);
-    await write.done;
-    await pumpEventQueue();
-    expect(b.services['grace']!.byId('sunday')!.events, const [EventTag(name: '聖餐', color: 0), retreat]);
-    expect(savedDay(b, 11).events, const [retreat]);
-
-    await write.undo();
-    expect(b.services['grace']!.byId('sunday')!.events, const [EventTag(name: '聖餐', color: 0)]);
-    expect(savedDay(b, 11).events, isEmpty);
-  });
-
-  test('a new common event alone leaves a template day a draft', () async {
-    final b = seededChurch();
-    final (_, actions) = await open(b);
-    const retreat = EventTag(name: '退修會', color: 2);
-    final draft = Roster(type: 'sunday', day: Day(2026, 10, 18));
-    await actions.setEvents(draft, const [], addToCommon: const [retreat]).done;
-    expect(b.services['grace']!.byId('sunday')!.events, contains(retreat));
-    expect(b.rosters['grace']![draft.id], isNull);
-  });
-
   test('an import is applied in full and undone in full, staff order included', () async {
     final b = seededChurch();
     final (_, actions) = await open(b);

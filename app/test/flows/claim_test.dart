@@ -426,11 +426,12 @@ void main() {
       return b;
     }
 
-    testWidgets('one already in a service is not offered it: likely merged, or not new', (tester) async {
-      final b = church();
-      await pumpApp(tester, b);
+    testWidgets('one already in a service is offered it last, under 加入聚會', (tester) async {
+      await pumpApp(tester, church());
       await go(tester, '/me/members/mei');
-      expect(find.text('合併沒有帳號的同工'), findsNothing);
+      await tester.scrollUntilVisible(find.text('合併沒有帳號的同工'), 200, scrollable: find.byType(Scrollable).last);
+      final merge = tester.getTopLeft(find.text('合併沒有帳號的同工')).dy;
+      expect(merge, greaterThan(tester.getTopLeft(find.text('加入聚會')).dy));
     });
 
     testWidgets('one in no service yet is offered it first, above 加入聚會', (tester) async {

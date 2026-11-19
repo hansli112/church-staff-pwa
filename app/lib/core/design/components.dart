@@ -316,7 +316,7 @@ class FootnoteLinks extends StatelessWidget {
             InkWell(
               onTap: link.onPressed,
               child: ConstrainedBox(
-                constraints: const BoxConstraints(minHeight: 32),
+                constraints: BoxConstraints(minHeight: Space.minTap(Theme.of(context).platform)),
                 child: Align(
                   widthFactor: 1,
                   heightFactor: 1,

@@ -80,7 +80,7 @@ class ChurchWrites {
     bool whole(Roster r) =>
         (r.isEvent ? _ref.read(eventArrangesProvider(r.forEvent!.group)) : _ref.read(arrangesProvider(r.type))).all;
     final days = [...change.before.values, ...change.after.values].whereType<Roster>();
-    final scoped = change.staffOrder == null && change.serviceChange == null && !days.every(whole);
+    final scoped = change.staffOrder == null && !days.every(whole);
     return scoped ? data.compareAndSetLedDuties(change) : data.compareAndSetRosters(change);
   }
 
