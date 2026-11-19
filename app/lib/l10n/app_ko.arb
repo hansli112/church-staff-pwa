@@ -125,12 +125,11 @@
     }
   },
   "pickerOthers": "다른 멤버",
-  "pickerFindOthers": "다른 사람 찾기",
+  "pickerEveryone": "모든 멤버",
   "pickerSwapDay": "다른 주와 바꾸기",
   "pickerSeveralThisTime": "여러 명 선택",
   "pickerUseName": "‘{name}’ 추가",
   "pickerUseNameDetail": "이번만",
-  "pickerNoOneServes": "아직 {duty} 담당자가 없어요",
   "pickerNoResults": "‘{query}’ 검색 결과가 없어요",
   "pickerSearchHint": "멤버 검색",
   "reorder": "순서 변경",

@@ -808,11 +808,11 @@ abstract class L10n {
   /// **'其他同工'**
   String get pickerOthers;
 
-  /// In the picker, under those who served the duty before: shows the search box, for other 同工 or a name typed
+  /// No description provided for @pickerEveryone.
   ///
   /// In zh, this message translates to:
-  /// **'找其他人'**
-  String get pickerFindOthers;
+  /// **'所有同工'**
+  String get pickerEveryone;
 
   /// No description provided for @pickerSwapDay.
   ///
@@ -837,12 +837,6 @@ abstract class L10n {
   /// In zh, this message translates to:
   /// **'只排這一次'**
   String get pickerUseNameDetail;
-
-  /// No description provided for @pickerNoOneServes.
-  ///
-  /// In zh, this message translates to:
-  /// **'還沒有人負責{duty}'**
-  String pickerNoOneServes(String duty);
 
   /// No description provided for @pickerNoResults.
   ///

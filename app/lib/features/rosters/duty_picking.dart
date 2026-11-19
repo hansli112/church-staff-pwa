@@ -6,7 +6,6 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:go_router/go_router.dart';
 
 import '../../core/design/components.dart';
 import '../../domain/day.dart';
@@ -37,7 +36,6 @@ Future<void> pickPeople(
   final members = ref.read(staffProvider).requireValue;
   final order = ref.read(rosterActionsProvider).orderOf(roster);
   final me = ref.read(meProvider).value;
-  final router = GoRouter.of(context);
   final l10n = L10n.of(context);
   final around = ref.read(rosterActionsProvider).servingAroundOf(roster);
   final unavailable = unavailableOn(roster, ref.read(unavailableDaysProvider).value ?? const {});
@@ -79,7 +77,6 @@ Future<void> pickPeople(
       (ref.read(servicesProvider).value?.byId(roster.type)?.duties.contains(duty.role) ?? false) &&
       (me?.editsDutyList(ref.read(ministriesProvider).value?.ministries ?? const [], roster.type, duty.role) ?? false);
   final onePerson = actions.takesOnePerson(roster, duty.role);
-  var invite = false;
   final result = await showAppSheet<PickerResult>(
     context,
     expand: true,
@@ -101,7 +98,6 @@ Future<void> pickPeople(
       canSwapDay: swapDays.any((d) => canSwapDuty(duty.role, roster, d)),
       onePerson: onePerson,
       canRemoveFutureGuests: !roster.isEvent,
-      onInvite: (me?.isAdmin ?? false) ? () => invite = true : null,
       notes: notes,
       unavailable: unavailableNames,
     ),
@@ -115,7 +111,6 @@ Future<void> pickPeople(
       await _savePicked(context, ref, roster, duty, result, via, unavailable: unavailableNames);
     }
   }
-  if (invite) unawaited(router.push('/me/invites'));
 }
 
 /// 之後都不排: [name], arranged this once, off [role] on the days ahead

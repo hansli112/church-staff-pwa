@@ -405,7 +405,7 @@ class L10nEn extends L10n {
   String get pickerOthers => 'Other team members';
 
   @override
-  String get pickerFindOthers => 'Someone else';
+  String get pickerEveryone => 'All team members';
 
   @override
   String get pickerSwapDay => 'Swap with another week';
@@ -420,11 +420,6 @@ class L10nEn extends L10n {
 
   @override
   String get pickerUseNameDetail => 'Just this once';
-
-  @override
-  String pickerNoOneServes(String duty) {
-    return 'No one serves as $duty yet';
-  }
 
   @override
   String pickerNoResults(String query) {

@@ -125,12 +125,11 @@
     }
   },
   "pickerOthers": "其他同工",
-  "pickerFindOthers": "找其他人",
+  "pickerEveryone": "所有同工",
   "pickerSwapDay": "和别的周交换",
   "pickerSeveralThisTime": "选择多位",
   "pickerUseName": "新增“{name}”",
   "pickerUseNameDetail": "只排这一次",
-  "pickerNoOneServes": "还没有人负责{duty}",
   "pickerNoResults": "找不到“{query}”",
   "pickerSearchHint": "搜索同工",
   "reorder": "调整顺序",

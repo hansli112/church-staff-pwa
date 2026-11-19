@@ -351,7 +351,6 @@ void main() {
       await go(tester, '/rosters/sunday/2026-10-11');
       await tapText(tester, '司會');
       await tapText(tester, '選取多位');
-      await tapText(tester, '找其他人');
       await tester.enterText(find.byType(TextField), 'John');
       await settle(tester);
       await tapText(tester, 'John Chen');
@@ -366,7 +365,6 @@ void main() {
       await pumpApp(tester, b);
       await go(tester, '/rosters/sunday/2026-10-11');
       await tapText(tester, '司琴');
-      await tapText(tester, '找其他人');
       await tester.enterText(find.byType(TextField), 'ｊｏｈｎ');
       await settle(tester);
       expect(find.text('其他同工'), findsOneWidget);
@@ -382,7 +380,6 @@ void main() {
       await pumpApp(tester, b);
       await go(tester, '/rosters/sunday/2026-10-11');
       await tapText(tester, '司琴');
-      await tapText(tester, '找其他人');
       await tester.enterText(find.byType(TextField), 'John');
       await settle(tester);
       await tapText(tester, 'John Chen');
@@ -400,8 +397,8 @@ void main() {
       await pumpApp(tester, b);
       await go(tester, '/rosters/youth/2026-10-10');
       await tapText(tester, '司會');
-      expect(findShown('還沒有人負責司會'), findsOneWidget);
-      expect(find.text('其他同工'), findsOneWidget);
+      expect(find.text('所有同工'), findsOneWidget);
+      expect(find.text('其他同工'), findsNothing);
       await tapText(tester, 'John Chen');
       final youth = b.rosters['grace']![Roster.idFor('youth', Day(2026, 10, 10))]!;
       expect(youth.duties.firstWhere((d) => d.role == '司會').people, ['John Chen']);
@@ -415,7 +412,6 @@ void main() {
       await pumpApp(tester, b);
       await go(tester, '/rosters/sunday/2026-10-11');
       await tapText(tester, '司琴');
-      await tapText(tester, '找其他人');
       await tester.enterText(find.byType(TextField), 'John');
       await settle(tester);
       await tapText(tester, 'John Chen');
@@ -433,7 +429,6 @@ void main() {
       await settle(tester);
       await tapText(tester, '完成');
       expect(find.text('排過招待的人'), findsOneWidget);
-      await tapText(tester, '找其他人');
       await tester.enterText(find.byType(TextField), '美玉');
       await settle(tester);
       expect(
@@ -469,7 +464,6 @@ void main() {
       await pumpApp(tester, b);
       await go(tester, '/rosters/sunday/2026-10-11');
       await tapText(tester, '招待');
-      await tapText(tester, '找其他人');
       await tester.enterText(find.byType(TextField), 'John');
       await settle(tester);
       await tapText(tester, 'John Chen');
@@ -488,7 +482,6 @@ void main() {
       await tester.tap(find.byTooltip('從名單移除李美玉'));
       await settle(tester);
       await tapText(tester, '完成');
-      await tapText(tester, '找其他人');
       await tester.enterText(find.byType(TextField), '美玉');
       await settle(tester);
       await tapText(tester, '李美玉');
@@ -503,7 +496,6 @@ void main() {
       await go(tester, '/rosters/sunday/2026-10-11');
       // 司琴 has no staff order yet: by name, John Chen would come first.
       await tapText(tester, '司琴');
-      await tapText(tester, '找其他人');
       await tester.enterText(find.byType(TextField), 'John');
       await settle(tester);
       await tapText(tester, 'John Chen');
@@ -535,7 +527,6 @@ void main() {
       await pumpApp(tester, b);
       await go(tester, '/rosters/sunday/2026-10-11');
       await tapText(tester, '司琴');
-      await tapText(tester, '找其他人');
       await tester.enterText(find.byType(TextField), '外請講員');
       await settle(tester);
       expect(find.text('新增「外請講員」'), findsOneWidget);
@@ -544,21 +535,16 @@ void main() {
       expect(savedDay(b, 11).duties[1].uids, isEmpty);
     });
 
-    testWidgets('the search waits behind 找其他人, under those who did the duty; then it has the keyboard', (
-      tester,
-    ) async {
+    testWidgets('the search is at the top, over those who did the duty, without the keyboard', (tester) async {
       final many = [for (var i = 0; i < 30; i++) Member(uid: 'x$i', name: '同工$i')];
       await pumpApp(tester, seededChurch(extra: many));
       await go(tester, '/rosters/sunday/2026-10-11');
       await tapText(tester, '司琴');
-      expect(find.byType(TextField), findsNothing);
+      expect(tester.widget<TextField>(find.byType(TextField)).autofocus, isFalse);
       expect(
-        tester.getTopLeft(find.text('找其他人')).dy,
-        greaterThan(tester.getTopLeft(find.text('李美玉').last).dy),
+        tester.getTopLeft(find.byType(TextField)).dy,
+        lessThan(tester.getTopLeft(find.text('李美玉').last).dy),
       );
-      await tapText(tester, '找其他人');
-      expect(tester.widget<TextField>(find.byType(TextField)).autofocus, isTrue);
-      expect(find.text('找其他人'), findsNothing);
     });
 
     testWidgets('who is picked shows only by their tick: someone found stays, ticked, once the search is cleared', (
@@ -568,7 +554,6 @@ void main() {
       await pumpApp(tester, b);
       await go(tester, '/rosters/sunday/2026-10-11');
       await tapText(tester, '招待');
-      await tapText(tester, '找其他人');
       await tester.enterText(find.byType(TextField), 'John');
       await settle(tester);
       await tapText(tester, 'John Chen');
@@ -633,8 +618,6 @@ void main() {
       await pumpApp(tester, b);
       await go(tester, '/rosters/sunday/2026-10-11');
       await tapText(tester, '招待');
-      await tester.scrollUntilVisible(find.text('找其他人'), 2000, scrollable: find.byType(Scrollable).last);
-      await tapText(tester, '找其他人');
       for (final name in ['同工0499', '同工0000']) {
         await tester.enterText(find.byType(TextField), name);
         await settle(tester);
@@ -680,28 +663,13 @@ void main() {
       expect(find.text('排過招待的人'), findsOneWidget);
     });
 
-    testWidgets('when nobody serves a duty, an admin can invite people from the picker', (tester) async {
+    testWidgets('the picker has no 邀請同工, even with nobody on the duty: invites are on the home page and in 設定', (
+      tester,
+    ) async {
       await pumpApp(tester, seededChurch());
       await go(tester, '/rosters/youth/2026-10-10');
       await tapText(tester, '司會');
-      expect(findShown('還沒有人負責司會'), findsOneWidget);
-      await tapText(tester, '邀請同工');
-      expect(find.text('建立邀請連結'), findsOneWidget, reason: 'the invites page');
-    });
-
-    testWidgets('a roster editor, who cannot invite, gets no invite button', (tester) async {
-      final b = seededChurch(as: editor);
-      final day = savedDay(b, 11);
-      b.rosters['grace']![day.id] = day.copyWith(
-        duties: [
-          ...day.duties,
-          const Duty(role: '音控', people: []),
-        ],
-      );
-      await pumpApp(tester, b);
-      await go(tester, '/rosters/sunday/2026-10-11');
-      await tapText(tester, '音控');
-      expect(find.text('還沒有人負責音控'), findsOneWidget);
+      expect(find.text('所有同工'), findsOneWidget);
       expect(find.text('邀請同工'), findsNothing);
     });
 

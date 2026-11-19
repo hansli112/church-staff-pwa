@@ -125,12 +125,11 @@
     }
   },
   "pickerOthers": "ほかのメンバー",
-  "pickerFindOthers": "ほかの人を探す",
+  "pickerEveryone": "すべてのメンバー",
   "pickerSwapDay": "別の週と交換",
   "pickerSeveralThisTime": "複数選択",
   "pickerUseName": "「{name}」を追加",
   "pickerUseNameDetail": "今回だけ",
-  "pickerNoOneServes": "{duty}の担当者はまだいません",
   "pickerNoResults": "「{query}」は見つかりません",
   "pickerSearchHint": "メンバーを検索",
   "reorder": "並べ替え",

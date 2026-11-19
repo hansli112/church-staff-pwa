@@ -81,7 +81,6 @@ class PeoplePicker extends StatefulWidget {
     this.onePerson = false,
     this.initialGuests = const {},
     this.guestSuggestions = const [],
-    this.onInvite,
     this.notes = const {},
     this.unavailable = const {},
     this.canRemoveFutureGuests = false,
@@ -116,11 +115,6 @@ class PeoplePicker extends StatefulWidget {
   /// The duty takes one person (RosterActions.takesOnePerson).
   final bool onePerson;
 
-  /// For those who may invite people (admins): while nobody serves the
-  /// duty, a 「邀請同工」 button closes the picker, keeping what was picked,
-  /// and this goes on to the invites.
-  final VoidCallback? onInvite;
-
   /// A line under a member's name, by name: what they already serve
   /// around the day (#90).
   final Map<String, String> notes;
@@ -150,10 +144,6 @@ class _PeoplePickerState extends State<PeoplePicker> {
   final _takeOff = <Member>[];
   String _query = '';
 
-  /// The search box, out of the way until 找其他人: whoever is likely is on
-  /// the duty's list already. Shown from the start when nobody is.
-  late bool _searchShown = _serving.isEmpty;
-  bool _searchFocus = false;
   bool _reordering = false;
   List<String>? _ranking;
 
@@ -317,15 +307,15 @@ class _PeoplePickerState extends State<PeoplePicker> {
           if (_reordering)
             Expanded(child: _reorderList(l10n, c))
           else ...[
-            if (_searchShown)
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: Space.m),
-                child: SearchField(
-                  hint: l10n.pickerSearchHint,
-                  autofocus: _searchFocus,
-                  onChanged: (q) => setState(() => _query = q),
-                ),
+            // At the top, whether or not anyone serves the duty yet: for
+            // anyone else in the church, or a name typed.
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: Space.m),
+              child: SearchField(
+                hint: l10n.pickerSearchHint,
+                onChanged: (q) => setState(() => _query = q),
               ),
+            ),
             Expanded(child: _list(l10n, c)),
           ],
         ],
@@ -405,42 +395,10 @@ class _PeoplePickerState extends State<PeoplePicker> {
       for (final n in serving) {
         rows.add(() => _row(n, c, note: widget.notes[n], onTap: () => _choose(n)));
       }
-    } else if (!searching) {
-      // One sentence and, for those who can, one button.
-      rows.add(
-        () => Padding(
-          padding: const EdgeInsets.all(Space.l),
-          child: Column(
-            children: [
-              BalancedText(
-                l10n.pickerNoOneServes(widget.duty),
-                style: AppText.body.copyWith(color: c.secondaryLabel),
-              ),
-              if (widget.onInvite case final invite?)
-                SecondaryButton(
-                  label: l10n.inviteMembers,
-                  onPressed: () {
-                    Navigator.pop(context, result);
-                    invite();
-                  },
-                ),
-            ],
-          ),
-        ),
-      );
-    }
-    if (!_searchShown) {
-      rows.add(
-        () => ListRow(
-          title: l10n.pickerFindOthers,
-          leading: const Icon(Symbols.search_rounded),
-          chevron: false,
-          onTap: () => setState(() => _searchShown = _searchFocus = true),
-        ),
-      );
     }
     if (others.isNotEmpty) {
-      rows.add(() => SectionHeader(l10n.pickerOthers));
+      // Nobody serves it yet: everyone, not 「other」 than nobody.
+      rows.add(() => SectionHeader(_serving.isEmpty ? l10n.pickerEveryone : l10n.pickerOthers));
       for (final m in others) {
         rows.add(() => _row(m.name, c, note: widget.notes[m.name], onTap: () => _pickOther(m)));
       }

@@ -396,7 +396,7 @@ class L10nKo extends L10n {
   String get pickerOthers => '다른 멤버';
 
   @override
-  String get pickerFindOthers => '다른 사람 찾기';
+  String get pickerEveryone => '모든 멤버';
 
   @override
   String get pickerSwapDay => '다른 주와 바꾸기';
@@ -411,11 +411,6 @@ class L10nKo extends L10n {
 
   @override
   String get pickerUseNameDetail => '이번만';
-
-  @override
-  String pickerNoOneServes(String duty) {
-    return '아직 $duty 담당자가 없어요';
-  }
 
   @override
   String pickerNoResults(String query) {

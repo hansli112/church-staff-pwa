@@ -125,12 +125,11 @@
     }
   },
   "pickerOthers": "Other team members",
-  "pickerFindOthers": "Someone else",
+  "pickerEveryone": "All team members",
   "pickerSwapDay": "Swap with another week",
   "pickerSeveralThisTime": "Select several",
   "pickerUseName": "Add “{name}”",
   "pickerUseNameDetail": "Just this once",
-  "pickerNoOneServes": "No one serves as {duty} yet",
   "pickerNoResults": "No results for “{query}”",
   "pickerSearchHint": "Search team members",
   "reorder": "Reorder",

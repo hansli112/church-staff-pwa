@@ -395,7 +395,7 @@ class L10nJa extends L10n {
   String get pickerOthers => 'ほかのメンバー';
 
   @override
-  String get pickerFindOthers => 'ほかの人を探す';
+  String get pickerEveryone => 'すべてのメンバー';
 
   @override
   String get pickerSwapDay => '別の週と交換';
@@ -410,11 +410,6 @@ class L10nJa extends L10n {
 
   @override
   String get pickerUseNameDetail => '今回だけ';
-
-  @override
-  String pickerNoOneServes(String duty) {
-    return '$dutyの担当者はまだいません';
-  }
 
   @override
   String pickerNoResults(String query) {

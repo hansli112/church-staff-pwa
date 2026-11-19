@@ -240,8 +240,7 @@
     }
   },
   "pickerOthers": "其他同工",
-  "pickerFindOthers": "找其他人",
-  "@pickerFindOthers": {"description": "In the picker, under those who served the duty before: shows the search box, for other 同工 or a name typed"},
+  "pickerEveryone": "所有同工",
   "pickerSwapDay": "和別週交換",
   "pickerSeveralThisTime": "選取多位",
   "pickerUseName": "新增「{name}」",
@@ -253,14 +252,6 @@
     }
   },
   "pickerUseNameDetail": "只排這一次",
-  "pickerNoOneServes": "還沒有人負責{duty}",
-  "@pickerNoOneServes": {
-    "placeholders": {
-      "duty": {
-        "type": "String"
-      }
-    }
-  },
   "pickerNoResults": "找不到「{query}」",
   "@pickerNoResults": {
     "placeholders": {

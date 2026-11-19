@@ -395,7 +395,7 @@ class L10nZh extends L10n {
   String get pickerOthers => '其他同工';
 
   @override
-  String get pickerFindOthers => '找其他人';
+  String get pickerEveryone => '所有同工';
 
   @override
   String get pickerSwapDay => '和別週交換';
@@ -410,11 +410,6 @@ class L10nZh extends L10n {
 
   @override
   String get pickerUseNameDetail => '只排這一次';
-
-  @override
-  String pickerNoOneServes(String duty) {
-    return '還沒有人負責$duty';
-  }
 
   @override
   String pickerNoResults(String query) {
@@ -3967,7 +3962,7 @@ class L10nZhHans extends L10nZh {
   String get pickerOthers => '其他同工';
 
   @override
-  String get pickerFindOthers => '找其他人';
+  String get pickerEveryone => '所有同工';
 
   @override
   String get pickerSwapDay => '和别的周交换';
@@ -3982,11 +3977,6 @@ class L10nZhHans extends L10nZh {
 
   @override
   String get pickerUseNameDetail => '只排这一次';
-
-  @override
-  String pickerNoOneServes(String duty) {
-    return '还没有人负责$duty';
-  }
 
   @override
   String pickerNoResults(String query) {
