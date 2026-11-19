@@ -1243,8 +1243,11 @@ class L10nKo extends L10n {
   String get photoImportAction => '사진으로 봉사표 가져오기';
 
   @override
+  String get photoIntro => '종이 봉사표 사진을 찍거나 고르면 AI가 읽어 들여요';
+
+  @override
   String photoRemaining(int count) {
-    return '이번 달 $count장 남음';
+    return '이번 달 $count장 남음 · 매달 1일에 초기화';
   }
 
   @override
@@ -2228,10 +2231,6 @@ class L10nKo extends L10n {
   String get importPromptCopied => '복사했어요. 사진과 함께 AI에 보내고, 받은 JSON을 붙여 넣어 주세요';
 
   @override
-  String get importFormatHelp =>
-      'date: YYYY-MM-DD. 아무도 없으면 people에 []를 넣어요.\nevents는 생략할 수 있고, 특별 순서 color는 색상 번호 0–5만 쓸 수 있어요.';
-
-  @override
   String get importPhotoFormatError => '인식 결과 형식이 맞지 않아요. 다시 인식하거나 고급 JSON을 사용해 주세요.';
 
   @override
@@ -2548,15 +2547,6 @@ class L10nKo extends L10n {
 
   @override
   String get appUpdateCheckFirst => '먼저 업데이트를 확인해 주세요';
-
-  @override
-  String get importExampleRole => '반주';
-
-  @override
-  String get importExamplePerson => '김서연';
-
-  @override
-  String get importExampleEvent => '성찬';
 
   @override
   String get rosterShowMore => '더 보기';

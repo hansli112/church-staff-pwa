@@ -2296,10 +2296,16 @@ abstract class L10n {
   /// **'從照片匯入服事表'**
   String get photoImportAction;
 
+  /// Top of 照片匯入: what it does, who reads the photo
+  ///
+  /// In zh, this message translates to:
+  /// **'拍下或選一張紙本服事表的照片，AI 會自動辨識'**
+  String get photoIntro;
+
   /// No description provided for @photoRemaining.
   ///
   /// In zh, this message translates to:
-  /// **'這個月還可以辨識 {count} 張'**
+  /// **'這個月還剩 {count} 張・每月 1 日重算'**
   String photoRemaining(int count);
 
   /// No description provided for @photoTake.
@@ -4036,12 +4042,6 @@ abstract class L10n {
   /// **'已複製，連同照片傳給 AI，再把它回的 JSON 貼上來'**
   String get importPromptCopied;
 
-  /// Explanation below the unlocalized canonical JSON protocol example
-  ///
-  /// In zh, this message translates to:
-  /// **'date：YYYY-MM-DD；沒有人時 people 填 []。\nevents 可省略；特別活動的 color 填色號 0–5。'**
-  String get importFormatHelp;
-
   /// Photo recognizer returned an invalid canonical JSON response
   ///
   /// In zh, this message translates to:
@@ -4557,24 +4557,6 @@ abstract class L10n {
   /// In zh, this message translates to:
   /// **'請先檢查更新'**
   String get appUpdateCheckFirst;
-
-  /// Example duty in the import JSON example; only the value is translated
-  ///
-  /// In zh, this message translates to:
-  /// **'司琴'**
-  String get importExampleRole;
-
-  /// Example name in the import JSON example
-  ///
-  /// In zh, this message translates to:
-  /// **'李美玉'**
-  String get importExamplePerson;
-
-  /// Example occasion (特別活動) in the import JSON example
-  ///
-  /// In zh, this message translates to:
-  /// **'聖餐'**
-  String get importExampleEvent;
 
   /// No description provided for @rosterShowMore.
   ///

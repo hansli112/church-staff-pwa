@@ -32,6 +32,7 @@ class EditableRoster extends ConsumerWidget {
     this.arranges = const Arranges.all(),
     this.onEditEvents,
     this.onAddDuty,
+    this.onCopyDuties,
   });
 
   final Roster roster;
@@ -50,6 +51,9 @@ class EditableRoster extends ConsumerWidget {
 
   /// 新增服事項目, the list's last row; null for who may add none.
   final VoidCallback? onAddDuty;
+
+  /// 沿用其他活動, under 新增服事項目 while there are no duties yet.
+  final VoidCallback? onCopyDuties;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -116,16 +120,21 @@ class EditableRoster extends ConsumerWidget {
                 },
                 child: _DutyRow(roster: roster, duty: duty, editable: arranges.has(duty.role)),
               ),
-            if (onAddDuty != null && (roster.duties.isNotEmpty || whenEmpty == null))
+            if (onAddDuty != null)
               ListRow(
                 title: l10n.addDuty,
                 leading: const Icon(Symbols.add_rounded),
                 onTap: ready ? onAddDuty : null,
               ),
+            if (onCopyDuties != null && roster.duties.isEmpty)
+              ListRow(
+                title: l10n.copyDuties,
+                leading: const Icon(Symbols.content_copy_rounded),
+                onTap: ready ? onCopyDuties : null,
+              ),
           ],
         ),
-        if (roster.duties.isEmpty && (whenEmpty != null || onAddDuty == null))
-          whenEmpty ?? EmptyState(message: l10n.addDuty),
+        if (roster.duties.isEmpty && onAddDuty == null) whenEmpty ?? EmptyState(message: l10n.addDuty),
       ],
     );
   }

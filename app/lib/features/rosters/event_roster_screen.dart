@@ -124,7 +124,9 @@ class EventRosterScreen extends ConsumerWidget {
     final led = ref.watch(eventArrangesProvider(roster?.forEvent?.group));
     final canEdit = led.any;
     final whole = led.all;
-    final editable = canEdit && ref.watch(eventEditingProvider);
+    // Keeps what editing reads loaded (and the backend warm), so a duty
+    // opens at once.
+    if (canEdit) ref.watch(eventEditingProvider);
     final services = ref.watch(servicesProvider).value?.services ?? const <Service>[];
     final addable = roster == null ? const <String>[] : addableDuties(roster, eventDutySuggestions(services), led);
     return Scaffold(
@@ -148,15 +150,10 @@ class EventRosterScreen extends ConsumerWidget {
                 onAddDuty: whole || addable.isNotEmpty
                     ? () => _addDuty(context, ref, roster, addable, any: whole)
                     : null,
-                whenEmpty: EmptyState(
-                  message: l10n.eventRosterEmpty,
-                  actionLabel: editable && (whole || addable.isNotEmpty) ? l10n.addDuty : null,
-                  onAction: () => _addDuty(context, ref, roster, addable, any: whole),
-                  // Only while it is empty: what is wanted is another
-                  // event's duties to start from, not on top of its own.
-                  secondActionLabel: editable && whole ? l10n.copyDuties : null,
-                  onSecondAction: () => _copyDuties(context, ref, roster),
-                ),
+                // Only while it is empty: what is wanted is another
+                // event's duties to start from, not on top of its own.
+                onCopyDuties: whole ? () => _copyDuties(context, ref, roster) : null,
+                whenEmpty: EmptyState(message: l10n.eventRosterEmpty),
               )
             else
               RosterDayView(

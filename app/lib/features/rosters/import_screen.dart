@@ -404,8 +404,9 @@ class _ImportScreenState extends ConsumerState<ImportScreen> {
     return ListView(
       padding: const EdgeInsets.all(Space.m),
       children: [
+        BalancedText(l10n.photoIntro, textAlign: TextAlign.start, style: AppText.body),
         Padding(
-          padding: const EdgeInsets.only(bottom: Space.m),
+          padding: const EdgeInsets.only(top: Space.xs, bottom: Space.m),
           child: BalancedText(
             quota == null
                 ? ' '
@@ -457,18 +458,6 @@ class _ImportScreenState extends ConsumerState<ImportScreen> {
                 label: l10n.photoPasteJson,
                 expand: true,
                 onPressed: _ready ? () => setState(() => _paste = !_paste) : null,
-              ),
-              Padding(
-                padding: const EdgeInsets.all(Space.m),
-                child: SelectableText(
-                  // The JSON protocol's field names are never translated;
-                  // its example values are.
-                  '[{"date":"2026-10-18","duties":[{"role":${jsonEncode(l10n.importExampleRole)},'
-                  '"people":[${jsonEncode(l10n.importExamplePerson)}]}],'
-                  '"events":[{"name":${jsonEncode(l10n.importExampleEvent)},"color":0}]}]\n'
-                  '${l10n.importFormatHelp}',
-                  style: AppText.footnote,
-                ),
               ),
             ],
           ),

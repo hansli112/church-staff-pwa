@@ -766,13 +766,15 @@ void main() {
     expect(take.onPressed, isNull);
   });
 
-  testWidgets('an authorized roster editor can paste the documented JSON under advanced controls', (tester) async {
+  testWidgets('an authorized roster editor can paste JSON under advanced controls; the format is in the AI prompt', (
+    tester,
+  ) async {
     await pumpApp(tester, agreedChurch());
     await go(tester, '/rosters/import/sunday');
     await tapText(tester, '進階');
+    expect(find.textContaining('"duties"'), findsNothing, reason: 'no example to read or type');
     await openPasteJson(tester);
     expect(find.byType(TextField), findsOneWidget);
-    expect(find.textContaining('color'), findsWidgets);
   });
 
   testWidgets("an AI's whole reply pastes: the ```json fence and its words around the array are left out", (

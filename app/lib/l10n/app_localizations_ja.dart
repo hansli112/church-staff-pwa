@@ -1242,8 +1242,11 @@ class L10nJa extends L10n {
   String get photoImportAction => '写真から奉仕表を読み込む';
 
   @override
+  String get photoIntro => '紙の奉仕表を撮るか選ぶと、AI が読み取ります';
+
+  @override
   String photoRemaining(int count) {
-    return '今月はあと$count枚読み取れます';
+    return '今月はあと$count枚・毎月1日にリセット';
   }
 
   @override
@@ -2228,9 +2231,6 @@ class L10nJa extends L10n {
   String get importPromptCopied => 'コピーしました。写真と一緒に AI に送り、返ってきた JSON を貼り付けてください';
 
   @override
-  String get importFormatHelp => 'date：YYYY-MM-DD。担当者がいない場合は people を [] にします。\nevents は省略可。特別行事の color は色番号 0〜5。';
-
-  @override
   String get importPhotoFormatError => '読み取り結果の形式が正しくありません。もう一度読み取るか、詳細設定の JSON を使ってください。';
 
   @override
@@ -2547,15 +2547,6 @@ class L10nJa extends L10n {
 
   @override
   String get appUpdateCheckFirst => '先にアップデートを確認してください';
-
-  @override
-  String get importExampleRole => '奏楽';
-
-  @override
-  String get importExamplePerson => '佐藤 美咲';
-
-  @override
-  String get importExampleEvent => '聖餐式';
 
   @override
   String get rosterShowMore => 'さらに表示';

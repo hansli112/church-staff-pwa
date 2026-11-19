@@ -160,7 +160,7 @@ void main() {
     download.complete();
     await settle(tester);
     expect(find.text('拍照'), findsOneWidget);
-    expect(find.text('這個月還可以辨識 30 張'), findsOneWidget);
+    expect(find.text('這個月還剩 30 張・每月 1 日重算'), findsOneWidget);
     expect(
       GoRouter.of(tester.element(find.byType(Scaffold).first)).routerDelegate.currentConfiguration.uri.path,
       '/rosters/import/sunday',

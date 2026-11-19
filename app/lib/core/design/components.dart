@@ -805,19 +805,12 @@ class EmptyState extends StatelessWidget {
     this.icon,
     this.actionLabel,
     this.onAction,
-    this.secondActionLabel,
-    this.onSecondAction,
   });
 
   final String message;
   final IconData? icon;
   final String? actionLabel;
   final VoidCallback? onAction;
-
-  /// Another way to start, under the first: 沿用其他活動 under
-  /// 新增服事項目.
-  final String? secondActionLabel;
-  final VoidCallback? onSecondAction;
 
   @override
   Widget build(BuildContext context) {
@@ -837,7 +830,6 @@ class EmptyState extends StatelessWidget {
               const SizedBox(height: Space.s),
               SecondaryButton(label: actionLabel!, onPressed: onAction),
             ],
-            if (secondActionLabel != null) SecondaryButton(label: secondActionLabel!, onPressed: onSecondAction),
           ],
         ),
       ),

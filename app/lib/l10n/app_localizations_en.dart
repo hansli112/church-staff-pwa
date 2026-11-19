@@ -1300,6 +1300,9 @@ class L10nEn extends L10n {
   String get photoImportAction => 'Import schedule from photo';
 
   @override
+  String get photoIntro => 'Take or choose a photo of a paper schedule, and AI reads it';
+
+  @override
   String photoRemaining(int count) {
     String _temp0 = intl.Intl.pluralLogic(
       count,
@@ -1307,7 +1310,7 @@ class L10nEn extends L10n {
       other: '$count photos left this month',
       one: '1 photo left this month',
     );
-    return '$_temp0';
+    return '$_temp0 · resets on the 1st';
   }
 
   @override
@@ -2360,10 +2363,6 @@ class L10nEn extends L10n {
   String get importPromptCopied => 'Copied. Send it to an AI with the photo, then paste the JSON it replies with';
 
   @override
-  String get importFormatHelp =>
-      'date: YYYY-MM-DD; if no one is serving, set people to [].\nevents is optional; an occasion’s color accepts only palette numbers 0–5.';
-
-  @override
   String get importPhotoFormatError =>
       'The recognized result isn’t in the right format. Recognize again or use advanced JSON.';
 
@@ -2681,15 +2680,6 @@ class L10nEn extends L10n {
 
   @override
   String get appUpdateCheckFirst => 'Check for updates first';
-
-  @override
-  String get importExampleRole => 'Piano';
-
-  @override
-  String get importExamplePerson => 'Grace Lee';
-
-  @override
-  String get importExampleEvent => 'Communion';
 
   @override
   String get rosterShowMore => 'Show more';

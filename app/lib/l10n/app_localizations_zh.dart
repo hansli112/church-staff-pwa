@@ -1242,8 +1242,11 @@ class L10nZh extends L10n {
   String get photoImportAction => '從照片匯入服事表';
 
   @override
+  String get photoIntro => '拍下或選一張紙本服事表的照片，AI 會自動辨識';
+
+  @override
   String photoRemaining(int count) {
-    return '這個月還可以辨識 $count 張';
+    return '這個月還剩 $count 張・每月 1 日重算';
   }
 
   @override
@@ -2224,9 +2227,6 @@ class L10nZh extends L10n {
   String get importPromptCopied => '已複製，連同照片傳給 AI，再把它回的 JSON 貼上來';
 
   @override
-  String get importFormatHelp => 'date：YYYY-MM-DD；沒有人時 people 填 []。\nevents 可省略；特別活動的 color 填色號 0–5。';
-
-  @override
   String get importPhotoFormatError => '辨識結果的格式不對，請重新辨識或用進階 JSON';
 
   @override
@@ -2543,15 +2543,6 @@ class L10nZh extends L10n {
 
   @override
   String get appUpdateCheckFirst => '請先檢查更新';
-
-  @override
-  String get importExampleRole => '司琴';
-
-  @override
-  String get importExamplePerson => '李美玉';
-
-  @override
-  String get importExampleEvent => '聖餐';
 
   @override
   String get rosterShowMore => '顯示更多';
@@ -4811,8 +4802,11 @@ class L10nZhHans extends L10nZh {
   String get photoImportAction => '从照片导入事奉表';
 
   @override
+  String get photoIntro => '拍下或选一张纸本事奉表的照片，AI 会自动识别';
+
+  @override
   String photoRemaining(int count) {
-    return '这个月还可以识别 $count 张';
+    return '这个月还剩 $count 张・每月 1 日重算';
   }
 
   @override
@@ -5793,9 +5787,6 @@ class L10nZhHans extends L10nZh {
   String get importPromptCopied => '已复制，连同照片发给 AI，再把它回复的 JSON 粘贴进来';
 
   @override
-  String get importFormatHelp => 'date：YYYY-MM-DD；没有人时 people 填 []。\nevents 可省略；特别活动的 color 填色号 0–5。';
-
-  @override
   String get importPhotoFormatError => '识别结果的格式不对，请重新识别或用高级 JSON';
 
   @override
@@ -6112,15 +6103,6 @@ class L10nZhHans extends L10nZh {
 
   @override
   String get appUpdateCheckFirst => '请先检查更新';
-
-  @override
-  String get importExampleRole => '司琴';
-
-  @override
-  String get importExamplePerson => '李美玉';
-
-  @override
-  String get importExampleEvent => '圣餐';
 
   @override
   String get rosterShowMore => '显示更多';

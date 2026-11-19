@@ -758,7 +758,9 @@
   "photoImport": "照片匯入",
   "photoImportAction": "從照片匯入服事表",
   "@photoImportAction": { "description": "Item in 安排服事's menu (⋯) that opens photo import: says what it makes, a roster from a photo" },
-  "photoRemaining": "這個月還可以辨識 {count} 張",
+  "photoIntro": "拍下或選一張紙本服事表的照片，AI 會自動辨識",
+  "@photoIntro": {"description": "Top of 照片匯入: what it does, who reads the photo"},
+  "photoRemaining": "這個月還剩 {count} 張・每月 1 日重算",
   "@photoRemaining": {
     "placeholders": {
       "count": {
@@ -1394,10 +1396,6 @@
     "description": "Copies the prompt photo recognition sends the AI, built by the backend from the church's settings, for the editor to use with an AI of their own."
   },
   "importPromptCopied": "已複製，連同照片傳給 AI，再把它回的 JSON 貼上來",
-  "importFormatHelp": "date：YYYY-MM-DD；沒有人時 people 填 []。\nevents 可省略；特別活動的 color 填色號 0–5。",
-  "@importFormatHelp": {
-    "description": "Explanation below the unlocalized canonical JSON protocol example"
-  },
   "importPhotoFormatError": "辨識結果的格式不對，請重新辨識或用進階 JSON",
   "@importPhotoFormatError": {
     "description": "Photo recognizer returned an invalid canonical JSON response"
@@ -1897,12 +1895,6 @@
   "appUpdateScopeChanged": "帳號或教會換了，請重新檢查更新",
   "appUpdateBackToMe": "請再點一次「更新並重新開啟」",
   "appUpdateCheckFirst": "請先檢查更新",
-  "importExampleRole": "司琴",
-  "@importExampleRole": { "description": "Example duty in the import JSON example; only the value is translated" },
-  "importExamplePerson": "李美玉",
-  "@importExamplePerson": { "description": "Example name in the import JSON example" },
-  "importExampleEvent": "聖餐",
-  "@importExampleEvent": { "description": "Example occasion (特別活動) in the import JSON example" },
   "rosterShowMore": "顯示更多",
   "rosterShowPrevious": "之前的服事表",
   "@rosterShowPrevious": { "description": "服事表 tab: shows the saved day before the ones listed, one at a time" },
