@@ -375,7 +375,7 @@ class L10nKo extends L10n {
   String get dutyName => '담당 이름';
 
   @override
-  String get removeDuty => '이 담당 빼기';
+  String get removeDuty => '이날은 이 담당 없음';
 
   @override
   String dutyRemoved(String duty) {

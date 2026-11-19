@@ -113,7 +113,7 @@
   "dutyCount": "{count, plural, =1{1 role} other{{count} roles}}",
   "addDuty": "Add role",
   "dutyName": "Role name",
-  "removeDuty": "Remove role",
+  "removeDuty": "Not needed this day",
   "dutyRemoved": "Removed {duty}",
   "dutyUpdated": "Updated {duty}",
   "pickerServes": "Served as {duty} before",

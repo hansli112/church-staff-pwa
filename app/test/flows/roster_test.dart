@@ -649,7 +649,7 @@ void main() {
       await tester.fling(find.byType(ListView).last, const Offset(0, -20000), 5000);
       await settle(tester);
       expect(
-        tester.getRect(find.text('移除這項')).bottom,
+        tester.getRect(find.text('這一天沒有這項服事')).bottom,
         lessThan(half / tester.view.devicePixelRatio),
         reason: 'not under the keyboard',
       );

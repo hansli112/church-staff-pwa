@@ -459,13 +459,13 @@ void main() {
     await go(tester, '/rosters/plan/sunday');
     await tester.tap(cell('司琴', 11));
     await settle(tester);
-    await tester.tap(find.text('移除這項'));
+    await tester.tap(find.text('這一天沒有這項服事'));
     await settle(tester);
     expect(savedDay(b, 11).duties.map((d) => d.role), ['司會', '招待']);
     expect(find.descendant(of: cell('司琴', 11), matching: find.text('—')), findsOneWidget);
     await tester.tap(cell('司琴', 11));
     await settle(tester);
-    expect(find.text('移除這項'), findsNothing);
+    expect(find.text('這一天沒有這項服事'), findsNothing);
   });
 
   testWidgets('a date is its day’s number over its weekday, or its 特別活動 by name, the whole of a long one', (

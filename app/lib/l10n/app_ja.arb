@@ -113,7 +113,7 @@
   "dutyCount": "担当{count}件",
   "addDuty": "担当を追加",
   "dutyName": "担当名",
-  "removeDuty": "この担当を外す",
+  "removeDuty": "この日はこの担当なし",
   "dutyRemoved": "{duty}を外しました",
   "dutyUpdated": "{duty}を更新しました",
   "pickerServes": "{duty}を担当したメンバー",

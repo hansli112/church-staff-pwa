@@ -374,7 +374,7 @@ class L10nJa extends L10n {
   String get dutyName => '担当名';
 
   @override
-  String get removeDuty => 'この担当を外す';
+  String get removeDuty => 'この日はこの担当なし';
 
   @override
   String dutyRemoved(String duty) {

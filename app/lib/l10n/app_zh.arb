@@ -213,7 +213,7 @@
   },
   "addDuty": "新增服事項目",
   "dutyName": "服事項目名稱",
-  "removeDuty": "移除這項",
+  "removeDuty": "這一天沒有這項服事",
   "dutyRemoved": "已移除{duty}",
   "@dutyRemoved": {
     "placeholders": {

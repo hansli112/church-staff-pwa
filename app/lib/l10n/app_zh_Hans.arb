@@ -113,7 +113,7 @@
   "dutyCount": "{count} 项事奉",
   "addDuty": "添加事奉项目",
   "dutyName": "事奉项目名称",
-  "removeDuty": "移除这项",
+  "removeDuty": "这一天没有这项事奉",
   "dutyRemoved": "已移除{duty}",
   "dutyUpdated": "已更新{duty}",
   "pickerServes": "排过{duty}的人",

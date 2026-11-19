@@ -781,7 +781,7 @@ abstract class L10n {
   /// No description provided for @removeDuty.
   ///
   /// In zh, this message translates to:
-  /// **'移除這項'**
+  /// **'這一天沒有這項服事'**
   String get removeDuty;
 
   /// No description provided for @dutyRemoved.

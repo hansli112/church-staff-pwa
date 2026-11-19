@@ -384,7 +384,7 @@ class L10nEn extends L10n {
   String get dutyName => 'Role name';
 
   @override
-  String get removeDuty => 'Remove role';
+  String get removeDuty => 'Not needed this day';
 
   @override
   String dutyRemoved(String duty) {

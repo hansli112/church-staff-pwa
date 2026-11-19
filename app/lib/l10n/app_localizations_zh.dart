@@ -374,7 +374,7 @@ class L10nZh extends L10n {
   String get dutyName => '服事項目名稱';
 
   @override
-  String get removeDuty => '移除這項';
+  String get removeDuty => '這一天沒有這項服事';
 
   @override
   String dutyRemoved(String duty) {
@@ -3941,7 +3941,7 @@ class L10nZhHans extends L10nZh {
   String get dutyName => '事奉项目名称';
 
   @override
-  String get removeDuty => '移除这项';
+  String get removeDuty => '这一天没有这项事奉';
 
   @override
   String dutyRemoved(String duty) {
