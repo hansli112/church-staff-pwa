@@ -38,6 +38,7 @@ class ImportScreen extends ConsumerStatefulWidget {
 class _ImportScreenState extends ConsumerState<ImportScreen> {
   bool _ready = false;
   bool _applying = false;
+  bool _advanced = false;
   TextEditingController _json = TextEditingController();
 
   ImportSession get _session => ref.read(importSessionProvider(widget.serviceType).notifier);
@@ -444,28 +445,60 @@ class _ImportScreenState extends ConsumerState<ImportScreen> {
             expand: true,
             onPressed: blocked ? null : () => _photos(ImageSource.gallery),
           ),
-          ExpansionTile(
-            title: Text(l10n.importAdvanced),
-            children: [
-              SecondaryButton(
-                label: l10n.importCopyPrompt,
-                expand: true,
-                onPressed: _ready ? _copyPrompt : null,
+          const SizedBox(height: Space.l),
+          // 進階 and what it opens, one card: the row its header.
+          ClipRRect(
+            borderRadius: BorderRadius.circular(Radii.m),
+            child: Material(
+              color: c.surface,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  ListRow(
+                    title: l10n.importAdvanced,
+                    trailing: AnimatedRotation(
+                      turns: _advanced ? 0.5 : 0,
+                      duration: const Duration(milliseconds: 200),
+                      child: Icon(Symbols.expand_more_rounded, color: c.tertiaryLabel),
+                    ),
+                    onTap: () => setState(() => _advanced = !_advanced),
+                  ),
+                  if (_advanced) ...[
+                    Divider(height: 0.5, thickness: 0.5, indent: Space.m, color: c.separator),
+                    Padding(
+                      padding: const EdgeInsets.all(Space.m),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
+                        children: [
+                          SecondaryButton(
+                            label: l10n.importCopyPrompt,
+                            expand: true,
+                            onPressed: _ready ? _copyPrompt : null,
+                          ),
+                          const SizedBox(height: Space.s),
+                          // The reply pasted straight in: no button to open a field.
+                          TextField(
+                            controller: _json,
+                            maxLines: 6,
+                            style: AppText.footnote.copyWith(fontFamily: 'monospace'),
+                            decoration: InputDecoration(hintText: l10n.jsonHint),
+                            onChanged: (_) => setState(() {}),
+                          ),
+                          if (_json.text.trim().isNotEmpty) ...[
+                            const SizedBox(height: Space.s),
+                            SecondaryButton(
+                              label: l10n.next2,
+                              expand: true,
+                              onPressed: _ready && !_busy ? _parsePasted : null,
+                            ),
+                          ],
+                        ],
+                      ),
+                    ),
+                  ],
+                ],
               ),
-              // The reply pasted straight in: no button to open a field.
-              Padding(
-                padding: const EdgeInsets.symmetric(vertical: Space.s),
-                child: TextField(
-                  controller: _json,
-                  maxLines: 6,
-                  style: AppText.footnote.copyWith(fontFamily: 'monospace'),
-                  decoration: InputDecoration(hintText: l10n.jsonHint),
-                  onChanged: (_) => setState(() {}),
-                ),
-              ),
-              if (_json.text.trim().isNotEmpty)
-                SecondaryButton(label: l10n.next2, expand: true, onPressed: _ready && !_busy ? _parsePasted : null),
-            ],
+            ),
           ),
         ],
         if (_errorText(draft, l10n) case final error?)
