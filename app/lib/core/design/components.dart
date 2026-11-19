@@ -212,7 +212,11 @@ class ListSection extends StatelessWidget {
             ),
           ),
           if (footer != null) _SectionFooter(footer!),
-          if (footerLinks.isNotEmpty) _FooterLinks(footerLinks),
+          if (footerLinks.isNotEmpty)
+            Padding(
+              padding: const EdgeInsets.fromLTRB(Space.m, Space.xs, Space.m, 0),
+              child: FootnoteLinks(footerLinks),
+            ),
         ],
       ),
     );
@@ -290,8 +294,10 @@ class _SectionFooter extends StatelessWidget {
   );
 }
 
-class _FooterLinks extends StatelessWidget {
-  const _FooterLinks(this.links);
+/// Links as small as a footnote, in a line, 「服務條款 · 隱私權政策」: under a
+/// section, or under a field's footnote.
+class FootnoteLinks extends StatelessWidget {
+  const FootnoteLinks(this.links, {super.key});
 
   final List<({String label, VoidCallback onPressed})> links;
 
@@ -299,13 +305,13 @@ class _FooterLinks extends StatelessWidget {
   Widget build(BuildContext context) {
     final c = AppColors.of(context);
     final style = AppText.footnote.copyWith(color: c.secondaryLabel);
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(Space.m, Space.xs, Space.m, 0),
+    return Align(
+      alignment: AlignmentDirectional.centerStart,
       child: Wrap(
         crossAxisAlignment: WrapCrossAlignment.center,
         children: [
           for (final (i, link) in links.indexed) ...[
-            if (i > 0) Text(' · ', style: style),
+            if (i > 0) Text(L10n.of(context).dotSeparator, style: style),
             // Tall enough to tap, the words as small as the footer's.
             InkWell(
               onTap: link.onPressed,

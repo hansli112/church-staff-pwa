@@ -375,7 +375,7 @@ class _AgendaState extends ConsumerState<_Agenda> {
         // whether it is one day or several (2026-11-19, the time beside a
         // day's event and under a span read as two layouts). One line: the
         // rest of a long address is on the event's page.
-        subtitle: [_when(l10n, e), if (place.isNotEmpty) place].join(' · '),
+        subtitle: [_when(l10n, e), if (place.isNotEmpty) place].join(l10n.dotSeparator),
         subtitleLines: 1,
         // Opens the event either way: to edit, or to read. A new one shows
         // while it is saved, and opens once it has an id.

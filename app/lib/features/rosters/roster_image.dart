@@ -21,6 +21,7 @@ import '../../domain/plan_weeks.dart';
 import '../../l10n/app_localizations.dart';
 import '../../state/export.dart';
 import '../../state/providers.dart';
+import '../common/errors.dart';
 
 /// Opens the picture of [serviceType]'s roster in [month] (its first day),
 /// the months around it a tap away, to share.
@@ -29,6 +30,16 @@ Future<void> showRosterImage(BuildContext context, {required String serviceType,
       context,
       builder: (_) => _RosterImageSheet(serviceType: serviceType, month: month),
     );
+
+/// What was saved in [month] (its first day) before today, which
+/// savedRostersProvider leaves out: a month gone by, or this one's first
+/// weeks, arranged.
+final _pastInMonthProvider = FutureProvider.autoDispose.family<List<Roster>, Day>((ref, month) async {
+  final today = ref.watch(todayProvider);
+  if (!month.isBefore(today)) return const [];
+  final end = addMonths(month, 1);
+  return openChurch(ref).pastRosters(from: month, before: end.isBefore(today) ? end : today);
+});
 
 class _RosterImageSheet extends ConsumerStatefulWidget {
   const _RosterImageSheet({required this.serviceType, required this.month});
@@ -55,6 +66,8 @@ class _RosterImageSheetState extends ConsumerState<_RosterImageSheet> {
       image.dispose();
       if (png == null || !mounted) return;
       await ref.read(fileSaverProvider).save('$name.png', png.buffer.asUint8List(), 'image/png');
+    } catch (e) {
+      if (mounted) showToast(context, errorText(L10n.of(context), e));
     } finally {
       if (mounted) setState(() => _sharing = false);
     }
@@ -65,7 +78,10 @@ class _RosterImageSheetState extends ConsumerState<_RosterImageSheet> {
     final l10n = L10n.of(context);
     final c = AppColors.of(context);
     final service = ref.watch(servicesProvider).value?.byId(widget.serviceType);
-    final saved = ref.watch(savedRostersProvider).value;
+    final upcoming = ref.watch(savedRostersProvider).value;
+    final past = ref.watch(_pastInMonthProvider(_month));
+    // Its past weeks too, once read; without them if they cannot be.
+    final saved = upcoming == null || past.isLoading ? null : [...?past.value, ...upcoming];
     final arranges = ref.watch(arrangesProvider(widget.serviceType));
     final church = ref.watch(churchProvider).value?.name ?? '';
     final monthName = DateFormat.yMMMM().format(_month.midnight);

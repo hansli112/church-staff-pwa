@@ -156,6 +156,37 @@ void main() {
     expect(bytes.take(4), [0x89, 0x50, 0x4E, 0x47]);
   });
 
+  testWidgets('分享成圖片 of a month half gone: its arranged days gone by are in it, the empty ones not', (tester) async {
+    await pumpApp(tester, seededChurch(clock: () => ChurchTimeZone.taipei.instantOf(DateTime.utc(2026, 10, 20, 1))));
+    await go(tester, '/rosters/plan/sunday');
+    await tester.tap(find.byIcon(Symbols.more_horiz_rounded));
+    await settle(tester);
+    await tester.tap(find.text('分享成圖片'));
+    await settle(tester);
+    final picture = find.byType(RosterImage);
+    expect(find.descendant(of: picture, matching: find.text('主日崇拜 2026年10月')), findsOneWidget);
+    expect(
+      find.descendant(of: picture, matching: find.text('林同工')),
+      findsOneWidget,
+      reason: 'the 4th, arranged',
+    );
+    expect(
+      find.descendant(of: picture, matching: find.text('王牧師')),
+      findsOneWidget,
+      reason: 'the 11th, arranged',
+    );
+    expect(
+      find.descendant(of: picture, matching: find.text('10月18日')),
+      findsNothing,
+      reason: 'gone by, nobody on it',
+    );
+    expect(
+      find.descendant(of: picture, matching: find.text('10月25日')),
+      findsOneWidget,
+      reason: 'still to come',
+    );
+  });
+
   testWidgets('a cell picks its people at once; nobody is told until 完成, once, which goes back', (tester) async {
     final b = seededChurch();
     final telemetry = RecordingTelemetry();

@@ -240,20 +240,9 @@ class _ChurchLinkScreenState extends ConsumerState<ChurchLinkScreen> {
                 ),
                 // The JSON it takes is on the site, for whoever writes it
                 // (2026-11-19: spelled out here, it read as nothing).
-                Align(
-                  alignment: AlignmentDirectional.centerStart,
-                  child: InkWell(
-                    onTap: () => openGuide(context, ref, Guide.homeLink),
-                    child: ConstrainedBox(
-                      constraints: const BoxConstraints(minHeight: 32),
-                      child: Align(
-                        widthFactor: 1,
-                        heightFactor: 1,
-                        child: Text(l10n.linkSourceFormat, style: AppText.footnote.copyWith(color: c.accent)),
-                      ),
-                    ),
-                  ),
-                ),
+                FootnoteLinks([
+                  (label: l10n.linkSourceFormat, onPressed: () => openGuide(context, ref, Guide.homeLink)),
+                ]),
                 if (link?.source != null)
                   SecondaryButton(
                     label: l10n.linkSourceRetry,

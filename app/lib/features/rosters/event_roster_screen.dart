@@ -124,9 +124,9 @@ class EventRosterScreen extends ConsumerWidget {
     final led = ref.watch(eventArrangesProvider(roster?.forEvent?.group));
     final canEdit = led.any;
     final whole = led.all;
-    // Keeps what editing reads loaded (and the backend warm), so a duty
-    // opens at once.
-    if (canEdit) ref.watch(eventEditingProvider);
+    // What editing reads, loaded: the buttons to start wait for it, as a
+    // write before then fails rather than guess.
+    final ready = canEdit && ref.watch(eventEditingProvider);
     final services = ref.watch(servicesProvider).value?.services ?? const <Service>[];
     final addable = roster == null ? const <String>[] : addableDuties(roster, eventDutySuggestions(services), led);
     return Scaffold(
@@ -152,10 +152,11 @@ class EventRosterScreen extends ConsumerWidget {
                     : null,
                 whenEmpty: whole || addable.isNotEmpty
                     ? _StartRoster(
-                        onAdd: () => _addDuty(context, ref, roster, addable, any: whole),
+                        onAdd: ready ? () => _addDuty(context, ref, roster, addable, any: whole) : null,
                         // Only while it is empty: what is wanted is another
                         // event's duties to start from, not on top of its own.
-                        onCopy: whole ? () => _copyDuties(context, ref, roster) : null,
+                        copies: whole,
+                        onCopy: whole && ready ? () => _copyDuties(context, ref, roster) : null,
                       )
                     : EmptyState(message: l10n.eventRosterEmpty),
               )
@@ -248,9 +249,11 @@ class EventRosterScreen extends ConsumerWidget {
 /// An event's roster with no duties yet: what it says, and the two ways to
 /// start, one filled and one plain, not two links alike.
 class _StartRoster extends StatelessWidget {
-  const _StartRoster({required this.onAdd, this.onCopy});
+  const _StartRoster({required this.onAdd, required this.copies, this.onCopy});
 
-  final VoidCallback onAdd;
+  /// Null, as [onCopy], while what they write with loads.
+  final VoidCallback? onAdd;
+  final bool copies;
   final VoidCallback? onCopy;
 
   @override
@@ -272,7 +275,7 @@ class _StartRoster extends StatelessWidget {
             hangIcon: true,
             onPressed: onAdd,
           ),
-          if (onCopy != null) ...[
+          if (copies) ...[
             const SizedBox(height: Space.s),
             SecondaryButton(label: l10n.copyDuties, expand: true, onPressed: onCopy),
           ],
