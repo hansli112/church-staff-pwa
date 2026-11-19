@@ -610,6 +610,31 @@ void main() {
       expect(peopleOn(b, 4, '司琴'), isEmpty);
     });
 
+    testWidgets('先空著, at the end of the picker, takes the names off and keeps the duty; 復原 puts them back', (
+      tester,
+    ) async {
+      final b = seededChurch();
+      await pumpApp(tester, b);
+      await go(tester, '/rosters/sunday/2026-10-04');
+      await tapText(tester, '司琴');
+      await tapText(tester, '先空著');
+      expect(find.byType(PeoplePicker), findsNothing, reason: 'done at once');
+      expect(peopleOn(b, 4, '司琴'), isEmpty);
+      expect(savedDay(b, 4).duties.map((d) => d.role), contains('司琴'));
+      await tapText(tester, '復原');
+      expect(peopleOn(b, 4, '司琴'), ['李美玉']);
+    });
+
+    testWidgets('a duty nobody is on has no 先空著', (tester) async {
+      final b = seededChurch();
+      await pumpApp(tester, b);
+      await go(tester, '/rosters/sunday/2026-10-04');
+      await tapText(tester, '司琴');
+      await tapText(tester, '先空著');
+      await tapText(tester, '司琴');
+      expect(find.text('先空著'), findsNothing);
+    });
+
     testWidgets('a large picker can search, select different distant names, and keep them when closed', (tester) async {
       final many = [
         for (var i = 0; i < 500; i++)

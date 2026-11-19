@@ -132,6 +132,8 @@
   "pickerOffList": "移出名单",
   "pickerUseName": "新增“{name}”",
   "pickerUseNameDetail": "只排这一次",
+  "pickerLeaveEmpty": "先空着",
+  "pickerAddStaff": "新增同工“{name}”",
   "pickerNoResults": "找不到“{query}”",
   "pickerSearchHint": "搜索同工",
   "pickerTakeOff": "从名单移除{name}",

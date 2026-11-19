@@ -132,6 +132,8 @@
   "pickerOffList": "목록에서 빼기",
   "pickerUseName": "‘{name}’ 추가",
   "pickerUseNameDetail": "이번만",
+  "pickerLeaveEmpty": "비워 두기",
+  "pickerAddStaff": "‘{name}’ 님을 멤버로 추가",
   "pickerNoResults": "‘{query}’ 검색 결과가 없어요",
   "pickerSearchHint": "멤버 검색",
   "pickerTakeOff": "{name} 님을 목록에서 빼기",

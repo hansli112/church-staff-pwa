@@ -8,7 +8,6 @@ import 'package:go_router/go_router.dart';
 import 'package:material_symbols_icons/symbols.dart';
 
 import '../../core/design/components.dart';
-import '../../data/backend.dart';
 import '../../core/design/tokens.dart';
 import '../../domain/limits.dart';
 import '../../domain/models.dart';
@@ -399,8 +398,7 @@ class GroupStaffSections extends ConsumerWidget {
         } catch (e) {
           if (!context.mounted) return;
           // Someone added them meanwhile, or the list was not up to date.
-          final taken = e is CloudException && e.code == CloudErrorCode.duplicateName;
-          showToast(context, taken ? l10n.nameTaken(typed) : saveErrorText(l10n, e));
+          showToast(context, nameErrorText(l10n, e, typed));
         }
     }
   }

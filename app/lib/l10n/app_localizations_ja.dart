@@ -418,6 +418,14 @@ class L10nJa extends L10n {
   String get pickerUseNameDetail => '今回だけ';
 
   @override
+  String get pickerLeaveEmpty => '空けておく';
+
+  @override
+  String pickerAddStaff(String name) {
+    return '「$name」をメンバーに追加';
+  }
+
+  @override
   String pickerNoResults(String query) {
     return '「$query」は見つかりません';
   }

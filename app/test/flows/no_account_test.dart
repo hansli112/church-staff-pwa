@@ -96,14 +96,57 @@ void main() {
     expect(b.pendingMembers['grace']![added.id]!.zones.single.duties, ['招待']);
   });
 
-  testWidgets('a name typed in the picker is for this once, not a 同工', (tester) async {
+  testWidgets('a name typed in the picker is for this once', (tester) async {
     final b = church(as: editor);
     await pumpApp(tester, b);
     await go(tester, '/rosters/sunday/2026-10-11');
     await tapText(tester, '招待');
     await tester.enterText(find.byType(TextField).last, '張講員');
     await settle(tester);
-    expect(find.text('只排這一次'), findsOneWidget);
+    await tapText(tester, '只排這一次');
+    await tapText(tester, '完成');
+    expect(peopleOn(b, 11, '招待'), contains('張講員'));
+    expect(b.pendingMembers['grace']?.values.where((p) => p.name == '張講員'), isEmpty);
+  });
+
+  testWidgets('or a 同工 without an account, arranged now and theirs when they join by that name', (tester) async {
+    final b = church(as: editor);
+    await pumpApp(tester, b);
+    await go(tester, '/rosters/sunday/2026-10-11');
+    await tapText(tester, '招待');
+    await tester.enterText(find.byType(TextField).last, '王小明');
+    await settle(tester);
+    await tapText(tester, '新增同工「王小明」');
+    await tapText(tester, '完成');
+    final added = b.pendingMembers['grace']!.values.singleWhere((p) => p.name == '王小明');
+    expect(added.zones.single.serviceType, 'sunday');
+    expect(added.zones.single.duties, ['招待'], reason: 'listed first for it next time');
+    final duty = savedDay(b, 11).duties.firstWhere((d) => d.role == '招待');
+    expect(duty.people, contains('王小明'));
+    expect(duty.uids['王小明'], added.id, reason: 'his, for when he joins');
+  });
+
+  testWidgets('on a duty of one, 新增同工 puts them there at once', (tester) async {
+    final b = church(as: editor);
+    await pumpApp(tester, b);
+    await go(tester, '/rosters/sunday/2026-10-11');
+    await tapText(tester, '司琴');
+    await tester.enterText(find.byType(TextField).last, '王小明');
+    await settle(tester);
+    expect(find.text('沒有帳號'), findsOneWidget, reason: 'as 加入同工 says it');
+    await tapText(tester, '新增同工「王小明」');
+    final added = b.pendingMembers['grace']!.values.singleWhere((p) => p.name == '王小明');
+    expect(savedDay(b, 11).duties.firstWhere((d) => d.role == '司琴').uids, {'王小明': added.id});
+  });
+
+  testWidgets('a name someone here has is not offered as a new 同工', (tester) async {
+    final b = church(as: editor);
+    await pumpApp(tester, b);
+    await go(tester, '/rosters/sunday/2026-10-11');
+    await tapText(tester, '招待');
+    await tester.enterText(find.byType(TextField).last, '黃鎮台');
+    await settle(tester);
+    expect(find.textContaining('新增同工'), findsNothing, reason: 'a name someone here has');
   });
 
   testWidgets('an admin fixes his name, on the rosters too', (tester) async {

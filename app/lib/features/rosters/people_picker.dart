@@ -22,8 +22,13 @@ class PickerResult {
     this.removeDuty = false,
     this.swapDay = false,
     this.guestNames = const {},
+    this.newStaff = const {},
     this.removeFutureGuest,
   });
+
+  /// Names typed to be 同工 without an account (新增同工), to add to the
+  /// service with the duty before the day is saved.
+  final Set<String> newStaff;
 
   /// A name arranged this once, to take off the days ahead too
   /// (之後都不排), swiped in 臨時排過的人.
@@ -60,8 +65,10 @@ class PickerResult {
 /// scheduled for it once is listed first next time, so nobody has to set
 /// duties up beforehand. Everyone is listed there from the start while
 /// nobody serves the duty yet. Swiped away, an admin takes someone off the
-/// list again. A typed name nobody has can be used as is, for a visiting
-/// speaker. For a duty that takes one person (多人服事 off), picking
+/// list again. A typed name nobody has can be a 同工 without an account
+/// (新增同工, whose day it is once they join by that name), or used as is,
+/// for a visiting speaker. 先空著 at the end takes everyone off the day's
+/// duty and keeps it. For a duty that takes one person (多人服事 off), picking
 /// someone puts them there in place of whoever was, and closes; 「選取」
 /// at the top ticks several this once, as a duty of several does from the
 /// start: a circle before each name, and a handle to drag the list's
@@ -87,7 +94,13 @@ class PeoplePicker extends StatefulWidget {
     this.notes = const {},
     this.unavailable = const {},
     this.canRemoveFutureGuests = false,
+    this.canAddStaff = false,
   });
+
+  /// A typed name nobody has can be a 同工 without an account in the
+  /// service (新增同工, addByName), not only arranged this once: one who
+  /// adds 同工 there, on a service's roster.
+  final bool canAddStaff;
 
   /// Names arranged this once swipe away from the days ahead too: a
   /// service's roster, not an event's.
@@ -138,6 +151,9 @@ class PeoplePicker extends StatefulWidget {
 class _PeoplePickerState extends State<PeoplePicker> {
   late final List<String> _selected = [...widget.initial];
   late final Set<String> _guests = {...widget.initialGuests};
+
+  /// Typed as 新增同工, in the order typed; unticked, still listed.
+  final _newStaff = <String>{};
   late bool _tapReplaces = widget.onePerson && widget.initial.length < 2;
   late List<String> _serving;
 
@@ -189,6 +205,7 @@ class _PeoplePickerState extends State<PeoplePicker> {
     ],
     takeDutyFrom: _takeOff,
     guestNames: _guests.intersection(_selected.toSet()),
+    newStaff: _newStaff.intersection(_selected.toSet()),
   );
 
   /// Whether closing without 完成 would lose something: who is picked,
@@ -200,7 +217,7 @@ class _PeoplePickerState extends State<PeoplePicker> {
       _grant.isNotEmpty ||
       _takeOff.isNotEmpty;
 
-  void _toggle(String name, {bool guest = false}) {
+  void _toggle(String name, {bool guest = false, bool staff = false}) {
     Haptics.selection();
     setState(() {
       if (_selected.remove(name)) {
@@ -210,6 +227,7 @@ class _PeoplePickerState extends State<PeoplePicker> {
       } else {
         _selected.add(name);
         if (guest) _guests.add(name);
+        if (staff) _newStaff.add(name);
       }
     });
   }
@@ -217,14 +235,16 @@ class _PeoplePickerState extends State<PeoplePicker> {
   /// A name tapped in the list: for a duty of one, [name] in place of
   /// whoever was there, and done; otherwise, or [name] ticked already,
   /// picked or unpicked.
-  void _choose(String name, {bool guest = false}) {
-    if (!_tapReplaces || _selected.contains(name)) return _toggle(name, guest: guest);
+  void _choose(String name, {bool guest = false, bool staff = false}) {
+    if (!_tapReplaces || _selected.contains(name)) return _toggle(name, guest: guest, staff: staff);
     Haptics.selection();
     _selected
       ..clear()
       ..add(name);
     _guests.clear();
+    _newStaff.clear();
     if (guest) _guests.add(name);
+    if (staff) _newStaff.add(name);
     Navigator.pop(context, result);
   }
 
@@ -283,10 +303,10 @@ class _PeoplePickerState extends State<PeoplePicker> {
     setState(() => _unlist(name));
   }
 
-  void _useTyped() {
+  void _useTyped({bool staff = false}) {
     final name = _query.trim();
     if (name.isEmpty || _selected.contains(name)) return;
-    _choose(name, guest: true);
+    _choose(name, guest: !staff, staff: staff);
   }
 
   /// 「選取」 until something changed, for a duty of one: a tap there is
@@ -392,8 +412,12 @@ class _PeoplePickerState extends State<PeoplePicker> {
       ...widget.guestSuggestions,
       ..._guests,
       for (final n in _selected)
-        if (!_serving.contains(n) && !_others.any((m) => m.name == n)) n,
+        if (!_serving.contains(n) && !_others.any((m) => m.name == n) && !_newStaff.contains(n)) n,
     }.where((n) => _matches(n, q) && !_onDay.contains(n)).toList();
+    final added = [
+      for (final n in _newStaff)
+        if (_matches(n, q)) n,
+    ];
     final typedIsKnown =
         typed.isEmpty ||
         onDayListed.contains(typed) ||
@@ -401,6 +425,7 @@ class _PeoplePickerState extends State<PeoplePicker> {
         rest.contains(typed) ||
         others.any((m) => m.name == typed) ||
         guests.contains(typed) ||
+        _newStaff.contains(typed) ||
         _selected.contains(typed);
 
     // Ticking several, whoever may change the list's order drags it by the
@@ -423,7 +448,7 @@ class _PeoplePickerState extends State<PeoplePicker> {
         part: drags ? part : null,
       ),
     );
-    if (onDayListed.isNotEmpty || onDayOthers.isNotEmpty || rest.isNotEmpty) {
+    if (onDayListed.isNotEmpty || onDayOthers.isNotEmpty || rest.isNotEmpty || added.isNotEmpty) {
       rows.add(_Entry('h/serves', (_) => SectionHeader(l10n.pickerServes(widget.duty))));
       for (final n in onDayListed) {
         listRow(n, 0);
@@ -436,6 +461,10 @@ class _PeoplePickerState extends State<PeoplePicker> {
       }
       for (final n in unavailable) {
         listRow(n, 2);
+      }
+      // 新增同工 here: on the list once saved.
+      for (final n in added) {
+        rows.add(_Entry('new/$n', (_) => _row(n, c, l10n, onTap: () => _choose(n, staff: true))));
       }
     }
     if (others.isNotEmpty) {
@@ -456,6 +485,22 @@ class _PeoplePickerState extends State<PeoplePicker> {
         rows.add(_Entry('guest/$name', (_) => _guestRow(name, c, l10n)));
       }
     }
+    // Nobody in the church by that name, however written: addByName
+    // would refuse it.
+    final typedKey = nameKey(typed);
+    if (!typedIsKnown && widget.canAddStaff && !widget.members.any((m) => nameKey(m.name) == typedKey)) {
+      rows.add(
+        _Entry(
+          'typed-staff',
+          (_) => ListRow(
+            title: l10n.pickerAddStaff(typed),
+            subtitle: l10n.noAccount,
+            leading: const Icon(Symbols.person_add_rounded),
+            onTap: () => _useTyped(staff: true),
+          ),
+        ),
+      );
+    }
     if (!typedIsKnown) {
       rows.add(
         _Entry(
@@ -469,7 +514,7 @@ class _PeoplePickerState extends State<PeoplePicker> {
         ),
       );
     }
-    if (searching && rest.isEmpty && others.isEmpty && guests.isEmpty && typedIsKnown) {
+    if (searching && rest.isEmpty && others.isEmpty && guests.isEmpty && added.isEmpty && typedIsKnown) {
       rows.add(
         _Entry(
           'none',
@@ -482,7 +527,9 @@ class _PeoplePickerState extends State<PeoplePicker> {
     }
     // Only before anyone is picked here: a swap does not keep picks.
     final swaps = widget.canSwapDay && !searching && listEquals(_selected, widget.initial);
-    if ((swaps || widget.canRemove) && !searching) {
+    // Someone on it as it opened: the duty kept, nobody on it for now.
+    final empties = widget.initial.isNotEmpty && !searching;
+    if (swaps || empties || (widget.canRemove && !searching)) {
       rows.add(_Entry('gap', (_) => const SizedBox(height: Space.l)));
     }
     if (swaps) {
@@ -493,6 +540,21 @@ class _PeoplePickerState extends State<PeoplePicker> {
             title: l10n.pickerSwapDay,
             leading: const Icon(Symbols.swap_vert_rounded),
             onTap: () => Navigator.pop(context, PickerResult(people: widget.initial, swapDay: true)),
+          ),
+        ),
+      );
+    }
+    if (empties) {
+      rows.add(
+        _Entry(
+          'empty',
+          (_) => ListRow(
+            title: l10n.pickerLeaveEmpty,
+            leading: const Icon(Symbols.person_off_rounded),
+            onTap: () => Navigator.pop(
+              context,
+              PickerResult(people: const [], ranking: _ranking, takeDutyFrom: _takeOff),
+            ),
           ),
         ),
       );

@@ -4,6 +4,13 @@ import '../../l10n/app_localizations.dart';
 /// What to tell the user when a save failed with [error].
 String saveErrorText(L10n l10n, Object error) => error is CloudException ? errorText(l10n, error) : l10n.saveFailed;
 
+/// What to tell the user when giving someone [name] failed: someone in
+/// the church has it already, or the save failed.
+String nameErrorText(L10n l10n, Object error, String name) =>
+    error is CloudException && error.code == CloudErrorCode.duplicateName
+    ? l10n.nameTaken(name)
+    : saveErrorText(l10n, error);
+
 /// What to tell the user about [error]: how to fix it, no technical detail.
 String errorText(L10n l10n, Object error) {
   if (error is AuthException) {

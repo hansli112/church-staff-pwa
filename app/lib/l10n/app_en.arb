@@ -132,6 +132,8 @@
   "pickerOffList": "Remove from list",
   "pickerUseName": "Add “{name}”",
   "pickerUseNameDetail": "Just this once",
+  "pickerLeaveEmpty": "Leave empty",
+  "pickerAddStaff": "Add “{name}” as a team member",
   "pickerNoResults": "No results for “{query}”",
   "pickerSearchHint": "Search team members",
   "pickerTakeOff": "Remove {name} from the list",

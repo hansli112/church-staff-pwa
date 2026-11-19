@@ -257,6 +257,15 @@
     }
   },
   "pickerUseNameDetail": "只排這一次",
+  "pickerLeaveEmpty": "先空著",
+  "pickerAddStaff": "新增同工「{name}」",
+  "@pickerAddStaff": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
   "pickerNoResults": "找不到「{query}」",
   "@pickerNoResults": {
     "placeholders": {

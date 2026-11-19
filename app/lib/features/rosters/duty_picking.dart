@@ -101,6 +101,8 @@ Future<void> pickPeople(
       canSwapDay: swapDays.any((d) => canSwapDuty(duty.role, roster, d)),
       onePerson: onePerson,
       canRemoveFutureGuests: !roster.isEvent,
+      // An event is in no service to add someone to.
+      canAddStaff: !roster.isEvent && (me?.addsStaffTo(ServiceGroup(roster.type)) ?? false),
       notes: notes,
       unavailable: unavailableNames,
     ),
@@ -245,6 +247,21 @@ Future<void> _savePicked(
     await runWithUndo(context, l10n.dutyRemoved(duty.role), () => actions.removeDuty(roster, duty.role, via: via));
     return;
   }
+  // 新增同工 first, each on the duty's list (one the service has), so the
+  // day is theirs: one that fails says so, and the day is left as it was.
+  final newIds = <String, String>{};
+  final listed = ref.read(servicesProvider).value?.byId(roster.type)?.duties.contains(duty.role) ?? false;
+  // Read before waiting: the page, and its ref, can be gone by then.
+  final data = ref.churchData;
+  for (final name in result.newStaff) {
+    try {
+      final id = newIds[name] = await data.addByName(name, roster.type);
+      if (listed) await data.grantDuty(id, roster.type, duty.role);
+    } catch (e) {
+      if (context.mounted) showToast(context, nameErrorText(l10n, e, name));
+      return;
+    }
+  }
   // Not waited for: changes go to the backend in turn, and the pick
   // shows at once. One that fails says so.
   if (result.addDutyTo.isNotEmpty || result.takeDutyFrom.isNotEmpty) {
@@ -263,7 +280,7 @@ Future<void> _savePicked(
   final changed = pickChanges(duty, result.people, guestNames: result.guestNames);
   if (!context.mounted) return;
   if (changed || result.ranking != null) {
-    await _savePick(context, actions, roster, duty, result, changed, unavailable, via);
+    await _savePick(context, actions, roster, duty, result, changed, unavailable, via, newIds: newIds);
   }
   // Taken off the list alone: say so, with a way back. With the day
   // changed too, the day's 復原 comes first.
@@ -284,8 +301,9 @@ Future<void> _savePick(
   PickerResult result,
   bool changed,
   Set<String> unavailable,
-  RosterVia via,
-) async {
+  RosterVia via, {
+  Map<String, String> newIds = const {},
+}) async {
   final l10n = L10n.of(context);
   // Picked though they marked the day as one they cannot serve: said, so
   // it is not missed (#91).
@@ -306,6 +324,7 @@ Future<void> _savePick(
       result.people,
       guestNames: result.guestNames,
       ranking: result.ranking,
+      newIds: newIds,
       via: via,
     ),
   );

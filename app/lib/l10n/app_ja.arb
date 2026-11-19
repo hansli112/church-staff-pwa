@@ -132,6 +132,8 @@
   "pickerOffList": "リストから外す",
   "pickerUseName": "「{name}」を追加",
   "pickerUseNameDetail": "今回だけ",
+  "pickerLeaveEmpty": "空けておく",
+  "pickerAddStaff": "「{name}」をメンバーに追加",
   "pickerNoResults": "「{query}」は見つかりません",
   "pickerSearchHint": "メンバーを検索",
   "pickerTakeOff": "{name}をリストから外す",

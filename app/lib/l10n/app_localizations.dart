@@ -850,6 +850,18 @@ abstract class L10n {
   /// **'只排這一次'**
   String get pickerUseNameDetail;
 
+  /// No description provided for @pickerLeaveEmpty.
+  ///
+  /// In zh, this message translates to:
+  /// **'先空著'**
+  String get pickerLeaveEmpty;
+
+  /// No description provided for @pickerAddStaff.
+  ///
+  /// In zh, this message translates to:
+  /// **'新增同工「{name}」'**
+  String pickerAddStaff(String name);
+
   /// No description provided for @pickerNoResults.
   ///
   /// In zh, this message translates to:

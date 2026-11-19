@@ -4,7 +4,6 @@ import 'package:material_symbols_icons/symbols.dart';
 
 import '../../core/design/components.dart';
 import '../../core/design/tokens.dart';
-import '../../data/backend.dart';
 import '../../domain/limits.dart';
 import '../../domain/models.dart';
 import '../../l10n/app_localizations.dart';
@@ -305,8 +304,7 @@ class _NoAccountScreen extends ConsumerWidget {
       if (context.mounted) showToast(context, l10n.pendingRenamed);
     } catch (e) {
       if (!context.mounted) return;
-      final taken = e is CloudException && e.code == CloudErrorCode.duplicateName;
-      showToast(context, taken ? l10n.nameTaken(next) : saveErrorText(l10n, e));
+      showToast(context, nameErrorText(l10n, e, next));
     }
   }
 
