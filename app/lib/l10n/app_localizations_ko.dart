@@ -716,6 +716,9 @@ class L10nKo extends L10n {
   String get addMinistry => '사역팀 추가';
 
   @override
+  String get ministriesChurchWide => '교회 전체 사역팀';
+
+  @override
   String get ministryName => '사역팀 이름';
 
   @override

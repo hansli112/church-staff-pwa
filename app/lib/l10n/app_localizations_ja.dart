@@ -715,6 +715,9 @@ class L10nJa extends L10n {
   String get addMinistry => 'ミニストリーを追加';
 
   @override
+  String get ministriesChurchWide => '教会全体のミニストリー';
+
+  @override
   String get ministryName => 'ミニストリー名';
 
   @override

@@ -464,6 +464,8 @@
   "@ministries": { "description": "Header: the church's ministries (事工)" },
   "addMinistry": "新增事工",
   "@addMinistry": { "description": "Button: make a new ministry" },
+  "ministriesChurchWide": "全教會的事工",
+  "@ministriesChurchWide": {"description": "Header on 聚會與事工 over the 事工 of no one service: in several, or none"},
   "ministryName": "事工名稱",
   "@ministryName": { "description": "Field hint: a ministry's name, e.g. 敬拜團" },
   "ministryDuties": "服事項目",

@@ -236,6 +236,7 @@
   "groupsSub": "Roles, leads and team members",
   "ministries": "Ministries",
   "addMinistry": "Add a ministry",
+  "ministriesChurchWide": "Church-wide ministries",
   "ministryName": "Ministry name",
   "ministryDuties": "Roles",
   "dutyOthers": "Everyone else",

@@ -99,6 +99,9 @@ void main() {
     await pumpApp(tester, b);
     await go(tester, '/me/groups/service/sunday');
     await tester.scrollUntilVisible(find.text('聖餐'), 300);
+    // Clear of the tab bar.
+    await tester.drag(find.byType(Scrollable).first, const Offset(0, -200));
+    await settle(tester);
     await tapText(tester, '聖餐');
     await tapText(tester, '顏色');
     await tapText(tester, '藍');
@@ -205,6 +208,9 @@ void main() {
     await pumpApp(tester, b);
     await go(tester, '/me/groups/service/sunday');
     await tester.scrollUntilVisible(find.text('聖餐'), 300);
+    // Clear of the tab bar.
+    await tester.drag(find.byType(Scrollable).first, const Offset(0, -200));
+    await settle(tester);
     await tapText(tester, '聖餐');
     await tapText(tester, '改名');
     await tester.enterText(find.byType(TextField), '聖餐主日');
@@ -281,6 +287,9 @@ void main() {
     expect(b.services['grace']!.byId('sunday')!.duties, contains('司琴'));
 
     await tester.scrollUntilVisible(find.text('聖餐'), 300);
+    // Clear of the tab bar.
+    await tester.drag(find.byType(Scrollable).first, const Offset(0, -200));
+    await settle(tester);
     await tapText(tester, '聖餐');
     await tapText(tester, '移除');
     expect(b.services['grace']!.byId('sunday')!.events, isEmpty);

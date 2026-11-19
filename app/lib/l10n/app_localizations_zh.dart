@@ -715,6 +715,9 @@ class L10nZh extends L10n {
   String get addMinistry => '新增事工';
 
   @override
+  String get ministriesChurchWide => '全教會的事工';
+
+  @override
   String get ministryName => '事工名稱';
 
   @override
@@ -4272,6 +4275,9 @@ class L10nZhHans extends L10nZh {
 
   @override
   String get addMinistry => '新增事工';
+
+  @override
+  String get ministriesChurchWide => '全教会的事工';
 
   @override
   String get ministryName => '事工名称';

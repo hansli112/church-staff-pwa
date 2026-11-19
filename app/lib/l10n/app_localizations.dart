@@ -1372,6 +1372,12 @@ abstract class L10n {
   /// **'新增事工'**
   String get addMinistry;
 
+  /// Header on 聚會與事工 over the 事工 of no one service: in several, or none
+  ///
+  /// In zh, this message translates to:
+  /// **'全教會的事工'**
+  String get ministriesChurchWide;
+
   /// Field hint: a ministry's name, e.g. 敬拜團
   ///
   /// In zh, this message translates to:

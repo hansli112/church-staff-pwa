@@ -732,6 +732,9 @@ class L10nEn extends L10n {
   String get addMinistry => 'Add a ministry';
 
   @override
+  String get ministriesChurchWide => 'Church-wide ministries';
+
+  @override
   String get ministryName => 'Ministry name';
 
   @override
