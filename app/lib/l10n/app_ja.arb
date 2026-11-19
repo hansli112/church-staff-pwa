@@ -392,7 +392,7 @@
   "inviteZonesFooter": "選ばない場合、集会に加えるまで相手は奉仕表を見られません。",
   "photoImport": "写真から読み込み",
   "photoImportAction": "写真から奉仕表を読み込む",
-  "photoIntro": "紙の奉仕表を撮ると AI が読み取ります",
+  "photoIntro": "奉仕表を撮るかアップロードすると AI が読み取ります",
   "photoRemaining": "今月はあと{count}枚・毎月1日にリセット",
   "photoTake": "写真を撮る",
   "photoPick": "写真を選ぶ",

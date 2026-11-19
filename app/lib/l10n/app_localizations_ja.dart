@@ -1242,7 +1242,7 @@ class L10nJa extends L10n {
   String get photoImportAction => '写真から奉仕表を読み込む';
 
   @override
-  String get photoIntro => '紙の奉仕表を撮ると AI が読み取ります';
+  String get photoIntro => '奉仕表を撮るかアップロードすると AI が読み取ります';
 
   @override
   String photoRemaining(int count) {

@@ -392,7 +392,7 @@
   "inviteZonesFooter": "With none checked, they won’t see any schedules until you add them to a service.",
   "photoImport": "Import from photo",
   "photoImportAction": "Import schedule from photo",
-  "photoIntro": "Photograph a paper schedule and AI reads it",
+  "photoIntro": "Take or upload a photo of your schedule and AI reads it",
   "photoRemaining": "{count, plural, =1{1 photo left this month} other{{count} photos left this month}} · resets on the 1st",
   "photoTake": "Take photo",
   "photoPick": "Choose photo",

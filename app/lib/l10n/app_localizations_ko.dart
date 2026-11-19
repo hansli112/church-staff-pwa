@@ -1243,7 +1243,7 @@ class L10nKo extends L10n {
   String get photoImportAction => '사진으로 봉사표 가져오기';
 
   @override
-  String get photoIntro => '종이 봉사표를 찍으면 AI가 읽어 들여요';
+  String get photoIntro => '봉사표를 찍거나 올리면 AI가 읽어 들여요';
 
   @override
   String photoRemaining(int count) {

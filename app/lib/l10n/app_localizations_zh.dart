@@ -1242,7 +1242,7 @@ class L10nZh extends L10n {
   String get photoImportAction => '從照片匯入服事表';
 
   @override
-  String get photoIntro => '拍下紙本服事表，AI 自動辨識';
+  String get photoIntro => '拍下或上傳服事表，AI 自動辨識';
 
   @override
   String photoRemaining(int count) {
@@ -4802,7 +4802,7 @@ class L10nZhHans extends L10nZh {
   String get photoImportAction => '从照片导入事奉表';
 
   @override
-  String get photoIntro => '拍下纸本事奉表，AI 自动识别';
+  String get photoIntro => '拍下或上传事奉表，AI 自动识别';
 
   @override
   String photoRemaining(int count) {

@@ -1300,7 +1300,7 @@ class L10nEn extends L10n {
   String get photoImportAction => 'Import schedule from photo';
 
   @override
-  String get photoIntro => 'Photograph a paper schedule and AI reads it';
+  String get photoIntro => 'Take or upload a photo of your schedule and AI reads it';
 
   @override
   String photoRemaining(int count) {
