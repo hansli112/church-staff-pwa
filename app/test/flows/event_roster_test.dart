@@ -144,8 +144,6 @@ void main() {
     await tapText(tester, '聖誕晚會');
     // The pastor edits the calendar: the row is in the editor.
     await tapText(tester, '安排服事');
-    await tester.tap(find.byTooltip('編輯'));
-    await settle(tester);
     await tapText(tester, '沿用其他活動');
     await tapText(tester, '去年聖誕晚會');
     final r = b.rosters['grace']!['ev_xmas']!;

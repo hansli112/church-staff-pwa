@@ -130,19 +130,7 @@ class EventRosterScreen extends ConsumerWidget {
     return Scaffold(
       appBar: AppBar(
         title: Text(roster?.forEvent?.title ?? ''),
-        actions: savingActions([
-          if (canEdit && roster != null && whole)
-            PopupMenuButton<String>(
-              enabled: editable,
-              tooltip: l10n.edit,
-              icon: const Icon(Symbols.more_horiz_rounded),
-              onSelected: (v) => switch (v) {
-                'copy' => _copyDuties(context, ref, roster),
-                _ => null,
-              },
-              itemBuilder: (_) => [PopupMenuItem(value: 'copy', child: Text(l10n.copyDuties))],
-            ),
-        ]),
+        actions: savingActions(const []),
       ),
       body: switch (rosters) {
         AsyncValue(hasError: true, hasValue: false) => ErrorRetry(
@@ -164,6 +152,10 @@ class EventRosterScreen extends ConsumerWidget {
                   message: l10n.eventRosterEmpty,
                   actionLabel: editable && (whole || addable.isNotEmpty) ? l10n.addDuty : null,
                   onAction: () => _addDuty(context, ref, roster, addable, any: whole),
+                  // Only while it is empty: what is wanted is another
+                  // event's duties to start from, not on top of its own.
+                  secondActionLabel: editable && whole ? l10n.copyDuties : null,
+                  onSecondAction: () => _copyDuties(context, ref, roster),
                 ),
               )
             else
