@@ -132,6 +132,16 @@ void main() {
       findsNothing,
       reason: 'only who is arranged',
     );
+    // A duty a row, a day a column: tall like a phone however many duties.
+    final day11 = find.descendant(of: picture, matching: find.text('10月11日'));
+    final day18 = find.descendant(of: picture, matching: find.text('10月18日'));
+    expect(tester.getTopLeft(day11).dy, tester.getTopLeft(day18).dy);
+    expect(tester.getTopLeft(day11).dx, lessThan(tester.getTopLeft(day18).dx));
+    final duty = find.descendant(of: picture, matching: find.text('司會'));
+    final person = find.descendant(of: picture, matching: find.text('王牧師')).first;
+    expect(tester.getTopLeft(duty).dy, tester.getTopLeft(person).dy);
+    expect(tester.getTopLeft(duty).dx, lessThan(tester.getTopLeft(person).dx));
+    expect(tester.getCenter(person).dx, closeTo(tester.getCenter(day11).dx, 60));
 
     await tester.tap(find.byTooltip('下個月'));
     await settle(tester);

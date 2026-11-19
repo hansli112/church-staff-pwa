@@ -281,6 +281,37 @@ void main() {
       expect(find.byType(CircularProgressIndicator), findsOneWidget);
     });
 
+    testWidgets('PrimaryButton with hangIcon centres its words, the icon hung before them', (tester) async {
+      await pumpWidgetInApp(
+        tester,
+        SizedBox(
+          width: 300,
+          child: PrimaryButton(label: '新增項目', icon: const Icon(Symbols.add_rounded), hangIcon: true, onPressed: () {}),
+        ),
+      );
+      final button = tester.getCenter(find.byType(FilledButton)).dx;
+      expect(tester.getCenter(find.text('新增項目')).dx, closeTo(button, 0.5));
+      expect(tester.getCenter(find.byIcon(Symbols.add_rounded).first).dx, lessThan(button));
+    });
+
+    testWidgets('ListSection footerLinks are small links under it, each its own tap', (tester) async {
+      final tapped = <String>[];
+      await pumpWidgetInApp(
+        tester,
+        ListSection(
+          footerLinks: [
+            (label: '服務條款', onPressed: () => tapped.add('terms')),
+            (label: '隱私權政策', onPressed: () => tapped.add('privacy')),
+          ],
+          children: const [ListRow(title: '每月支持')],
+        ),
+      );
+      expect(tester.getTopLeft(find.text('服務條款')).dy, greaterThan(tester.getBottomLeft(find.text('每月支持')).dy));
+      await tester.tap(find.text('隱私權政策'));
+      await tester.tap(find.text('服務條款'));
+      expect(tapped, ['privacy', 'terms']);
+    });
+
     testWidgets('toast offers 復原 and runs it', (tester) async {
       var undone = false;
       await pumpWidgetInApp(

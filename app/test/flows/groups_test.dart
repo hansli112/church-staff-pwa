@@ -386,4 +386,13 @@ void main() {
     await settle(tester);
     expect(find.text('找不到這位同工'), findsOneWidget);
   });
+
+  testWidgets("a 小組's name and 小組長 are under the service it is part of, with no row for it", (tester) async {
+    final b = seededChurch();
+    b.smallGroups['grace'] = {'joy': const SmallGroupDetails(id: 'joy', name: '喜樂小組', service: 'sunday')};
+    await pumpApp(tester, b);
+    await go(tester, '/me/groups/small/joy');
+    expect(find.text('主日崇拜的小組'), findsOneWidget);
+    expect(find.text('屬於'), findsNothing);
+  });
 }

@@ -53,6 +53,25 @@ void main() {
     expect(inAgenda('同工會'), findsOneWidget);
   });
 
+  testWidgets("every event's time is under its name, its place after it; nothing on the right", (tester) async {
+    final b = seededChurch()..connectCalendar('grace', calendarName: '教會行事曆');
+    b.calendarEvents['grace'] = [
+      CalendarEvent(
+        id: 'a',
+        title: '同工會',
+        start: DateTime(2026, 10, 9, 19, 30),
+        end: DateTime(2026, 10, 9, 21),
+        location: '副堂',
+      ),
+      CalendarEvent(id: 'b', title: '秋季郊遊', start: DateTime(2026, 10, 17), end: DateTime(2026, 10, 18), allDay: true),
+    ];
+    await pumpApp(tester, b);
+    await go(tester, '/calendar');
+    expect(inAgenda('19:30 – 21:00 · 副堂'), findsOneWidget);
+    expect(inAgenda('整天'), findsOneWidget);
+    expect(find.text('19:30'), findsNothing, reason: 'no time on the right');
+  });
+
   testWidgets('not connected: staff see one sentence, the admin gets a way to connect', (tester) async {
     await pumpApp(tester, seededChurch(as: staffMei));
     await go(tester, '/calendar');

@@ -93,6 +93,7 @@ void main() {
       ..webhookSecrets['grace'] = 'whsec_existing';
     await pumpApp(tester, b);
     await go(tester, '/me/webhook');
+    expect(findShown('密鑰只顯示一次，忘了就換一個'), findsOneWidget, reason: 'where the secret is');
     await tapText(tester, '換新的密鑰');
     expect(findShown('舊的密鑰會立刻失效，接收端要改用新的'), findsOneWidget);
     await tapText(tester, '自動產生');
