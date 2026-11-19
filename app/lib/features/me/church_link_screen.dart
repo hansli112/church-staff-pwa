@@ -10,7 +10,6 @@ import '../../domain/models.dart';
 import '../../l10n/app_localizations.dart';
 import '../../state/providers.dart';
 import '../common/errors.dart';
-import '../home/church_link_card.dart';
 import '../common/link_errors.dart';
 import '../common/time_zones.dart';
 
@@ -163,19 +162,8 @@ class _ChurchLinkScreenState extends ConsumerState<ChurchLinkScreen> {
       body: ListView(
         padding: const EdgeInsets.symmetric(vertical: Space.m),
         children: [
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: Space.l),
-            child: Text(l10n.churchLinkPreview, style: AppText.footnote.copyWith(color: c.secondaryLabel)),
-          ),
-          ExcludeSemantics(
-            child: IgnorePointer(
-              child: ChurchLinkCard(
-                title: _title.text.trim().isEmpty ? l10n.churchLinkTitle : _title.text.trim(),
-                body: _body.text.trim(),
-                url: '',
-              ),
-            ),
-          ),
+          // No card of how it will look: the fields under it said the same
+          // (2026-11-19).
           Padding(
             padding: fieldPadding,
             child: Column(

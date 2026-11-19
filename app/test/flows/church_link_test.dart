@@ -6,8 +6,6 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
 import 'package:martha/domain/models.dart';
 
-import 'package:martha/features/home/church_link_card.dart';
-
 import '../support/harness.dart';
 import '../support/seed.dart';
 
@@ -69,17 +67,9 @@ void main() {
     expect(find.text('請輸入 https:// 開頭的連結'), findsOneWidget);
     expect(b.churchLinks['grace'], isNull);
 
-    expect(find.text('同工的首頁最上面會這樣顯示'), findsOneWidget);
     await tester.enterText(field('標題'), '主日奉獻');
     await tester.enterText(field('敘述（選填）'), '線上奉獻與收據');
     await tester.pump();
-    for (final shown in ['主日奉獻', '線上奉獻與收據']) {
-      expect(
-        find.descendant(of: find.byType(ChurchLinkCard), matching: find.text(shown)),
-        findsOneWidget,
-        reason: 'on the card as everyone will see it',
-      );
-    }
     await tester.enterText(field('連結'), 'https://grace.example/give');
     await tapText(tester, '儲存');
     expect(b.churchLinks['grace'], link);

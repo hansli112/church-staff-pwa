@@ -1805,9 +1805,6 @@ class L10nEn extends L10n {
   String get churchLinkNone => 'Not set';
 
   @override
-  String get churchLinkPreview => 'Everyone’s home page shows this at the top';
-
-  @override
   String get churchLinkTitle => 'Title';
 
   @override

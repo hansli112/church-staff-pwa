@@ -1709,9 +1709,6 @@ class L10nJa extends L10n {
   String get churchLinkNone => '未設定';
 
   @override
-  String get churchLinkPreview => 'メンバーのホームのいちばん上にこう表示されます';
-
-  @override
   String get churchLinkTitle => 'タイトル';
 
   @override

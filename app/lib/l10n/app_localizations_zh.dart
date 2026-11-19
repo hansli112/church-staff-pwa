@@ -1708,9 +1708,6 @@ class L10nZh extends L10n {
   String get churchLinkNone => '未設定';
 
   @override
-  String get churchLinkPreview => '同工的首頁最上面會這樣顯示';
-
-  @override
   String get churchLinkTitle => '標題';
 
   @override
@@ -5263,9 +5260,6 @@ class L10nZhHans extends L10nZh {
 
   @override
   String get churchLinkNone => '未设置';
-
-  @override
-  String get churchLinkPreview => '同工的首页最上面会这样显示';
 
   @override
   String get churchLinkTitle => '标题';

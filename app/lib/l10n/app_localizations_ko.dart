@@ -1710,9 +1710,6 @@ class L10nKo extends L10n {
   String get churchLinkNone => '설정 안 됨';
 
   @override
-  String get churchLinkPreview => '모든 멤버의 홈 맨 위에 이렇게 보여요';
-
-  @override
   String get churchLinkTitle => '제목';
 
   @override

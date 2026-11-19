@@ -3148,12 +3148,6 @@ abstract class L10n {
   /// **'未設定'**
   String get churchLinkNone;
 
-  /// No description provided for @churchLinkPreview.
-  ///
-  /// In zh, this message translates to:
-  /// **'同工的首頁最上面會這樣顯示'**
-  String get churchLinkPreview;
-
   /// No description provided for @churchLinkTitle.
   ///
   /// In zh, this message translates to:
