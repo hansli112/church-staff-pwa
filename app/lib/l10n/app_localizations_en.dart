@@ -411,7 +411,10 @@ class L10nEn extends L10n {
   String get pickerSwapDay => 'Swap with another week';
 
   @override
-  String get pickerSeveralThisTime => 'Select several';
+  String get pickerSeveralThisTime => 'Select';
+
+  @override
+  String get pickerOffList => 'Remove from list';
 
   @override
   String pickerUseName(String name) {
@@ -428,15 +431,6 @@ class L10nEn extends L10n {
 
   @override
   String get pickerSearchHint => 'Search team members';
-
-  @override
-  String get reorder => 'Reorder';
-
-  @override
-  String get reorderHint => 'Drag to reorder. Every week will use this order.';
-
-  @override
-  String get editListHint => 'Drag to reorder';
 
   @override
   String pickerTakeOff(String name) {

@@ -402,7 +402,10 @@ class L10nKo extends L10n {
   String get pickerSwapDay => '다른 주와 바꾸기';
 
   @override
-  String get pickerSeveralThisTime => '여러 명 선택';
+  String get pickerSeveralThisTime => '선택';
+
+  @override
+  String get pickerOffList => '목록에서 빼기';
 
   @override
   String pickerUseName(String name) {
@@ -419,15 +422,6 @@ class L10nKo extends L10n {
 
   @override
   String get pickerSearchHint => '멤버 검색';
-
-  @override
-  String get reorder => '순서 변경';
-
-  @override
-  String get reorderHint => '드래그해서 순서를 바꿔 주세요. 매주 이 순서대로 표시돼요.';
-
-  @override
-  String get editListHint => '드래그해서 순서를 바꿔요';
 
   @override
   String pickerTakeOff(String name) {

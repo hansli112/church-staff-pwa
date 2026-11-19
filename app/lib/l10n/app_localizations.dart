@@ -823,8 +823,14 @@ abstract class L10n {
   /// No description provided for @pickerSeveralThisTime.
   ///
   /// In zh, this message translates to:
-  /// **'選取多位'**
+  /// **'選取'**
   String get pickerSeveralThisTime;
+
+  /// No description provided for @pickerOffList.
+  ///
+  /// In zh, this message translates to:
+  /// **'移出名單'**
+  String get pickerOffList;
 
   /// No description provided for @pickerUseName.
   ///
@@ -849,24 +855,6 @@ abstract class L10n {
   /// In zh, this message translates to:
   /// **'搜尋同工'**
   String get pickerSearchHint;
-
-  /// No description provided for @reorder.
-  ///
-  /// In zh, this message translates to:
-  /// **'調整順序'**
-  String get reorder;
-
-  /// No description provided for @reorderHint.
-  ///
-  /// In zh, this message translates to:
-  /// **'拖曳調整先後，每一週都照這個順序'**
-  String get reorderHint;
-
-  /// Admins editing a duty's list in the picker: reorder, or take people off
-  ///
-  /// In zh, this message translates to:
-  /// **'拖曳調整先後'**
-  String get editListHint;
 
   /// Tooltip of the minus button beside a person in the picker's 編輯
   ///

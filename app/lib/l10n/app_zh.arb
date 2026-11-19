@@ -242,7 +242,8 @@
   "pickerOthers": "其他同工",
   "pickerEveryone": "所有同工",
   "pickerSwapDay": "和別週交換",
-  "pickerSeveralThisTime": "選取多位",
+  "pickerSeveralThisTime": "選取",
+  "pickerOffList": "移出名單",
   "pickerUseName": "新增「{name}」",
   "@pickerUseName": {
     "placeholders": {
@@ -261,12 +262,6 @@
     }
   },
   "pickerSearchHint": "搜尋同工",
-  "reorder": "調整順序",
-  "reorderHint": "拖曳調整先後，每一週都照這個順序",
-  "editListHint": "拖曳調整先後",
-  "@editListHint": {
-    "description": "Admins editing a duty's list in the picker: reorder, or take people off"
-  },
   "pickerTakeOff": "從名單移除{name}",
   "@pickerTakeOff": {
     "description": "Tooltip of the minus button beside a person in the picker's 編輯",

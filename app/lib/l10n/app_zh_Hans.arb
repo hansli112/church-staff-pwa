@@ -127,14 +127,12 @@
   "pickerOthers": "其他同工",
   "pickerEveryone": "所有同工",
   "pickerSwapDay": "和别的周交换",
-  "pickerSeveralThisTime": "选择多位",
+  "pickerSeveralThisTime": "选择",
+  "pickerOffList": "移出名单",
   "pickerUseName": "新增“{name}”",
   "pickerUseNameDetail": "只排这一次",
   "pickerNoResults": "找不到“{query}”",
   "pickerSearchHint": "搜索同工",
-  "reorder": "调整顺序",
-  "reorderHint": "拖动调整先后，每一周都按这个顺序",
-  "editListHint": "拖动调整先后",
   "pickerTakeOff": "从名单移除{name}",
   "@pickerTakeOff": {
     "placeholders": {

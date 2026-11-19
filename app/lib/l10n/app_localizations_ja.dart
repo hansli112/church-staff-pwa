@@ -401,7 +401,10 @@ class L10nJa extends L10n {
   String get pickerSwapDay => '別の週と交換';
 
   @override
-  String get pickerSeveralThisTime => '複数選択';
+  String get pickerSeveralThisTime => '選択';
+
+  @override
+  String get pickerOffList => 'リストから外す';
 
   @override
   String pickerUseName(String name) {
@@ -418,15 +421,6 @@ class L10nJa extends L10n {
 
   @override
   String get pickerSearchHint => 'メンバーを検索';
-
-  @override
-  String get reorder => '並べ替え';
-
-  @override
-  String get reorderHint => 'ドラッグして並べ替えます。毎週この順番になります。';
-
-  @override
-  String get editListHint => 'ドラッグで並べ替えます';
 
   @override
   String pickerTakeOff(String name) {

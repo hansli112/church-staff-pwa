@@ -11,6 +11,7 @@ import 'package:martha/features/rosters/editable_roster.dart';
 import 'package:martha/features/rosters/people_picker.dart';
 import 'package:martha/features/rosters/roster_card.dart';
 import 'package:martha/state/session.dart';
+import 'package:material_symbols_icons/symbols.dart';
 
 import '../support/harness.dart';
 import '../support/seed.dart';
@@ -18,6 +19,15 @@ import '../support/telemetry.dart';
 
 Future<void> tapText(WidgetTester tester, String text) async {
   await tester.tap(find.text(text).last);
+  await settle(tester);
+}
+
+/// Swipes [name]'s row in the picker to the end: off the duty's list.
+Future<void> swipeOff(WidgetTester tester, String name) async {
+  await tester.drag(
+    find.descendant(of: find.byType(PeoplePicker), matching: find.text(name)).first,
+    const Offset(-500, 0),
+  );
   await settle(tester);
 }
 
@@ -276,12 +286,17 @@ void main() {
       ], reason: 'the undo is not another edit');
     });
 
-    testWidgets('a duty only ever one person has takes a second with 選取多位', (tester) async {
+    testWidgets('a duty only ever one person has takes a second with 選取, up top: a circle before each name', (
+      tester,
+    ) async {
       final b = seededChurch();
       await pumpApp(tester, b);
       await go(tester, '/rosters/sunday/2026-10-11');
       await tapText(tester, '司會');
-      await tapText(tester, '選取多位');
+      expect(find.byIcon(Symbols.radio_button_unchecked_rounded), findsNothing, reason: 'one at a time: a check');
+      await tapText(tester, '選取');
+      expect(find.text('選取'), findsNothing);
+      expect(find.byIcon(Symbols.radio_button_unchecked_rounded), findsWidgets);
       await tapText(tester, '林同工');
       expect(find.text('排過司會的人'), findsOneWidget, reason: 'still open for more');
       await tapText(tester, '完成');
@@ -318,7 +333,7 @@ void main() {
       await pumpApp(tester, b);
       await go(tester, '/rosters/sunday/2026-10-11');
       await tapText(tester, '司會');
-      expect(find.text('選取多位'), findsNothing);
+      expect(find.text('選取'), findsNothing);
       await tapText(tester, '林同工');
       expect(find.text('排過司會的人'), findsOneWidget, reason: 'still open for more');
     });
@@ -331,7 +346,7 @@ void main() {
       expect(b.services['grace']!.byId('sunday')!.manyDuties, ['司會', '招待'], reason: '招待 had two, as it stood');
       await go(tester, '/rosters/sunday/2026-10-11');
       await tapText(tester, '司會');
-      expect(find.text('選取多位'), findsNothing);
+      expect(find.text('選取'), findsNothing);
       await tapText(tester, '林同工');
       expect(find.text('排過司會的人'), findsOneWidget, reason: 'still open for more');
       await tapText(tester, '完成');
@@ -342,15 +357,15 @@ void main() {
       expect(b.services['grace']!.byId('sunday')!.manyDuties, ['司會']);
       await go(tester, '/rosters/sunday/2026-10-18');
       await tapText(tester, '招待');
-      expect(find.text('選取多位'), findsOneWidget, reason: 'had two before, and yet one at a time');
+      expect(find.text('選取'), findsOneWidget, reason: 'had two before, and yet one at a time');
     });
 
-    testWidgets('a helper found by searching can join as a second with 選取多位', (tester) async {
+    testWidgets('a helper found by searching can join as a second with 選取', (tester) async {
       final b = seededChurch();
       await pumpApp(tester, b);
       await go(tester, '/rosters/sunday/2026-10-11');
       await tapText(tester, '司會');
-      await tapText(tester, '選取多位');
+      await tapText(tester, '選取');
       await tester.enterText(find.byType(TextField), 'John');
       await settle(tester);
       await tapText(tester, 'John Chen');
@@ -419,15 +434,12 @@ void main() {
       expect(b.members['grace']!['john']!.serves('sunday', '司琴'), isFalse);
     });
 
-    testWidgets('an admin takes someone off a duty’s list in 編輯; searching still finds them', (tester) async {
+    testWidgets('an admin swipes someone off a duty’s list; searching still finds them', (tester) async {
       final b = seededChurch();
       await pumpApp(tester, b);
       await go(tester, '/rosters/sunday/2026-10-11');
       await tapText(tester, '招待');
-      await tapText(tester, '編輯');
-      await tester.tap(find.byTooltip('從名單移除李美玉'));
-      await settle(tester);
-      await tapText(tester, '完成');
+      await swipeOff(tester, '李美玉');
       expect(find.text('排過招待的人'), findsOneWidget);
       await tester.enterText(find.byType(TextField), '美玉');
       await settle(tester);
@@ -446,15 +458,13 @@ void main() {
       expect(b.members['grace']!['mei']!.serves('sunday', '招待'), isTrue);
     });
 
-    testWidgets('taking the last one off the list still leaves a way out of 編輯', (tester) async {
+    testWidgets('on a duty of one, swiping someone off the list turns 選取 into 完成, to keep it', (tester) async {
       final b = seededChurch();
       await pumpApp(tester, b);
       await go(tester, '/rosters/sunday/2026-10-11');
       await tapText(tester, '司琴');
-      await tapText(tester, '編輯');
-      await tester.tap(find.byTooltip('從名單移除李美玉'));
-      await settle(tester);
-      await tapText(tester, '完成');
+      await swipeOff(tester, '李美玉');
+      expect(find.text('選取'), findsNothing);
       await tapText(tester, '完成');
       expect(b.members['grace']!['mei']!.serves('sunday', '司琴'), isFalse);
     });
@@ -478,10 +488,7 @@ void main() {
       await pumpApp(tester, b);
       await go(tester, '/rosters/sunday/2026-10-11');
       await tapText(tester, '招待');
-      await tapText(tester, '編輯');
-      await tester.tap(find.byTooltip('從名單移除李美玉'));
-      await settle(tester);
-      await tapText(tester, '完成');
+      await swipeOff(tester, '李美玉');
       await tester.enterText(find.byType(TextField), '美玉');
       await settle(tester);
       await tapText(tester, '李美玉');
@@ -510,16 +517,16 @@ void main() {
       await pumpApp(tester, seededChurch(as: editor));
       await go(tester, '/rosters/sunday/2026-10-11');
       await tapText(tester, '招待');
-      await tapText(tester, '編輯');
-      expect(find.byTooltip('從名單移除李美玉'), findsOneWidget);
+      expect(find.byKey(const ValueKey('off/李美玉')), findsOneWidget, reason: 'swipes off the list');
+      expect(find.byIcon(Symbols.drag_handle_rounded), findsWidgets);
     });
 
     testWidgets('行政 arranges every roster but leaves the lists to who leads them', (tester) async {
       await pumpApp(tester, seededChurch(as: office, extra: [office]));
       await go(tester, '/rosters/sunday/2026-10-11');
       await tapText(tester, '招待');
-      await tapText(tester, '調整順序');
-      expect(find.byTooltip('從名單移除李美玉'), findsNothing);
+      expect(find.byIcon(Symbols.drag_handle_rounded), findsWidgets, reason: 'reorders');
+      expect(find.byKey(const ValueKey('off/李美玉')), findsNothing);
     });
 
     testWidgets('no search results is one sentence; a typed name can be used', (tester) async {

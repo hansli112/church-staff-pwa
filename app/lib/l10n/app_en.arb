@@ -127,14 +127,12 @@
   "pickerOthers": "Other team members",
   "pickerEveryone": "All team members",
   "pickerSwapDay": "Swap with another week",
-  "pickerSeveralThisTime": "Select several",
+  "pickerSeveralThisTime": "Select",
+  "pickerOffList": "Remove from list",
   "pickerUseName": "Add “{name}”",
   "pickerUseNameDetail": "Just this once",
   "pickerNoResults": "No results for “{query}”",
   "pickerSearchHint": "Search team members",
-  "reorder": "Reorder",
-  "reorderHint": "Drag to reorder. Every week will use this order.",
-  "editListHint": "Drag to reorder",
   "pickerTakeOff": "Remove {name} from the list",
   "@pickerTakeOff": {
     "placeholders": {

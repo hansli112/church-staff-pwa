@@ -401,7 +401,10 @@ class L10nZh extends L10n {
   String get pickerSwapDay => '和別週交換';
 
   @override
-  String get pickerSeveralThisTime => '選取多位';
+  String get pickerSeveralThisTime => '選取';
+
+  @override
+  String get pickerOffList => '移出名單';
 
   @override
   String pickerUseName(String name) {
@@ -418,15 +421,6 @@ class L10nZh extends L10n {
 
   @override
   String get pickerSearchHint => '搜尋同工';
-
-  @override
-  String get reorder => '調整順序';
-
-  @override
-  String get reorderHint => '拖曳調整先後，每一週都照這個順序';
-
-  @override
-  String get editListHint => '拖曳調整先後';
 
   @override
   String pickerTakeOff(String name) {
@@ -3968,7 +3962,10 @@ class L10nZhHans extends L10nZh {
   String get pickerSwapDay => '和别的周交换';
 
   @override
-  String get pickerSeveralThisTime => '选择多位';
+  String get pickerSeveralThisTime => '选择';
+
+  @override
+  String get pickerOffList => '移出名单';
 
   @override
   String pickerUseName(String name) {
@@ -3985,15 +3982,6 @@ class L10nZhHans extends L10nZh {
 
   @override
   String get pickerSearchHint => '搜索同工';
-
-  @override
-  String get reorder => '调整顺序';
-
-  @override
-  String get reorderHint => '拖动调整先后，每一周都按这个顺序';
-
-  @override
-  String get editListHint => '拖动调整先后';
 
   @override
   String pickerTakeOff(String name) {

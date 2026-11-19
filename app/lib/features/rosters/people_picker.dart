@@ -59,11 +59,13 @@ class PickerResult {
 /// them, an admin also gives them the duty, without asking: whoever is
 /// scheduled for it once is listed first next time, so nobody has to set
 /// duties up beforehand. Everyone is listed there from the start while
-/// nobody serves the duty yet. In 編輯 an admin takes people off the list
-/// again. A typed name nobody has can be used as is, for a visiting
+/// nobody serves the duty yet. Swiped away, an admin takes someone off the
+/// list again. A typed name nobody has can be used as is, for a visiting
 /// speaker. For a duty that takes one person (多人服事 off), picking
-/// someone puts them there in place of whoever was, and closes;
-/// 「選取多位」 at the end ticks several this once.
+/// someone puts them there in place of whoever was, and closes; 「選取」
+/// at the top ticks several this once, as a duty of several does from the
+/// start: a circle before each name, and a handle to drag the list's
+/// order by (iOS's edit mode: selecting and reordering, one mode).
 /// Nothing is kept until then or 完成: 取消, or closing it any other way
 /// after a change, asks to discard it ([UnsavedChanges]).
 class PeoplePicker extends StatefulWidget {
@@ -101,11 +103,11 @@ class PeoplePicker extends StatefulWidget {
   final List<String> guestSuggestions;
 
   /// Admins edit who is on the duty's list (picking someone puts them on,
-  /// 編輯 takes them off); roster editors may not.
+  /// a swipe takes them off); roster editors may not.
   final bool canEditDutyList;
   final bool canReorder;
 
-  /// Offer 「移除這項」 at the end of the list (the row also swipes away).
+  /// Offer 「這一天沒有這項服事」 at the end of the list (the row also swipes away).
   final bool canRemove;
 
   /// Offer 「和別週交換」 there: the dragless way to what dragging a cell
@@ -144,7 +146,6 @@ class _PeoplePickerState extends State<PeoplePicker> {
   final _takeOff = <Member>[];
   String _query = '';
 
-  bool _reordering = false;
   List<String>? _ranking;
 
   @override
@@ -262,7 +263,8 @@ class _PeoplePickerState extends State<PeoplePicker> {
     ];
   }
 
-  /// 編輯's minus: [name] off the list, still picked for this day.
+  /// Swiped off the list: [name] listed with everyone else, still picked
+  /// for this day.
   void _takeOffList(String name) {
     Haptics.selection();
     setState(() => _unlist(name));
@@ -274,6 +276,10 @@ class _PeoplePickerState extends State<PeoplePicker> {
     _choose(name, guest: true);
   }
 
+  /// 「選取」 until something changed, for a duty of one: a tap there is
+  /// done already.
+  bool get _offersSelect => _tapReplaces && !_changed;
+
   @override
   Widget build(BuildContext context) {
     final l10n = L10n.of(context);
@@ -282,42 +288,28 @@ class _PeoplePickerState extends State<PeoplePicker> {
       changed: () => _changed,
       child: Column(
         children: [
-          // Nothing is saved until 完成. In 編輯 its own 完成 goes back to
-          // picking.
+          // Nothing is saved until 完成.
           SheetBar(
             title: widget.duty,
-            cancel: !_reordering,
             actions: [
-              // Whoever edits the list (Member.editsDutyList) changes its
-              // order and who is on it; other roster editors only reorder.
-              // 完成 stays once 編輯 empties the list.
-              if (_reordering ||
-                  (widget.canEditDutyList ? _serving.isNotEmpty : widget.canReorder && _serving.length > 1))
-                SecondaryButton(
-                  label: _reordering
-                      ? l10n.done
-                      : widget.canEditDutyList
-                      ? l10n.edit
-                      : l10n.reorder,
-                  onPressed: () => setState(() => _reordering = !_reordering),
-                ),
-              if (!_reordering) SecondaryButton(label: l10n.done, onPressed: () => Navigator.pop(context, result)),
+              _offersSelect
+                  ? SecondaryButton(
+                      label: l10n.pickerSeveralThisTime,
+                      onPressed: () => setState(() => _tapReplaces = false),
+                    )
+                  : SecondaryButton(label: l10n.done, onPressed: () => Navigator.pop(context, result)),
             ],
           ),
-          if (_reordering)
-            Expanded(child: _reorderList(l10n, c))
-          else ...[
-            // At the top, whether or not anyone serves the duty yet: for
-            // anyone else in the church, or a name typed.
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: Space.m),
-              child: SearchField(
-                hint: l10n.pickerSearchHint,
-                onChanged: (q) => setState(() => _query = q),
-              ),
+          // At the top, whether or not anyone serves the duty yet: for
+          // anyone else in the church, or a name typed.
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: Space.m),
+            child: SearchField(
+              hint: l10n.pickerSearchHint,
+              onChanged: (q) => setState(() => _query = q),
             ),
-            Expanded(child: _list(l10n, c)),
-          ],
+          ),
+          Expanded(child: _list(l10n, c)),
         ],
       ),
     );
@@ -334,30 +326,41 @@ class _PeoplePickerState extends State<PeoplePicker> {
   /// the ticks are in sight. Fixed while it is open; a tap moves no row.
   late final _onDay = widget.initial.toSet();
 
-  /// A row for [name], one of [_onDay]: a name arranged this once, one
-  /// on the duty's list, or another 同工.
+  /// A row for [name], one of [_onDay] off the duty's list: a name
+  /// arranged this once, or another 同工.
   Widget _onDayRow(String name, AppColors c, L10n l10n) {
-    if (widget.initialGuests.contains(name)) return _guestRow(name, c, l10n);
-    if (!_serving.contains(name)) {
-      if (_others.where((m) => m.name == name).firstOrNull case final m?) {
-        return _row(name, c, note: widget.notes[name], onTap: () => _pickOther(m));
-      }
-      return _guestRow(name, c, l10n);
+    if (_others.where((m) => m.name == name).firstOrNull case final m? when !widget.initialGuests.contains(name)) {
+      return _row(name, c, l10n, note: widget.notes[name], onTap: () => _pickOther(m));
     }
-    return _row(name, c, note: widget.notes[name], onTap: () => _choose(name));
+    return _guestRow(name, c, l10n);
   }
 
   Widget _list(L10n l10n, AppColors c) {
     final q = nameKey(_query);
     final servingSet = _serving.toSet();
-    final onDay = [
-      for (final n in widget.initial)
-        if (_matches(n, q)) n,
+    bool listed(String n) => servingSet.contains(n) && !widget.initialGuests.contains(n);
+    // On the day and on the list, in its order (they move with a drag);
+    // then those on the day this once.
+    final onDayListed = [
+      for (final n in _serving)
+        if (_onDay.contains(n) && listed(n) && _matches(n, q)) n,
     ];
-    final serving = _unavailableLast([
+    final onDayOthers = [
+      for (final n in widget.initial)
+        if (!listed(n) && _matches(n, q)) n,
+    ];
+    final rest = [
       for (final n in _serving)
         if (_matches(n, q) && !_onDay.contains(n)) n,
-    ], (n) => n);
+    ];
+    final available = [
+      for (final n in rest)
+        if (!widget.unavailable.contains(n)) n,
+    ];
+    final unavailable = [
+      for (final n in rest)
+        if (widget.unavailable.contains(n)) n,
+    ];
     final searching = q.isNotEmpty;
     // Nobody serves this duty yet (a new church): offer everyone rather
     // than an empty list that only a search would fill. Otherwise those
@@ -380,95 +383,152 @@ class _PeoplePickerState extends State<PeoplePicker> {
     }.where((n) => _matches(n, q) && !_onDay.contains(n)).toList();
     final typedIsKnown =
         typed.isEmpty ||
-        onDay.contains(typed) ||
-        serving.contains(typed) ||
+        onDayListed.contains(typed) ||
+        onDayOthers.contains(typed) ||
+        rest.contains(typed) ||
         others.any((m) => m.name == typed) ||
         guests.contains(typed) ||
         _selected.contains(typed);
 
-    final rows = <Widget Function()>[];
-    if (onDay.isNotEmpty || serving.isNotEmpty) {
-      rows.add(() => SectionHeader(l10n.pickerServes(widget.duty)));
-      for (final n in onDay) {
-        rows.add(() => _onDayRow(n, c, l10n));
+    // Ticking several, whoever may change the list's order drags it by the
+    // handles: each part of it within itself, the day's people too.
+    final drags = !_tapReplaces && !searching && (widget.canEditDutyList || widget.canReorder);
+    final rows = <_Entry>[];
+    void listRow(String n, int part) => rows.add(
+      _Entry(
+        'serves/$n',
+        (i) => _row(
+          n,
+          c,
+          l10n,
+          note: widget.notes[n],
+          onTap: () => _choose(n),
+          dragAt: drags ? i : null,
+          swipesOff: widget.canEditDutyList,
+        ),
+        name: n,
+        part: drags ? part : null,
+      ),
+    );
+    if (onDayListed.isNotEmpty || onDayOthers.isNotEmpty || rest.isNotEmpty) {
+      rows.add(_Entry('h/serves', (_) => SectionHeader(l10n.pickerServes(widget.duty))));
+      for (final n in onDayListed) {
+        listRow(n, 0);
       }
-      for (final n in serving) {
-        rows.add(() => _row(n, c, note: widget.notes[n], onTap: () => _choose(n)));
+      for (final n in onDayOthers) {
+        rows.add(_Entry('day/$n', (_) => _onDayRow(n, c, l10n)));
+      }
+      for (final n in available) {
+        listRow(n, 1);
+      }
+      for (final n in unavailable) {
+        listRow(n, 2);
       }
     }
     if (others.isNotEmpty) {
       // Nobody serves it yet: everyone, not 「other」 than nobody.
-      rows.add(() => SectionHeader(_serving.isEmpty ? l10n.pickerEveryone : l10n.pickerOthers));
+      rows.add(_Entry('h/others', (_) => SectionHeader(_serving.isEmpty ? l10n.pickerEveryone : l10n.pickerOthers)));
       for (final m in others) {
-        rows.add(() => _row(m.name, c, note: widget.notes[m.name], onTap: () => _pickOther(m)));
+        rows.add(
+          _Entry(
+            'other/${m.uid}',
+            (_) => _row(m.name, c, l10n, note: widget.notes[m.name], onTap: () => _pickOther(m)),
+          ),
+        );
       }
     }
     if (guests.isNotEmpty) {
-      rows.add(() => SectionHeader(l10n.pickerGuestNames));
+      rows.add(_Entry('h/guests', (_) => SectionHeader(l10n.pickerGuestNames)));
       for (final name in guests) {
-        rows.add(() => _guestRow(name, c, l10n));
+        rows.add(_Entry('guest/$name', (_) => _guestRow(name, c, l10n)));
       }
     }
     if (!typedIsKnown) {
       rows.add(
-        () => ListRow(
-          title: l10n.pickerUseName(typed),
-          subtitle: l10n.pickerUseNameDetail,
-          leading: const Icon(Symbols.add_rounded),
-          onTap: _useTyped,
+        _Entry(
+          'typed',
+          (_) => ListRow(
+            title: l10n.pickerUseName(typed),
+            subtitle: l10n.pickerUseNameDetail,
+            leading: const Icon(Symbols.add_rounded),
+            onTap: _useTyped,
+          ),
         ),
       );
     }
-    if (searching && serving.isEmpty && others.isEmpty && guests.isEmpty && typedIsKnown) {
+    if (searching && rest.isEmpty && others.isEmpty && guests.isEmpty && typedIsKnown) {
       rows.add(
-        () => Padding(
-          padding: const EdgeInsets.all(Space.l),
-          child: BalancedText(l10n.pickerNoResults(typed), style: AppText.body.copyWith(color: c.secondaryLabel)),
+        _Entry(
+          'none',
+          (_) => Padding(
+            padding: const EdgeInsets.all(Space.l),
+            child: BalancedText(l10n.pickerNoResults(typed), style: AppText.body.copyWith(color: c.secondaryLabel)),
+          ),
         ),
       );
     }
     // Only before anyone is picked here: a swap does not keep picks.
     final swaps = widget.canSwapDay && !searching && listEquals(_selected, widget.initial);
-    if ((swaps || widget.canRemove || _tapReplaces) && !searching) {
-      rows.add(() => const SizedBox(height: Space.l));
-    }
-    if (_tapReplaces && !searching) {
-      rows.add(
-        () => ListRow(
-          title: l10n.pickerSeveralThisTime,
-          leading: const Icon(Symbols.group_add_rounded),
-          chevron: false,
-          onTap: () => setState(() => _tapReplaces = false),
-        ),
-      );
+    if ((swaps || widget.canRemove) && !searching) {
+      rows.add(_Entry('gap', (_) => const SizedBox(height: Space.l)));
     }
     if (swaps) {
       rows.add(
-        () => ListRow(
-          title: l10n.pickerSwapDay,
-          leading: const Icon(Symbols.swap_vert_rounded),
-          onTap: () => Navigator.pop(context, PickerResult(people: widget.initial, swapDay: true)),
+        _Entry(
+          'swap',
+          (_) => ListRow(
+            title: l10n.pickerSwapDay,
+            leading: const Icon(Symbols.swap_vert_rounded),
+            onTap: () => Navigator.pop(context, PickerResult(people: widget.initial, swapDay: true)),
+          ),
         ),
       );
     }
     if (widget.canRemove && !searching) {
       rows.add(
-        () => ListRow(
-          title: l10n.removeDuty,
-          destructive: true,
-          onTap: () => Navigator.pop(
-            context,
-            PickerResult(people: widget.initial, removeDuty: true),
+        _Entry(
+          'remove',
+          (_) => ListRow(
+            title: l10n.removeDuty,
+            destructive: true,
+            onTap: () => Navigator.pop(
+              context,
+              PickerResult(people: widget.initial, removeDuty: true),
+            ),
           ),
         ),
       );
     }
-    return ListView.builder(
+    return ReorderableListView.builder(
+      buildDefaultDragHandles: false,
       keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
       // The sheet runs on under the keyboard; its end scrolls out above it.
       padding: EdgeInsets.only(bottom: Space.xl + MediaQuery.viewInsetsOf(context).bottom),
       itemCount: rows.length,
-      itemBuilder: (_, i) => rows[i](),
+      onReorder: (from, to) => _reorder(rows, from, to),
+      itemBuilder: (_, i) => KeyedSubtree(key: ValueKey(rows[i].key), child: rows[i].build(i)),
+    );
+  }
+
+  /// A row dragged from [from] to before [to], kept within its part of the
+  /// list. The names of that part take their places in the duty's order
+  /// in their new order; everyone else keeps theirs.
+  void _reorder(List<_Entry> rows, int from, int to) {
+    final part = rows[from].part;
+    if (part == null) return;
+    final first = rows.indexWhere((e) => e.part == part);
+    final last = rows.lastIndexWhere((e) => e.part == part);
+    final at = (to > from ? to - 1 : to).clamp(first, last);
+    final names = [for (final e in rows.sublist(first, last + 1)) e.name!];
+    names.insert(at - first, names.removeAt(from - first));
+    final moved = names.toSet();
+    final next = names.iterator;
+    Haptics.selection();
+    setState(
+      () => _serving = _ranking = [
+        for (final n in _serving)
+          if (moved.contains(n)) (next..moveNext()).current else n,
+      ],
     );
   }
 
@@ -482,7 +542,7 @@ class _PeoplePickerState extends State<PeoplePicker> {
 
   /// A name arranged before without an account; swiped, 之後都不排.
   Widget _guestRow(String name, AppColors c, L10n l10n) {
-    final row = _row(name, c, onTap: () => _choose(name, guest: true));
+    final row = _row(name, c, l10n, onTap: () => _choose(name, guest: true));
     if (!widget.canRemoveFutureGuests) return row;
     void remove() => Navigator.pop(context, PickerResult(people: widget.initial, removeFutureGuest: name));
     return Semantics(
@@ -500,70 +560,74 @@ class _PeoplePickerState extends State<PeoplePicker> {
     );
   }
 
-  Widget _row(String name, AppColors c, {String? note, required VoidCallback onTap}) {
+  /// One name. Ticking several, a circle before it; one at a time, a check
+  /// after the one there. [dragAt] gives it a handle to drag by;
+  /// [swipesOff] takes it off the duty's list, swiped to the end.
+  Widget _row(
+    String name,
+    AppColors c,
+    L10n l10n, {
+    String? note,
+    required VoidCallback onTap,
+    int? dragAt,
+    bool swipesOff = false,
+  }) {
     final on = _selected.contains(name);
-    return Semantics(
+    Widget row = Semantics(
       selected: on,
       child: Material(
         color: c.surfaceRaised,
-        child: ListRow(title: name, subtitle: note, selected: on, chevron: false, onTap: onTap),
+        child: ListRow(
+          title: name,
+          subtitle: note,
+          leading: _tapReplaces
+              ? null
+              : Icon(
+                  on ? Symbols.check_circle_rounded : Symbols.radio_button_unchecked_rounded,
+                  fill: on ? 1 : 0,
+                  color: on ? c.accent : c.tertiaryLabel,
+                  size: 24,
+                ),
+          selected: _tapReplaces ? on : null,
+          trailing: dragAt == null
+              ? null
+              : ReorderableDragStartListener(
+                  index: dragAt,
+                  child: Icon(Symbols.drag_handle_rounded, color: c.tertiaryLabel),
+                ),
+          chevron: false,
+          onTap: onTap,
+        ),
+      ),
+    );
+    if (!swipesOff) return row;
+    // Still listed after it, on the day or picked: it springs back, off
+    // the list. Otherwise it goes.
+    bool stays() => _onDay.contains(name) || _selected.contains(name);
+    return Semantics(
+      customSemanticsActions: {CustomSemanticsAction(label: l10n.pickerTakeOff(name)): () => _takeOffList(name)},
+      child: Dismissible(
+        key: ValueKey('off/$name'),
+        direction: DismissDirection.endToStart,
+        background: SwipeDeleteBackground(label: l10n.pickerOffList),
+        confirmDismiss: (_) async {
+          if (!stays()) return true;
+          _takeOffList(name);
+          return false;
+        },
+        onDismissed: (_) => _takeOffList(name),
+        child: row,
       ),
     );
   }
+}
 
-  Widget _reorderList(L10n l10n, AppColors c) {
-    final list = _ranking ?? _serving;
-    return Column(
-      children: [
-        Padding(
-          padding: const EdgeInsets.symmetric(
-            horizontal: Space.m,
-            vertical: Space.s,
-          ),
-          child: BalancedText(
-            widget.canEditDutyList ? l10n.editListHint : l10n.reorderHint,
-            textAlign: TextAlign.start,
-            style: AppText.footnote.copyWith(color: c.secondaryLabel),
-          ),
-        ),
-        Expanded(
-          child: ReorderableListView.builder(
-            buildDefaultDragHandles: false,
-            itemCount: list.length,
-            onReorder: (from, to) {
-              final next = [...list];
-              final moved = next.removeAt(from);
-              next.insert(to > from ? to - 1 : to, moved);
-              Haptics.selection();
-              setState(() {
-                _ranking = next;
-                _serving = next;
-              });
-            },
-            itemBuilder: (_, i) => Material(
-              key: ValueKey(list[i]),
-              color: c.surfaceRaised,
-              child: ReorderableDelayedDragStartListener(
-                index: i,
-                child: ListRow(
-                  title: list[i],
-                  leading: widget.canEditDutyList
-                      ? IconButton(
-                          icon: Icon(Symbols.do_not_disturb_on_rounded, color: c.destructive),
-                          tooltip: l10n.pickerTakeOff(list[i]),
-                          onPressed: () => _takeOffList(list[i]),
-                        )
-                      : null,
-                  trailing: ReorderableDragStartListener(
-                    index: i,
-                    child: Icon(Symbols.drag_handle_rounded, color: c.tertiaryLabel),
-                  ),
-                ),
-              ),
-            ),
-          ),
-        ),
-      ],
-    );
-  }
+/// A row of the picker's list, keyed for dragging. [part], for a name on
+/// the duty's list that drags: the run of rows it moves within.
+class _Entry {
+  const _Entry(this.key, this.build, {this.name, this.part});
+  final String key;
+  final Widget Function(int index) build;
+  final String? name;
+  final int? part;
 }

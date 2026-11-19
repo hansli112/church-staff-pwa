@@ -127,14 +127,12 @@
   "pickerOthers": "다른 멤버",
   "pickerEveryone": "모든 멤버",
   "pickerSwapDay": "다른 주와 바꾸기",
-  "pickerSeveralThisTime": "여러 명 선택",
+  "pickerSeveralThisTime": "선택",
+  "pickerOffList": "목록에서 빼기",
   "pickerUseName": "‘{name}’ 추가",
   "pickerUseNameDetail": "이번만",
   "pickerNoResults": "‘{query}’ 검색 결과가 없어요",
   "pickerSearchHint": "멤버 검색",
-  "reorder": "순서 변경",
-  "reorderHint": "드래그해서 순서를 바꿔 주세요. 매주 이 순서대로 표시돼요.",
-  "editListHint": "드래그해서 순서를 바꿔요",
   "pickerTakeOff": "{name} 님을 목록에서 빼기",
   "@pickerTakeOff": {
     "placeholders": {

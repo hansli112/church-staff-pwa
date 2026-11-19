@@ -127,14 +127,12 @@
   "pickerOthers": "ほかのメンバー",
   "pickerEveryone": "すべてのメンバー",
   "pickerSwapDay": "別の週と交換",
-  "pickerSeveralThisTime": "複数選択",
+  "pickerSeveralThisTime": "選択",
+  "pickerOffList": "リストから外す",
   "pickerUseName": "「{name}」を追加",
   "pickerUseNameDetail": "今回だけ",
   "pickerNoResults": "「{query}」は見つかりません",
   "pickerSearchHint": "メンバーを検索",
-  "reorder": "並べ替え",
-  "reorderHint": "ドラッグして並べ替えます。毎週この順番になります。",
-  "editListHint": "ドラッグで並べ替えます",
   "pickerTakeOff": "{name}をリストから外す",
   "@pickerTakeOff": {
     "placeholders": {

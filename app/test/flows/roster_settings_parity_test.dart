@@ -311,7 +311,10 @@ void main() {
     await tester.enterText(find.byType(TextField), '新外請');
     await settle(tester);
     await tapText(tester, '新增「新外請」');
-    await tapText(tester, '編輯');
+    // Searching, nothing drags: the order is the whole list's.
+    expect(find.byIcon(Symbols.drag_handle_rounded), findsNothing);
+    await tester.enterText(find.byType(TextField), '');
+    await settle(tester);
     final handle = find.byIcon(Symbols.drag_handle_rounded).first;
     // Well past the next row, however tall rows are.
     final row = tester.getSize(find.ancestor(of: handle, matching: find.byType(ListRow)).first).height;
@@ -321,7 +324,6 @@ void main() {
     await tester.pump(const Duration(milliseconds: 500));
     await gesture.up();
     await settle(tester);
-    await tapText(tester, '完成');
     await tapText(tester, '完成');
 
     expect(peopleOn(b, 4, '招待'), containsAll(['李美玉', '陳志豪', '新外請']));
