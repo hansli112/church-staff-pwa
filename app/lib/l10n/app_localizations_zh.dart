@@ -483,9 +483,6 @@ class L10nZh extends L10n {
   String get eventName => '特別活動名稱';
 
   @override
-  String get addToCommon => '加入常用選項';
-
-  @override
   String get eventColor => '顏色';
 
   @override
@@ -4042,9 +4039,6 @@ class L10nZhHans extends L10nZh {
 
   @override
   String get eventName => '特别活动名称';
-
-  @override
-  String get addToCommon => '加入常用选项';
 
   @override
   String get eventColor => '颜色';

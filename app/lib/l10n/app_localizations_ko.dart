@@ -484,9 +484,6 @@ class L10nKo extends L10n {
   String get eventName => '특별 순서 이름';
 
   @override
-  String get addToCommon => '자주 쓰는 항목에 추가';
-
-  @override
   String get eventColor => '색상';
 
   @override

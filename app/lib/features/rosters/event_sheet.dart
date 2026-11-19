@@ -7,28 +7,14 @@ import '../../core/design/tokens.dart';
 import '../../domain/models.dart';
 import '../../l10n/app_localizations.dart';
 
-class EventSheetResult {
-  const EventSheetResult(this.events, {this.addToCommon = const []});
-
-  final List<EventTag> events;
-
-  /// Custom tags to keep as common options for this service.
-  final List<EventTag> addToCommon;
-}
-
 /// Special-event tags for one day: tick the service's common ones, or add
-/// a one-off with a colour (and, for admins, keep it as a common option).
+/// one for this day only from the list's last row (新增特別活動). The
+/// common ones are set on the service's page.
 class EventSheet extends StatefulWidget {
-  const EventSheet({
-    super.key,
-    required this.options,
-    required this.selected,
-    required this.canAddToCommon,
-  });
+  const EventSheet({super.key, required this.options, required this.selected});
 
   final List<EventTag> options;
   final List<EventTag> selected;
-  final bool canAddToCommon;
 
   @override
   State<EventSheet> createState() => _EventSheetState();
@@ -36,10 +22,11 @@ class EventSheet extends StatefulWidget {
 
 class _EventSheetState extends State<EventSheet> {
   late final List<EventTag> _selected = [...widget.selected];
-  final _addToCommon = <EventTag>[];
   final _name = TextEditingController();
+
+  /// Typing a new one: the last row is a field, the colours under it.
+  bool _adding = false;
   int _color = 0;
-  bool _keep = false;
 
   @override
   void dispose() {
@@ -66,21 +53,34 @@ class _EventSheetState extends State<EventSheet> {
     });
   }
 
-  void _addCustom() {
-    final name = _name.text.trim();
-    if (name.isEmpty || _all.any((e) => e.name == name)) return;
-    final tag = EventTag(name: name, color: _color);
+  void _startAdding() {
+    final used = {for (final e in _all) e.color};
     setState(() {
-      _selected.add(tag);
-      if (_keep) _addToCommon.add(tag);
-      _name.clear();
+      _adding = true;
+      // One not on the list yet, so it tells apart from the rest.
+      _color = [for (var i = 0; i < EventColors.count; i++) i].firstWhere((i) => !used.contains(i), orElse: () => 0);
     });
+  }
+
+  /// Adds what was typed, ticked, for this day; a name on the list already
+  /// is ticked instead.
+  void _addTyped() {
+    final name = _name.text.trim();
+    if (name.isNotEmpty) {
+      final known = _all.where((e) => e.name == name).firstOrNull;
+      if (known == null) {
+        _selected.add(EventTag(name: name, color: _color));
+      } else if (!_selected.any((e) => e.name == name)) {
+        _selected.add(known);
+      }
+    }
+    _name.clear();
+    setState(() => _adding = false);
   }
 
   @override
   Widget build(BuildContext context) {
     final l10n = L10n.of(context);
-    final c = AppColors.of(context);
     return UnsavedChanges(
       changed: () =>
           !setEquals({for (final e in _selected) e.name}, {for (final e in widget.selected) e.name}) ||
@@ -96,7 +96,11 @@ class _EventSheetState extends State<EventSheet> {
                 actions: [
                   SecondaryButton(
                     label: l10n.done,
-                    onPressed: () => Navigator.pop(context, EventSheetResult(_selected, addToCommon: _addToCommon)),
+                    onPressed: () {
+                      // Typed but not entered yet: meant all the same.
+                      if (_name.text.trim().isNotEmpty) _addTyped();
+                      Navigator.pop(context, _selected);
+                    },
                   ),
                 ],
               ),
@@ -104,59 +108,49 @@ class _EventSheetState extends State<EventSheet> {
                 child: ListView(
                   shrinkWrap: true,
                   children: [
-                    if (_all.isNotEmpty)
-                      ListSection(
-                        children: [
-                          for (final tag in _all)
-                            ListRow(
-                              title: tag.name,
-                              leading: Tag.event(context, ' ', tag.color),
-                              selected: _selected.any((e) => e.name == tag.name),
-                              onTap: () => _toggle(tag),
-                            ),
-                        ],
-                      ),
                     ListSection(
-                      header: l10n.customEvent,
                       children: [
-                        Padding(
-                          padding: const EdgeInsets.all(Space.s),
-                          child: TextField(
-                            controller: _name,
-                            textInputAction: TextInputAction.done,
-                            decoration: InputDecoration(hintText: l10n.eventName),
-                            onSubmitted: (_) => _addCustom(),
+                        for (final tag in _all)
+                          ListRow(
+                            title: tag.name,
+                            leading: Tag.event(context, ' ', tag.color),
+                            selected: _selected.any((e) => e.name == tag.name),
+                            onTap: () => _toggle(tag),
                           ),
-                        ),
-                        Padding(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: Space.s,
-                            vertical: Space.xs,
+                        if (!_adding)
+                          ListRow(
+                            title: l10n.addEvent,
+                            leading: const Icon(Symbols.add_rounded),
+                            chevron: false,
+                            onTap: _startAdding,
+                          )
+                        else ...[
+                          Padding(
+                            padding: const EdgeInsets.all(Space.s),
+                            child: TextField(
+                              controller: _name,
+                              autofocus: true,
+                              textInputAction: TextInputAction.done,
+                              decoration: InputDecoration(hintText: l10n.eventName),
+                              onSubmitted: (_) => _addTyped(),
+                            ),
                           ),
-                          child: Wrap(
-                            spacing: Space.s,
-                            children: [
-                              for (var i = 0; i < EventColors.count; i++)
-                                _ColorDot(
-                                  index: i,
-                                  label: _colorName(l10n, i),
-                                  selected: _color == i,
-                                  onTap: () => setState(() => _color = i),
-                                ),
-                            ],
+                          Padding(
+                            padding: const EdgeInsets.symmetric(horizontal: Space.s, vertical: Space.xs),
+                            child: Wrap(
+                              spacing: Space.s,
+                              children: [
+                                for (var i = 0; i < EventColors.count; i++)
+                                  _ColorDot(
+                                    index: i,
+                                    label: _colorName(l10n, i),
+                                    selected: _color == i,
+                                    onTap: () => setState(() => _color = i),
+                                  ),
+                              ],
+                            ),
                           ),
-                        ),
-                        if (widget.canAddToCommon)
-                          SwitchRow(
-                            title: l10n.addToCommon,
-                            value: _keep,
-                            onChanged: (v) => setState(() => _keep = v),
-                          ),
-                        ListRow(
-                          title: l10n.add,
-                          leading: Icon(Symbols.add_rounded, color: c.accent),
-                          onTap: _addCustom,
-                        ),
+                        ],
                       ],
                     ),
                   ],

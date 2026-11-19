@@ -331,7 +331,6 @@
   "addEvent": "新增特別活動",
   "@addEvent": { "description": "Row at the end of a service's common special events (服事設定): adds one" },
   "eventName": "特別活動名稱",
-  "addToCommon": "加入常用選項",
   "eventColor": "顏色",
   "colorName0": "紅",
   "colorName1": "橘",

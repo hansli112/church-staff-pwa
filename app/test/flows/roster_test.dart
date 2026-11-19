@@ -900,19 +900,33 @@ void main() {
   });
 
   group('special events', () {
-    testWidgets('tick a common event and add a custom one to the common list', (tester) async {
+    testWidgets('tick a common event and add one for this day only, ticked, in a colour not used yet', (tester) async {
       final b = seededChurch();
       await pumpApp(tester, b);
       await go(tester, '/rosters/sunday/2026-10-11');
       await tapText(tester, '特別活動');
       await tapText(tester, '聖餐');
+      expect(find.byType(TextField), findsNothing, reason: 'only once 新增特別活動 is tapped');
+      await tapText(tester, '新增特別活動');
       await tester.enterText(find.byType(TextField), '特會');
-      await tapText(tester, '加入常用選項');
-      await tapText(tester, '新增');
+      await tester.testTextInput.receiveAction(TextInputAction.done);
+      await settle(tester);
+      expect(find.byType(TextField), findsNothing, reason: 'the row is back');
       await tapText(tester, '完成');
-      expect(savedDay(b, 11).events.map((e) => e.name), ['聖餐', '特會']);
-      expect(b.services['grace']!.byId('sunday')!.events.map((e) => e.name), ['聖餐', '特會']);
+      expect(savedDay(b, 11).events, const [EventTag(name: '聖餐', color: 0), EventTag(name: '特會', color: 1)]);
+      expect(b.services['grace']!.byId('sunday')!.events.map((e) => e.name), ['聖餐'], reason: 'not a common one');
       expect(find.text('已更新特別活動'), findsOneWidget);
+    });
+
+    testWidgets('a name typed but not entered is added with 完成', (tester) async {
+      final b = seededChurch();
+      await pumpApp(tester, b);
+      await go(tester, '/rosters/sunday/2026-10-11');
+      await tapText(tester, '特別活動');
+      await tapText(tester, '新增特別活動');
+      await tester.enterText(find.byType(TextField), '浸禮');
+      await tapText(tester, '完成');
+      expect(savedDay(b, 11).events.map((e) => e.name), ['浸禮']);
     });
 
     testWidgets('a day with none has 特別活動 under its date; no menu up top', (tester) async {
@@ -925,7 +939,7 @@ void main() {
         reason: "新增服事項目 is the list's last row",
       );
       await tapText(tester, '特別活動');
-      expect(find.text('自訂特別活動'), findsOneWidget, reason: 'the sheet');
+      expect(find.text('新增特別活動'), findsOneWidget, reason: 'the sheet');
     });
 
     testWidgets('closing the sheet without a change saves nothing', (tester) async {

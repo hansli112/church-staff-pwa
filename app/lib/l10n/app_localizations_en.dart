@@ -493,9 +493,6 @@ class L10nEn extends L10n {
   String get eventName => 'Occasion name';
 
   @override
-  String get addToCommon => 'Add to common occasions';
-
-  @override
   String get eventColor => 'Color';
 
   @override

@@ -952,12 +952,6 @@ abstract class L10n {
   /// **'特別活動名稱'**
   String get eventName;
 
-  /// No description provided for @addToCommon.
-  ///
-  /// In zh, this message translates to:
-  /// **'加入常用選項'**
-  String get addToCommon;
-
   /// No description provided for @eventColor.
   ///
   /// In zh, this message translates to:

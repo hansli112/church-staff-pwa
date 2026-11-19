@@ -153,23 +153,16 @@ class RosterDayScreen extends ConsumerWidget {
     Service service,
   ) async {
     final l10n = L10n.of(context);
-    final editsSettings = ref.read(meProvider).value?.editsServiceSettings ?? false;
-    final result = await showAppSheet<EventSheetResult>(
+    final events = await showAppSheet<List<EventTag>>(
       context,
-      builder: (context) => EventSheet(
-        options: service.events,
-        selected: roster.events,
-        canAddToCommon: editsSettings,
-      ),
+      builder: (context) => EventSheet(options: service.events, selected: roster.events),
     );
-    if (result == null || !context.mounted) return;
     // Ticking a tag off and on again only moves it to the end.
-    if (result.addToCommon.isEmpty && setEquals(result.events.toSet(), roster.events.toSet())) return;
-    if (!context.mounted) return;
+    if (events == null || !context.mounted || setEquals(events.toSet(), roster.events.toSet())) return;
     await runWithUndo(
       context,
       l10n.eventsUpdated,
-      () => ref.read(rosterActionsProvider).setEvents(roster, result.events, addToCommon: result.addToCommon),
+      () => ref.read(rosterActionsProvider).setEvents(roster, events),
     );
   }
 }

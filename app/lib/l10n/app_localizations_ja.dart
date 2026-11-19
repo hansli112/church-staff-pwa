@@ -483,9 +483,6 @@ class L10nJa extends L10n {
   String get eventName => '特別行事の名前';
 
   @override
-  String get addToCommon => 'よく使う項目に追加';
-
-  @override
   String get eventColor => '色';
 
   @override

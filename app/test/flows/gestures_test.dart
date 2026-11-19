@@ -105,7 +105,7 @@ void main() {
     await tapText(tester, '特別活動');
     await back(tester);
     expect(find.text('放棄變更？'), findsNothing);
-    expect(find.text('加入常用選項'), findsNothing, reason: 'closed');
+    expect(find.text('新增特別活動'), findsNothing, reason: 'closed');
   });
 
   testWidgets('a sheet with a change asks before going: 聚會時間, 填寫人數, 特別活動', (tester) async {
