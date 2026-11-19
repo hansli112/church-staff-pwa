@@ -1256,9 +1256,6 @@ class L10nZh extends L10n {
   String get photoPick => '選照片';
 
   @override
-  String get photoPasteJson => '貼上 JSON';
-
-  @override
   String get photoRecognizing => '辨識中，大約需要一分鐘';
 
   @override
@@ -1318,7 +1315,7 @@ class L10nZh extends L10n {
   String get importBadRows => '讀不懂的資料';
 
   @override
-  String get jsonHint => '貼上辨識結果的 JSON';
+  String get jsonHint => '把 AI 的回覆整段貼在這裡';
 
   @override
   String get next2 => '預覽';
@@ -2230,7 +2227,7 @@ class L10nZh extends L10n {
   String get importPhotoFormatError => '辨識結果的格式不對，請重新辨識或用進階 JSON';
 
   @override
-  String get importJsonSyntaxError => 'JSON 格式不對，請用下方範例的陣列格式';
+  String get importJsonSyntaxError => 'JSON 格式不對，請把 AI 的回覆整段貼上';
 
   @override
   String get importJsonEdit => '編輯 JSON';
@@ -4816,9 +4813,6 @@ class L10nZhHans extends L10nZh {
   String get photoPick => '选择照片';
 
   @override
-  String get photoPasteJson => '粘贴 JSON';
-
-  @override
   String get photoRecognizing => '识别中，大约需要一分钟';
 
   @override
@@ -4878,7 +4872,7 @@ class L10nZhHans extends L10nZh {
   String get importBadRows => '读不懂的数据';
 
   @override
-  String get jsonHint => '粘贴识别结果的 JSON';
+  String get jsonHint => '把 AI 的回复整段粘贴在这里';
 
   @override
   String get next2 => '预览';
@@ -5790,7 +5784,7 @@ class L10nZhHans extends L10nZh {
   String get importPhotoFormatError => '识别结果的格式不对，请重新识别或用高级 JSON';
 
   @override
-  String get importJsonSyntaxError => 'JSON 格式不对，请用下方示例的数组格式';
+  String get importJsonSyntaxError => 'JSON 格式不对，请把 AI 的回复整段粘贴进来';
 
   @override
   String get importJsonEdit => '编辑 JSON';

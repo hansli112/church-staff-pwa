@@ -37,7 +37,6 @@ class ImportScreen extends ConsumerStatefulWidget {
 
 class _ImportScreenState extends ConsumerState<ImportScreen> {
   bool _ready = false;
-  bool _paste = false;
   bool _applying = false;
   TextEditingController _json = TextEditingController();
 
@@ -365,7 +364,6 @@ class _ImportScreenState extends ConsumerState<ImportScreen> {
     final draft = ref.watch(importSessionProvider(widget.serviceType));
     final key = _session.draftKey;
     if (_shownDraft != null && !identical(_shownDraft, key)) {
-      _paste = false;
       _applying = false;
       _lastPlan = null;
       // The old field is removed in this frame; do not notify it mid-build.
@@ -454,11 +452,19 @@ class _ImportScreenState extends ConsumerState<ImportScreen> {
                 expand: true,
                 onPressed: _ready ? _copyPrompt : null,
               ),
-              SecondaryButton(
-                label: l10n.photoPasteJson,
-                expand: true,
-                onPressed: _ready ? () => setState(() => _paste = !_paste) : null,
+              // The reply pasted straight in: no button to open a field.
+              Padding(
+                padding: const EdgeInsets.symmetric(vertical: Space.s),
+                child: TextField(
+                  controller: _json,
+                  maxLines: 6,
+                  style: AppText.footnote.copyWith(fontFamily: 'monospace'),
+                  decoration: InputDecoration(hintText: l10n.jsonHint),
+                  onChanged: (_) => setState(() {}),
+                ),
               ),
+              if (_json.text.trim().isNotEmpty)
+                SecondaryButton(label: l10n.next2, expand: true, onPressed: _ready && !_busy ? _parsePasted : null),
             ],
           ),
         ],
@@ -471,17 +477,6 @@ class _ImportScreenState extends ConsumerState<ImportScreen> {
               style: AppText.subheadline.copyWith(color: c.destructive),
             ),
           ),
-        if (_paste) ...[
-          const SizedBox(height: Space.m),
-          TextField(
-            controller: _json,
-            maxLines: 8,
-            style: AppText.footnote.copyWith(fontFamily: 'monospace'),
-            decoration: InputDecoration(hintText: l10n.jsonHint),
-          ),
-          const SizedBox(height: Space.s),
-          SecondaryButton(label: l10n.next2, expand: true, onPressed: _ready && !_busy ? _parsePasted : null),
-        ],
       ],
     );
   }

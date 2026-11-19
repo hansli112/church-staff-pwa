@@ -2320,12 +2320,6 @@ abstract class L10n {
   /// **'選照片'**
   String get photoPick;
 
-  /// No description provided for @photoPasteJson.
-  ///
-  /// In zh, this message translates to:
-  /// **'貼上 JSON'**
-  String get photoPasteJson;
-
   /// No description provided for @photoRecognizing.
   ///
   /// In zh, this message translates to:
@@ -2431,7 +2425,7 @@ abstract class L10n {
   /// No description provided for @jsonHint.
   ///
   /// In zh, this message translates to:
-  /// **'貼上辨識結果的 JSON'**
+  /// **'把 AI 的回覆整段貼在這裡'**
   String get jsonHint;
 
   /// No description provided for @next2.
@@ -4051,7 +4045,7 @@ abstract class L10n {
   /// Pasted import JSON syntax or root-array error
   ///
   /// In zh, this message translates to:
-  /// **'JSON 格式不對，請用下方範例的陣列格式'**
+  /// **'JSON 格式不對，請把 AI 的回覆整段貼上'**
   String get importJsonSyntaxError;
 
   /// Import preview source JSON edit action and sheet title

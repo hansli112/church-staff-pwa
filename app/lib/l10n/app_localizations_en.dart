@@ -1320,9 +1320,6 @@ class L10nEn extends L10n {
   String get photoPick => 'Choose photo';
 
   @override
-  String get photoPasteJson => 'Paste JSON';
-
-  @override
   String get photoRecognizing => 'Reading the photo. This takes about a minute.';
 
   @override
@@ -1400,7 +1397,7 @@ class L10nEn extends L10n {
   String get importBadRows => 'Unreadable rows';
 
   @override
-  String get jsonHint => 'Paste the JSON result';
+  String get jsonHint => 'Paste the AI\'s whole reply here';
 
   @override
   String get next2 => 'Preview';
@@ -2367,7 +2364,7 @@ class L10nEn extends L10n {
       'The recognized result isn’t in the right format. Recognize again or use advanced JSON.';
 
   @override
-  String get importJsonSyntaxError => 'Invalid JSON. Use the array format in the example below.';
+  String get importJsonSyntaxError => 'Invalid JSON. Paste the AI’s whole reply.';
 
   @override
   String get importJsonEdit => 'Edit JSON';

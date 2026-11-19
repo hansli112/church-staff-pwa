@@ -32,10 +32,10 @@ Future<void> tapText(WidgetTester tester, String text) async {
 }
 
 /// 貼上 JSON sits under the prompt help in 進階, below a phone-sized screen.
+/// The field under 進階, opened already: brought into view.
 Future<void> openPasteJson(WidgetTester tester) async {
-  await tester.ensureVisible(findShown('貼上 JSON').last);
+  await tester.ensureVisible(find.byType(TextField).last);
   await tester.pump();
-  await tapText(tester, '貼上 JSON');
 }
 
 /// The editor's church, the editor having agreed that photo recognition
@@ -305,6 +305,9 @@ void main() {
       ]),
     );
     await tester.scrollUntilVisible(find.text('預覽'), 200, scrollable: find.byType(Scrollable).first);
+    // Clear of the tab bar, which the page runs under.
+    await tester.drag(find.byType(Scrollable).first, const Offset(0, -200));
+    await settle(tester);
     await tapText(tester, '預覽');
     await tester.scrollUntilVisible(find.text('日期'), 200);
     await settle(tester);

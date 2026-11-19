@@ -770,7 +770,6 @@
   },
   "photoTake": "拍照",
   "photoPick": "選照片",
-  "photoPasteJson": "貼上 JSON",
   "photoRecognizing": "辨識中，大約需要一分鐘",
   "photoChurchLimit": "這個月的 {limit} 張用完了，下個月 1 日恢復",
   "@photoChurchLimit": {
@@ -817,7 +816,7 @@
   "importUnknownDuties": "這個聚會沒有這些服事項目",
   "importPastDays": "已經過去的日期，沒有匯入",
   "importBadRows": "讀不懂的資料",
-  "jsonHint": "貼上辨識結果的 JSON",
+  "jsonHint": "把 AI 的回覆整段貼在這裡",
   "next2": "預覽",
   "calNotConnected": "教會還沒有連接行事曆",
   "calConnect": "連接 Google 日曆",
@@ -1400,7 +1399,7 @@
   "@importPhotoFormatError": {
     "description": "Photo recognizer returned an invalid canonical JSON response"
   },
-  "importJsonSyntaxError": "JSON 格式不對，請用下方範例的陣列格式",
+  "importJsonSyntaxError": "JSON 格式不對，請把 AI 的回覆整段貼上",
   "@importJsonSyntaxError": {
     "description": "Pasted import JSON syntax or root-array error"
   },

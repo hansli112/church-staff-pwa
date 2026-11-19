@@ -366,32 +366,40 @@ class _AgendaState extends ConsumerState<_Agenda> {
       onShift: shift,
     );
 
-    Widget row(CalendarEvent e, {Widget? leading}) => ListRow(
-      leading: leading,
-      title: e.title,
-      // One line: the whole address is on the event's page.
-      subtitle: e.location,
-      subtitleLines: 1,
-      trailing: Text(
-        _when(l10n, e),
-        textAlign: TextAlign.end,
-        style: AppText.body.copyWith(color: AppColors.of(context).secondaryLabel),
-      ),
-      // Opens the event either way: to edit, or to read. A new one shows
-      // while it is saved, and opens once it has an id.
-      chevron: true,
-      onTap: e.id == null
-          ? null
-          : () {
-              final edits = canEdit && (me?.editsEvent(e) ?? false);
-              // Google's own (a birthday) only reads: it is changed there.
-              if (edits && !e.googleOnly) {
-                editEvent(context, ref, e, month: month);
-              } else {
-                showEventDetail(context, e, editInGoogle: edits);
-              }
-            },
-    );
+    Widget row(CalendarEvent e, {Widget? leading}) {
+      final span = _span(l10n, e);
+      final place = e.location?.trim() ?? '';
+      return ListRow(
+        leading: leading,
+        title: e.title,
+        // Over several days, the span under the title on one line; beside
+        // it, it took two lines and read as two times. The address on one
+        // line: the whole of it is on the event's page.
+        subtitle: span == null && place.isEmpty ? null : [?span, if (place.isNotEmpty) place].join('\n'),
+        subtitleLines: span != null && place.isNotEmpty ? 2 : 1,
+        trailing: span != null
+            ? null
+            : Text(
+                e.allDay ? l10n.calAllDay : DateFormat.Hm().format(e.start),
+                textAlign: TextAlign.end,
+                style: AppText.body.copyWith(color: AppColors.of(context).secondaryLabel),
+              ),
+        // Opens the event either way: to edit, or to read. A new one shows
+        // while it is saved, and opens once it has an id.
+        chevron: true,
+        onTap: e.id == null
+            ? null
+            : () {
+                final edits = canEdit && (me?.editsEvent(e) ?? false);
+                // Google's own (a birthday) only reads: it is changed there.
+                if (edits && !e.googleOnly) {
+                  editEvent(context, ref, e, month: month);
+                } else {
+                  showEventDetail(context, e, editInGoogle: edits);
+                }
+              },
+      );
+    }
 
     final List<Widget> agenda;
     if (selected != null) {
@@ -569,12 +577,12 @@ class _FoldingState extends State<_Folding> with SingleTickerProviderStateMixin 
   );
 }
 
-/// When an event is, beside its title: all day or its start time, or for
-/// one over several days the whole span, on two lines when it has times.
-String _when(L10n l10n, CalendarEvent e) {
+/// When an event over several days is, under its title, on one line:
+/// the days, with the times when it has them; null for one day.
+String? _span(L10n l10n, CalendarEvent e) {
+  if (e.lastDay == e.day) return null;
   final time = DateFormat.Hm();
   final day = shortMonthDay(l10n);
-  if (e.lastDay == e.day) return e.allDay ? l10n.calAllDay : time.format(e.start);
-  if (e.allDay) return '${day.format(e.start)}–${day.format(e.lastDay.midnight)}';
-  return '${day.format(e.start)} ${time.format(e.start)} –\n${day.format(e.end)} ${time.format(e.end)}';
+  if (e.allDay) return '${day.format(e.start)} – ${day.format(e.lastDay.midnight)}';
+  return '${day.format(e.start)} ${time.format(e.start)} – ${day.format(e.end)} ${time.format(e.end)}';
 }

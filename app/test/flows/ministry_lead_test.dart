@@ -100,9 +100,8 @@ void main() {
     await pumpApp(tester, b);
     await go(tester, '/rosters/import/sunday');
     await tapText(tester, '進階');
-    await tester.ensureVisible(findShown('貼上 JSON').last);
+    await tester.ensureVisible(find.byType(TextField).last);
     await tester.pump();
-    await tapText(tester, '貼上 JSON');
     await tester.enterText(
       find.byType(TextField),
       jsonEncode([

@@ -27,7 +27,6 @@ import '../../state/providers.dart';
 Future<void> showRosterImage(BuildContext context, {required String serviceType, required Day month}) =>
     showAppSheet<void>(
       context,
-      expand: true,
       builder: (_) => _RosterImageSheet(serviceType: serviceType, month: month),
     );
 
@@ -82,8 +81,11 @@ class _RosterImageSheetState extends ConsumerState<_RosterImageSheet> {
     ];
     final duties = service == null ? const <String>[] : planDuties(service, days, arranges);
     final title = l10n.rosterImageTitle(service?.name ?? '', monthName);
+    // As tall as the picture: 分享 right under it, not at the screen's foot.
     return SafeArea(
       child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           SheetBar(
             title: l10n.rosterShareImage,
@@ -109,18 +111,20 @@ class _RosterImageSheetState extends ConsumerState<_RosterImageSheet> {
               ),
             ],
           ),
-          Expanded(
+          Flexible(
             child: Container(
               color: c.background,
               padding: const EdgeInsets.all(Space.m),
-              alignment: Alignment.topCenter,
               // The whole picture, made smaller to fit; shared at full size.
-              child: FittedBox(
-                fit: BoxFit.scaleDown,
+              child: Align(
                 alignment: Alignment.topCenter,
-                child: RepaintBoundary(
-                  key: _picture,
-                  child: RosterImage(church: church, title: title, days: days, duties: duties),
+                heightFactor: 1,
+                child: FittedBox(
+                  fit: BoxFit.scaleDown,
+                  child: RepaintBoundary(
+                    key: _picture,
+                    child: RosterImage(church: church, title: title, days: days, duties: duties),
+                  ),
                 ),
               ),
             ),

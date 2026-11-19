@@ -150,10 +150,14 @@ class EventRosterScreen extends ConsumerWidget {
                 onAddDuty: whole || addable.isNotEmpty
                     ? () => _addDuty(context, ref, roster, addable, any: whole)
                     : null,
-                // Only while it is empty: what is wanted is another
-                // event's duties to start from, not on top of its own.
-                onCopyDuties: whole ? () => _copyDuties(context, ref, roster) : null,
-                whenEmpty: EmptyState(message: l10n.eventRosterEmpty),
+                whenEmpty: whole || addable.isNotEmpty
+                    ? _StartRoster(
+                        onAdd: () => _addDuty(context, ref, roster, addable, any: whole),
+                        // Only while it is empty: what is wanted is another
+                        // event's duties to start from, not on top of its own.
+                        onCopy: whole ? () => _copyDuties(context, ref, roster) : null,
+                      )
+                    : EmptyState(message: l10n.eventRosterEmpty),
               )
             else
               RosterDayView(
@@ -237,6 +241,36 @@ class EventRosterScreen extends ConsumerWidget {
       context,
       l10n.dutiesCopied(count),
       () => ref.read(rosterActionsProvider).addDuties(roster, [for (final d in from.duties) d.role]),
+    );
+  }
+}
+
+/// An event's roster with no duties yet: what it says, and the two ways to
+/// start, one filled and one plain, not two links alike.
+class _StartRoster extends StatelessWidget {
+  const _StartRoster({required this.onAdd, this.onCopy});
+
+  final VoidCallback onAdd;
+  final VoidCallback? onCopy;
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = L10n.of(context);
+    final c = AppColors.of(context);
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(Space.l, Space.xl * 2, Space.l, Space.l),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          BalancedText(l10n.eventRosterEmpty, style: AppText.body.copyWith(color: c.secondaryLabel)),
+          const SizedBox(height: Space.m),
+          PrimaryButton(label: l10n.addDuty, icon: const Icon(Symbols.add_rounded), onPressed: onAdd),
+          if (onCopy != null) ...[
+            const SizedBox(height: Space.s),
+            SecondaryButton(label: l10n.copyDuties, expand: true, onPressed: onCopy),
+          ],
+        ],
+      ),
     );
   }
 }

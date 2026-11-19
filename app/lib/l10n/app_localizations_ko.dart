@@ -1257,9 +1257,6 @@ class L10nKo extends L10n {
   String get photoPick => '사진 선택';
 
   @override
-  String get photoPasteJson => 'JSON 붙여넣기';
-
-  @override
   String get photoRecognizing => '인식하는 중이에요. 1분 정도 걸려요.';
 
   @override
@@ -1319,7 +1316,7 @@ class L10nKo extends L10n {
   String get importBadRows => '읽을 수 없는 데이터';
 
   @override
-  String get jsonHint => '인식 결과 JSON을 붙여넣어 주세요';
+  String get jsonHint => 'AI 답변을 통째로 붙여넣어 주세요';
 
   @override
   String get next2 => '미리보기';
@@ -2234,7 +2231,7 @@ class L10nKo extends L10n {
   String get importPhotoFormatError => '인식 결과 형식이 맞지 않아요. 다시 인식하거나 고급 JSON을 사용해 주세요.';
 
   @override
-  String get importJsonSyntaxError => 'JSON 형식이 잘못됐어요. 아래 예시처럼 배열 형식을 사용해 주세요.';
+  String get importJsonSyntaxError => 'JSON 형식이 잘못됐어요. AI 답변을 통째로 붙여넣어 주세요.';
 
   @override
   String get importJsonEdit => 'JSON 편집';

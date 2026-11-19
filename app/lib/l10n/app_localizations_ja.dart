@@ -1256,9 +1256,6 @@ class L10nJa extends L10n {
   String get photoPick => '写真を選ぶ';
 
   @override
-  String get photoPasteJson => 'JSON を貼り付け';
-
-  @override
   String get photoRecognizing => '読み取り中です。1分ほどかかります。';
 
   @override
@@ -1318,7 +1315,7 @@ class L10nJa extends L10n {
   String get importBadRows => '読み取れなかったデータ';
 
   @override
-  String get jsonHint => '読み取り結果の JSON を貼り付け';
+  String get jsonHint => 'AI の返答をそのまま貼り付け';
 
   @override
   String get next2 => 'プレビュー';
@@ -2234,7 +2231,7 @@ class L10nJa extends L10n {
   String get importPhotoFormatError => '読み取り結果の形式が正しくありません。もう一度読み取るか、詳細設定の JSON を使ってください。';
 
   @override
-  String get importJsonSyntaxError => 'JSON の形式が正しくありません。下の例の配列形式を使ってください。';
+  String get importJsonSyntaxError => 'JSON の形式が正しくありません。AI の返答をそのまま貼り付けてください。';
 
   @override
   String get importJsonEdit => 'JSON を編集';

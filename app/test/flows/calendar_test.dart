@@ -461,9 +461,12 @@ void main() {
     ];
     await pumpApp(tester, b);
     await go(tester, '/calendar');
-    expect(find.text('9/29–10/2'), findsOneWidget);
-    expect(find.text('10/9 22:00 –\n10/10 06:00'), findsOneWidget);
-    expect(find.textContaining('9月29日'), findsNothing, reason: 'listed under 10月1日');
+    // Under the title, one line each, nothing beside it.
+    expect(find.textContaining('9/29 – 10/2'), findsOneWidget);
+    expect(find.textContaining('10/9 22:00 – 10/10 06:00'), findsOneWidget);
+    final row = find.ancestor(of: shownText('退修會').last, matching: find.byType(ListRow));
+    final listed = tester.widget<DateBlock>(find.descendant(of: row, matching: find.byType(DateBlock)));
+    expect(listed.day, 1, reason: 'listed under the 1st');
   });
 
   testWidgets('staff cannot edit even when connected', (tester) async {
