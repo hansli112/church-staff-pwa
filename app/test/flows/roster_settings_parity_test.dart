@@ -319,7 +319,7 @@ void main() {
     await tapText(tester, '招待');
     await tester.enterText(find.byType(TextField), '新外請');
     await settle(tester);
-    await tapText(tester, '新增「新外請」');
+    await tapText(tester, '臨時排「新外請」');
     // Searching, nothing drags: the order is the whole list's.
     expect(find.byIcon(Symbols.drag_handle_rounded), findsNothing);
     await tester.enterText(find.byType(TextField), '');

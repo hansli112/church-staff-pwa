@@ -416,14 +416,19 @@ class L10nKo extends L10n {
   }
 
   @override
-  String get pickerUseNameDetail => '이번만';
-
-  @override
   String get pickerLeaveEmpty => '비워 두기';
 
   @override
   String pickerAddStaff(String name) {
     return '‘$name’ 님을 멤버로 추가';
+  }
+
+  @override
+  String get pickerAddStaffDetail => '가입하면 배정한 봉사를 이어받아요';
+
+  @override
+  String pickerOnce(String name) {
+    return '‘$name’ 님을 이번만 넣기';
   }
 
   @override

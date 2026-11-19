@@ -425,14 +425,19 @@ class L10nEn extends L10n {
   }
 
   @override
-  String get pickerUseNameDetail => 'Just this once';
-
-  @override
   String get pickerLeaveEmpty => 'Leave empty';
 
   @override
   String pickerAddStaff(String name) {
     return 'Add “$name” as a team member';
+  }
+
+  @override
+  String get pickerAddStaffDetail => 'When they join, what’s arranged is theirs';
+
+  @override
+  String pickerOnce(String name) {
+    return 'Fill in “$name” just this once';
   }
 
   @override

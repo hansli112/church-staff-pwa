@@ -844,12 +844,6 @@ abstract class L10n {
   /// **'新增「{name}」'**
   String pickerUseName(String name);
 
-  /// No description provided for @pickerUseNameDetail.
-  ///
-  /// In zh, this message translates to:
-  /// **'只排這一次'**
-  String get pickerUseNameDetail;
-
   /// No description provided for @pickerLeaveEmpty.
   ///
   /// In zh, this message translates to:
@@ -861,6 +855,18 @@ abstract class L10n {
   /// In zh, this message translates to:
   /// **'新增同工「{name}」'**
   String pickerAddStaff(String name);
+
+  /// No description provided for @pickerAddStaffDetail.
+  ///
+  /// In zh, this message translates to:
+  /// **'之後加入，就接得到排好的服事'**
+  String get pickerAddStaffDetail;
+
+  /// No description provided for @pickerOnce.
+  ///
+  /// In zh, this message translates to:
+  /// **'臨時排「{name}」'**
+  String pickerOnce(String name);
 
   /// No description provided for @pickerNoResults.
   ///

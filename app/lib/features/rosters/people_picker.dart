@@ -494,8 +494,10 @@ class _PeoplePickerState extends State<PeoplePicker> {
           'typed-staff',
           (_) => ListRow(
             title: l10n.pickerAddStaff(typed),
-            subtitle: l10n.noAccount,
+            subtitle: l10n.pickerAddStaffDetail,
             leading: const Icon(Symbols.person_add_rounded),
+            // Done at once: nothing further to open.
+            chevron: false,
             onTap: () => _useTyped(staff: true),
           ),
         ),
@@ -506,9 +508,10 @@ class _PeoplePickerState extends State<PeoplePicker> {
         _Entry(
           'typed',
           (_) => ListRow(
-            title: l10n.pickerUseName(typed),
-            subtitle: l10n.pickerUseNameDetail,
+            title: l10n.pickerOnce(typed),
             leading: const Icon(Symbols.add_rounded),
+            // Done at once: nothing further to open.
+            chevron: false,
             onTap: _useTyped,
           ),
         ),
@@ -551,6 +554,8 @@ class _PeoplePickerState extends State<PeoplePicker> {
           (_) => ListRow(
             title: l10n.pickerLeaveEmpty,
             leading: const Icon(Symbols.person_off_rounded),
+            // Done at once: nothing further to open.
+            chevron: false,
             onTap: () => Navigator.pop(
               context,
               PickerResult(people: const [], ranking: _ranking, takeDutyFrom: _takeOff),

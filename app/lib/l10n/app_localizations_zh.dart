@@ -415,14 +415,19 @@ class L10nZh extends L10n {
   }
 
   @override
-  String get pickerUseNameDetail => '只排這一次';
-
-  @override
   String get pickerLeaveEmpty => '先空著';
 
   @override
   String pickerAddStaff(String name) {
     return '新增同工「$name」';
+  }
+
+  @override
+  String get pickerAddStaffDetail => '之後加入，就接得到排好的服事';
+
+  @override
+  String pickerOnce(String name) {
+    return '臨時排「$name」';
   }
 
   @override
@@ -3985,14 +3990,19 @@ class L10nZhHans extends L10nZh {
   }
 
   @override
-  String get pickerUseNameDetail => '只排这一次';
-
-  @override
   String get pickerLeaveEmpty => '先空着';
 
   @override
   String pickerAddStaff(String name) {
     return '新增同工“$name”';
+  }
+
+  @override
+  String get pickerAddStaffDetail => '之后加入，就接得到排好的事奉';
+
+  @override
+  String pickerOnce(String name) {
+    return '临时排“$name”';
   }
 
   @override

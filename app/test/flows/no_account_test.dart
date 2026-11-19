@@ -103,7 +103,7 @@ void main() {
     await tapText(tester, '招待');
     await tester.enterText(find.byType(TextField).last, '張講員');
     await settle(tester);
-    await tapText(tester, '只排這一次');
+    await tapText(tester, '臨時排「張講員」');
     await tapText(tester, '完成');
     expect(peopleOn(b, 11, '招待'), contains('張講員'));
     expect(b.pendingMembers['grace']?.values.where((p) => p.name == '張講員'), isEmpty);
@@ -133,7 +133,6 @@ void main() {
     await tapText(tester, '司琴');
     await tester.enterText(find.byType(TextField).last, '王小明');
     await settle(tester);
-    expect(find.text('沒有帳號'), findsOneWidget, reason: 'as 加入同工 says it');
     await tapText(tester, '新增同工「王小明」');
     final added = b.pendingMembers['grace']!.values.singleWhere((p) => p.name == '王小明');
     expect(savedDay(b, 11).duties.firstWhere((d) => d.role == '司琴').uids, {'王小明': added.id});
@@ -147,6 +146,7 @@ void main() {
     await tester.enterText(find.byType(TextField).last, '黃鎮台');
     await settle(tester);
     expect(find.textContaining('新增同工'), findsNothing, reason: 'a name someone here has');
+    expect(find.textContaining('臨時排「'), findsNothing);
   });
 
   testWidgets('an admin fixes his name, on the rosters too', (tester) async {

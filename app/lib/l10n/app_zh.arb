@@ -256,10 +256,18 @@
       }
     }
   },
-  "pickerUseNameDetail": "只排這一次",
   "pickerLeaveEmpty": "先空著",
   "pickerAddStaff": "新增同工「{name}」",
   "@pickerAddStaff": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "pickerAddStaffDetail": "之後加入，就接得到排好的服事",
+  "pickerOnce": "臨時排「{name}」",
+  "@pickerOnce": {
     "placeholders": {
       "name": {
         "type": "String"
