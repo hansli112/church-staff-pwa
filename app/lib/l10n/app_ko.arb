@@ -392,7 +392,7 @@
   "inviteZonesFooter": "선택하지 않으면 예배에 추가하기 전까지 봉사표를 볼 수 없어요.",
   "photoImport": "사진으로 가져오기",
   "photoImportAction": "사진으로 봉사표 가져오기",
-  "photoIntro": "종이 봉사표 사진을 찍거나 고르면 AI가 읽어 들여요",
+  "photoIntro": "종이 봉사표를 찍으면 AI가 읽어 들여요",
   "photoRemaining": "이번 달 {count}장 남음 · 매달 1일에 초기화",
   "photoTake": "사진 찍기",
   "photoPick": "사진 선택",

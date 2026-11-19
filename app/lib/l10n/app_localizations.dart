@@ -2299,7 +2299,7 @@ abstract class L10n {
   /// Top of 照片匯入: what it does, who reads the photo
   ///
   /// In zh, this message translates to:
-  /// **'拍下或選一張紙本服事表的照片，AI 會自動辨識'**
+  /// **'拍下紙本服事表，AI 自動辨識'**
   String get photoIntro;
 
   /// No description provided for @photoRemaining.

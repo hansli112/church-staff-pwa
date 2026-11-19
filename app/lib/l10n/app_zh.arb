@@ -758,7 +758,7 @@
   "photoImport": "照片匯入",
   "photoImportAction": "從照片匯入服事表",
   "@photoImportAction": { "description": "Item in 安排服事's menu (⋯) that opens photo import: says what it makes, a roster from a photo" },
-  "photoIntro": "拍下或選一張紙本服事表的照片，AI 會自動辨識",
+  "photoIntro": "拍下紙本服事表，AI 自動辨識",
   "@photoIntro": {"description": "Top of 照片匯入: what it does, who reads the photo"},
   "photoRemaining": "這個月還剩 {count} 張・每月 1 日重算",
   "@photoRemaining": {

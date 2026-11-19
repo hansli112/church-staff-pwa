@@ -392,7 +392,7 @@
   "inviteZonesFooter": "不选的话，对方加入后看不到事奉表，要等你把他加进聚会。",
   "photoImport": "照片导入",
   "photoImportAction": "从照片导入事奉表",
-  "photoIntro": "拍下或选一张纸本事奉表的照片，AI 会自动识别",
+  "photoIntro": "拍下纸本事奉表，AI 自动识别",
   "photoRemaining": "这个月还剩 {count} 张・每月 1 日重算",
   "photoTake": "拍照",
   "photoPick": "选择照片",
