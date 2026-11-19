@@ -426,6 +426,13 @@ void main() {
       return b;
     }
 
+    testWidgets('one already in a service is not offered it: likely merged, or not new', (tester) async {
+      final b = church();
+      await pumpApp(tester, b);
+      await go(tester, '/me/members/mei');
+      expect(find.text('合併沒有帳號的同工'), findsNothing);
+    });
+
     testWidgets('one in no service yet is offered it first, above 加入聚會', (tester) async {
       await pumpApp(tester, church());
       await go(tester, '/me/members/ming');

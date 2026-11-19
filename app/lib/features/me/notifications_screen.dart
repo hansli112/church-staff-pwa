@@ -50,24 +50,6 @@ class NotificationsScreen extends ConsumerWidget {
         l10n.notifRosterChangeSub,
       ),
       (NotificationKind.swap, l10n.notifSwap, l10n.notifSwapSub),
-      if (me.isAdmin)
-        (
-          NotificationKind.memberJoined,
-          l10n.notifMemberJoined,
-          l10n.notifMemberJoinedSub,
-        ),
-      if (me.isAdmin)
-        (
-          NotificationKind.memberLeft,
-          l10n.notifMemberLeft,
-          l10n.notifMemberLeftSub,
-        ),
-      if (me.isAdmin)
-        (
-          NotificationKind.joinRequest,
-          l10n.notifJoinRequest,
-          l10n.notifJoinRequestSub,
-        ),
       // 回報人數 (#85): for whoever is asked, while the church has it on.
       if (ref.watch(churchProvider.select((c) => c.value?.attendanceSince != null)) && me.remindedAttendance.isNotEmpty)
         (
@@ -75,6 +57,16 @@ class NotificationsScreen extends ConsumerWidget {
           l10n.notifAttendance,
           l10n.notifAttendanceSub,
         ),
+    ];
+
+    // Only an admin's; under their own heading, so the first list is the
+    // same for everyone (2026-11-19).
+    final adminKinds = [
+      if (me.isAdmin) ...[
+        (NotificationKind.memberJoined, l10n.notifMemberJoined, l10n.notifMemberJoinedSub),
+        (NotificationKind.memberLeft, l10n.notifMemberLeft, l10n.notifMemberLeftSub),
+        (NotificationKind.joinRequest, l10n.notifJoinRequest, l10n.notifJoinRequestSub),
+      ],
     ];
 
     Future<void> set(NotificationKind kind, bool on) async {
@@ -87,7 +79,10 @@ class NotificationsScreen extends ConsumerWidget {
         final result = await enableNotifications(context, nudge: true);
         if (result != null && result != PushPermission.granted) return;
         // The others showed off, so they stay off: only the one tapped.
-        next = {...muted, for (final (k, _, _) in kinds) k}..remove(kind);
+        next = {
+          ...muted,
+          for (final (k, _, _) in [...kinds, ...adminKinds]) k,
+        }..remove(kind);
       }
       try {
         await data.setNotificationPrefs(me.uid, next);
@@ -103,6 +98,13 @@ class NotificationsScreen extends ConsumerWidget {
         if (context.mounted) showToast(context, saveErrorText(l10n, e));
       }
     }
+
+    Widget row((NotificationKind, String, String?) k) => SwitchRow(
+      title: k.$2,
+      subtitle: k.$3,
+      value: !shownOff && !muted.contains(k.$1),
+      onChanged: blocked ? null : (v) => set(k.$1, v),
+    );
 
     return Scaffold(
       appBar: AppBar(title: Text(l10n.notifications), actions: savingActions(const [GuideButton(Guide.notifications)])),
@@ -132,16 +134,10 @@ class NotificationsScreen extends ConsumerWidget {
             ),
           ListSection(
             header: l10n.notifThisChurch,
-            children: [
-              for (final (kind, title, sub) in kinds)
-                SwitchRow(
-                  title: title,
-                  subtitle: sub,
-                  value: !shownOff && !muted.contains(kind),
-                  onChanged: blocked ? null : (v) => set(kind, v),
-                ),
-            ],
+            children: [for (final k in kinds) row(k)],
           ),
+          if (adminKinds.isNotEmpty)
+            ListSection(header: l10n.roleAdmin, children: [for (final k in adminKinds) row(k)]),
           if (timingShown)
             ListSection(
               header: l10n.notifReminderTime,

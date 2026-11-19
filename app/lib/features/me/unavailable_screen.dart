@@ -170,8 +170,10 @@ class _UnavailableScreenState extends ConsumerState<UnavailableScreen> {
                 ),
                 Padding(
                   padding: const EdgeInsets.fromLTRB(Space.l, Space.s, Space.l, Space.m),
-                  child: Text(
+                  // A line each: how to mark, and who sees (2026-11-19).
+                  child: BalancedText(
                     l10n.unavailableHint,
+                    textAlign: TextAlign.start,
                     style: AppText.footnote.copyWith(color: AppColors.of(context).secondaryLabel),
                   ),
                 ),

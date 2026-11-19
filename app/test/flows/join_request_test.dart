@@ -339,7 +339,7 @@ void main() {
     final b = seededChurch();
     await pumpApp(tester, b);
     await go(tester, '/me/notifications');
-    expect(find.text('有人申請加入教會時（只通知管理員）'), findsOneWidget);
+    expect(find.text('有人申請加入教會時'), findsOneWidget);
     await tester.tap(find.text('申請加入'));
     await settle(tester);
     expect(b.members['grace']!['pastor']!.mutedNotifications, {NotificationKind.joinRequest});

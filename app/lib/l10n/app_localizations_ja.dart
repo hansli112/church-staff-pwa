@@ -1109,13 +1109,13 @@ class L10nJa extends L10n {
   String get notifMemberJoined => 'メンバーの参加';
 
   @override
-  String get notifMemberJoinedSub => '誰かが招待で教会に参加したとき（管理者のみ）';
+  String get notifMemberJoinedSub => '誰かが招待で教会に参加したとき';
 
   @override
   String get notifMemberLeft => 'メンバーの退出';
 
   @override
-  String get notifMemberLeftSub => '誰かが教会を退出したとき（管理者のみ）';
+  String get notifMemberLeftSub => '誰かが教会を退出したとき';
 
   @override
   String get notifThisChurch => 'この教会の通知';
@@ -3166,7 +3166,7 @@ class L10nJa extends L10n {
   String get notifJoinRequest => '参加申請';
 
   @override
-  String get notifJoinRequestSub => '誰かが参加を申請したとき（管理者のみ）';
+  String get notifJoinRequestSub => '誰かが参加を申請したとき';
 
   @override
   String get notifListEmpty => '過去30日間の通知はありません';

@@ -165,6 +165,12 @@ class _SupportScreenState extends ConsumerState<SupportScreen> {
                       footer: supporter
                           ? l10n.supportMonthlyTerms(store.name)
                           : l10n.supportMonthlyTermsAndIcons(store.name),
+                      // In its small words, not two rows of their own: the
+                      // About page has them too (2026-11-19).
+                      footerLinks: [
+                        (label: l10n.termsOfService, onPressed: () => openSitePage(context, ref, '/terms')),
+                        (label: l10n.privacyPolicy, onPressed: () => openSitePage(context, ref, '/privacy')),
+                      ],
                       children: [
                         // The other plan switches to it.
                         _Amounts(monthly, label: (m) => l10n.supportPerMonth(m.price), paid: plan, onPick: _buy),
@@ -174,13 +180,6 @@ class _SupportScreenState extends ConsumerState<SupportScreen> {
                             onTap: () =>
                                 launchUrl(store.manageSubscription(plan), mode: LaunchMode.externalApplication),
                           ),
-                      ],
-                    ),
-                  if (monthly.isNotEmpty)
-                    ListSection(
-                      children: [
-                        ListRow(title: l10n.termsOfService, onTap: () => openSitePage(context, ref, '/terms')),
-                        ListRow(title: l10n.privacyPolicy, onTap: () => openSitePage(context, ref, '/privacy')),
                       ],
                     ),
                 ],

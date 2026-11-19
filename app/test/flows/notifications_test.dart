@@ -36,4 +36,21 @@ void main() {
     expect(find.text('前一天晚上'), findsNothing);
     expect(find.text('每週一晚上，列出這週的服事'), findsOneWidget, reason: 'what turning it on would bring');
   });
+
+  testWidgets("an admin's own notifications are under 管理員; nobody else has them", (tester) async {
+    await pumpApp(tester, seededChurch());
+    GoRouter.of(tester.element(find.byType(Scaffold).first)).go('/me/notifications');
+    await settle(tester);
+    expect(find.text('管理員'), findsOneWidget);
+    for (final kind in ['同工加入', '同工退出', '申請加入']) {
+      expect(find.text(kind), findsOneWidget);
+    }
+    expect(find.textContaining('只通知管理員'), findsNothing, reason: 'the heading says it');
+
+    await pumpApp(tester, seededChurch(as: staffMei));
+    GoRouter.of(tester.element(find.byType(Scaffold).first)).go('/me/notifications');
+    await settle(tester);
+    expect(find.text('管理員'), findsNothing);
+    expect(find.text('同工加入'), findsNothing);
+  });
 }

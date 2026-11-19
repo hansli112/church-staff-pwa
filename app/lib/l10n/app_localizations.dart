@@ -2065,7 +2065,7 @@ abstract class L10n {
   /// No description provided for @notifMemberJoinedSub.
   ///
   /// In zh, this message translates to:
-  /// **'有人用邀請加入教會時（只通知管理員）'**
+  /// **'有人用邀請加入教會時'**
   String get notifMemberJoinedSub;
 
   /// No description provided for @notifMemberLeft.
@@ -2077,7 +2077,7 @@ abstract class L10n {
   /// No description provided for @notifMemberLeftSub.
   ///
   /// In zh, this message translates to:
-  /// **'有人退出教會時（只通知管理員）'**
+  /// **'有人退出教會時'**
   String get notifMemberLeftSub;
 
   /// No description provided for @notifThisChurch.
@@ -5623,7 +5623,7 @@ abstract class L10n {
   /// No description provided for @notifJoinRequestSub.
   ///
   /// In zh, this message translates to:
-  /// **'有人申請加入教會時（只通知管理員）'**
+  /// **'有人申請加入教會時'**
   String get notifJoinRequestSub;
 
   /// 通知列表 is empty (#89)
@@ -5911,7 +5911,7 @@ abstract class L10n {
   /// Under the month on the page of days a member can't serve
   ///
   /// In zh, this message translates to:
-  /// **'點一天標記，拖過去可以一次標好幾天。只有排服事的人看得到。'**
+  /// **'點一天標記，拖過去可以一次標好幾天。\n只有排服事的人看得到。'**
   String get unavailableHint;
 
   /// Header over the stretches a member has marked

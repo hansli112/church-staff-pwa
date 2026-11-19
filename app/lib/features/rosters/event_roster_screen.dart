@@ -264,8 +264,14 @@ class _StartRoster extends StatelessWidget {
         children: [
           BalancedText(l10n.eventRosterEmpty, style: AppText.body.copyWith(color: c.secondaryLabel)),
           const SizedBox(height: Space.m),
-          // No ＋: the words line up with the lines above and below.
-          PrimaryButton(label: l10n.addDutyFirst, onPressed: onAdd),
+          // The ＋ hung before the words, so they line up with the lines
+          // above and below.
+          PrimaryButton(
+            label: l10n.addDutyFirst,
+            icon: const Icon(Symbols.add_rounded),
+            hangIcon: true,
+            onPressed: onAdd,
+          ),
           if (onCopy != null) ...[
             const SizedBox(height: Space.s),
             SecondaryButton(label: l10n.copyDuties, expand: true, onPressed: onCopy),

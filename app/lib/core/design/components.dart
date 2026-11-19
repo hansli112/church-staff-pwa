@@ -32,6 +32,7 @@ class PrimaryButton extends StatelessWidget {
     required this.onPressed,
     this.icon,
     this.busy = false,
+    this.hangIcon = false,
   });
 
   final String label;
@@ -40,6 +41,10 @@ class PrimaryButton extends StatelessWidget {
 
   /// Shows a spinner and ignores taps while the action runs.
   final bool busy;
+
+  /// Centers the label alone, [icon] hung before it: the words line up
+  /// with centered lines above and below (an empty state's).
+  final bool hangIcon;
 
   @override
   Widget build(BuildContext context) {
@@ -53,9 +58,25 @@ class PrimaryButton extends StatelessWidget {
             ),
           )
         : Text(label, textAlign: TextAlign.center);
-    final button = icon == null || busy
+    final i = icon;
+    final button = i == null || busy
         ? FilledButton(onPressed: busy ? () {} : onPressed, child: child)
-        : FilledButton.icon(onPressed: onPressed, icon: icon!, label: child);
+        : hangIcon
+        ? FilledButton(
+            onPressed: onPressed,
+            // As wide again after the label, unseen, so the label is centered.
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                i,
+                const SizedBox(width: Space.s),
+                Flexible(child: child),
+                const SizedBox(width: Space.s),
+                Visibility.maintain(visible: false, child: i),
+              ],
+            ),
+          )
+        : FilledButton.icon(onPressed: onPressed, icon: i, label: child);
     // While busy the label is a spinner; keep the name for screen readers
     // without adding a second button node.
     return busy ? Semantics(label: label, excludeSemantics: true, button: true, child: button) : button;
@@ -156,12 +177,17 @@ class ListSection extends StatelessWidget {
     this.header,
     this.headerAction,
     this.footer,
+    this.footerLinks = const [],
     required this.children,
   });
 
   final String? header;
   final ({String label, VoidCallback onPressed})? headerAction;
   final String? footer;
+
+  /// Links in the footer's small words, after [footer]: pages the section
+  /// must point to but nobody comes for (a subscription's terms).
+  final List<({String label, VoidCallback onPressed})> footerLinks;
   final List<Widget> children;
 
   @override
@@ -186,6 +212,7 @@ class ListSection extends StatelessWidget {
             ),
           ),
           if (footer != null) _SectionFooter(footer!),
+          if (footerLinks.isNotEmpty) _FooterLinks(footerLinks),
         ],
       ),
     );
@@ -261,6 +288,41 @@ class _SectionFooter extends StatelessWidget {
       style: AppText.footnote.copyWith(color: AppColors.of(context).secondaryLabel),
     ),
   );
+}
+
+class _FooterLinks extends StatelessWidget {
+  const _FooterLinks(this.links);
+
+  final List<({String label, VoidCallback onPressed})> links;
+
+  @override
+  Widget build(BuildContext context) {
+    final c = AppColors.of(context);
+    final style = AppText.footnote.copyWith(color: c.secondaryLabel);
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(Space.m, Space.xs, Space.m, 0),
+      child: Wrap(
+        crossAxisAlignment: WrapCrossAlignment.center,
+        children: [
+          for (final (i, link) in links.indexed) ...[
+            if (i > 0) Text(' · ', style: style),
+            // Tall enough to tap, the words as small as the footer's.
+            InkWell(
+              onTap: link.onPressed,
+              child: ConstrainedBox(
+                constraints: const BoxConstraints(minHeight: 32),
+                child: Align(
+                  widthFactor: 1,
+                  heightFactor: 1,
+                  child: Text(link.label, style: style.copyWith(color: c.accent)),
+                ),
+              ),
+            ),
+          ],
+        ],
+      ),
+    );
+  }
 }
 
 /// The line over the row [over]: under its text, as iOS draws it, when it

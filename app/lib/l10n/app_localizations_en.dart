@@ -1147,13 +1147,13 @@ class L10nEn extends L10n {
   String get notifMemberJoined => 'Team member joined';
 
   @override
-  String get notifMemberJoinedSub => 'When someone joins with an invite (admins only)';
+  String get notifMemberJoinedSub => 'When someone joins with an invite';
 
   @override
   String get notifMemberLeft => 'Team member left';
 
   @override
-  String get notifMemberLeftSub => 'When someone leaves the church (admins only)';
+  String get notifMemberLeftSub => 'When someone leaves the church';
 
   @override
   String get notifThisChurch => 'Notifications for this church';
@@ -3327,7 +3327,7 @@ class L10nEn extends L10n {
   String get notifJoinRequest => 'Requests to join';
 
   @override
-  String get notifJoinRequestSub => 'When someone asks to join the church (admins only)';
+  String get notifJoinRequestSub => 'When someone asks to join the church';
 
   @override
   String get notifListEmpty => 'No notifications in the last 30 days';

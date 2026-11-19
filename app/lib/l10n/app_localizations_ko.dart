@@ -1110,13 +1110,13 @@ class L10nKo extends L10n {
   String get notifMemberJoined => '멤버 들어옴';
 
   @override
-  String get notifMemberJoinedSub => '누군가 초대로 교회에 들어왔을 때(관리자만)';
+  String get notifMemberJoinedSub => '누군가 초대로 교회에 들어왔을 때';
 
   @override
   String get notifMemberLeft => '멤버 나감';
 
   @override
-  String get notifMemberLeftSub => '누군가 교회에서 나갔을 때(관리자만)';
+  String get notifMemberLeftSub => '누군가 교회에서 나갔을 때';
 
   @override
   String get notifThisChurch => '이 교회의 알림';
@@ -3166,7 +3166,7 @@ class L10nKo extends L10n {
   String get notifJoinRequest => '가입 신청';
 
   @override
-  String get notifJoinRequestSub => '누군가 가입을 신청했을 때(관리자만)';
+  String get notifJoinRequestSub => '누군가 가입을 신청했을 때';
 
   @override
   String get notifListEmpty => '최근 30일 동안 알림이 없어요';

@@ -1109,13 +1109,13 @@ class L10nZh extends L10n {
   String get notifMemberJoined => '同工加入';
 
   @override
-  String get notifMemberJoinedSub => '有人用邀請加入教會時（只通知管理員）';
+  String get notifMemberJoinedSub => '有人用邀請加入教會時';
 
   @override
   String get notifMemberLeft => '同工退出';
 
   @override
-  String get notifMemberLeftSub => '有人退出教會時（只通知管理員）';
+  String get notifMemberLeftSub => '有人退出教會時';
 
   @override
   String get notifThisChurch => '這間教會的通知';
@@ -3162,7 +3162,7 @@ class L10nZh extends L10n {
   String get notifJoinRequest => '申請加入';
 
   @override
-  String get notifJoinRequestSub => '有人申請加入教會時（只通知管理員）';
+  String get notifJoinRequestSub => '有人申請加入教會時';
 
   @override
   String get notifListEmpty => '最近 30 天沒有通知';
@@ -3346,7 +3346,7 @@ class L10nZh extends L10n {
   String get unavailableTitle => '不能服事的日子';
 
   @override
-  String get unavailableHint => '點一天標記，拖過去可以一次標好幾天。只有排服事的人看得到。';
+  String get unavailableHint => '點一天標記，拖過去可以一次標好幾天。\n只有排服事的人看得到。';
 
   @override
   String get unavailableMarked => '已填的日子';
@@ -4663,13 +4663,13 @@ class L10nZhHans extends L10nZh {
   String get notifMemberJoined => '同工加入';
 
   @override
-  String get notifMemberJoinedSub => '有人用邀请加入教会时（只通知管理员）';
+  String get notifMemberJoinedSub => '有人用邀请加入教会时';
 
   @override
   String get notifMemberLeft => '同工退出';
 
   @override
-  String get notifMemberLeftSub => '有人退出教会时（只通知管理员）';
+  String get notifMemberLeftSub => '有人退出教会时';
 
   @override
   String get notifThisChurch => '这间教会的通知';
@@ -6716,7 +6716,7 @@ class L10nZhHans extends L10nZh {
   String get notifJoinRequest => '申请加入';
 
   @override
-  String get notifJoinRequestSub => '有人申请加入教会时（只通知管理员）';
+  String get notifJoinRequestSub => '有人申请加入教会时';
 
   @override
   String get notifListEmpty => '最近 30 天没有通知';
@@ -6900,7 +6900,7 @@ class L10nZhHans extends L10nZh {
   String get unavailableTitle => '不能事奉的日子';
 
   @override
-  String get unavailableHint => '点一天标记，拖过去可以一次标好几天。只有排事奉的人看得到。';
+  String get unavailableHint => '点一天标记，拖过去可以一次标好几天。\n只有排事奉的人看得到。';
 
   @override
   String get unavailableMarked => '已填的日子';
