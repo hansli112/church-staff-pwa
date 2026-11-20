@@ -123,7 +123,9 @@ export async function calendarAuthUrl(deps: CalDeps, caller: Caller | null, data
     response_type: 'code',
     scope: SCOPES.join(' '),
     access_type: 'offline',
-    prompt: 'consent',
+    // select_account: Google asks which account even when the browser is
+    // signed in to one, so reconnecting can switch to another.
+    prompt: 'consent select_account',
     include_granted_scopes: 'false',
     state,
   });

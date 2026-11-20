@@ -89,6 +89,15 @@ describe('connecting', () => {
     await rejectsWith(calendarAuthUrl(d, caller('other'), { churchId: 'C1' }), 'permissionDenied');
   });
 
+  test('Google asks which account every time, so 中斷連接 then 連接 can switch to another one', async () => {
+    await church();
+    const d = { ...deps, google: fakeGoogle().google, config };
+    const { url } = await calendarAuthUrl(d, caller('pastor'), { churchId: 'C1' });
+    const prompt = new URL(url).searchParams.get('prompt')!.split(' ');
+    assert.ok(prompt.includes('select_account'), 'a browser signed in to one account would use it without asking');
+    assert.ok(prompt.includes('consent'), 'consent still hands over a refresh token every time');
+  });
+
   test('the callback stores the token encrypted, never in the church tree', async () => {
     await church();
     const { google } = fakeGoogle();
