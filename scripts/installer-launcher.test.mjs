@@ -20,7 +20,7 @@ async function launcherRepository(t, { shallow = false } = {}) {
   await mkdir(path.join(origin, 'scripts/installer'), { recursive: true });
   await cp(path.join(ROOT, 'scripts/start-installation.sh'), path.join(origin, 'scripts/start-installation.sh'));
   await writeFile(path.join(origin, 'scripts/install-core.mjs'), '');
-  await git(origin, 'init', '-q', '-b', 'main');
+  await git(origin, 'init', '-q', '-b', 'selfhost');
   const commit = async (name) => {
     await writeFile(path.join(origin, 'version.txt'), name);
     await git(origin, 'add', '-A');
@@ -36,8 +36,9 @@ async function launcherRepository(t, { shallow = false } = {}) {
     // A one-commit clone of current: the floor and older versions are absent.
     await git(origin, 'branch', '-q', 'current', revisions.current);
     await git(dir, 'clone', '-q', '--depth', '1', '--branch', 'current', `file://${origin}`, clone);
+    // Named main, as clones from before the move to selfhost are.
     await git(clone, 'branch', '-q', '-m', 'main');
-    await git(clone, 'config', 'remote.origin.fetch', '+refs/heads/main:refs/remotes/origin/main');
+    await git(clone, 'config', 'remote.origin.fetch', '+refs/heads/selfhost:refs/remotes/origin/selfhost');
   } else {
     await git(dir, 'clone', '-q', origin, clone);
     await git(clone, 'reset', '-q', '--hard', revisions.current);

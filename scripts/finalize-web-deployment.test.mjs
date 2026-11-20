@@ -284,7 +284,7 @@ test('CLI rejects malformed args and redacts invalid JSON contents', async (t) =
 
 test('CI uses the shared finalizer while preserving safety gates, local CanvasKit and Pages module output', async () => {
   const source = await readFile(path.join(ROOT, '.github/workflows/deploy-flutter-pwa.yml'), 'utf8');
-  assert.match(source, /branches: \[ main, dev \]/);
+  assert.match(source, /branches: \[ selfhost, dev \]/);
   assert.match(source, /needs: \[firestore-rules, functions-tests, web-tests\]/);
   assert.match(source, /run: flutter analyze/);
   assert.match(source, /run: flutter test/);
@@ -295,7 +295,7 @@ test('CI uses the shared finalizer while preserving safety gates, local CanvasKi
   assert.match(source, /--vendor-version "flutter-\$\{FLUTTER_VERSION\}"/);
   assert.match(source, /--firebase-config \.local\/firebase-config\.json/);
   assert.match(source, /pages functions build \.local\/deployment\/functions --outdir=build\/web\/_worker\.js/);
-  assert.match(source, /--branch=\$\{\{ github.ref_name \}\}/);
+  assert.match(source, /--branch=\$\{\{ github.ref_name == 'selfhost' && 'main' \|\| github.ref_name \}\}/);
   assert.doesNotMatch(source, /sed -i|cp -R \.local\/deployment\/web/);
   assert.ok(source.indexOf('web/version.json') < source.indexOf('flutter build web --release'));
   assert.ok(source.indexOf('node scripts/finalize-web-deployment.mjs') < source.indexOf('pages functions build'));

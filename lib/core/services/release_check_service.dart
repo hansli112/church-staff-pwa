@@ -8,7 +8,7 @@ import 'package:http/http.dart' as http;
 /// 只有維護者改了 release.json 的版本號才算新版本 —— 只改文件或小修正的
 /// commit 不會去吵教會。
 const upstreamReleaseUrl =
-    'https://raw.githubusercontent.com/hansli112/church-staff-pwa/main/release.json';
+    'https://raw.githubusercontent.com/hansli112/church-staff-pwa/selfhost/release.json';
 
 class ReleaseInfo {
   const ReleaseInfo({

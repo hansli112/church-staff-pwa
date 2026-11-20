@@ -2,17 +2,19 @@
 
 以 Flutter Web 製作的繁體中文教會同工工具，提供服事表、帳號及權限管理，可選接 Google Calendar、照片匯入與通知。各教會自行持有並管理自己的 **Firebase 專案與 Cloudflare Pages 專案**，不共用上游的帳號、資料庫、日曆或憑證。
 
+> 自架版已停止更新，留在 `selfhost` 分支；`main` 分支是[馬大別忙](https://marthasit.com)。
+
 原始程式碼採 [MIT License](LICENSE)，著作權人為 Hans Lee。這是可自行部署的開源專案，**不是代管服務；不承諾客服、維運、回應時間或第三方免費額度**。
 
 ## 搬到馬大別忙（線上版）
 
-[![Open in Cloud Shell](https://gstatic.com/cloudssh/images/open-btn.svg)](https://shell.cloud.google.com/cloudshell/editor?cloudshell_git_repo=https%3A%2F%2Fgithub.com%2Fhansli112%2Fchurch-staff-pwa&cloudshell_git_branch=main&cloudshell_workspace=.&cloudshell_tutorial=docs%2Fmove-to-martha.md&show=terminal)
+[![Open in Cloud Shell](https://gstatic.com/cloudssh/images/open-btn.svg)](https://shell.cloud.google.com/cloudshell/editor?cloudshell_git_repo=https%3A%2F%2Fgithub.com%2Fhansli112%2Fchurch-staff-pwa&cloudshell_git_branch=selfhost&cloudshell_workspace=.&cloudshell_tutorial=docs%2Fmove-to-martha.md&show=terminal)
 
-[馬大別忙](https://marthasit.com) 是同一套服事表的線上版，不用自己維護 Firebase、Cloudflare，還有手機 App。已經架好的網站，用上面的按鈕產生搬家檔（只讀資料，不改動現在的網站），再到馬大別忙「建立新教會 → 從舊版搬過來」上傳，同工、服事表和聚會設定都會搬過去。步驟見 **[搬家教學](docs/move-to-martha.md)**；指令是 `node scripts/export-move.mjs`。
+[馬大別忙](https://marthasit.com) 是同一套服事表的線上版，不用自己維護 Firebase、Cloudflare，還有手機 App（[App Store](https://apps.apple.com/app/id6823826952)、[Google Play](https://play.google.com/store/apps/details?id=app.marthasit)）。已經架好的網站，用上面的按鈕產生搬家檔（只讀資料，不改動現在的網站），再到馬大別忙「建立新教會 → 從舊版搬過來」上傳，同工、服事表和聚會設定都會搬過去。步驟見 **[搬家教學](docs/move-to-martha.md)**；指令是 `node scripts/export-move.mjs`。
 
 ## 不會寫程式？用安裝精靈
 
-[![Open in Cloud Shell](https://gstatic.com/cloudssh/images/open-btn.svg)](https://shell.cloud.google.com/cloudshell/editor?cloudshell_git_repo=https%3A%2F%2Fgithub.com%2Fhansli112%2Fchurch-staff-pwa&cloudshell_git_branch=main&cloudshell_workspace=.&cloudshell_tutorial=docs%2Finstall-cloud-shell.md&show=terminal)
+[![Open in Cloud Shell](https://gstatic.com/cloudssh/images/open-btn.svg)](https://shell.cloud.google.com/cloudshell/editor?cloudshell_git_repo=https%3A%2F%2Fgithub.com%2Fhansli112%2Fchurch-staff-pwa&cloudshell_git_branch=selfhost&cloudshell_workspace=.&cloudshell_tutorial=docs%2Finstall-cloud-shell.md&show=terminal)
 
 按上面的按鈕，照 Cloud Shell 右側的中文教學一步步做，大約 30 分鐘就能架好你們教會自己的同工助手（登入、同工管理、服事表）。不用安裝任何軟體，也不需要 GitHub 帳號；網站和資料都在你們教會自己的 Google／Cloudflare 帳號裡，不會綁定付費方案。
 
@@ -41,7 +43,7 @@
 3. 複製 `config/church.example.json` 到 **gitignored** 的 `.local/church.json`，填自己的公開顯示設定；build 用的 Firebase Web 設定與伺服器 secrets 分開存放。
 4. 用 `scripts/prepare-deployment.mjs` 從同一份設定產生 Flutter defines、Worker 設定與 Firestore rules。**先審查並明確部署產生的 rules，再部署對應的前後端**，不可只部署 repo 的預設 rules。
 5. 在 Firebase Console 建立首位管理員的 Auth 帳號，核對 UID 後，以 `scripts/bootstrap-admin.mjs` 建立一次性、create-only 的 admin profile。它預設完全離線 dry-run，不會把任意登入者自動升成管理員。
-6. 依部署指南設定 GitHub Actions。`main`／`dev` push 會觸發部署；必須提供自己的完整設定與憑證，缺少時 fail-fast。repo 不包含任何教會的可用生產憑證。
+6. 依部署指南設定 GitHub Actions。`selfhost`／`dev` push 會觸發部署；必須提供自己的完整設定與憑證，缺少時 fail-fast。repo 不包含任何教會的可用生產憑證。
 
 不要直接在新的分支執行舊部署工具去連既有站台；不要把真實姓名、同工名單、日曆 ID、照片、金鑰或私有設定提交到公開 repo。新增忽略規則不會移除已進入 Git 歷史的內容；曾外洩的真正 secrets 仍須撤銷／輪替。
 

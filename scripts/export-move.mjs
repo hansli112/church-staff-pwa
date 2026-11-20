@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 // 搬到馬大別忙（線上版）用的搬家檔：唯讀，只讀這個專案的 Firestore，不改任何東西。
-// 格式見 https://github.com/hansli112/church-staff-pwa/blob/martha-main/docs/move-format.md
+// 格式見 https://github.com/hansli112/church-staff-pwa/blob/main/docs/move-format.md
 import { execFileSync } from 'node:child_process';
 import { writeFileSync } from 'node:fs';
 import { pathToFileURL } from 'node:url';

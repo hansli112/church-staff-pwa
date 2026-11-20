@@ -1,7 +1,7 @@
 name: Deploy Flutter PWA
 on:
   push:
-    branches: [ main, dev ] # 當你 push 到 main 或 dev 時會觸發
+    branches: [ selfhost, dev ] # 當你 push 到 selfhost 或 dev 時會觸發
   workflow_dispatch: # 允許手動觸發
 
 env:
@@ -258,7 +258,8 @@ jobs:
       # cloudflare/pages-action@v1 已被官方 deprecate（repo 已封存），
       # 改用 wrangler-action 跑 `pages deploy`。API token 權限需求相同
       # （Cloudflare Pages: Edit）。
-      # 關鍵：推送到 main 會更新 Production，推送到 dev 會產生 Preview 網址
+      # 關鍵：推送到 selfhost 會更新 Production（Cloudflare 的正式分支叫 main，
+      # 這個 repo 的 main 2026-11 起是馬大別忙），推送到 dev 會產生 Preview 網址
       - name: Publish to Cloudflare Pages
         uses: cloudflare/wrangler-action@v3
         with:
@@ -267,4 +268,4 @@ jobs:
           command: >-
             pages deploy build/web
             --project-name=${{ vars.CLOUDFLARE_PAGES_PROJECT }}
-            --branch=${{ github.ref_name }}
+            --branch=${{ github.ref_name == 'selfhost' && 'main' || github.ref_name }}

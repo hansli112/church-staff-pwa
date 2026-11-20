@@ -40,6 +40,9 @@ if [[ -z "${INSTALLER_SELF_UPDATED:-}" ]] && git -C "$ROOT" rev-parse --is-insid
   # Cloud Shell's clone sets the branch upstream to the local repo itself
   # (branch.<name>.remote = .), so a bare `git pull` never fetches anything.
   branch="$(git -C "$ROOT" symbolic-ref --quiet --short HEAD || true)"
+  # The self-hosted version moved from main to selfhost (2026-11); main is now
+  # 馬大別忙, a different program. Clones made before that are still on main.
+  [[ "$branch" == main ]] && branch=selfhost
   if [[ -n "$running" ]]; then
     printf '%s\n' '另一個安裝精靈還在執行，略過自動更新。'
   elif [[ -n "$(git -C "$ROOT" status --porcelain --untracked-files=no)" ]]; then

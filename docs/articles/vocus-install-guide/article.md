@@ -48,7 +48,7 @@
 
 Cloud Shell 是 Google 免費提供、開在瀏覽器裡的一台小電腦。安裝精靈就在這裡面執行。
 
-1. 打開專案頁面：https://github.com/hansli112/church-staff-pwa
+1. 打開專案頁面：https://github.com/hansli112/church-staff-pwa/tree/selfhost
 2. 在頁面最上面「不會寫程式？用安裝精靈」下面，按藍色的「**Open in Google Cloud Shell**」按鈕。
 
 【插入圖 01｜01-open-in-cloud-shell.png】
@@ -384,4 +384,4 @@ Google 有時候還在建立資源，精靈會請你等一下。**不要重新�
 
 願這個小工具幫你們的服事少一點行政、多一點陪伴。
 
-專案連結：https://github.com/hansli112/church-staff-pwa
+專案連結：https://github.com/hansli112/church-staff-pwa/tree/selfhost

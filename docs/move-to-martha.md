@@ -17,7 +17,7 @@
 用**建立這個網站的 Google 帳號**打開 Cloud Shell。按下方指令卡右上角的「在終端機執行」圖示，然後在黑色終端機按一次 Enter：
 
 ```sh
-bash -c 'd=$HOME/cloudshell_open/church-staff-pwa; [ -d "$d/.git" ] || git clone -q --branch main --single-branch https://github.com/hansli112/church-staff-pwa.git "$d" || exit 1; git -C "$d" pull -q --ff-only origin main; cd "$HOME" && node "$d/scripts/export-move.mjs" --out move.json'
+bash -c 'd=$HOME/cloudshell_open/church-staff-pwa; [ -d "$d/.git" ] || git clone -q --branch selfhost --single-branch https://github.com/hansli112/church-staff-pwa.git "$d" || exit 1; git -C "$d" pull -q --ff-only origin selfhost; cd "$HOME" && node "$d/scripts/export-move.mjs" --out move.json'
 ```
 
 完成後終端機會寫出同工幾位、服事表幾份，請對一下數字。

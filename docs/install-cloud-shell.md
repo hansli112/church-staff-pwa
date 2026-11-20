@@ -29,7 +29,7 @@
 **不用找程式在哪個資料夾**。按下方指令卡右上角的「在終端機執行」圖示（小終端機），然後在黑色終端機按一次 Enter。它會尋找已下載的程式；如果沒有，就從 GitHub 下載後啟動。只需做這一次，不要逐字輸入指令。
 
 ```sh
-bash -c 'd=; [ -f scripts/start-installation.sh ] && d=$PWD; [ -z "$d" ] && s=$(find "$HOME" -maxdepth 7 -type f -path "*/church-staff-pwa*/scripts/start-installation.sh" -print -quit) && [ -n "$s" ] && d=${s%/scripts/start-installation.sh}; if [ -z "$d" ]; then d=$HOME/cloudshell_open/church-staff-pwa; mkdir -p $HOME/cloudshell_open && git clone -q --branch main --single-branch https://github.com/hansli112/church-staff-pwa.git "$d" || exit 1; fi; grep -q "pull --ff-only --quiet origin" "$d/scripts/start-installation.sh" || git -C "$d" pull -q --ff-only origin main; exec bash "$d/scripts/start-installation.sh"'
+bash -c 'd=; [ -f scripts/start-installation.sh ] && d=$PWD; [ -z "$d" ] && s=$(find "$HOME" -maxdepth 7 -type f -path "*/church-staff-pwa*/scripts/start-installation.sh" -print -quit) && [ -n "$s" ] && d=${s%/scripts/start-installation.sh}; if [ -z "$d" ]; then d=$HOME/cloudshell_open/church-staff-pwa; mkdir -p $HOME/cloudshell_open && git clone -q --branch selfhost --single-branch https://github.com/hansli112/church-staff-pwa.git "$d" || exit 1; fi; grep -q "pull --ff-only --quiet origin" "$d/scripts/start-installation.sh" || git -C "$d" pull -q --ff-only origin selfhost; exec bash "$d/scripts/start-installation.sh"'
 ```
 
 如果終端機顯示紅色錯誤，先停下來，不要重複按「執行」。

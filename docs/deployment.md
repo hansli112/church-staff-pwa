@@ -254,7 +254,7 @@ Docker 的資產來源目前固定為 build context 中的 `web/`，且 `.local/
 
 ## 7. GitHub Actions 與 Cloudflare
 
-`.github/workflows/deploy-flutter-pwa.yml` 是標準 release 路線：`main`／`dev` push 或手動觸發會執行；**沒有 `DEPLOY_ENABLED` 這類額外開關**。Fork 後先確認 Actions 是否允許執行，完成自己的設定再觸發。`main` 對應正式、`dev` 對應預覽；缺少必要設定時 fail-fast，不拿中性設定蓋既有站台。
+`.github/workflows/deploy-flutter-pwa.yml` 是標準 release 路線：`selfhost`／`dev` push 或手動觸發會執行；**沒有 `DEPLOY_ENABLED` 這類額外開關**。Fork 後先確認 Actions 是否允許執行，完成自己的設定再觸發。`selfhost` 對應正式（部署到 Cloudflare 的 `main`）、`dev` 對應預覽；缺少必要設定時 fail-fast，不拿中性設定蓋既有站台。
 
 GitHub Settings → Secrets and variables → Actions：
 

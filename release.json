@@ -6,5 +6,5 @@
     "服事表標題改成簡單的「服事表」，首頁改叫「我的服事」",
     "修正：停用聚會後，重新整理有時會變回舊的設定；服事項目、事件選項、小組設定也不再顯示停用的聚會"
   ],
-  "guideUrl": "https://github.com/hansli112/church-staff-pwa/blob/main/docs/install-cloud-shell.md#7-更新到新版本"
+  "guideUrl": "https://github.com/hansli112/church-staff-pwa/blob/selfhost/docs/install-cloud-shell.md#7-更新到新版本"
 }
