@@ -93,6 +93,11 @@ dev_dependencies:
   cloud_functions_web: any
   firebase_storage_web: any
 
+dependency_overrides:
+  # go_router with a page popped twice not throwing (see its README).
+  go_router:
+    path: ../third_party/go_router
+
 # For information on the generic Dart part of this file, see the
 # following page: https://dart.dev/tools/pub/pubspec
 
