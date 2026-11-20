@@ -368,10 +368,10 @@ Chrome 小幅改善；桌面 WebKit 差距小且教會資訊冷開反而較慢�
   - 限制：Firestore 無法拆出每間教會的讀寫量；重度教會靠 GA4 活躍度與後端既有計數（照片額度）推估。
 - 錯誤 log：
   - App：Crashlytics（當機、未處理例外）。
-  - Web：Crashlytics 不支援，錯誤送到一支 function 寫入 Cloud Logging。
+  - Web：Crashlytics 不支援，錯誤送到 `logClientError` 寫入 Cloud Logging，格式是 Error Reporting 的 `ReportedErrorEvent`（服務名 `web-client`）。一起送的有當時的頁面（路由樣板）、Flutter 當時在做什麼（在 widget 的參數之前截斷）、丟出錯誤的 library、有沒有被接住（`fatal`）。這些是 log 的欄位，不放進訊息，不影響 Error Reporting 的分組；舊版沒送也照樣記錄。
   - Cloud Functions：直接寫 Cloud Logging，Error Reporting 自動分組。
   - 只記 uid、教會 ID 和錯誤本身。錯誤都先經過 `loggable()`（`functions/src/redact.ts`），只留種類、code、status，以及去掉 email 和電話號碼的訊息與堆疊。訊息裡的姓名去不掉，所以自己丟的錯誤只寫 ID，不寫名字。不記整個錯誤物件：Google API 的錯誤會帶著整個請求和回應（token、活動標題、參加的人）。
-- 通知：Crashlytics 與 Error Reporting 的「新錯誤類型」email，寄到專案擁有者的 Google 帳號，不用開新帳號。
+- 通知：Crashlytics 與 Error Reporting 的「新錯誤類型」email，寄到 support@marthasit.com，不用開新帳號。收到後怎麼查、怎麼修見 `docs/firebase-setup.md`〈收到錯誤信之後〉。
 - 檢視：Hans 後台加「統計」頁，畫每日快照趨勢；行為與錯誤細節連到 Firebase / GCP console。
 - 隱私：log 只記 uid、cid、錯誤堆疊，不記姓名、email、服事表內容；log 保留預設 30 天。分析不提供關閉開關，隱私權政策與商店隱私標籤揭露。
 

@@ -142,6 +142,34 @@ API 金鑰放在 `~/.appstoreconnect/private_keys/AuthKey_<金鑰 ID>.p8`，alto
   - iOS：在 Xcode 的 Runner scheme 加上啟動參數 `-FIRDebugEnabled`
 - Android 沒有 `google-services.json`，GA4 在 Dart 之前就啟動，讀不到 `main.dart` 給的 Firebase 設定，所以 `android/app/build.gradle.kts` 從 `--dart-define-from-file` 取 `FIREBASE_ANDROID_APP_ID` 寫成 `google_app_id` 資源。少了它 GA4 不會報錯，只在 logcat 寫 `Missing google_app_id. Firebase Analytics disabled`（1.0.0+14 以前的版本都是這樣）。有了 app ID，Android 會在 Dart 之前用這些資源建立預設的 Firebase app，所以 API key、project ID、sender ID、storage bucket 也要一起寫，和 `env.dart` 給的一樣；只寫 app ID 時 `Firebase.initializeApp` 會丟 `duplicate-app`，App 停在啟動畫面（1.0.0+15 就是這樣，沒有上架）。確認：`adb logcat -s FA FA-SVC` 要看到 `Logging event` 和 `upload successful`。
 
+### 收到錯誤信之後
+
+Crashlytics 和 Error Reporting 只在出現**新種類**的錯誤時寄信（寄到 support@marthasit.com），之後同一種再發生不會再寄。所以信少不代表錯誤少，次數和最近一次要回 console 看。
+
+1. **看是哪一種錯、在哪裡發生**：
+   - 手機版：Firebase console 的 Crashlytics。custom key `shorebird_patch_number` 是當時跑的修補（見上面的 Shorebird）。
+   - 網頁版：Error Reporting 的 `web-client` 服務，或直接查 log：
+
+     ```sh
+     gcloud logging read 'jsonPayload.serviceContext.service="web-client"' --project marthasit \
+       --format='table(timestamp, jsonPayload.screen, jsonPayload.during, jsonPayload.library, jsonPayload.fatal)' --limit 20
+     ```
+
+     `screen` 是當時的頁面（路由樣板，同 GA4 的 `screen_view`），`during` 是 Flutter 當時在做什麼（例如 `while dispatching a pointer event`，在 widget 的參數之前截斷），`library` 是丟出錯誤的 Flutter 部分，`fatal` 是 `true` 時沒有任何地方接住它。舊版網頁沒送這些欄位，會是空的。
+   - Functions：Error Reporting 依 function 分組。log 用 function 名字的小寫查：
+
+     ```sh
+     gcloud logging read 'resource.type="cloud_run_revision" AND resource.labels.service_name="createchurch" AND severity>=WARNING' \
+       --project marthasit --freshness=7d --limit 20
+     ```
+
+   - 預設的 gcloud 帳號沒有 marthasit 的權限時，加 `--account <有權限的帳號>`。
+2. **找出當時的版本**：用錯誤的時間對 Hosting／Functions 的部署時間，找出那次部署的 commit。
+3. **網頁 wasm 版的堆疊**：`deploy.sh` 建出的 `main.dart.wasm` 去掉了函式名字，堆疊只有 `wasm-function[編號]`。要對回名字，就在那次部署的 commit，用 `deploy.sh` 的同一行 `flutter build web` 加上 `--no-strip-wasm` 另外建一份（`-o` 到別的資料夾，不要蓋掉 `app/build/web`）。先確認兩份 wasm 除了 custom section 以外完全相同，再從帶名字那份的 name section 查編號（例如 WABT 的 `wasm-objdump`）。部署時有沒 commit 的改動，就建不出相同的 wasm，編號對不準，所以 prod 只從乾淨的工作區部署。JS 版（Safari、iOS、Firefox）的堆疊不用這一步。
+4. **修**：用 `git worktree add -b <分支> <路徑>` 另開 worktree，先寫能重現的測試（`functions/test`、`app/test`），修好再跑全部測試。
+5. **上線**：`scripts/deploy.sh prod`；手機版急的用 Shorebird 推修補。合回主要分支並 push，刪掉修正用的分支。
+6. **一時找不到原因，或不馬上修的**：開 GitHub issue，寫下錯誤訊息、查詢指令、目前排除了什麼、還在懷疑什麼，不要只留在對話裡。
+
 ## 部署
 
 ```sh
