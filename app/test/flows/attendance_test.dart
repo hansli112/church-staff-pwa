@@ -102,6 +102,34 @@ void main() {
     expect(find.text('新增一次聚會'), findsOneWidget);
   });
 
+  testWidgets(
+    'a service on several weekdays asks for 人數 on each with a roster; its 聚會時間 is by its rosters or every week',
+    (
+      tester,
+    ) async {
+      final b = withAttendance(seededChurch(as: editor, clock: eveningOf(Day(2026, 10, 11))));
+      b.setServices('grace', [
+        sundayService.copyWith(weekdays: [DateTime.wednesday, DateTime.sunday]),
+        youthService,
+      ]);
+      b.rosters['grace']![Roster.idFor('sunday', Day(2026, 10, 7))] = Roster(type: 'sunday', day: Day(2026, 10, 7));
+      await pumpApp(tester, b);
+      await go(tester, '/home');
+      expect(find.textContaining('10月11日'), findsWidgets, reason: "Sunday's");
+      expect(find.textContaining('10月7日'), findsWidgets, reason: "Wednesday's, which has a roster too");
+
+      await go(tester, '/me/groups/service/sunday/attendance');
+      expect(inRow('聚會時間', '有服事表的週三、週日'), findsOneWidget);
+      await tapText(tester, '聚會時間');
+      expect(find.text('隔週'), findsNothing, reason: 'every other week or month is for one day');
+      expect(find.text('每月'), findsNothing);
+      await tapText(tester, '每週');
+      await tapText(tester, '儲存');
+      expect(b.attendance['grace']!['service:sunday']!.time, MeetingTime(startsOn: Day(2026, 10, 11)));
+      expect(inRow('聚會時間', '每週三、週日'), findsOneWidget);
+    },
+  );
+
   testWidgets('首頁連結 (每日靈糧) stays at the top of 首頁, above 填寫人數', (tester) async {
     final b = withAttendance(seededChurch(as: editor, clock: eveningOf(Day(2026, 10, 4))))
       ..churchLinks['grace'] = const ChurchLink(title: '每日靈糧', url: 'https://grace.example/daily');

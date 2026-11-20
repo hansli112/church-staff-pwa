@@ -28,11 +28,11 @@ import 'world.dart';
 const sunday = Service(
   id: 'sunday',
   name: '主日崇拜',
-  weekday: DateTime.sunday,
+  weekdays: [DateTime.sunday],
   duties: ['司會', '司琴', '招待'],
   events: [EventTag(name: '聖餐', color: 0)],
 );
-const youth = Service(id: 'youth', name: '青年崇拜', weekday: DateTime.saturday, duties: ['司會']);
+const youth = Service(id: 'youth', name: '青年崇拜', weekdays: [DateTime.saturday], duties: ['司會']);
 
 /// Somewhere nothing listens: fetching it fails at once, the same way
 /// everywhere.
@@ -1170,7 +1170,7 @@ void contractTests(Future<ContractWorld> Function() open) {
     test('admins save the services, never none; IDs once used stay valid', () async {
       final g = await Grace.open(w);
       await expectLater(g.church.putServices(const []), denied());
-      const renamed = Service(id: 'sunday', name: '主日', weekday: DateTime.sunday, duties: ['司會'], enabled: false);
+      const renamed = Service(id: 'sunday', name: '主日', weekdays: [DateTime.sunday], duties: ['司會'], enabled: false);
       await g.church.putServices(const [renamed]);
       final settings = await g.church.services().first;
       expect(settings.services, const [renamed]);

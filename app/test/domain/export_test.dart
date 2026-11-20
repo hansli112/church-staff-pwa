@@ -8,8 +8,8 @@ import 'package:martha/domain/models.dart';
 import 'package:martha/domain/staff_order.dart';
 
 void main() {
-  const sunday = Service(id: 'sunday', name: '主日崇拜', weekday: 7, duties: ['司會', '司琴']);
-  const youth = Service(id: 'youth', name: '青年, "崇拜"', weekday: 6);
+  const sunday = Service(id: 'sunday', name: '主日崇拜', weekdays: [7], duties: ['司會', '司琴']);
+  const youth = Service(id: 'youth', name: '青年, "崇拜"', weekdays: [6]);
   final at = DateTime.utc(2026, 10, 4, 2, 30);
   const zh = CsvWords(fileName: '服事表.csv', date: '日期', service: '服事', role: '服事項目', people: '同工', separator: '、');
   const en = CsvWords(

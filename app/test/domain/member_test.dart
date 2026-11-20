@@ -2,9 +2,9 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:martha/domain/models.dart';
 
 void main() {
-  const sunday = Service(id: 'sunday', name: '主日崇拜', weekday: 7);
-  const youth = Service(id: 'youth', name: '青年崇拜', weekday: 6);
-  const prayer = Service(id: 'prayer', name: '禱告會', weekday: 3);
+  const sunday = Service(id: 'sunday', name: '主日崇拜', weekdays: [7]);
+  const youth = Service(id: 'youth', name: '青年崇拜', weekdays: [6]);
+  const prayer = Service(id: 'prayer', name: '禱告會', weekdays: [3]);
   const services = [sunday, youth, prayer];
 
   group('the 服事表 tab', () {

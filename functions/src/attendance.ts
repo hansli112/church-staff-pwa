@@ -27,13 +27,15 @@ export const ATTENDANCE_HOUR = 21;
 
 /**
  * When a group meets. A service, unless its 聚會時間 says otherwise: on
- * its [weekday], when that day has a roster ([roster], whether it has).
+ * its [weekday], or any of its [weekdays] when it meets on several, when
+ * that day has a roster ([roster], whether it has).
  * Else on [weekday], every [every] weeks (1 or 2) from [startsOn], a day
  * it met; or, with [monthWeeks], those weeks of each month (第 1、3 個週五),
  * from [startsOn] on.
  */
 export interface Meets {
   weekday?: number;
+  weekdays?: number[];
   roster?: boolean;
   every?: number;
   startsOn?: string;
@@ -68,7 +70,8 @@ export const weekOfMonth = (day: string) => Math.floor((Number(day.slice(8)) - 1
 export function attendanceDue(meets: Meets, state: AttendanceState, day: string): boolean {
   if (day < state.since) return false;
   if (state.pauses.some((p) => p.from <= day && day < p.until)) return false;
-  if (meets.weekday === undefined || weekdayOf(day) !== meets.weekday) return false;
+  const on = meets.weekdays?.length ? meets.weekdays.includes(weekdayOf(day)) : weekdayOf(day) === meets.weekday;
+  if (!on) return false;
   // A service by its rosters, or, on a 聚會時間 of its own, before it began.
   if ('roster' in meets && (!meets.startsOn || day < meets.startsOn)) return meets.roster === true;
   if (meets.startsOn && day < meets.startsOn) return false;
@@ -164,10 +167,14 @@ export function pausesOf(d: DocumentSnapshot | undefined): Pause[] {
   );
 }
 
-type Service = { id: string; name?: string; weekday?: number; enabled?: boolean };
+type Service = { id: string; name?: string; weekday?: number; weekdays?: number[]; enabled?: boolean };
+
+/** The days service [s] meets: its `weekdays` when it meets on several, else its `weekday`. */
+const weekdaysOf = (s: Service): number[] =>
+  Array.isArray(s.weekdays) && s.weekdays.length > 0 ? s.weekdays : typeof s.weekday === 'number' ? [s.weekday] : [];
 
 /**
- * When service [s] meets on [day]: on its weekday when that day has a
+ * When service [s] meets on [day]: on its weekdays when that day has a
  * roster ([roster]), unless its 聚會時間 says otherwise ([state],
  * attendance/service:<id>): every other week, those weeks of each month,
  * or every week (`everyWeek`, 每週都填人數, #93).
@@ -176,9 +183,9 @@ function serviceMeets(s: Service, roster: boolean, state: DocumentSnapshot | und
   const time = meetsOf(state);
   if (time.monthWeeks || time.every === 2 || state?.get('everyWeek') === true) {
     // Before it began, by its rosters as before.
-    return { ...time, weekday: s.weekday, ...(time.startsOn ? { roster } : {}) };
+    return { ...time, weekdays: weekdaysOf(s), ...(time.startsOn ? { roster } : {}) };
   }
-  return { weekday: s.weekday, roster };
+  return { weekdays: weekdaysOf(s), roster };
 }
 
 /** The services, 小組 and 其他聚會 of church [cid] meeting on [day], before pauses and what was filled in. */
@@ -190,7 +197,7 @@ async function dueOn(deps: { db: PushDeps['db'] }, cid: string, day: string): Pr
     deps.db.collection(`churches/${cid}/gatherings`).where('weekday', '==', weekday).get(),
   ]);
   const meetingServices = ((services.get('services') as Service[] | undefined) ?? [])
-    .filter((s) => s.enabled !== false && s.weekday === weekday);
+    .filter((s) => s.enabled !== false && weekdaysOf(s).includes(weekday));
   const [rosters, states] = meetingServices.length === 0
     ? [[], []]
     : await Promise.all([

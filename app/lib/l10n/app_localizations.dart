@@ -1834,6 +1834,12 @@ abstract class L10n {
   /// **'週日'**
   String get weekday7;
 
+  /// Three or more days in a row a service meets on: 週一到週五; from and to are weekday1–7's
+  ///
+  /// In zh, this message translates to:
+  /// **'{from}到{to}'**
+  String weekdayRange(String from, String to);
+
   /// No description provided for @deleteAccountTitle.
   ///
   /// In zh, this message translates to:
@@ -5206,7 +5212,7 @@ abstract class L10n {
   /// **'未設定'**
   String get meetsNotSet;
 
-  /// A 小組 meeting every week; weekday is weekday1–7's
+  /// A 小組 meeting every week; weekday is weekday1–7's, or a service's days (週三、週日, 週一到週五)
   ///
   /// In zh, this message translates to:
   /// **'每{weekday}'**
@@ -5242,7 +5248,7 @@ abstract class L10n {
   /// **'照服事表'**
   String get meetsByRoster;
 
-  /// A service meeting when its day has a roster
+  /// A service meeting when its day has a roster; weekday is its days (週日, 週三、週日, 週一到週五)
   ///
   /// In zh, this message translates to:
   /// **'有服事表的{weekday}'**

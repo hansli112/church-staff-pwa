@@ -313,6 +313,7 @@
   "weekday5": "周五",
   "weekday6": "周六",
   "weekday7": "周日",
+  "weekdayRange": "{from}到{to}",
   "deleteAccountTitle": "删除你的账号？",
   "deleteAccountBody": "你会退出所有教会，账号与个人资料会被删除且无法恢复。事奉表上的名字会保留。",
   "deleteAccountLastAdmin": "你是“{churches}”唯一的管理员，请先把管理员交给别的同工",

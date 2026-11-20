@@ -616,7 +616,7 @@ class Service {
   const Service({
     required this.id,
     required this.name,
-    required this.weekday,
+    required this.weekdays,
     this.enabled = true,
     this.duties = const [],
     this.events = const [],
@@ -627,8 +627,9 @@ class Service {
   final String id;
   final String name;
 
-  /// 1 = Monday … 7 = Sunday.
-  final int weekday;
+  /// The days it meets, 1 = Monday … 7 = Sunday: at least one, in that
+  /// order. Each has its own roster (晨更 週一到週五).
+  final List<int> weekdays;
 
   /// A disabled service keeps its old rosters but gets no new ones.
   final bool enabled;
@@ -648,7 +649,7 @@ class Service {
 
   Service copyWith({
     String? name,
-    int? weekday,
+    List<int>? weekdays,
     bool? enabled,
     List<String>? duties,
     List<EventTag>? events,
@@ -656,7 +657,7 @@ class Service {
   }) => Service(
     id: id,
     name: name ?? this.name,
-    weekday: weekday ?? this.weekday,
+    weekdays: weekdays ?? this.weekdays,
     enabled: enabled ?? this.enabled,
     duties: duties ?? this.duties,
     events: events ?? this.events,
@@ -668,7 +669,7 @@ class Service {
       other is Service &&
       other.id == id &&
       other.name == name &&
-      other.weekday == weekday &&
+      listEquals(other.weekdays, weekdays) &&
       other.enabled == enabled &&
       listEquals(other.duties, duties) &&
       listEquals(other.events, events) &&
@@ -678,7 +679,7 @@ class Service {
   int get hashCode => Object.hash(
     id,
     name,
-    weekday,
+    Object.hashAll(weekdays),
     enabled,
     Object.hashAll(duties),
     Object.hashAll(events),

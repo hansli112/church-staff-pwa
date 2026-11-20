@@ -425,7 +425,7 @@ Json _eventToJson(EventTag e) => {'name': e.name, 'color': e.color};
 Service serviceFromJson(Json data) => Service(
   id: data['id'] as String,
   name: data['name'] as String? ?? '',
-  weekday: (data['weekday'] as num?)?.toInt().clamp(1, 7) ?? DateTime.sunday,
+  weekdays: _weekdays(data),
   enabled: data['enabled'] as bool? ?? true,
   duties: _strings(data['duties']),
   events: [
@@ -435,10 +435,28 @@ Service serviceFromJson(Json data) => Service(
   manyDuties: data['manyDuties'] is List ? _strings(data['manyDuties']) : null,
 );
 
+/// A service's days: `weekdays` when it meets on more than one, else
+/// `weekday` alone, as older apps wrote and still read (the first of them).
+List<int> _weekdays(Json data) {
+  final many = {
+    if (data['weekdays'] is List)
+      for (final d in data['weekdays'] as List)
+        if (d is num && d >= 1 && d <= 7) d.toInt(),
+  };
+  if (many.isNotEmpty) return [...many]..sort();
+  return [(data['weekday'] as num?)?.toInt().clamp(1, 7) ?? DateTime.sunday];
+}
+
+/// Whether any of [services] meets on several days: settings/services
+/// says so (`severalDays`), so firestore.rules turns away an older app's
+/// write of the list, which would lose their `weekdays`.
+bool severalDays(List<Service> services) => services.any((s) => s.weekdays.length > 1);
+
 Json serviceToJson(Service s) => {
   'id': s.id,
   'name': s.name,
-  'weekday': s.weekday,
+  'weekday': s.weekdays.first,
+  if (s.weekdays.length > 1) 'weekdays': s.weekdays,
   'enabled': s.enabled,
   'duties': s.duties,
   'events': [for (final e in s.events) _eventToJson(e)],

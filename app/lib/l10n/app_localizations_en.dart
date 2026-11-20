@@ -1021,6 +1021,11 @@ class L10nEn extends L10n {
   String get weekday7 => 'Sun';
 
   @override
+  String weekdayRange(String from, String to) {
+    return '$from–$to';
+  }
+
+  @override
   String get deleteAccountTitle => 'Delete your account?';
 
   @override
@@ -3096,7 +3101,7 @@ class L10nEn extends L10n {
 
   @override
   String meetsWithRoster(String weekday) {
-    return '${weekday}s with a schedule';
+    return '$weekday with a schedule';
   }
 
   @override

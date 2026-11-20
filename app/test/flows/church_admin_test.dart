@@ -451,6 +451,37 @@ void main() {
       expect(find.text('青年崇拜'), findsNothing);
     });
 
+    testWidgets('a service meets on several weekdays, each with its own roster; at least one stays ticked', (
+      tester,
+    ) async {
+      final b = seededChurch();
+      await pumpApp(tester, b);
+      await go(tester, '/me/groups/service/youth');
+      await tapText(tester, '星期');
+      for (final day in ['週一', '週二', '週三', '週四', '週五']) {
+        await tapText(tester, day);
+      }
+      await tapText(tester, '週六');
+      await tapText(tester, '完成');
+      expect(b.services['grace']!.byId('youth')!.weekdays, [1, 2, 3, 4, 5]);
+      expect(find.text('週一到週五'), findsOneWidget);
+      await go(tester, '/rosters');
+      await tapText(tester, '青年崇拜');
+      expect(find.text('週一'), findsWidgets, reason: 'a roster each day');
+      expect(find.text('週二'), findsWidgets);
+
+      await go(tester, '/me/groups/service/youth');
+      await tapText(tester, '星期');
+      for (final day in ['週一', '週二', '週三', '週四', '週五']) {
+        await tapText(tester, day);
+      }
+      await tapText(tester, '完成');
+      expect(b.services['grace']!.byId('youth')!.weekdays, [5], reason: 'the last one stays');
+
+      await go(tester, '/me/groups');
+      expect(find.text('週五'), findsOneWidget);
+    });
+
     testWidgets('renaming a duty moves members\' zones and the staff order with it', (tester) async {
       final b = seededChurch();
       await pumpApp(tester, b);

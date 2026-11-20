@@ -131,8 +131,8 @@ void main() {
   });
 
   group('arranging an event', () {
-    const sunday = Service(id: 'sunday', name: '主日崇拜', weekday: 7, duties: ['司會', '司琴', '招待']);
-    const youth = Service(id: 'youth', name: '青年崇拜', weekday: 6, duties: ['司琴', '音控']);
+    const sunday = Service(id: 'sunday', name: '主日崇拜', weekdays: [7], duties: ['司會', '司琴', '招待']);
+    const youth = Service(id: 'youth', name: '青年崇拜', weekdays: [6], duties: ['司琴', '音控']);
 
     test('offers every duty the services use, each once, in their order', () {
       expect(eventDutySuggestions(const [sunday, youth]), ['司會', '司琴', '招待', '音控']);

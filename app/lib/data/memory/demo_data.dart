@@ -205,7 +205,7 @@ const demoServices = [
   Service(
     id: 'sunday',
     name: '主日崇拜',
-    weekday: DateTime.sunday,
+    weekdays: [DateTime.sunday],
     duties: ['司會', '敬拜主領', '司琴', '鼓', '音控', '投影', '招待', '奉獻'],
     events: [
       EventTag(name: '聖餐', color: 0),
@@ -216,13 +216,13 @@ const demoServices = [
   Service(
     id: 'youth',
     name: '青年崇拜',
-    weekday: DateTime.saturday,
+    weekdays: [DateTime.saturday],
     duties: ['司會', '敬拜主領', '吉他', '音控', '投影'],
   ),
   Service(
     id: 'prayer',
     name: '禱告會',
-    weekday: DateTime.wednesday,
+    weekdays: [DateTime.wednesday],
     duties: ['帶領', '司琴'],
   ),
 ];
@@ -236,7 +236,7 @@ List<Service> demoServicesIn(AppLanguage language) {
       Service(
         id: s.id,
         name: w.services[i],
-        weekday: s.weekday,
+        weekdays: s.weekdays,
         duties: w.duties[i],
         events: [for (final (j, e) in s.events.indexed) EventTag(name: w.events[j], color: e.color)],
       ),
@@ -288,7 +288,7 @@ List<Member> demoMembers(int count, [AppLanguage language = AppLanguage.zhHant])
 List<Roster> demoRosters(List<Member> people, Day today, [List<Service> services = demoServices, Day? plannedUntil]) {
   final result = <Roster>[];
   for (final s in services) {
-    var day = today.addDays(-28).nextOnOrAfter(s.weekday);
+    var day = today.addDays(-28).nextOnOrAfter(s.weekdays.first);
     for (var week = 0; week < 52; week++, day = day.addDays(7)) {
       result.add(
         Roster(

@@ -26,7 +26,7 @@ void main() {
     final cid = backend.addChurch('恩典堂');
     backend.addMember(cid, Member(uid: me.uid, name: '管理員', role: Role.admin));
     backend.setServices(cid, const [
-      Service(id: 'sunday', name: '主日', weekday: 7, duties: ['司琴']),
+      Service(id: 'sunday', name: '主日', weekdays: [7], duties: ['司琴']),
     ]);
     final church = backend.church(cid);
     final roster = Roster(

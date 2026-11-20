@@ -825,6 +825,15 @@ describe('設定 (settings)', () => {
     await assertFails(deleteDoc(ref));
   });
 
+  it('有聚會好幾天（severalDays）之後，沒寫 severalDays 的舊版 App 不能整份覆蓋掉', async () => {
+    const ref = doc(as(ADMIN_A), `churches/${A}/settings/services`);
+    const all = services(['sunday', 'youth', 'prayer']);
+    await assertSucceeds(setDoc(ref, { ...all, severalDays: true }));
+    await assertFails(setDoc(ref, all));
+    await assertSucceeds(setDoc(ref, { ...all, severalDays: false }));
+    await assertSucceeds(setDoc(ref, all));
+  });
+
   it('services 不能夾帶其他欄位', async () => {
     await assertFails(
       setDoc(doc(as(ADMIN_A), `churches/${A}/settings/services`), {

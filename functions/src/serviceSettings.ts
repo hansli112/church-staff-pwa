@@ -7,7 +7,10 @@ import { LIMITS } from './limits.js';
 interface Service {
   id: string;
   name: string;
+  /** The first of [weekdays] when it has them, as older apps read it. */
   weekday: number;
+  /** The days it meets, in order, when more than one; absent for one day. */
+  weekdays?: number[];
   enabled: boolean;
   duties: string[];
   events: { name: string; color: number }[];
@@ -28,11 +31,24 @@ function label(value: unknown): string {
 
 function service(value: unknown): Service {
   const s = record(value);
-  exactKeys(s, ['id', 'name', 'weekday', 'enabled', 'duties', 'events', ...(Object.hasOwn(s, 'manyDuties') ? ['manyDuties'] : [])]);
+  exactKeys(s, [
+    'id', 'name', 'weekday', 'enabled', 'duties', 'events',
+    ...(Object.hasOwn(s, 'weekdays') ? ['weekdays'] : []),
+    ...(Object.hasOwn(s, 'manyDuties') ? ['manyDuties'] : []),
+  ]);
   const serviceId = id(s.id);
   const name = label(s.name);
   if (!Number.isInteger(s.weekday) || (s.weekday as number) < 1 || (s.weekday as number) > 7 || typeof s.enabled !== 'boolean') {
     fail('invalid-argument', 'unknown');
+  }
+  let weekdays: number[] | undefined;
+  if (Object.hasOwn(s, 'weekdays')) {
+    // Two or more, in order, the first its weekday.
+    if (!Array.isArray(s.weekdays) || s.weekdays.length < 2 || s.weekdays[0] !== s.weekday
+        || s.weekdays.some((d, i) => !Number.isInteger(d) || d < 1 || d > 7 || (i > 0 && d <= (s.weekdays as number[])[i - 1]))) {
+      fail('invalid-argument', 'unknown');
+    }
+    weekdays = s.weekdays as number[];
   }
   if (!Array.isArray(s.duties) || !Array.isArray(s.events)) fail('invalid-argument', 'unknown');
   const duties = s.duties.map(label);
@@ -49,7 +65,10 @@ function service(value: unknown): Service {
     manyDuties = s.manyDuties.map(label);
     if (new Set(manyDuties).size !== manyDuties.length || manyDuties.some((d) => !duties.includes(d))) fail('invalid-argument', 'unknown');
   }
-  return { id: serviceId, name, weekday: s.weekday as number, enabled: s.enabled, duties, events, ...(manyDuties && { manyDuties }) };
+  return {
+    id: serviceId, name, weekday: s.weekday as number, ...(weekdays && { weekdays }),
+    enabled: s.enabled, duties, events, ...(manyDuties && { manyDuties }),
+  };
 }
 
 function rename(value: unknown, before: Service, after: Service): DutyRename | undefined {
@@ -139,8 +158,11 @@ export async function editService(deps: Deps, caller: Caller | null, data: unkno
         tx.update(order.ref, { roles: next });
       }
     }
+    const next = services.map((s) => s.id === before.id ? after : s);
     tx.update(ref, {
-      services: services.map((s) => s.id === before.id ? after : s),
+      services: next,
+      // An older app's write of the list would lose `weekdays`: firestore.rules turns it away.
+      severalDays: next.some((s) => Array.isArray(s.weekdays)),
       updatedAt: serverTime(),
     });
   });

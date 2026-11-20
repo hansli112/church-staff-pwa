@@ -26,7 +26,7 @@
 | `pendingIndex/{email 的 SHA-256}` | 只有後端讀寫：`churches`（教會 id → 待認領同工 id） |
 | `invites/{邀請碼}` | `cid`、`churchName`、`expiresAt`（31 天內）、`revoked`、`createdBy`、`createdAt`、`zoneTypes`（選填，加入後屬於的牧區，最多 20 個；加入時只留教會還有的聚會別，不帶服事項目）。管理員建立、撤回，加入經 `redeemInvite` |
 | `churches/{cid}/staff_orders/{type}` | 各聚會別的同工排序 |
-| `churches/{cid}/settings/{doc}` | `services`（聚會別，`ids` 只增不減；每個聚會的 `manyDuties` 是多人服事的服事項目，管理員第一次設之前沒有這個欄位，App 照前 8 週猜；`editService` 檢查都在 `duties` 裡，服事項目改名時跟著改）、`ministries`（事工：`ministries` 每個 `{id, name, duties: [{service, duty}]}`，最多 50 個；`ids` 只增不減）、`roster_templates` 等 |
+| `churches/{cid}/settings/{doc}` | `services`（聚會別，`ids` 只增不減；每個聚會的 `weekday` 是星期幾（1 是週一…7 是週日），一週聚會好幾天的另有 `weekdays`（兩天以上、照順序，第一天就是 `weekday`，舊版 App 只讀 `weekday`），每一天各一張服事表；每個聚會的 `manyDuties` 是多人服事的服事項目，管理員第一次設之前沒有這個欄位，App 照前 8 週猜；`editService` 檢查都在 `duties` 裡，服事項目改名時跟著改）、`ministries`（事工：`ministries` 每個 `{id, name, duties: [{service, duty}]}`，最多 50 個；`ids` 只增不減）、`roster_templates` 等 |
 | `churches/{cid}/settings/link` | 首頁連結：`title`（1–30 字）、`body`（最多 120 字）、`url`（限 `https`）；`source`（每日內容來源，`https`）與 `fetchMinute`（每天抓取時間，教會時區午夜後的分鐘數，15 分鐘為單位）只能經 `setLinkSource` 設定 |
 | `churches/{cid}/settings/linkContent` | 只有後端寫，兩種形狀擇一：成功時 `source`、`date`（教會的今天，`YYYY-MM-DD`）、`title`、`body`、`link`、`fetchedAt`；失敗時只有 `source`、`error`、`errorStatus`、`errorAt`，不保留之前的內容 |
 | `linkSources/{cid}` | 只有後端讀寫：內容來源的排程，`source`、`fetchMinute`、`epoch`（設定每變一次就換，晚到的結果不能寫回）、`nextAt`、`lastAttemptDay`（排程這天試過了）、`lastDay`（最後成功的那天）、`attemptId`（抓取中才有） |
@@ -143,7 +143,7 @@ App 與 Functions 各寫一次的教會資料規則也一樣：新教會的預�
 管理員在「管理教會」打開，記下打開那天（`attendanceSince`），之前的聚會不算。
 
 - 一個群組的回報人數可以關掉一段時間：在 `pauses` 加一段從那天起、到 `9999-12-31` 的暫停；打開時那段的結束改成那天（同一天開關就拿掉），關掉的那幾週一直不算未填。
-- 什麼時候要填：聚會照服事設定的星期幾，而且那天有服事表；設了自己聚會時間的聚會不看服事表，照它每週、隔週或每月第幾個那天要填（以前的「每週都填人數」`everyWeek` 就是每週）。小組和其他聚會照它們的聚會時間：每週或隔週（從 `startsOn` 算），或每月第幾個 `weekday`（`monthWeeks`）；`startsOn` 之前不算，所以剛設好的不會有一排之前的未填。沒設星期幾的不提醒。暫停的期間不算（`testdata/church_rules.json` 的 `attendanceDue`）。
+- 什麼時候要填：聚會照服事設定的星期幾（好幾天的每一天），而且那天有服事表；聚會好幾天的，聚會時間只能照服事表或每週；設了自己聚會時間的聚會不看服事表，照它每週、隔週或每月第幾個那天要填（以前的「每週都填人數」`everyWeek` 就是每週）。小組和其他聚會照它們的聚會時間：每週或隔週（從 `startsOn` 算），或每月第幾個 `weekday`（`monthWeeks`）；`startsOn` 之前不算，所以剛設好的不會有一排之前的未填。沒設星期幾的不提醒。暫停的期間不算（`testdata/church_rules.json` 的 `attendanceDue`）。
 - 提醒：每小時跑一次，教會當地 21:00 那次給還沒人填的群組推播：聚會當天一次，隔天還沒填再一次（「還沒填」，#93），之後不再推（`functions/src/attendance.ts`）。聚會給它的負責人（`lead` 身分；牧者看得到人數、能填，但不提醒，`testdata/church_rules.json` 的 `attendanceReminded`），小組給小組長，再加上那個群組 `fillers` 裡的人；其他聚會只給 `fillers`。首頁的「填寫人數」也只給會被提醒的人。有人填了、按了「這次沒聚會」、或和別的小組一起聚會了就不推。點推播直接開那次聚會的填寫畫面（`/home?fill=<群組>&day=<dateKey>`）。同工可以在「設定 → 通知」關掉「回報人數提醒」（`attendance`）。
 - 人數總覽（#93、#95）：在「設定」→「回報人數」頁（回報人數開著時）。管理員和行政看全部群組；聚會負責人和牧者從「我負責的」進去，只看自己的聚會和它的小組（能填人數的群組，`writesAttendance`）。一次一週，星期日到星期六，最早到回報人數開始那週（最多 12 週前），打開是最近一個有人填過的週。每個聚會一區（那個聚會和它的小組），其他聚會一區放最後；每次聚會一列，寫人數、「未填」或「沒聚會」，區裡照日期由舊到新、同一天聚會在小組前，沒聚會的在後面；今天的有人填了才列；這週還沒到的聚會列最後，寫聚會時間，沒設聚會時間的小組寫「還沒設聚會時間」，暫停中（回報人數關掉，或舊版設的暫停）不列。最上面寫還有幾個未填或都填好了，不加總人數。管理員和行政在最下面看到每個其他聚會和它的聚會時間（這週不聚會的也找得到），和「新增其他聚會」。未填的那列有「提醒」，推給和自動提醒同一批人，同一個群組一天一次，能填那個群組人數的人都能按（`remindAttendance`、`attendanceAsks`）。點一列開那一次的填寫畫面，行政也能代填；畫面最下面到那個群組的人數頁。
 - 聯合小組（#93）：填小組人數時可以勾「和其他小組一起」：同一個聚會、那天也要聚會、還沒人填的小組。總人數記在填的小組（`together`），勾到的那天記成「和○○小組一起」（`with`），不算未填、不提醒；不蓋掉已經填好的（`togetherFilled`）。之後取消勾選的會清掉，除非那組自己改填過；被勾到的小組長可以直接改成自己的人數。聚會合併不用這個，用「這次沒聚會」加備註。

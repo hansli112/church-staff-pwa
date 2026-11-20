@@ -2703,13 +2703,13 @@ class _MemoryAttendance implements AttendanceData {
     final meets = switch (_c._group(key)) {
       ServiceGroup(:final id) => switch (b.services[cid]!.byId(id)) {
         final s? when record.time != null => Meets(
-          weekday: s.weekday,
+          weekdays: s.weekdays,
           every: record.time!.every,
           startsOn: record.time!.startsOn,
           monthWeeks: record.time!.monthWeeks,
           roster: record.time!.startsOn == null ? null : b.rosters[cid]!.containsKey(Roster.idFor(id, day)),
         ),
-        final s? => Meets(weekday: s.weekday, roster: b.rosters[cid]!.containsKey(Roster.idFor(id, day))),
+        final s? => Meets(weekdays: s.weekdays, roster: b.rosters[cid]!.containsKey(Roster.idFor(id, day))),
         null => null,
       },
       SmallGroup(:final id) => b.smallGroups[cid]?[id]?.meets,
@@ -3437,7 +3437,7 @@ const defaultServices = {
     Service(
       id: 'sunday',
       name: '主日崇拜',
-      weekday: DateTime.sunday,
+      weekdays: [DateTime.sunday],
       duties: ['司會', '敬拜', '司琴', '音控', '投影', '招待'],
       events: [
         EventTag(name: '聖餐', color: 0),
@@ -3449,7 +3449,7 @@ const defaultServices = {
     Service(
       id: 'sunday',
       name: '主日崇拜',
-      weekday: DateTime.sunday,
+      weekdays: [DateTime.sunday],
       duties: ['领会', '敬拜主领', '司琴', '音控', '投影', '招待'],
       events: [
         EventTag(name: '圣餐', color: 0),
@@ -3461,7 +3461,7 @@ const defaultServices = {
     Service(
       id: 'sunday',
       name: 'Sunday Service',
-      weekday: DateTime.sunday,
+      weekdays: [DateTime.sunday],
       duties: ['Host', 'Worship Leader', 'Piano', 'Sound', 'Slides', 'Usher'],
       events: [
         EventTag(name: 'Communion', color: 0),
@@ -3473,7 +3473,7 @@ const defaultServices = {
     Service(
       id: 'sunday',
       name: '主日礼拝',
-      weekday: DateTime.sunday,
+      weekdays: [DateTime.sunday],
       duties: ['司会', '賛美リード', '奏楽', '音響', 'スライド', '受付'],
       events: [
         EventTag(name: '聖餐式', color: 0),
@@ -3485,7 +3485,7 @@ const defaultServices = {
     Service(
       id: 'sunday',
       name: '주일예배',
-      weekday: DateTime.sunday,
+      weekdays: [DateTime.sunday],
       duties: ['사회', '찬양 인도', '반주', '음향', '자막', '안내'],
       events: [
         EventTag(name: '성찬', color: 0),

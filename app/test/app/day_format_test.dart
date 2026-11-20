@@ -3,6 +3,7 @@ import 'package:intl/intl.dart';
 import 'package:martha/core/builtin_localizations.dart';
 import 'package:martha/core/languages.dart';
 import 'package:martha/domain/day.dart';
+import 'package:martha/features/common/labels.dart';
 import 'package:martha/features/rosters/day_block.dart';
 import 'package:martha/features/rosters/format.dart';
 import 'package:martha/l10n/app_localizations.dart';
@@ -37,5 +38,15 @@ void main() {
     expect(dayBlock(today, today).month, '10月');
     await _in(AppLanguage.ko);
     expect(dayBlock(today, today).month, '10월');
+  });
+
+  test("a service's weekdays: three or more in a row as one, the rest each", () async {
+    final zh = await _in(AppLanguage.zhHant);
+    expect(weekdaysLabel(zh, [7]), '週日');
+    expect(weekdaysLabel(zh, [3, 7]), '週三、週日');
+    expect(weekdaysLabel(zh, [1, 2, 3, 4, 5]), '週一到週五');
+    expect(weekdaysLabel(zh, [1, 2, 4, 5, 6]), '週一、週二、週四到週六');
+    final en = await _in(AppLanguage.en);
+    expect(weekdaysLabel(en, [1, 2, 3, 4, 5]), 'Mon–Fri');
   });
 }

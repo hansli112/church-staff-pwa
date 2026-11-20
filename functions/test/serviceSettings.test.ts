@@ -64,6 +64,12 @@ test('service edits reject noncanonical input, identity changes and ambiguous du
     { ...valid, after: { ...sunday, name: ' ' } },
     { ...valid, after: { ...sunday, weekday: 8 } },
     { ...valid, after: { ...sunday, weekday: 1.5 } },
+    { ...valid, after: { ...sunday, weekday: 1, weekdays: [1] } },
+    { ...valid, after: { ...sunday, weekday: 1, weekdays: [1, 1] } },
+    { ...valid, after: { ...sunday, weekday: 3, weekdays: [1, 3] } },
+    { ...valid, after: { ...sunday, weekday: 3, weekdays: [3, 1] } },
+    { ...valid, after: { ...sunday, weekday: 1, weekdays: [1, 8] } },
+    { ...valid, after: { ...sunday, weekday: 1, weekdays: '1,3' } },
     { ...valid, after: { ...sunday, enabled: 'yes' } },
     { ...valid, after: { ...sunday, duties: ['司會', '司會'] } },
     { ...valid, after: { ...sunday, duties: [' '] } },
@@ -177,6 +183,22 @@ test('editing one service compares only that service and merges the current unre
   const after = { ...sunday, weekday: 6 };
   await editService(deps, caller('admin'), { churchId: 'C1', before: sunday, after });
   assert.deepEqual((await db.doc('churches/C1/settings/services').get()).get('services'), [currentYouth, after]);
+});
+
+test('a service may meet on several weekdays, the first of them its weekday, as older apps read it', async () => {
+  await church();
+  const after = { ...sunday, weekday: 1, weekdays: [1, 2, 3, 4, 5] };
+  await editService(deps, caller('admin'), { churchId: 'C1', before: sunday, after });
+  assert.deepEqual((await db.doc('churches/C1/settings/services').get()).get('services'), [after, youth]);
+  assert.equal((await db.doc('churches/C1/settings/services').get()).get('severalDays'), true, 'firestore.rules keeps older apps off the list');
+  // An older app, without them, sees a newer setting.
+  await rejectsWith(editService(deps, caller('admin'), {
+    churchId: 'C1', before: { ...sunday, weekday: 1 }, after: { ...sunday, weekday: 1, name: '晨更' },
+  }), 'conflict');
+  const back = { ...sunday, weekday: 7 };
+  await editService(deps, caller('admin'), { churchId: 'C1', before: after, after: back });
+  assert.deepEqual((await db.doc('churches/C1/settings/services').get()).get('services'), [back, youth]);
+  assert.equal((await db.doc('churches/C1/settings/services').get()).get('severalDays'), false);
 });
 
 test('an admin edits only the compared service, keeping unrelated services, history and existing assignments', async () => {

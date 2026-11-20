@@ -4,7 +4,7 @@ import 'package:martha/domain/models.dart';
 import 'package:martha/domain/plan_weeks.dart';
 import 'package:martha/domain/serving_around.dart';
 
-const sunday = Service(id: 'sunday', name: '主日崇拜', weekday: DateTime.sunday, duties: ['司會', '司琴', '招待']);
+const sunday = Service(id: 'sunday', name: '主日崇拜', weekdays: [DateTime.sunday], duties: ['司會', '司琴', '招待']);
 
 Roster day(int month, int date, List<Duty> duties, {String type = 'sunday'}) =>
     Roster(type: type, day: Day(2026, month, date), duties: duties);
@@ -34,6 +34,18 @@ void main() {
       expect([for (final d in months.first.days) d.day.day], [4, 11, 14, 18, 25]);
       expect(months.last.days.map((d) => d.day.day), [1, 8, 15, 22, 29]);
       expect(months.last.days.every((d) => !d.saved), isTrue);
+    });
+
+    test('a service on several weekdays has a row for each of them', () {
+      const prayer = Service(id: 'prayer', name: '禱告會', weekdays: [DateTime.tuesday, DateTime.thursday]);
+      final months = planMonths(
+        service: prayer,
+        saved: const [],
+        today: Day(2026, 10, 20),
+        month: Day(2026, 10, 1),
+        months: 1,
+      );
+      expect([for (final d in months.single.days) d.day.day], [20, 22, 27, 29]);
     });
 
     test('across a year, and a month with no day left out', () {

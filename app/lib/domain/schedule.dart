@@ -4,13 +4,16 @@ import 'models.dart';
 /// The rosters of [service] from [from] for [weeks] weeks, oldest first.
 ///
 /// Roster documents are only written when someone edits a day. Every other
-/// week shows a draft built from the service template on the service's
-/// weekday, so nothing has to be pre-generated (self-host backfilled a
-/// quarter of documents from the editor's device, which needed a
-/// transaction over every day of each week to avoid duplicates).
+/// day shows a draft built from the service template on each of the
+/// service's weekdays, so nothing has to be pre-generated (self-host
+/// backfilled a quarter of documents from the editor's device, which needed
+/// a transaction over every day of each week to avoid duplicates).
 ///
-/// A week that already has a saved roster gets no draft, even when the
-/// service has since moved to another weekday.
+/// A day saved on one of its weekdays takes that day's place. One saved
+/// off it takes its week's place too when the service meets on one day
+/// (it has since moved to another weekday); one on several has each of
+/// them still, as 安排服事 does (planMonths), a day dropped keeping only
+/// what was saved on it.
 List<Roster> upcomingRosters({
   required Service service,
   required Iterable<Roster> saved,
@@ -22,13 +25,22 @@ List<Roster> upcomingRosters({
       if (roster.type == service.id && !roster.day.isBefore(from)) roster,
   ];
   if (service.enabled) {
-    final taken = {for (final r in result) r.day.weekStart};
+    final byWeek = <Day, List<Day>>{};
+    for (final r in result) {
+      (byWeek[r.day.weekStart] ??= []).add(r.day);
+    }
     for (var week = 0; week < weeks; week++) {
       final start = from.weekStart.addDays(week * 7);
-      if (taken.contains(start)) continue;
-      final day = start.nextOnOrAfter(service.weekday);
-      if (day.isBefore(from)) continue;
-      result.add(draftRoster(service, day));
+      final taken = byWeek[start] ?? const <Day>[];
+      final free = [
+        for (final w in service.weekdays)
+          if (start.nextOnOrAfter(w) case final day when !taken.contains(day)) day,
+      ];
+      if (service.weekdays.length == 1 && taken.isNotEmpty) free.clear();
+      result.addAll([
+        for (final day in free)
+          if (!day.isBefore(from)) draftRoster(service, day),
+      ]);
     }
   }
   result.sort((a, b) => a.day.compareTo(b.day));

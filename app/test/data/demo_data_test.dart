@@ -15,7 +15,7 @@ void main() {
           .where((r) => r.type == s.id)
           .map((r) => r.day)
           .reduce((a, b) => a.compareTo(b) < 0 ? a : b);
-      expect(first, from.nextOnOrAfter(s.weekday), reason: s.name);
+      expect(first, from.nextOnOrAfter(s.weekdays.first), reason: s.name);
     }
   });
 
@@ -73,10 +73,10 @@ void main() {
         expect(b.services['demo']!.services.map((s) => s.name), services.map((s) => s.name));
         for (final (i, s) in services.indexed) {
           expect(
-            [s.id, s.weekday, s.duties.length, s.events.length],
+            [s.id, s.weekdays, s.duties.length, s.events.length],
             [
               demoServices[i].id,
-              demoServices[i].weekday,
+              demoServices[i].weekdays,
               demoServices[i].duties.length,
               demoServices[i].events.length,
             ],

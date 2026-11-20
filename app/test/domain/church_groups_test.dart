@@ -4,8 +4,8 @@ import 'package:martha/domain/models.dart';
 final _groups = ChurchGroups(
   services: const ServiceSettings(
     services: [
-      Service(id: 'sunday', name: '主日崇拜', weekday: 7),
-      Service(id: 'old', name: '晨禱', weekday: 3, enabled: false),
+      Service(id: 'sunday', name: '主日崇拜', weekdays: [7]),
+      Service(id: 'old', name: '晨禱', weekdays: [3], enabled: false),
     ],
   ),
   ministries: const MinistrySettings(
@@ -77,8 +77,8 @@ void main() {
     final groups = ChurchGroups(
       services: const ServiceSettings(
         services: [
-          Service(id: 'sunday', name: '主日崇拜', weekday: 7),
-          Service(id: 'youth', name: '青年崇拜', weekday: 6),
+          Service(id: 'sunday', name: '主日崇拜', weekdays: [7]),
+          Service(id: 'youth', name: '青年崇拜', weekdays: [6]),
         ],
       ),
       ministries: const MinistrySettings(

@@ -5,7 +5,7 @@ import 'package:martha/domain/schedule.dart';
 
 void main() {
   test('the rolling draft horizon does not hide already arranged far-future services', () {
-    const service = Service(id: 'sunday', name: '主日崇拜', weekday: DateTime.sunday, duties: ['司琴']);
+    const service = Service(id: 'sunday', name: '主日崇拜', weekdays: [DateTime.sunday], duties: ['司琴']);
     final far = Roster(type: 'sunday', day: Day(2027, 7, 4));
     final shown = upcomingRosters(service: service, saved: [far], from: Day(2026, 10, 1));
 

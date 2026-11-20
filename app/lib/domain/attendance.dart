@@ -9,16 +9,28 @@ import 'day.dart';
 /// same rules.
 
 /// When a group meets. A service, unless its 聚會時間 says otherwise: on
-/// its [weekday] when that day has a roster ([roster], whether it has);
+/// its [weekday], or any of its [weekdays] when it meets on several, when
+/// that day has a roster ([roster], whether it has);
 /// with one from [startsOn], by its rosters before then.
 /// Else on [weekday], every [every] weeks from [startsOn], a day it met;
 /// or, with [monthWeeks], those weeks of each month (第 1、3 個週五), from
 /// [startsOn] on.
 @immutable
 class Meets {
-  const Meets({this.weekday, this.roster, this.every = 1, this.startsOn, this.monthWeeks = const []});
+  const Meets({
+    this.weekday,
+    this.weekdays = const [],
+    this.roster,
+    this.every = 1,
+    this.startsOn,
+    this.monthWeeks = const [],
+  });
 
   final int? weekday;
+  final List<int> weekdays;
+
+  /// Whether it meets on [day]'s day of the week.
+  bool onWeekdayOf(Day day) => weekdays.isNotEmpty ? weekdays.contains(day.weekday) : day.weekday == weekday;
 
   /// Null for one that meets with or without a roster.
   final bool? roster;
@@ -144,7 +156,7 @@ bool attendanceDue(
   required Day day,
 }) {
   if (day.isBefore(since) || pauses.any((p) => p.covers(day))) return false;
-  if (meets.weekday == null || day.weekday != meets.weekday) return false;
+  if (!meets.onWeekdayOf(day)) return false;
   final start = meets.startsOn;
   // A service by its rosters, or, on a 聚會時間 of its own, before it began.
   if (meets.roster != null && (start == null || day.isBefore(start))) return meets.roster!;

@@ -7,7 +7,7 @@ import 'package:martha/domain/staff_order.dart';
 const service = Service(
   id: 'sunday',
   name: '主日',
-  weekday: 7,
+  weekdays: [7],
   duties: ['司會', '司琴', '招待'],
   events: [EventTag(name: '聖餐', color: 0)],
 );

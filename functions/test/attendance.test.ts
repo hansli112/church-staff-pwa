@@ -192,6 +192,19 @@ describe('回報人數 reminders (#85)', () => {
     assert.equal(await sendAttendanceReminders({ db, messaging, now: () => new Date('2026-10-18T22:00:00+08:00'), appUrl }), 0);
   });
 
+  test('a service on several weekdays asks on each of them with a roster', async () => {
+    await church();
+    await db.doc('churches/C1/settings/services').update({
+      services: [{ id: 'sunday', name: '主日崇拜', weekday: 3, weekdays: [3, 7], duties: ['司琴'] }],
+    });
+    await roster('2026-10-14');
+    await roster('2026-10-18');
+    const { sent, messaging } = fakePush();
+    assert.equal(await sendAttendanceReminders({ db, messaging, now: () => new Date('2026-10-14T21:00:00+08:00'), appUrl }), 1);
+    assert.equal(await sendAttendanceReminders({ db, messaging, now: sundayEvening, appUrl }), 1);
+    assert.deepEqual(sent.map((s) => s.tokens), [['tok-sundayLead'], ['tok-sundayLead']]);
+  });
+
   test("not its 牧者, who only sees them", async () => {
     await church();
     await db.doc('churches/C1/members/mei').update({ leadTypes: ['sunday'], identities: [{ kind: 'pastor', services: ['sunday'] }] });

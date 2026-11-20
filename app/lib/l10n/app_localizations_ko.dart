@@ -987,6 +987,11 @@ class L10nKo extends L10n {
   String get weekday7 => '일';
 
   @override
+  String weekdayRange(String from, String to) {
+    return '$from~$to';
+  }
+
+  @override
   String get deleteAccountTitle => '계정을 삭제할까요?';
 
   @override

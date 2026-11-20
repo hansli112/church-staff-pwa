@@ -37,7 +37,7 @@ final _recentRostersProvider = StreamProvider.autoDispose<List<Roster>>((ref) {
 typedef AttendanceGroup = ({ChurchGroup group, String name, Meets Function(Day day) meetsOn});
 
 /// The groups of the church that meet (its services, 小組 by when they
-/// meet, and 其他聚會), in that order, as [AttendanceGroup]s; a service meets on its weekday
+/// meet, and 其他聚會), in that order, as [AttendanceGroup]s; a service meets on its weekdays
 /// when that day has a roster, unless its 聚會時間 says otherwise
 /// (AttendanceRecord.time).
 final attendanceGroupsProvider = Provider.autoDispose<List<AttendanceGroup>>((ref) {
@@ -54,7 +54,7 @@ final attendanceGroupsProvider = Provider.autoDispose<List<AttendanceGroup>>((re
       (
         group: ServiceGroup(s.id),
         name: s.name,
-        meetsOn: (Day day) => Meets(weekday: s.weekday, roster: held.contains((s.id, day))),
+        meetsOn: (Day day) => Meets(weekdays: s.weekdays, roster: held.contains((s.id, day))),
       ),
     for (final g in smallGroups.inMeetingOrder([for (final s in services) s.id]))
       (group: g.group, name: g.name, meetsOn: (Day _) => g.meets),
@@ -86,8 +86,9 @@ bool _due(AttendanceGroup group, {required Day since, required AttendanceRecord 
     attendanceDue(
       switch ((group.meetsOn(day), record.time)) {
         // Before its own began, by its rosters as before.
-        (Meets(:final weekday, :final roster?), final time?) => Meets(
+        (Meets(:final weekday, :final weekdays, :final roster?), final time?) => Meets(
           weekday: weekday,
+          weekdays: weekdays,
           every: time.every,
           startsOn: time.startsOn,
           monthWeeks: time.monthWeeks,

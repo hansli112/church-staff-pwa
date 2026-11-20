@@ -1,5 +1,6 @@
 import 'dart:math';
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:material_symbols_icons/symbols.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -46,7 +47,10 @@ class ServiceListSection extends ConsumerWidget {
       final name = await promptText(context, title: l10n.serviceAdd, hint: l10n.serviceName);
       if (name == null) return;
       final id = newServiceId(settings.ids);
-      await save([...list, Service(id: id, name: name, weekday: DateTime.sunday)]);
+      await save([
+        ...list,
+        Service(id: id, name: name, weekdays: [DateTime.sunday]),
+      ]);
       if (context.mounted) await context.push('/me/groups/service/$id');
     }
 
@@ -58,8 +62,8 @@ class ServiceListSection extends ConsumerWidget {
       row: (s, handle) => ListRow(
         title: s.name,
         subtitle: s.enabled
-            ? weekdayLabel(l10n, s.weekday)
-            : '${weekdayLabel(l10n, s.weekday)}${l10n.dotSeparator}${l10n.serviceDisabled}',
+            ? weekdaysLabel(l10n, s.weekdays)
+            : '${weekdaysLabel(l10n, s.weekdays)}${l10n.dotSeparator}${l10n.serviceDisabled}',
         trailing: handle,
         // Opens its page, which the handle alone does not say.
         chevron: true,
@@ -151,28 +155,50 @@ class ServiceEdits {
     if (name != null) await save(service.copyWith(name: name));
   }
 
-  /// The weekday it meets, picked in a sheet.
-  Future<void> pickWeekday() async {
+  /// The weekdays it meets, ticked in a sheet and saved once as it closes
+  /// (not each tick, as MultiSelectRow does: ticks quicker than a save
+  /// would each compare with a service already changed); the last one
+  /// ticked stays.
+  Future<void> pickWeekdays() async {
     final l10n = _l10n;
-    final day = await showAppSheet<int>(
+    final ticked = {...service.weekdays};
+    await showAppSheet<void>(
       context,
-      builder: (context) => SafeArea(
-        child: SingleChildScrollView(
-          child: ListSection(
-            header: l10n.weekday,
+      builder: (context) => StatefulBuilder(
+        builder: (context, setState) => SafeArea(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
             children: [
-              for (var d = 1; d <= 7; d++)
-                ListRow(
-                  title: weekdayLabel(l10n, d),
-                  selected: service.weekday == d,
-                  onTap: () => Navigator.pop(context, d),
+              SheetBar(
+                title: l10n.weekday,
+                cancel: false,
+                actions: [SecondaryButton(label: l10n.done, onPressed: () => Navigator.pop(context))],
+              ),
+              Flexible(
+                child: SingleChildScrollView(
+                  child: ListSection(
+                    children: [
+                      for (var d = 1; d <= 7; d++)
+                        ListRow(
+                          title: weekdayLabel(l10n, d),
+                          selected: ticked.contains(d),
+                          onTap: () => setState(() {
+                            Haptics.selection();
+                            if (!ticked.remove(d)) ticked.add(d);
+                            if (ticked.isEmpty) ticked.add(d);
+                          }),
+                        ),
+                    ],
+                  ),
                 ),
+              ),
             ],
           ),
         ),
       ),
     );
-    if (day != null) await save(service.copyWith(weekday: day));
+    final weekdays = ticked.toList()..sort();
+    if (!listEquals(weekdays, service.weekdays)) await save(service.copyWith(weekdays: weekdays));
   }
 
   /// 新增服事項目: named, last on the list; its name once on it, or null.
@@ -395,7 +421,7 @@ class ServiceEdits {
   }
 }
 
-/// The top of a service's page: its name, weekday and whether it still
+/// The top of a service's page: its name, weekdays and whether it still
 /// runs; an admin changes them, anyone else reads them.
 Widget serviceBasicsSection(BuildContext context, WidgetRef ref, Service service, {required bool admin}) {
   final l10n = L10n.of(context);
@@ -410,9 +436,9 @@ Widget serviceBasicsSection(BuildContext context, WidgetRef ref, Service service
       ),
       ListRow(
         title: l10n.weekday,
-        value: weekdayLabel(l10n, service.weekday),
+        value: weekdaysLabel(l10n, service.weekdays),
         chevron: admin,
-        onTap: admin ? edits.pickWeekday : null,
+        onTap: admin ? edits.pickWeekdays : null,
       ),
       if (admin)
         SwitchRow(

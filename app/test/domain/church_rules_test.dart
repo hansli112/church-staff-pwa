@@ -298,6 +298,7 @@ void main() {
           attendanceDue(
             Meets(
               weekday: meets['weekday'] as int?,
+              weekdays: (meets['weekdays'] as List? ?? const []).cast<int>(),
               roster: meets['roster'] as bool?,
               every: meets['every'] as int? ?? 1,
               startsOn: Day.tryParse(meets['startsOn'] as String?),

@@ -7,7 +7,7 @@ import 'package:martha/domain/staff_order.dart';
 
 Roster sundayOn(int day) => Roster(type: 'sunday', day: Day(2026, 10, day));
 
-const sunday = Service(id: 'sunday', name: '主日', weekday: DateTime.sunday, duties: ['司琴']);
+const sunday = Service(id: 'sunday', name: '主日', weekdays: [DateTime.sunday], duties: ['司琴']);
 
 void main() {
   test('a change names exactly the documents it touches, before and after', () {

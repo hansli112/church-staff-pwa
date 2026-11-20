@@ -37,7 +37,8 @@
     "services": [
       {
         "id": "sunday", "name": "主日崇拜",
-        "weekday": 7,                      // 1 = 週一 … 7 = 週日
+        "weekday": 7,                      // 1 = 週一 … 7 = 週日；聚會好幾天時是第一天
+                                           // 聚會好幾天時另有 "weekdays": [1, 2, 3, 4, 5]
         "enabled": true,
         "duties": ["司會", "司琴"],         // 服事表的範本
         "events": [{ "name": "聖餐", "color": 0 }],  // color：0 紅、1 橘、2 黃、3 綠、4 藍、5 紫

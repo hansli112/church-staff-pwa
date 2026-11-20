@@ -3,9 +3,9 @@ import 'package:martha/domain/day.dart';
 import 'package:martha/domain/getting_started.dart';
 import 'package:martha/domain/models.dart';
 
-const sunday = Service(id: 'sunday', name: '主日崇拜', weekday: DateTime.sunday, duties: ['司會', '司琴']);
-const youth = Service(id: 'youth', name: '青年崇拜', weekday: DateTime.saturday, duties: ['司會']);
-const closed = Service(id: 'closed', name: '晚堂', weekday: DateTime.sunday, enabled: false);
+const sunday = Service(id: 'sunday', name: '主日崇拜', weekdays: [DateTime.sunday], duties: ['司會', '司琴']);
+const youth = Service(id: 'youth', name: '青年崇拜', weekdays: [DateTime.saturday], duties: ['司會']);
+const closed = Service(id: 'closed', name: '晚堂', weekdays: [DateTime.sunday], enabled: false);
 const services = ServiceSettings(services: [sunday, youth, closed]);
 const worship = Ministry(id: 'worship', name: '敬拜團', duties: [MinistryDuty('youth', '司琴')]);
 const care = Ministry(id: 'care', name: '關懷事工');

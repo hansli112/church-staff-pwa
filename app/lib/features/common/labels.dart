@@ -71,6 +71,25 @@ String weekdayLabel(L10n l10n, int weekday) => switch (weekday) {
   _ => l10n.weekday7,
 };
 
+/// The days a service meets, in order: 週日; 週三、週日; three or more in
+/// a row as one, 週一到週五.
+String weekdaysLabel(L10n l10n, List<int> weekdays) {
+  final parts = <String>[];
+  for (var i = 0; i < weekdays.length;) {
+    var j = i;
+    while (j + 1 < weekdays.length && weekdays[j + 1] == weekdays[j] + 1) {
+      j++;
+    }
+    if (j - i >= 2) {
+      parts.add(l10n.weekdayRange(weekdayLabel(l10n, weekdays[i]), weekdayLabel(l10n, weekdays[j])));
+    } else {
+      parts.addAll([for (var k = i; k <= j; k++) weekdayLabel(l10n, weekdays[k])]);
+    }
+    i = j + 1;
+  }
+  return parts.join(l10n.listSeparator);
+}
+
 String currencyLabel(L10n l10n, Currency c) => switch (c) {
   Currency.twd => l10n.currencyTwd,
   Currency.usd => l10n.currencyUsd,

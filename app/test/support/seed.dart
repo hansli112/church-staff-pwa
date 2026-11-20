@@ -8,11 +8,11 @@ import 'harness.dart';
 const sundayService = Service(
   id: 'sunday',
   name: '主日崇拜',
-  weekday: DateTime.sunday,
+  weekdays: [DateTime.sunday],
   duties: ['司會', '司琴', '招待'],
   events: [EventTag(name: '聖餐', color: 0)],
 );
-const youthService = Service(id: 'youth', name: '青年崇拜', weekday: DateTime.saturday, duties: ['司會']);
+const youthService = Service(id: 'youth', name: '青年崇拜', weekdays: [DateTime.saturday], duties: ['司會']);
 
 const pastor = Member(uid: 'pastor', name: '王牧師', role: Role.admin);
 

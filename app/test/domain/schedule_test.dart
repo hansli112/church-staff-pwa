@@ -7,7 +7,7 @@ void main() {
   const sunday = Service(
     id: 'sunday',
     name: '主日崇拜',
-    weekday: DateTime.sunday,
+    weekdays: [DateTime.sunday],
     duties: ['司會', '司琴'],
   );
   final thursday = Day(2026, 10, 1);
@@ -79,6 +79,43 @@ void main() {
       weeks: 1,
     );
     expect(rosters.single.day.key, '2026-10-04');
+  });
+
+  group('a service on several weekdays', () {
+    const morning = Service(id: 'morning', name: '晨更', weekdays: [1, 2, 3, 4, 5], duties: ['帶領']);
+
+    test('has a day on each of them', () {
+      final rosters = upcomingRosters(service: morning, saved: const [], from: thursday, weeks: 2);
+      expect(rosters.map((r) => r.day.key), [
+        '2026-10-01',
+        '2026-10-02',
+        '2026-10-05',
+        '2026-10-06',
+        '2026-10-07',
+        '2026-10-08',
+        '2026-10-09',
+      ]);
+    });
+
+    test('one saved on one of them takes its place alone; one saved off them, none', () {
+      final rosters = upcomingRosters(
+        service: morning,
+        saved: [
+          Roster(type: 'morning', day: Day(2026, 10, 6)),
+          Roster(type: 'morning', day: Day(2026, 10, 10)), // Saturday, since dropped
+        ],
+        from: Day(2026, 10, 5),
+        weeks: 1,
+      );
+      expect(rosters.map((r) => (r.day.key, r.saved)), [
+        ('2026-10-05', false),
+        ('2026-10-06', true),
+        ('2026-10-07', false),
+        ('2026-10-08', false),
+        ('2026-10-09', false),
+        ('2026-10-10', true),
+      ]);
+    });
   });
 
   group('myServices', () {

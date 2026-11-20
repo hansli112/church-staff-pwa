@@ -986,6 +986,11 @@ class L10nJa extends L10n {
   String get weekday7 => '日曜';
 
   @override
+  String weekdayRange(String from, String to) {
+    return '$from〜$to';
+  }
+
+  @override
   String get deleteAccountTitle => 'アカウントを削除しますか？';
 
   @override

@@ -986,6 +986,11 @@ class L10nZh extends L10n {
   String get weekday7 => '週日';
 
   @override
+  String weekdayRange(String from, String to) {
+    return '$from到$to';
+  }
+
+  @override
   String get deleteAccountTitle => '刪除你的帳號？';
 
   @override
@@ -4567,6 +4572,11 @@ class L10nZhHans extends L10nZh {
 
   @override
   String get weekday7 => '周日';
+
+  @override
+  String weekdayRange(String from, String to) {
+    return '$from到$to';
+  }
 
   @override
   String get deleteAccountTitle => '删除你的账号？';
