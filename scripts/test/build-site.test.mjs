@@ -234,7 +234,8 @@ describe('opened from the iOS and Android apps (from=app), a page hides its ways
       }
       if (!path.includes('/blog/')) continue;
       for (const [line] of built(path).matchAll(/^<(?:li|p)\b.*href="\/home".*$/gm)) {
-        assert.match(line, /<span data-from-app="hide">[^<]*(?:<[^a/][^>]*>[^<]*<\/[^>]+>[^<]*)*<a href="\/home"[ >]/, `${path}: ${line.trim()}`);
+        // The stores' links may come first, inside the same span.
+        assert.match(line, /<span data-from-app="hide">[^<]*(?:<(?!a href="\/)[^/][^>]*>[^<]*<\/[^>]+>[^<]*)*<a href="\/home"[ >]/, `${path}: ${line.trim()}`);
       }
     }
   });
