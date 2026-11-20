@@ -23,7 +23,10 @@ void main() {
     expect(phase(ErrorDescription('building Text("王小明", inherit: true)')), 'building Text');
     expect(phase(ErrorDescription('building _Row-[<\'uid1\'>]')), 'building _Row-');
     expect(phase(ErrorDescription('building RenderParagraph#1a2b3')), 'building RenderParagraph');
-    expect(phase(ErrorDescription('notifying listeners for ValueNotifier<String>: 王小明')), 'notifying listeners for ValueNotifier<String>');
+    expect(
+      phase(ErrorDescription('notifying listeners for ValueNotifier<String>: 王小明')),
+      'notifying listeners for ValueNotifier<String>',
+    );
     expect(phase(ErrorDescription('while handling\na gesture')), 'while handling');
     expect(phase(ErrorDescription('x' * 150)), hasLength(100));
     expect(phase(null), isNull);
