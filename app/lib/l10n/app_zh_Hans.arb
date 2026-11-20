@@ -119,14 +119,7 @@
   "dutyRemoved": "已移除{duty}",
   "swipeToDelete": "左滑删除",
   "dutyUpdated": "已更新{duty}",
-  "pickerServes": "排过{duty}的人",
-  "@pickerServes": {
-    "placeholders": {
-      "duty": {
-        "type": "String"
-      }
-    }
-  },
+  "pickerServes": "建议",
   "pickerOthers": "其他同工",
   "pickerEveryone": "所有同工",
   "pickerSwapDay": "和别的周交换",
@@ -138,7 +131,7 @@
   "pickerAddStaffDetail": "之后加入，就接得到排好的事奉",
   "pickerOnce": "临时排“{name}”",
   "pickerNoResults": "找不到“{query}”",
-  "pickerSearchHint": "搜索同工",
+  "pickerSearchHint": "搜索所有同工",
   "pickerTakeOff": "从名单移除{name}",
   "@pickerTakeOff": {
     "placeholders": {

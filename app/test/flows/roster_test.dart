@@ -225,7 +225,7 @@ void main() {
       await pumpApp(tester, b);
       await go(tester, '/rosters/sunday/2026-10-11');
       await tapText(tester, '招待');
-      expect(find.text('排過招待的人'), findsOneWidget);
+      expect(find.text('建議'), findsOneWidget);
       final hao = tester.getTopLeft(find.text('陳志豪').last).dy;
       final mei = tester.getTopLeft(find.text('李美玉').last).dy;
       expect(mei < hao, isTrue, reason: 'on the day: first, though staff order puts 陳志豪 first');
@@ -246,7 +246,7 @@ void main() {
       await tapText(tester, '取消');
       expect(find.text('放棄變更？'), findsOneWidget);
       await tapText(tester, '放棄變更');
-      expect(find.text('排過招待的人'), findsNothing, reason: 'the picker has closed');
+      expect(find.text('建議'), findsNothing, reason: 'the picker has closed');
       expect(peopleOn(b, 11, '招待'), ['李美玉']);
       expect(find.text('已更新招待'), findsNothing);
     });
@@ -261,7 +261,7 @@ void main() {
       Future<void> keepEditing() async {
         expect(find.text('放棄變更？'), findsOneWidget);
         await tapText(tester, '繼續編輯');
-        expect(find.text('排過招待的人').hitTestable(), findsOneWidget, reason: 'still open, all the way up');
+        expect(find.text('建議').hitTestable(), findsOneWidget, reason: 'still open, all the way up');
         expect(peopleOn(b, 11, '招待'), ['李美玉'], reason: 'nothing saved yet');
       }
 
@@ -282,7 +282,7 @@ void main() {
       await tester.binding.handlePopRoute();
       await settle(tester);
       expect(find.text('放棄變更？'), findsNothing);
-      expect(find.text('排過招待的人'), findsNothing, reason: 'closed at once');
+      expect(find.text('建議'), findsNothing, reason: 'closed at once');
     });
 
     testWidgets('a duty only ever one person has: picking someone puts them there instead, at once', (tester) async {
@@ -292,7 +292,7 @@ void main() {
       await go(tester, '/rosters/sunday/2026-10-11');
       await tapText(tester, '司會');
       await tapText(tester, '林同工');
-      expect(find.text('排過司會的人'), findsNothing, reason: 'the picker has closed');
+      expect(find.text('建議'), findsNothing, reason: 'the picker has closed');
       expect(peopleOn(b, 11, '司會'), ['林同工']);
       expect(find.text('已更新司會'), findsOneWidget);
       await tapText(tester, '復原');
@@ -314,7 +314,7 @@ void main() {
       expect(find.text('選取'), findsNothing);
       expect(find.byIcon(Symbols.radio_button_unchecked_rounded), findsWidgets);
       await tapText(tester, '林同工');
-      expect(find.text('排過司會的人'), findsOneWidget, reason: 'still open for more');
+      expect(find.text('建議'), findsOneWidget, reason: 'still open for more');
       await tapText(tester, '完成');
       expect(peopleOn(b, 11, '司會'), unorderedEquals(['王牧師', '林同工']));
     });
@@ -332,7 +332,7 @@ void main() {
       await go(tester, '/rosters/sunday/2026-10-11');
       await tapText(tester, '司會');
       await tapText(tester, '林同工');
-      expect(find.text('排過司會的人'), findsOneWidget, reason: 'still open for more');
+      expect(find.text('建議'), findsOneWidget, reason: 'still open for more');
       await tapText(tester, '完成');
       expect(peopleOn(b, 11, '司會'), unorderedEquals(['王牧師', '林同工']));
     });
@@ -351,7 +351,7 @@ void main() {
       await tapText(tester, '司會');
       expect(find.text('選取'), findsNothing);
       await tapText(tester, '林同工');
-      expect(find.text('排過司會的人'), findsOneWidget, reason: 'still open for more');
+      expect(find.text('建議'), findsOneWidget, reason: 'still open for more');
     });
 
     testWidgets("多人服事 on a duty's page decides: on, ticks; off, one tap puts someone in place", (tester) async {
@@ -364,7 +364,7 @@ void main() {
       await tapText(tester, '司會');
       expect(find.text('選取'), findsNothing);
       await tapText(tester, '林同工');
-      expect(find.text('排過司會的人'), findsOneWidget, reason: 'still open for more');
+      expect(find.text('建議'), findsOneWidget, reason: 'still open for more');
       await tapText(tester, '完成');
       expect(peopleOn(b, 11, '司會'), unorderedEquals(['王牧師', '林同工']));
 
@@ -456,7 +456,7 @@ void main() {
       await go(tester, '/rosters/sunday/2026-10-11');
       await tapText(tester, '招待');
       await swipeOff(tester, '李美玉');
-      expect(find.text('排過招待的人'), findsOneWidget);
+      expect(find.text('建議'), findsOneWidget);
       await tester.enterText(find.byType(TextField), '美玉');
       await settle(tester);
       expect(
@@ -708,7 +708,7 @@ void main() {
       await go(tester, '/rosters/sunday/2026-10-04');
       await tester.tap(find.textContaining('陳志豪'));
       await settle(tester);
-      expect(find.text('排過招待的人'), findsOneWidget);
+      expect(find.text('建議'), findsOneWidget);
     });
 
     testWidgets('the picker has no 邀請同工, even with nobody on the duty: invites are on the home page and in 設定', (

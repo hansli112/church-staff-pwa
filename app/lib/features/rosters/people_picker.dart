@@ -92,6 +92,7 @@ class PeoplePicker extends StatefulWidget {
     this.initialGuests = const {},
     this.guestSuggestions = const [],
     this.notes = const {},
+    this.busy = const {},
     this.unavailable = const {},
     this.canRemoveFutureGuests = false,
     this.canAddStaff = false,
@@ -139,6 +140,10 @@ class PeoplePicker extends StatefulWidget {
   /// A line under a member's name, by name: what they already serve
   /// around the day (#90).
   final Map<String, String> notes;
+
+  /// Who already serves another duty at the same service, by name:
+  /// suggested after those who do not, still to be picked.
+  final Set<String> busy;
 
   /// Who marked the day as one they cannot serve (#91), by name: listed
   /// after the rest of their section, still to be picked.
@@ -388,7 +393,11 @@ class _PeoplePickerState extends State<PeoplePicker> {
     ];
     final available = [
       for (final n in rest)
-        if (!widget.unavailable.contains(n)) n,
+        if (!widget.unavailable.contains(n) && !widget.busy.contains(n)) n,
+    ];
+    final busy = [
+      for (final n in rest)
+        if (!widget.unavailable.contains(n) && widget.busy.contains(n)) n,
     ];
     final unavailable = [
       for (final n in rest)
@@ -449,7 +458,7 @@ class _PeoplePickerState extends State<PeoplePicker> {
       ),
     );
     if (onDayListed.isNotEmpty || onDayOthers.isNotEmpty || rest.isNotEmpty || added.isNotEmpty) {
-      rows.add(_Entry('h/serves', (_) => SectionHeader(l10n.pickerServes(widget.duty))));
+      rows.add(_Entry('h/serves', (_) => SectionHeader(l10n.pickerServes)));
       for (final n in onDayListed) {
         listRow(n, 0);
       }
@@ -459,8 +468,11 @@ class _PeoplePickerState extends State<PeoplePicker> {
       for (final n in available) {
         listRow(n, 1);
       }
-      for (final n in unavailable) {
+      for (final n in busy) {
         listRow(n, 2);
+      }
+      for (final n in unavailable) {
+        listRow(n, 3);
       }
       // 新增同工 here: on the list once saved.
       for (final n in added) {

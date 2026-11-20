@@ -408,9 +408,7 @@ class L10nEn extends L10n {
   }
 
   @override
-  String pickerServes(String duty) {
-    return 'Served as $duty before';
-  }
+  String get pickerServes => 'Suggested';
 
   @override
   String get pickerOthers => 'Other team members';
@@ -454,7 +452,7 @@ class L10nEn extends L10n {
   }
 
   @override
-  String get pickerSearchHint => 'Search team members';
+  String get pickerSearchHint => 'Search all team members';
 
   @override
   String pickerTakeOff(String name) {

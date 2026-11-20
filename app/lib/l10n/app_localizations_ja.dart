@@ -398,9 +398,7 @@ class L10nJa extends L10n {
   }
 
   @override
-  String pickerServes(String duty) {
-    return '$dutyを担当したメンバー';
-  }
+  String get pickerServes => 'おすすめ';
 
   @override
   String get pickerOthers => 'ほかのメンバー';
@@ -444,7 +442,7 @@ class L10nJa extends L10n {
   }
 
   @override
-  String get pickerSearchHint => 'メンバーを検索';
+  String get pickerSearchHint => 'すべてのメンバーを検索';
 
   @override
   String pickerTakeOff(String name) {

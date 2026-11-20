@@ -212,7 +212,7 @@ void main() {
       await tapText(tester, '取消');
       expect(find.byType(CupertinoActionSheet), findsOneWidget);
       await tapText(tester, '放棄變更');
-      expect(find.text('排過招待的人'), findsNothing, reason: 'closed');
+      expect(find.text('建議'), findsNothing, reason: 'closed');
       expect(peopleOn(b, 11, '招待'), ['李美玉']);
     });
   });

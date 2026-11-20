@@ -119,14 +119,7 @@
   "dutyRemoved": "{duty} 담당을 뺐어요",
   "swipeToDelete": "왼쪽으로 밀어서 삭제",
   "dutyUpdated": "{duty} 담당을 수정했어요",
-  "pickerServes": "{duty} 담당했던 멤버",
-  "@pickerServes": {
-    "placeholders": {
-      "duty": {
-        "type": "String"
-      }
-    }
-  },
+  "pickerServes": "추천",
   "pickerOthers": "다른 멤버",
   "pickerEveryone": "모든 멤버",
   "pickerSwapDay": "다른 주와 바꾸기",
@@ -138,7 +131,7 @@
   "pickerAddStaffDetail": "가입하면 배정한 봉사를 이어받아요",
   "pickerOnce": "‘{name}’ 님을 이번만 넣기",
   "pickerNoResults": "‘{query}’ 검색 결과가 없어요",
-  "pickerSearchHint": "멤버 검색",
+  "pickerSearchHint": "모든 멤버 검색",
   "pickerTakeOff": "{name} 님을 목록에서 빼기",
   "@pickerTakeOff": {
     "placeholders": {

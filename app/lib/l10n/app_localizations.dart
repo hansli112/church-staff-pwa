@@ -814,11 +814,11 @@ abstract class L10n {
   /// **'已更新{duty}'**
   String dutyUpdated(String duty);
 
-  /// Header over the people the picker lists first: those the duty was given to, by hand or by being scheduled
+  /// Header over the people the picker suggests: those the duty was given to, by hand or by being scheduled; anyone else is found by searching
   ///
   /// In zh, this message translates to:
-  /// **'排過{duty}的人'**
-  String pickerServes(String duty);
+  /// **'建議'**
+  String get pickerServes;
 
   /// No description provided for @pickerOthers.
   ///
@@ -889,7 +889,7 @@ abstract class L10n {
   /// No description provided for @pickerSearchHint.
   ///
   /// In zh, this message translates to:
-  /// **'搜尋同工'**
+  /// **'搜尋所有同工'**
   String get pickerSearchHint;
 
   /// Tooltip of the minus button beside a person in the picker's 編輯

@@ -62,6 +62,10 @@ Future<void> pickPeople(
     for (final m in members)
       if (unavailable.containsKey(m.uid)) m.name,
   };
+  final busyNames = {
+    for (final m in members)
+      if (around[m.uid]?.here.any((d) => d != duty.role) ?? false) m.name,
+  };
   // Read now, not in the sheet's builder: it builds again on every layout
   // (the keyboard, a turn), and this page can be gone by then (a back, a
   // link), its ref with it.
@@ -104,6 +108,7 @@ Future<void> pickPeople(
       // An event is in no service to add someone to.
       canAddStaff: !roster.isEvent && (me?.addsStaffTo(ServiceGroup(roster.type)) ?? false),
       notes: notes,
+      busy: busyNames,
       unavailable: unavailableNames,
     ),
   );

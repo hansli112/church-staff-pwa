@@ -398,9 +398,7 @@ class L10nZh extends L10n {
   }
 
   @override
-  String pickerServes(String duty) {
-    return '排過$duty的人';
-  }
+  String get pickerServes => '建議';
 
   @override
   String get pickerOthers => '其他同工';
@@ -444,7 +442,7 @@ class L10nZh extends L10n {
   }
 
   @override
-  String get pickerSearchHint => '搜尋同工';
+  String get pickerSearchHint => '搜尋所有同工';
 
   @override
   String pickerTakeOff(String name) {
@@ -4011,9 +4009,7 @@ class L10nZhHans extends L10nZh {
   }
 
   @override
-  String pickerServes(String duty) {
-    return '排过$duty的人';
-  }
+  String get pickerServes => '建议';
 
   @override
   String get pickerOthers => '其他同工';
@@ -4057,7 +4053,7 @@ class L10nZhHans extends L10nZh {
   }
 
   @override
-  String get pickerSearchHint => '搜索同工';
+  String get pickerSearchHint => '搜索所有同工';
 
   @override
   String pickerTakeOff(String name) {

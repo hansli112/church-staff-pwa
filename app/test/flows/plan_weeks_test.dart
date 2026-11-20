@@ -514,6 +514,34 @@ void main() {
     expect(findShown('同一場：招待 · 這個月另有 2 次服事 · 同一天：青年崇拜 司會'), findsOneWidget);
   });
 
+  testWidgets(
+    'the picker suggests who serves nothing else there first, who does after, and says it searches everyone',
+    (
+      tester,
+    ) async {
+      final b = seededChurch();
+      b.rosters['grace']![Roster.idFor('sunday', Day(2026, 10, 11))] = Roster(
+        type: 'sunday',
+        day: Day(2026, 10, 11),
+        duties: const [
+          Duty(role: '司會', people: ['陳志豪'], uids: {'陳志豪': 'hao'}),
+          Duty(role: '招待', people: []),
+        ],
+      );
+      await pumpApp(tester, b);
+      await go(tester, '/rosters/sunday/2026-10-11');
+      await tester.tap(find.text('招待'));
+      await settle(tester);
+      expect(find.text('建議'), findsOneWidget);
+      expect(find.widgetWithText(TextField, '搜尋所有同工'), findsOneWidget);
+      // 陳志豪 comes first in 招待's order, but is 司會 at this 主日.
+      final mei = tester.getTopLeft(find.text('李美玉').last).dy;
+      final hao = tester.getTopLeft(find.text('陳志豪').last).dy;
+      expect(mei, lessThan(hao));
+      expect(findShown('同一場：司會 · 這個月另有 1 次服事'), findsOneWidget);
+    },
+  );
+
   testWidgets('復原 here also waits for 完成; the day’s own page tells at once', (tester) async {
     final b = seededChurch();
     await pumpApp(tester, b);

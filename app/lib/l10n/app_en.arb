@@ -119,14 +119,7 @@
   "dutyRemoved": "Removed {duty}",
   "swipeToDelete": "Swipe left to delete",
   "dutyUpdated": "Updated {duty}",
-  "pickerServes": "Served as {duty} before",
-  "@pickerServes": {
-    "placeholders": {
-      "duty": {
-        "type": "String"
-      }
-    }
-  },
+  "pickerServes": "Suggested",
   "pickerOthers": "Other team members",
   "pickerEveryone": "All team members",
   "pickerSwapDay": "Swap with another week",
@@ -138,7 +131,7 @@
   "pickerAddStaffDetail": "When they join, what’s arranged is theirs",
   "pickerOnce": "Fill in “{name}” just this once",
   "pickerNoResults": "No results for “{query}”",
-  "pickerSearchHint": "Search team members",
+  "pickerSearchHint": "Search all team members",
   "pickerTakeOff": "Remove {name} from the list",
   "@pickerTakeOff": {
     "placeholders": {

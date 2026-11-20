@@ -119,14 +119,7 @@
   "dutyRemoved": "{duty}を外しました",
   "swipeToDelete": "左にスワイプして削除",
   "dutyUpdated": "{duty}を更新しました",
-  "pickerServes": "{duty}を担当したメンバー",
-  "@pickerServes": {
-    "placeholders": {
-      "duty": {
-        "type": "String"
-      }
-    }
-  },
+  "pickerServes": "おすすめ",
   "pickerOthers": "ほかのメンバー",
   "pickerEveryone": "すべてのメンバー",
   "pickerSwapDay": "別の週と交換",
@@ -138,7 +131,7 @@
   "pickerAddStaffDetail": "参加すると、割り当てた奉仕が引き継がれます",
   "pickerOnce": "「{name}」を今回だけ入れる",
   "pickerNoResults": "「{query}」は見つかりません",
-  "pickerSearchHint": "メンバーを検索",
+  "pickerSearchHint": "すべてのメンバーを検索",
   "pickerTakeOff": "{name}をリストから外す",
   "@pickerTakeOff": {
     "placeholders": {
