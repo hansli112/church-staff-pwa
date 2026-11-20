@@ -20,7 +20,7 @@ Passwords, push notifications, LINE notifications, the daily devotional, and the
 
 ## 1. Make the move file
 
-Sign in with the Google account that set up your site and [open Cloud Shell](https://shell.cloud.google.com/cloudshell/editor?cloudshell_git_repo=https%3A%2F%2Fgithub.com%2Fhansli112%2Fchurch-staff-pwa&cloudshell_git_branch=main&cloudshell_workspace=.&cloudshell_tutorial=docs%2Fmove-to-martha.md&show=terminal). If your browser is signed in with a different account, open it anyway; you can switch after it runs, as below. When **Open in Cloud Shell** asks, check **Trust repo** and click **Confirm**. When **Authorize Cloud Shell** comes up, click **Authorize**: it’s Google’s own window, letting Cloud Shell read your old site’s data with your account. Click **Authorize** again whenever it comes back.
+Sign in with the Google account that set up your site and [open Cloud Shell](https://shell.cloud.google.com/cloudshell/editor?cloudshell_git_repo=https%3A%2F%2Fgithub.com%2Fhansli112%2Fchurch-staff-pwa&cloudshell_git_branch=selfhost&cloudshell_workspace=.&cloudshell_tutorial=docs%2Fmove-to-martha.md&show=terminal). If your browser is signed in with a different account, open it anyway; you can switch after it runs, as below. When **Open in Cloud Shell** asks, check **Trust repo** and click **Confirm**. When **Authorize Cloud Shell** comes up, click **Authorize**: it’s Google’s own window, letting Cloud Shell read your old site’s data with your account. Click **Authorize** again whenever it comes back.
 
 A guide (in Traditional Chinese) opens on the right. Click the terminal icon at the top right of step 1’s command, then press Enter in the terminal below.
 

@@ -20,7 +20,7 @@ description: 自前で立てる church-staff-pwa は更新を終えました。�
 
 ## 1. 移行ファイルを作る
 
-サイトを立てたときの Google アカウントで [Cloud Shell を開きます](https://shell.cloud.google.com/cloudshell/editor?cloudshell_git_repo=https%3A%2F%2Fgithub.com%2Fhansli112%2Fchurch-staff-pwa&cloudshell_git_branch=main&cloudshell_workspace=.&cloudshell_tutorial=docs%2Fmove-to-martha.md&show=terminal)。ブラウザで別のアカウントにログインしていても、そのまま開いてかまいません。実行したあと、下の手順で切り替えます。リポジトリを信頼するかどうか聞かれたら、信頼するにチェックを入れて確認します。続けて Cloud Shell の承認を求める画面が出たら、承認をクリックします。Google の公式の画面で、Cloud Shell があなたのアカウントで古いサイトのデータを読めるようにするものです。同じ画面がまた出たときも、承認をクリックしてください。
+サイトを立てたときの Google アカウントで [Cloud Shell を開きます](https://shell.cloud.google.com/cloudshell/editor?cloudshell_git_repo=https%3A%2F%2Fgithub.com%2Fhansli112%2Fchurch-staff-pwa&cloudshell_git_branch=selfhost&cloudshell_workspace=.&cloudshell_tutorial=docs%2Fmove-to-martha.md&show=terminal)。ブラウザで別のアカウントにログインしていても、そのまま開いてかまいません。実行したあと、下の手順で切り替えます。リポジトリを信頼するかどうか聞かれたら、信頼するにチェックを入れて確認します。続けて Cloud Shell の承認を求める画面が出たら、承認をクリックします。Google の公式の画面で、Cloud Shell があなたのアカウントで古いサイトのデータを読めるようにするものです。同じ画面がまた出たときも、承認をクリックしてください。
 
 右側に移行の手順（繁体字中国語）が開くので、手順1のコマンドの右上にあるターミナルのアイコンをクリックし、下のターミナルで Enter を一度押します。
 

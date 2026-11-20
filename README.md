@@ -2,7 +2,9 @@
 
 多教會共用的同工服事表工具（代管版）。設計見 [`docs/design.md`](docs/design.md)，資料模型與權限見 [`docs/data-model.md`](docs/data-model.md)，專案建立見 [`docs/firebase-setup.md`](docs/firebase-setup.md)。
 
-> 開發中。舊的自架版（church-staff-pwa）在其他分支，已凍結。
+**下載**：[App Store](https://apps.apple.com/app/id6823826952)・[Google Play](https://play.google.com/store/apps/details?id=app.marthasit)・[網頁版](https://marthasit.com)
+
+> 舊的自架版（教會同工助手）在 [`selfhost`](https://github.com/hansli112/church-staff-pwa/tree/selfhost) 分支，已停止更新；要搬過來見[搬家教學](https://marthasit.com/blog/move-from-self-host/)。
 
 ## 系統架構
 

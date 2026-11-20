@@ -2,9 +2,9 @@ name: martha-ci
 
 on:
   push:
-    branches: [martha-main]
+    branches: [main]
   pull_request:
-    branches: [martha-main]
+    branches: [main]
 
 # Pinned rather than ubuntu-latest, so a new runner image (Ubuntu 26 from
 # 2026-10-19) is a change made here, not one that breaks CI by itself.

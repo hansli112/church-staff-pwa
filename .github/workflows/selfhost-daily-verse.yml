@@ -1,0 +1,70 @@
+# The self-hosted version's daily verse (its code is on the selfhost branch).
+# GitHub runs schedules only from the default branch, so this stays here.
+name: Fetch Daily Verse
+
+on:
+  schedule:
+    - cron: '0 17 * * *' # UTC；部署者可依自己的時區調整
+  workflow_dispatch:
+
+concurrency:
+  group: fetch-daily-verse
+  cancel-in-progress: false
+
+jobs:
+  fetch:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: write
+    env:
+      # 與部署使用同一份設定，避免時區／資料來源各自漂移。Fork 沒設定就不抓。
+      CHURCH_CONFIG_JSON: ${{ secrets.CHURCH_CONFIG_JSON || vars.CHURCH_CONFIG_JSON }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: selfhost
+          path: source
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Validate shared source configuration
+        id: source-config
+        run: node source/scripts/fetch-daily-verse.mjs --check-config >> "$GITHUB_OUTPUT"
+
+      - name: Prepare data branch
+        if: steps.source-config.outputs.enabled == 'true'
+        shell: bash
+        run: |
+          set -euo pipefail
+          remote_ref=$(git -C source ls-remote --heads origin refs/heads/data)
+          if [ -n "$remote_ref" ]; then
+            git -C source fetch origin data
+            git -C source worktree add --detach ../data-site FETCH_HEAD
+          else
+            git -C source worktree add --detach ../data-site HEAD
+            git -C data-site checkout --orphan data
+            git -C data-site rm -rf .
+          fi
+
+      - name: Fetch and validate configured devotional source
+        if: steps.source-config.outputs.enabled == 'true'
+        run: node source/scripts/fetch-daily-verse.mjs data-site/daily-verse.json
+
+      - name: Commit and push changed data
+        if: steps.source-config.outputs.enabled == 'true'
+        working-directory: data-site
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name 'github-actions[bot]'
+          git config user.email 'github-actions[bot]@users.noreply.github.com'
+          git add daily-verse.json
+          if git diff --staged --quiet; then
+            echo "No changes to commit"
+          else
+            git commit -m "chore(devotional): update daily verse $(date -u +%Y-%m-%d)"
+            git push origin HEAD:refs/heads/data
+          fi

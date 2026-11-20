@@ -20,7 +20,7 @@ description: 自架的同工助手（church-staff-pwa）不再更新了。把同
 
 ## 1. 生成迁移文件
 
-用当初创建网站的 Google 账号[打开 Cloud Shell](https://shell.cloud.google.com/cloudshell/editor?cloudshell_git_repo=https%3A%2F%2Fgithub.com%2Fhansli112%2Fchurch-staff-pwa&cloudshell_git_branch=main&cloudshell_workspace=.&cloudshell_tutorial=docs%2Fmove-to-martha.md&show=terminal)。浏览器登录的是别的账号也没关系，先打开，运行完再照下面的说明换账号。
+用当初创建网站的 Google 账号[打开 Cloud Shell](https://shell.cloud.google.com/cloudshell/editor?cloudshell_git_repo=https%3A%2F%2Fgithub.com%2Fhansli112%2Fchurch-staff-pwa&cloudshell_git_branch=selfhost&cloudshell_workspace=.&cloudshell_tutorial=docs%2Fmove-to-martha.md&show=terminal)。浏览器登录的是别的账号也没关系，先打开，运行完再照下面的说明换账号。
 
 弹出询问要不要信任这个代码库的窗口时，先勾选信任，再点确认。
 

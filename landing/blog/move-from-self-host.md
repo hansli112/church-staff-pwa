@@ -20,7 +20,7 @@ description: 自架的同工助手（church-staff-pwa）不再更新了。把同
 
 ## 1. 產生搬家檔
 
-用當初建立網站的 Google 帳號[打開 Cloud Shell](https://shell.cloud.google.com/cloudshell/editor?cloudshell_git_repo=https%3A%2F%2Fgithub.com%2Fhansli112%2Fchurch-staff-pwa&cloudshell_git_branch=main&cloudshell_workspace=.&cloudshell_tutorial=docs%2Fmove-to-martha.md&show=terminal)。瀏覽器登入的是別的帳號也沒關係，先打開，跑完再照下面的說明換帳號。
+用當初建立網站的 Google 帳號[打開 Cloud Shell](https://shell.cloud.google.com/cloudshell/editor?cloudshell_git_repo=https%3A%2F%2Fgithub.com%2Fhansli112%2Fchurch-staff-pwa&cloudshell_git_branch=selfhost&cloudshell_workspace=.&cloudshell_tutorial=docs%2Fmove-to-martha.md&show=terminal)。瀏覽器登入的是別的帳號也沒關係，先打開，跑完再照下面的說明換帳號。
 
 跳出 **在 Cloud Shell 中開啟** 時，先勾 **信任存放區**，再按 **確認**。
 

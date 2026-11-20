@@ -20,7 +20,7 @@ description: 직접 설치하는 church-staff-pwa는 더 이상 업데이트되�
 
 ## 1. 이전용 파일 만들기
 
-사이트를 설치한 Google 계정으로 [Cloud Shell을 여세요](https://shell.cloud.google.com/cloudshell/editor?cloudshell_git_repo=https%3A%2F%2Fgithub.com%2Fhansli112%2Fchurch-staff-pwa&cloudshell_git_branch=main&cloudshell_workspace=.&cloudshell_tutorial=docs%2Fmove-to-martha.md&show=terminal). 브라우저에 다른 계정으로 로그인돼 있어도 그냥 여세요. 실행한 뒤 아래 방법으로 바꾸면 돼요. 저장소를 신뢰할지 묻는 창이 나오면 신뢰에 체크하고 확인을 누르세요. 이어서 Cloud Shell 승인을 묻는 창이 나오면 승인을 누르세요. Google의 공식 창으로, Cloud Shell이 내 계정으로 예전 사이트의 데이터를 읽을 수 있게 해 줘요. 같은 창이 또 나와도 승인을 누르면 돼요.
+사이트를 설치한 Google 계정으로 [Cloud Shell을 여세요](https://shell.cloud.google.com/cloudshell/editor?cloudshell_git_repo=https%3A%2F%2Fgithub.com%2Fhansli112%2Fchurch-staff-pwa&cloudshell_git_branch=selfhost&cloudshell_workspace=.&cloudshell_tutorial=docs%2Fmove-to-martha.md&show=terminal). 브라우저에 다른 계정으로 로그인돼 있어도 그냥 여세요. 실행한 뒤 아래 방법으로 바꾸면 돼요. 저장소를 신뢰할지 묻는 창이 나오면 신뢰에 체크하고 확인을 누르세요. 이어서 Cloud Shell 승인을 묻는 창이 나오면 승인을 누르세요. Google의 공식 창으로, Cloud Shell이 내 계정으로 예전 사이트의 데이터를 읽을 수 있게 해 줘요. 같은 창이 또 나와도 승인을 누르면 돼요.
 
 오른쪽에 옮기는 방법(번체 중국어)이 열리면, 1단계 명령어 오른쪽 위의 터미널 아이콘을 누르고 아래 터미널에서 Enter를 한 번 누르세요.
 
