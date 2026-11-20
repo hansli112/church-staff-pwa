@@ -1,5 +1,6 @@
 import assert from 'node:assert/strict';
 import { spawnSync } from 'node:child_process';
+import { createHash } from 'node:crypto';
 import { copyFileSync, cpSync, existsSync, mkdirSync, mkdtempSync, readFileSync, readdirSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { dirname, join } from 'node:path';
@@ -15,7 +16,7 @@ function deployment(t) {
   // A Flutter build copies app/web, the app shell's runtime scripts included.
   for (const file of ['martha_app.js', 'martha_app_sw.js', 'favicon.png', 'manifest.json']) copyFileSync(join(root, 'app/web', file), join(dir, 'app/web', file));
   cpSync(join(root, 'app/web/icons'), join(dir, 'app/web/icons'), { recursive: true });
-  for (const script of ['deploy.sh', 'hosting-predeploy.sh', 'fingerprint-fonts.mjs', 'fingerprint-web.mjs', 'build-site.mjs', 'release-web.mjs']) {
+  for (const script of ['deploy.sh', 'hosting-predeploy.sh', 'fingerprint-fonts.mjs', 'fingerprint-web.mjs', 'build-site.mjs', 'release-web.mjs', 'wasm-names.mjs']) {
     copyFileSync(join(root, 'scripts', script), join(dir, 'scripts', script));
   }
   assert.ok(existsSync(join(root, 'landing/node_modules/marked')), 'use existing website dependencies; do not install in tests');
@@ -35,7 +36,9 @@ mkdir -p build/web/canvaskit
 printf '%s' 'engine' > build/web/canvaskit/canvaskit.wasm
 if [[ " $* " == *" --wasm "* ]]; then
   printf '%s' '_flutter.buildConfig = {"builds":[{"compileTarget":"dart2wasm","renderer":"skwasm","mainWasmPath":"main.dart.wasm","jsSupportRuntimePath":"main.dart.mjs"},{"compileTarget":"dart2js","mainJsPath":"main.dart.js"}]}; _flutter.loader.load({});' > build/web/flutter_bootstrap.js
-  printf '%s' 'wasm entry' > build/web/main.dart.wasm
+  # A wasm with a custom section "entry" and, kept by --no-strip-wasm, the
+  # functions' names (function 0: main).
+  printf '\\0asm\\1\\0\\0\\0\\0\\6\\5entry\\0\\16\\4name\\1\\7\\1\\0\\4main' > build/web/main.dart.wasm
   printf '%s' 'module entry' > build/web/main.dart.mjs
 else
   printf '%s' '_flutter.buildConfig = {"builds":[{"compileTarget":"dart2js","mainJsPath":"main.dart.js"},{}]}; _flutter.loader.load({});' > build/web/flutter_bootstrap.js
@@ -76,7 +79,11 @@ test('deploy CLI builds a clean output on dev-to-prod switches without deleting 
   assert.equal(readFileSync(join(dir, 'app/build/web/.web-assets-project'), 'utf8'), 'test-prod');
   assert.deepEqual(readdirSync(archive).sort(), ['test-dev', 'test-prod']);
   // Chrome and Android run the wasm build; Safari and Firefox the JS one.
-  assert.equal(readFileSync(join(archive, 'test-prod/main.dart.ad50759298.wasm'), 'utf8'), 'wasm entry');
+  // Without the functions' names, which stay in .firebase/wasm-names.
+  const stripped = Buffer.from('\0asm\x01\0\0\0\0\x06\x05entry', 'latin1');
+  const hash = createHash('sha256').update(stripped).digest('hex').slice(0, 10);
+  assert.deepEqual(readFileSync(join(archive, `test-prod/main.dart.${hash}.wasm`)), stripped);
+  assert.ok(existsSync(join(dir, `.firebase/wasm-names/test-prod/main.dart.${hash}.names`)));
 });
 
 test("the web app's support entry takes the website's payments switch", (t) => {

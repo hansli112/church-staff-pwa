@@ -32,8 +32,12 @@ if [[ ",$only," == *",hosting,"* ]]; then
   # wasm one, Safari, iOS and Firefox (which cannot) the JS one.
   # SUPPORT_PAYMENTS=on also puts 支持馬大別忙 in the web app, a link to the
   # website's support page (hosting-predeploy.sh turns the page's payments on).
-  ( cd "$root/app" && flutter build web --wasm --dart-define-from-file="config/$env_name.json" \
+  ( cd "$root/app" && flutter build web --wasm --no-strip-wasm --dart-define-from-file="config/$env_name.json" \
       --dart-define="SUPPORT_PAYMENTS=${SUPPORT_PAYMENTS:-off}" )
+  # The functions' names stay here, out of what users download: the errors
+  # the web app reports say wasm-function[4284], which
+  # `node scripts/wasm-names.mjs name .firebase/wasm-names/<project>` names.
+  node "$root/scripts/wasm-names.mjs" strip "$root/app/build/web" "$root/.firebase/wasm-names/$project"
 fi
 
 firebase() { "$root/scripts/firebase.sh" "$project" "$@"; }
