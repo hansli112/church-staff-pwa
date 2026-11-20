@@ -118,6 +118,23 @@ void main() {
     });
   });
 
+  test("a saved day's duties show in its service's order; ones the service lacks after them", () {
+    final saved = Roster(
+      type: 'sunday',
+      day: Day(2026, 10, 4),
+      duties: const [
+        Duty(role: '司琴'),
+        Duty(role: '奉獻禱告'),
+        Duty(role: '司會'),
+        Duty(role: '歌者 2'),
+      ],
+    );
+    expect(
+      dutiesInOrder(saved, const ['司會', '歌者 2', '司琴']).map((d) => d.role),
+      ['司會', '歌者 2', '司琴', '奉獻禱告'],
+    );
+  });
+
   group('myServices', () {
     test('finds days only by explicitly bound uid and never by an unbound name', () {
       final rosters = [

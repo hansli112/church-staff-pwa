@@ -16,6 +16,7 @@ import '../../state/providers.dart';
 import '../../state/roster_actions.dart';
 import 'duty_picking.dart';
 import 'future_changes.dart';
+import 'roster_card.dart';
 
 /// Whether what editing [roster] reads is loaded; watching it keeps it so.
 bool _editingReady(WidgetRef ref, Roster roster) =>
@@ -101,7 +102,7 @@ class EditableRoster extends ConsumerWidget {
           ),
         ListSection(
           children: [
-            for (final duty in roster.duties)
+            for (final duty in shownDuties(ref, roster))
               Dismissible(
                 key: ValueKey('${roster.id}/${duty.role}'),
                 direction: ready && arranges.has(duty.role) ? DismissDirection.endToStart : DismissDirection.none,

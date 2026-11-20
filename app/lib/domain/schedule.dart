@@ -47,6 +47,24 @@ List<Roster> upcomingRosters({
   return result;
 }
 
+/// [roster]'s duties in its service's order, [template]: the order of the
+/// 服事項目 is the roster's. A saved day keeps the order it was saved in, and
+/// one added to it later comes last, so without this a reordered template
+/// would not reach it. Duties the service no longer has follow, as saved.
+List<Duty> dutiesInOrder(Roster roster, List<String> template) {
+  int rank(Duty d) {
+    final i = template.indexOf(d.role);
+    return i < 0 ? template.length : i;
+  }
+
+  final indexed = roster.duties.indexed.toList()
+    ..sort((a, b) {
+      final byTemplate = rank(a.$2).compareTo(rank(b.$2));
+      return byTemplate != 0 ? byTemplate : a.$1.compareTo(b.$1);
+    });
+  return [for (final (_, d) in indexed) d];
+}
+
 /// An unsaved roster for [day] with the service template's duties.
 Roster draftRoster(Service service, Day day) => Roster(
   type: service.id,

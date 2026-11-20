@@ -101,6 +101,22 @@ void main() {
       expect(find.text('待定'), findsWidgets);
     });
 
+    testWidgets("a saved day follows the 服事項目's order, viewed and arranged", (tester) async {
+      final b = seededChurch(as: pastor);
+      b.setServices('grace', [
+        sundayService.copyWith(duties: const ['招待', '司會', '司琴']),
+        youthService,
+      ]);
+      await pumpApp(tester, b);
+      await tapText(tester, '服事表');
+      double top(String text) => tester.getTopLeft(find.text(text).first).dy;
+      expect(top('招待'), lessThan(top('司會')), reason: '10/4 was saved 司會, 司琴, 招待');
+      await tester.tap(findDay('10月4日'));
+      await tester.pumpAndSettle();
+      expect(find.byType(EditableRoster), findsOneWidget);
+      expect(top('招待'), lessThan(top('司會')));
+    });
+
     testWidgets('a member sees only their 牧區; one in none is told to ask an admin', (tester) async {
       await pumpApp(tester, seededChurch(as: staffMei));
       await tapText(tester, '服事表');

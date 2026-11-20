@@ -7,6 +7,7 @@ import '../../core/design/components.dart';
 import '../../core/perf.dart';
 import '../../core/design/tokens.dart';
 import '../../domain/models.dart';
+import '../../domain/schedule.dart';
 import '../../l10n/app_localizations.dart';
 import '../../state/providers.dart';
 import 'day_block.dart';
@@ -59,10 +60,18 @@ class RosterCard extends ConsumerWidget {
   }
 }
 
+/// [roster]'s duties in its service's 服事項目 order (a saved day keeps the
+/// order it was saved in); an event's as saved.
+List<Duty> shownDuties(WidgetRef ref, Roster roster) {
+  if (roster.isEvent) return roster.duties;
+  final template = ref.watch(servicesProvider.select((s) => s.value?.byId(roster.type)?.duties));
+  return template == null ? roster.duties : dutiesInOrder(roster, template);
+}
+
 /// The content of a roster day: date, event tags, then each duty and its
 /// people. My own name is bold so I find it at a glance; the accent colour
 /// stays for actions and status.
-class RosterDayView extends StatelessWidget {
+class RosterDayView extends ConsumerWidget {
   const RosterDayView({
     super.key,
     required this.roster,
@@ -124,7 +133,7 @@ class RosterDayView extends StatelessWidget {
   }
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final c = AppColors.of(context);
     final l10n = L10n.of(context);
     return Padding(
@@ -170,7 +179,7 @@ class RosterDayView extends StatelessWidget {
                   ],
                 ),
                 const SizedBox(height: Space.s),
-                for (final duty in roster.duties)
+                for (final duty in shownDuties(ref, roster))
                   _myDuty(
                     context,
                     duty,
