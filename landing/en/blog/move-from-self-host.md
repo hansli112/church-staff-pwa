@@ -57,12 +57,12 @@ Your browser downloads `move.json`. It has your team members’ names and emails
 
 ## 4. Have your team join
 
-Until they sign in, team members who came over show **No account** under their name, and you can still put them on the schedule. Go to **Settings** → **Invites**, create an invite link, and send it to your team’s group.
+Until they sign in, team members who came over are listed under **No account** at the bottom of **Settings** → **Team members**, and you can still put them on the schedule. Go to **Settings** → **Invites**, create an invite link, and send it to your team’s group.
 
 - Team members who sign in with the same email as on the old site are asked whether to join your church. Tapping **Join** brings their schedules with them.
 - Old passwords don’t work. Anyone who signed in with an email and password should sign up again with the same email, or sign in with Google.
 - Team members who had no email on the old site are asked whether a name is theirs when they join with the invite link using the same name as on the schedule.
-- For someone using a different email, the admin taps **Merge a pending record** on that person’s page.
+- For someone using a different email, the admin taps **Merge with a team member without an account** on that person’s page.
 
 ## After the move
 

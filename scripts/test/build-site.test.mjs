@@ -350,6 +350,15 @@ test("every clip and picture of the app a page shows is in landing/media, in the
   }
 });
 
+test("the getting-started guide shows 開始使用's steps as pictures, each language its own, at a phone's size", () => {
+  for (const tag of TAGS) {
+    const html = built(sitePath(tag, '/blog/getting-started/'));
+    for (const name of ['start-home', 'start-service', 'start-arrange', 'start-invite']) {
+      assert.match(html, new RegExp(`<figure class="clip"><img src="/media/${tag}/${name}\\.jpg" alt="[^"]+" width="393" height="852" loading="lazy"></figure>`), `${tag}: ${name}`);
+    }
+  }
+});
+
 test("every guide the app opens (Guide, app/lib/features/common/site_pages.dart) is a post, in every language", () => {
   const guides = read('app/lib/features/common/site_pages.dart').match(/enum Guide \{([^;]*);/)[1];
   const slugs = [...guides.matchAll(/\w+\('([a-z-]+)'\)/g)].map((m) => m[1]);

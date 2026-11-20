@@ -2,11 +2,19 @@
 // .jpg of its first frame): short clips of the showcase demo, a church
 // settled in, at iPhone size, each a few taps with a dot where the finger
 // goes. A clip that calls still() also leaves <clip>-still.jpg, a
-// screenshot of that moment, for the pages that show a picture instead.
+// screenshot of that moment, for the pages that show a picture instead;
+// still(name) leaves <name>.jpg. A clip of pictures only (stills: true)
+// makes no video.
 //
 //   cd app && flutter build web --wasm --dart-define=MARTHA_ENV=demo \
 //     --dart-define=DEMO_SHOWCASE=true --dart-define=E2E=true -o build/web-showcase
-//   cd tools/e2e && node record.mjs ../../app/build/web-showcase ../../landing/media [--only=plan,swap] [--lang=en] [--stills]
+//   cd tools/e2e && node record.mjs ../../app/build/web-showcase ../../landing/media [--only=plan,swap] [--lang=en] [--stills] [--new-user=../../app/build/web-new]
+//
+// The clips of a church just made (newUser: true) need --new-user, a build
+// with --dart-define=DEMO_NEW_USER=true instead of DEMO_SHOWCASE; they are
+// left out without it. Build both with
+// --dart-define=WEB_ORIGIN=https://marthasit.com, so the links shown are
+// the website's.
 //
 // With --stills, only the stills are taken; the videos stay as they are.
 //
@@ -33,15 +41,20 @@ const LANGUAGES = {
   ko: { locale: 'ko-KR', arb: 'app_ko.arb' },
 };
 
+const newUserDir = flag('new-user')?.[0];
 const types = { '.js': 'text/javascript', '.mjs': 'text/javascript', '.html': 'text/html', '.json': 'application/json', '.wasm': 'application/wasm', '.css': 'text/css', '.png': 'image/png', '.otf': 'font/otf', '.ttf': 'font/ttf' };
-const server = http.createServer((req, res) => {
-  let file = path.join(webdir, decodeURIComponent(req.url.split('?')[0]));
-  if (!fs.existsSync(file) || fs.statSync(file).isDirectory()) file = path.join(webdir, 'index.html');
-  res.writeHead(200, { 'content-type': types[path.extname(file)] ?? 'application/octet-stream' });
-  fs.createReadStream(file).pipe(res);
-});
-await new Promise((r) => server.listen(0, r));
-const base = `http://localhost:${server.address().port}`;
+/** Serves the web build in [dir], every path the app's own. */
+async function serve(dir) {
+  const server = http.createServer((req, res) => {
+    let file = path.join(dir, decodeURIComponent(req.url.split('?')[0]));
+    if (!fs.existsSync(file) || fs.statSync(file).isDirectory()) file = path.join(dir, 'index.html');
+    res.writeHead(200, { 'content-type': types[path.extname(file)] ?? 'application/octet-stream' });
+    fs.createReadStream(file).pipe(res);
+  });
+  await new Promise((r) => server.listen(0, r));
+  return { server, base: `http://localhost:${server.address().port}` };
+}
+const servers = { showcase: await serve(webdir), ...(newUserDir && { newUser: await serve(newUserDir) }) };
 
 // A dot where the finger touches, drawn over the app (which ignores it).
 const FINGER = () => {
@@ -53,7 +66,7 @@ const FINGER = () => {
   });
 };
 
-/** One language's session: taps, waits and the app's words; still() is saved to [stillPath]. */
+/** One language's session: taps, waits and the app's words; still() is saved to [stillPath], still(name) beside it. */
 function session(page, words, stillPath) {
   const t = (key) => {
     const s = words[key];
@@ -78,8 +91,12 @@ function session(page, words, stillPath) {
   const escape = (text) => text.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
   const named = (name, role) =>
     page.getByRole(role, { name: name.startsWith('^') ? new RegExp(`^${escape(name.slice(1))}`) : name, exact: true });
-  const still = async () => {
-    if (stillPath) await page.screenshot({ path: stillPath, type: 'jpeg', quality: 85 });
+  const still = async (name) => {
+    if (!stillPath) return;
+    // Nothing hovered or pressed in the picture.
+    await page.mouse.move(1, 1);
+    await page.waitForTimeout(400);
+    await page.screenshot({ path: name ? path.join(path.dirname(stillPath), `${name}.jpg`) : stillPath, type: 'jpeg', quality: 85 });
   };
   return {
     page,
@@ -171,6 +188,7 @@ async function screencast(page, dir) {
 const CLIPS = {
   // 同工: 首頁 lists what I serve next; one opens its day.
   home: {
+    stills: true,
     route: '/home',
     async play(s) {
       await s.wait(1500);
@@ -208,6 +226,7 @@ const CLIPS = {
   },
   // 小組長: people added to a 小組 just started, one at a time.
   addStaff: {
+    stills: true,
     route: '/me/groups/small/sg2',
     async play(s) {
       await s.wait(1200);
@@ -218,6 +237,8 @@ const CLIPS = {
         // row above 刪除小組's section.
         await s.tap(s.node(s.t('deleteSmallGroup')), { dy: -68 });
         await s.wait(1000);
+        // The guides' picture: everyone in the church to pick from.
+        if (i === 0) await s.still();
         // The sheet's buttons: the scrim and 關閉, then the people.
         await s.tap(s.nodes('').nth(person));
         await s.wait(1200);
@@ -227,20 +248,23 @@ const CLIPS = {
   },
   // 小組長: when the 小組 meets, so 回報人數 knows which days to ask about.
   meets: {
+    stills: true,
     route: '/me/groups/small/sg2',
     async play(s) {
       await s.wait(1200);
       await s.tap(s.nodes(s.t('smallGroupMeets')).first());
       await s.wait(1000);
-      // The sheet's buttons: the scrim, 關閉, 儲存, 每週, 隔週, then Monday to Sunday.
-      await s.tap(s.nodes('').nth(9));
+      // The sheet's buttons: the scrim, 關閉, 取消, 儲存, 每週, 隔週, 每月, then Monday to Sunday.
+      await s.tap(s.nodes('').nth(10));
       await s.wait(600);
+      await s.still();
       await s.tap(s.node(s.t('save')));
       await s.wait(1800);
     },
   },
   // 小組長: the last meeting's 人數, on the 小組's 人數 page (#95).
   attendance: {
+    stills: true,
     route: '/me/groups/small/sg1/attendance',
     async play(s) {
       await s.wait(1200);
@@ -255,6 +279,7 @@ const CLIPS = {
   },
   // 管理員: an invite link for the 同工 group chat.
   invite: {
+    stills: true,
     route: '/me/invites',
     async play(s) {
       await s.wait(1200);
@@ -265,6 +290,7 @@ const CLIPS = {
   },
   // 行事曆: the church's Google Calendar, its events and services in one month.
   calendar: {
+    stills: true,
     route: '/calendar',
     async play(s) {
       await s.wait(2500);
@@ -292,8 +318,69 @@ const CLIPS = {
       await s.wait(2500);
     },
   },
+  // 管理員, a church just made: 開始使用 on 首頁, and the pages its steps
+  // open, for the getting-started guide.
+  start: {
+    newUser: true,
+    stills: true,
+    route: '/',
+    async play(s, { church, admin, typed, duties }) {
+      const row = (title) => s.page.getByRole('button').filter({ hasText: title }).first();
+      const before = (key) => s.t(key).split('{')[0];
+      await s.wait(1000);
+      // The demo's newcomer is asked first about a church moved from
+      // self-host, until they say no on this browser.
+      const decline = s.node(s.t('claimDecline'));
+      if (await decline.count()) {
+        await s.tap(decline);
+        await s.wait(1000);
+      }
+      await s.tap(s.node(s.t('createChurch')));
+      await s.wait(1000);
+      await s.tap(s.node(s.t('churchName'), 'textbox'));
+      await s.type(church);
+      await s.tap(s.node(s.t('yourName'), 'textbox'));
+      await s.page.keyboard.press('ControlOrMeta+a');
+      await s.type(admin);
+      await s.tap(s.node(s.t('create')));
+      await s.wait(2500);
+      await s.still('start-home');
+      // 設定聚會, then its one service, as a church starts with it.
+      await s.tap(row(s.t('gettingStartedServices')));
+      await s.wait(1200);
+      await s.tap(s.page.getByRole('button').nth(1));
+      await s.wait(1200);
+      await s.still('start-service');
+      await s.page.goBack();
+      await s.wait(1200);
+      await s.tap(s.nodes(before('gettingStartedNext')).first());
+      await s.wait(1500);
+      // 安排服事表: someone not joined yet, typed in the picker.
+      await s.tap(s.node(s.t('planWeeksAction')));
+      await s.wait(1500);
+      await s.tap(s.nodes(`${duties[0]}, `).first());
+      await s.wait(1000);
+      await s.tap(s.node(s.t('pickerSearchHint'), 'textbox'));
+      await s.type(typed);
+      await s.wait(800);
+      await s.still('start-arrange');
+      await s.tap(s.nodes(before('pickerAddStaff')).first());
+      await s.wait(1000);
+      await s.tap(s.node(s.t('done')));
+      await s.wait(1500);
+      // 首頁 is the tab bar's first; the tabs are not buttons to Flutter's accessibility tree.
+      await s.tap([49, 820]);
+      await s.wait(1500);
+      await s.tap(row(s.t('inviteMembers')));
+      await s.wait(1200);
+      await s.tap(s.node(s.t('inviteCreate')));
+      await s.wait(2500);
+      await s.still('start-invite');
+    },
+  },
   // 通知: what to be told, from 設定.
   notifications: {
+    stills: true,
     route: '/me',
     async play(s) {
       await s.wait(1000);
@@ -301,6 +388,7 @@ const CLIPS = {
       await s.wait(1300);
       await s.tap(s.node(s.t('notifReminderBoth')));
       await s.wait(1800);
+      await s.still();
     },
   },
 };
@@ -324,11 +412,27 @@ const DUTIES = {
   ko: ['사회', '찬양 인도', '반주', '드럼', '음향', '자막', '안내', '헌금'],
 };
 
+/** A church just made, in each language: its name, the admin's, and someone typed in before joining. */
+const START = {
+  'zh-Hant': { church: '以琳教會', admin: '林思恩', typed: '王以撒' },
+  'zh-Hans': { church: '以琳教会', admin: '林思恩', typed: '王以撒' },
+  en: { church: 'Elim Church', admin: 'Grace Lin', typed: 'Isaac Wang' },
+  ja: { church: 'エリム教会', admin: '林 恵', typed: '王 イサク' },
+  ko: { church: '엘림교회', admin: '임은혜', typed: '왕이삭' },
+};
+
 let failed = false;
 for (const language of languages) {
   const words = JSON.parse(fs.readFileSync(path.join(arbDir, LANGUAGES[language].arb), 'utf8'));
   for (const [name, clip] of Object.entries(CLIPS)) {
     if (only && !only.includes(name)) continue;
+    const served = clip.newUser ? servers.newUser : servers.showcase;
+    if (!served) {
+      console.log(`${language}/${name}: left out, no --new-user`);
+      continue;
+    }
+    const base = served.base;
+    const given = { duties: DUTIES[language], otherChurch: OTHER_CHURCH[language], ...START[language] };
     const context = await browser.newContext({
       viewport: { width: 393, height: 852 },
       deviceScaleFactor: 2,
@@ -351,16 +455,19 @@ for (const language of languages) {
     // before the recording starts. The demo starts afresh on the reload.
     await page.goto(`${base}${clip.route}`);
     await page.waitForTimeout(4000);
-    await clip.play(session(page, words), { duties: DUTIES[language], otherChurch: OTHER_CHURCH[language] }).catch(() => {});
+    await clip.play(session(page, words), given).catch(() => {});
+    // What the first play left on the device (a claim said no to, a step seen).
+    await page.evaluate(() => localStorage.clear());
     await page.goto(`${base}${clip.route}`);
     await page.waitForTimeout(4000);
     const dir = path.join(outdir, language);
     fs.mkdirSync(dir, { recursive: true });
-    const frames = stillsOnly ? null : await screencast(page, path.join(tmp, `${language}-${name}`));
+    const frames = stillsOnly || clip.stills ? null : await screencast(page, path.join(tmp, `${language}-${name}`));
     recording = true;
     try {
-      await clip.play(session(page, words, path.join(dir, `${name}-still.jpg`)), { duties: DUTIES[language], otherChurch: OTHER_CHURCH[language] });
-      if (lateFonts.length) throw new Error(`fonts fetched while recording: ${lateFonts.join(', ')}`);
+      await clip.play(session(page, words, path.join(dir, `${name}-still.jpg`)), given);
+      // A picture is taken once the page has settled; only a video shows a box before its font.
+      if (lateFonts.length && frames) throw new Error(`fonts fetched while recording: ${lateFonts.join(', ')}`);
     } catch (e) {
       failed = true;
       console.error(`${language}/${name}: ${e.message}`);
@@ -380,7 +487,7 @@ for (const language of languages) {
   }
 }
 await browser.close();
-server.close();
+for (const { server } of Object.values(servers)) server.close();
 if (failed) {
   console.error(`failed: screenshots in ${tmp}`);
   process.exit(1);

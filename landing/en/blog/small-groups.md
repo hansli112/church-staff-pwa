@@ -8,7 +8,7 @@ Churches like to know how many came to each small group meeting. Often that mean
 
 ## An admin sets things up first
 
-1. In **Settings**, turn on **Attendance**.
+1. In **Settings**, tap **Attendance**, then turn on the switch at the bottom.
 2. Go to **Settings** → **Services & ministries**, open the service the small group belongs to, tap **Add a small group**, and give it a name.
 3. On the small group’s page, tap **Small group leader** and pick a team member.
 
@@ -20,13 +20,13 @@ Once you’re assigned, a section like **Get started · Joy Group small group le
 
 On the small group’s page, under **Team members**, tap **Add team members**, pick people from the whole church list, and tap to add them. Added the wrong person? Tap **Remove** next to their name, or tap **Undo**.
 
-![On the small group page, tap Add team members and pick two people to add to the group](media:addStaff)
+![The list for adding team members: tap someone to add them to the group](shot:addStaff-still)
 
 ## Set when you meet
 
-Tap **Meets**, choose **Every week** or **Every other week**, pick the day, and tap **Save**.
+Tap **Meets**, choose **Every week**, **Every other week**, or **Monthly**, pick the day, and tap **Save**. For every other week, tap **Next meeting** to pick which week. For monthly, check which week of the month, like the first Thursday.
 
-![Tap Meets, choose every Thursday, then tap Save](media:meets)
+![Meets set to every Thursday](shot:meets-still)
 
 Once that’s set, tap **Attendance** on the small group’s page to see each meeting day. Days that haven’t come yet don’t show.
 
@@ -34,10 +34,11 @@ Once that’s set, tap **Attendance** on the small group’s page to see each me
 
 On or after the meeting day, tap **Attendance** on the small group’s page, then the meeting marked **Not filled in**, enter how many came, add a note if you like, and tap **Save**.
 
-![Tap a meeting that isn’t filled in, enter 9 people, and save](media:attendance)
+![Attendance lists each meeting, with 9 people filled in for today](shot:attendance-still)
 
 - **Didn’t meet that time:** Tap **We didn't meet**, so it doesn’t stay **Not filled in**.
-- **Still not filled in by 9 p.m. on the meeting day:** The small group leader gets a reminder. To stop these, go to **Settings** → **Notifications** and turn off **Attendance reminders**.
-- **Taking time off:** Tap the **Next meeting** row, check the meetings that are off, and tap **Done**. There are no reminders for those, and nothing is left **Not filled in**.
+- **Meeting at an unusual time:** Tap **Add a meeting**, pick the day, and fill it in.
+- **Who gets reminders:** The small group leader, and whoever is picked under **Reported by**. If no one has filled it in by 9 p.m. on the meeting day or the day after, they get a reminder. To stop these, go to **Settings** → **Notifications** and turn off **Attendance reminders**.
+- **Taking time off:** On the small group’s **Attendance** page, turn off the switch at the top. There are no reminders while it’s off, and nothing is left **Not filled in**. Turn it back on when you’re back.
 
-Admins, office staff and the service’s leads can see the attendance you fill in, and it’s kept even after the small group is deleted.
+Admins, office staff and the service’s leads can see the attendance you fill in, and it’s kept even after the small group is deleted. Admins can see which meetings haven’t been filled in each week in **Settings** → **Attendance**, and tap **Remind** to notify whoever should fill them in.

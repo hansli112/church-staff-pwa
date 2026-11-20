@@ -255,9 +255,9 @@ button.btn:disabled { opacity: 0.6; cursor: default; filter: none; }
 .prose code { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 0.875em; padding: 1px 6px; border-radius: 6px; background: var(--fill); }
 .prose blockquote { margin: 0 0 16px; padding-left: 16px; border-left: 4px solid var(--line); color: var(--text2); }
 
-/* App 的短片（media:<clip>）：手機畫面，不畫手機外框 */
+/* App 的短片（media:<clip>）和截圖（shot:<name>）：手機畫面，不畫手機外框 */
 .clip { margin: 24px auto; width: min(100%, 280px); }
-.clip video { display: block; width: 100%; height: auto; aspect-ratio: 393 / 852; border-radius: 28px; background: var(--app-bg); box-shadow: var(--shadow); }
+.clip video, .clip img { display: block; width: 100%; height: auto; aspect-ratio: 393 / 852; border-radius: 28px; background: var(--app-bg); box-shadow: var(--shadow); }
 
 
 /* 頁尾：三欄短短的連結，各有欄名；最下面是語言選單、社群圖示 */

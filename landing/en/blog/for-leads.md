@@ -28,13 +28,13 @@ Each one disappears once it’s done. If you’d rather not see the card, tap **
 
 Go to **Settings** → **I lead** and tap the service or ministry you lead to open its page:
 
-- Under **Team members**, tap **Add team members**, pick people from the whole church list, and tap to add them.
+- On a ministry’s page, tap **Add team members** under **Team members**. On a service’s page, tap **Team members** first, then **Add team members**. Pick people from the whole church list, and tap to add them.
 - When someone stops serving, tap **Remove** next to their name. Tapped it by mistake? Tap **Undo** to bring them back.
 - People who came to help and have served here but aren’t team members yet are listed under **Served with Youth Service, not on the team yet**. Tap **Add to team** to add them.
 
-![On the small group page, tap Add team members and pick two people to add](media:addStaff)
+![The list for adding team members: tap someone to add them](shot:addStaff-still)
 
-The video shows a small group’s page. Service and ministry pages work the same way.
+The picture shows a small group’s page. Service and ministry pages work the same way.
 
 Once they’re added:
 

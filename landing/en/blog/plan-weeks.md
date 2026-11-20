@@ -22,6 +22,8 @@ Tap a cell to bring up the list of people:
 
 - At the top are people who have served in this role, with how many times they’re already scheduled this month and anything else they’re doing that day, so no one gets scheduled too often.
 - Below them are the other team members. You can also search by name.
+- If a name doesn’t come up in the search, choose the row that adds them as a team member: someone who hasn’t joined yet, who gets the serving you arranged once they join. For someone helping just once, choose the row that fills them in just this once.
+- To leave a cell that already has someone empty for now, tap **Leave empty**.
 - For roles that take one person (like Host or Piano), tap a name and you’re set. To schedule two or more people this time, tap **Select** at the top right, make your picks, then tap **Done**. For a role that usually takes several, an admin can turn on **Several people** on the role’s page.
 
 ![Tap Host for two weeks, pick someone for each, then tap Done to notify the team](media:plan)

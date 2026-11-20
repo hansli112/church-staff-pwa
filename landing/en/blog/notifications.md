@@ -42,10 +42,11 @@ In **Settings** → **Notifications**, you can turn each one on or off:
 
 - **Serving reminders:** A reminder of your serving at 7 p.m. For **Reminder time**, choose **Monday evenings** (lists this week’s serving), **The evening before**, or **Both**.
 - **Schedule changes:** When you’re added to or removed from serving. Changes after 10 p.m. wait until 7 a.m., so they won’t wake you up at night.
-- **Attendance reminders:** For whoever fills in attendance, when no one has filled it in by 9 p.m. on the meeting day.
-- **Requests to join**, **Team member left**: Admins only.
+- **Covers and swaps:** When someone asks you to cover for them or swap with you. Leads also hear who covered and who swapped.
+- **Attendance reminders:** For whoever fills in attendance, when no one has filled it in by 9 p.m. on the meeting day or the day after.
+- **Team member joined**, **Team member left**, **Requests to join**: Admins only.
 
-![On the Notifications page in Settings, the serving reminder is changed to Both](media:notifications)
+![On the Notifications page in Settings, the serving reminder is changed to Both](shot:notifications-still)
 
 Notifications are set up per device: if you use both a phone and a computer, allow them on both. If you belong to several churches, each church’s notifications are set separately.
 

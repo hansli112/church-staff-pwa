@@ -26,6 +26,9 @@
 //   ![排好幾週，再按完成](media:plan)
 // It plays, muted and over and over, while it is on screen; for a visitor
 // who asks for less motion it waits, with the player's buttons, to be played.
+// A picture of the app, where one is as clear, is shot:<name>, the
+// language's <name>.jpg (a clip's still, or one of record.mjs's stills):
+//   ![按建立邀請連結，連結已複製](shot:start-invite)
 //
 // Languages: Traditional Chinese is landing/ itself, at the site's root;
 // each other language is landing/<tag>/, the same files translated, at
@@ -289,12 +292,16 @@ const CLIPS = `<script>
 </script>
 `;
 
-/** [html]'s media:<clip> images as [language]'s clips (a post's on a paragraph of their own). */
+/** [html]'s media:<clip> images as [language]'s clips, and its shot:<name> ones as its pictures, at a phone's size (a post's on a paragraph of their own). */
 function clips(html, language) {
   const video = (clip, alt) =>
     `<figure class="clip"><video class="clip" src="/media/${language}/${clip}.mp4" poster="/media/${language}/${clip}.jpg" width="393" height="852" muted loop playsinline preload="none" aria-label="${alt}"></video></figure>`;
-  const out = html.replace(/(?:<p>)?<img src="media:([A-Za-z]+)" alt="([^"]*)">(?:<\/p>)?/g, (_, clip, alt) => video(clip, alt));
-  return out === html ? html : out.replace('</body>', `${CLIPS}</body>`);
+  const shots = html.replace(
+    /(?:<p>)?<img src="shot:([A-Za-z-]+)" alt="([^"]*)">(?:<\/p>)?/g,
+    (_, name, alt) => `<figure class="clip"><img src="/media/${language}/${name}.jpg" alt="${alt}" width="393" height="852" loading="lazy"></figure>`,
+  );
+  const out = shots.replace(/(?:<p>)?<img src="media:([A-Za-z]+)" alt="([^"]*)">(?:<\/p>)?/g, (_, clip, alt) => video(clip, alt));
+  return out === shots ? shots : out.replace('</body>', `${CLIPS}</body>`);
 }
 
 /**
