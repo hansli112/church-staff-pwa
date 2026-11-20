@@ -239,10 +239,9 @@ class GatheringsScreen extends ConsumerWidget {
           ReorderableSection<Gathering>(
             items: gatherings,
             keyOf: (g) => g.id,
-            row: (g, handle) => ListRow(
+            row: (g) => ListRow(
               title: g.name,
               value: meetingTimeLabel(l10n, g.time),
-              trailing: handle,
               chevron: true,
               onTap: () => context.push(attendancePage(GatheringGroup(g.id))),
             ),

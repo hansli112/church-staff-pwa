@@ -118,6 +118,7 @@
   "removeDuty": "この日はこの担当なし",
   "dutyRemoved": "{duty}を外しました",
   "swipeToDelete": "左にスワイプして削除",
+  "holdToMoveSwipeToDelete": "長押しで並べ替え、左にスワイプして削除",
   "dutyUpdated": "{duty}を更新しました",
   "pickerServes": "おすすめ",
   "pickerOthers": "ほかのメンバー",

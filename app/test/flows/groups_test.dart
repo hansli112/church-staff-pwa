@@ -400,12 +400,27 @@ void main() {
     expect(find.text('5 人'), findsOneWidget);
   });
 
-  testWidgets('in 聚會與事工 a service shows it opens its page, as well as that it can be moved', (tester) async {
-    await pumpApp(tester, seededChurch());
+  testWidgets('in 聚會與事工 a service shows only that it opens its page; held, it moves', (tester) async {
+    final b = seededChurch();
+    await pumpApp(tester, b);
     await go(tester, '/me/groups');
     final row = find.ancestor(of: find.text('主日崇拜'), matching: find.byType(ListRow)).first;
     expect(find.descendant(of: row, matching: find.byIcon(Symbols.chevron_right_rounded)), findsOneWidget);
-    expect(find.descendant(of: row, matching: find.byIcon(Symbols.drag_handle_rounded)), findsOneWidget);
+    expect(find.byIcon(Symbols.drag_handle_rounded), findsNothing);
+    await dragRow(tester, '主日崇拜', 1);
+    expect([for (final s in b.services['grace']!.services) s.id], ['youth', 'sunday']);
+  });
+
+  testWidgets("a service's page says its duties are held to move and swiped to delete, with no handles", (
+    tester,
+  ) async {
+    final b = seededChurch();
+    await pumpApp(tester, b);
+    await go(tester, '/me/groups/service/sunday');
+    expect(find.byIcon(Symbols.drag_handle_rounded), findsNothing);
+    expect(findShown('按住拖曳排序，左滑刪除'), findsWidgets);
+    await dragRow(tester, '司會', 1);
+    expect(b.services['grace']!.byId('sunday')!.duties, ['司琴', '司會', '招待']);
   });
 
   testWidgets("行政 reads a service's 同工 on their page, and moves nobody; a search with no one says so", (tester) async {

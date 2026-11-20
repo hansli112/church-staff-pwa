@@ -394,6 +394,9 @@ class L10nKo extends L10n {
   String get swipeToDelete => '왼쪽으로 밀어서 삭제';
 
   @override
+  String get holdToMoveSwipeToDelete => '길게 눌러 순서 변경, 왼쪽으로 밀어서 삭제';
+
+  @override
   String dutyUpdated(String duty) {
     return '$duty 담당을 수정했어요';
   }

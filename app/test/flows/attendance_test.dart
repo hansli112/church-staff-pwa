@@ -55,21 +55,6 @@ Future<void> scrollToShow(WidgetTester tester, Finder finder) async {
   await settle(tester);
 }
 
-/// Drags [text]'s row by its handle [rows] rows down (up when negative).
-Future<void> dragRow(WidgetTester tester, String text, int rows) async {
-  final row = find.ancestor(of: find.text(text).last, matching: find.byType(ListRow)).first;
-  final handle = find.descendant(of: row, matching: find.byIcon(Symbols.drag_handle_rounded));
-  final height = tester.getSize(row).height;
-  final gesture = await tester.startGesture(tester.getCenter(handle));
-  await tester.pump(const Duration(milliseconds: 100));
-  await gesture.moveBy(Offset(0, rows.sign * 20.0));
-  await tester.pump(const Duration(milliseconds: 100));
-  await gesture.moveBy(Offset(0, height * (rows + rows.sign * 0.8)));
-  await tester.pump(const Duration(milliseconds: 500));
-  await gesture.up();
-  await settle(tester);
-}
-
 Future<void> go(WidgetTester tester, String path) async {
   GoRouter.of(tester.element(find.byType(Scaffold).first)).go(path);
   await settle(tester);

@@ -345,8 +345,8 @@ class _RowDivider extends StatelessWidget {
   );
 }
 
-/// A [ListSection] whose rows are put in order by dragging: by the handle
-/// at once, or anywhere on the row after a long press. A sliver, so a row
+/// A [ListSection] whose rows are put in order by holding one and dragging
+/// it, with no handle beside the chevron (2026-11-20). A sliver, so a row
 /// dragged past the screen's edge scrolls the page. [after] are fixed rows
 /// below them (新增…). The new order shows until [onReorder]'s write is
 /// done; then [items] again, saved or not.
@@ -367,8 +367,8 @@ class ReorderableSection<T> extends StatefulWidget {
   final List<T> items;
   final Object Function(T item) keyOf;
 
-  /// The row for one item, with [handle] as its trailing.
-  final Widget Function(T item, Widget? handle) row;
+  /// The row for one item.
+  final Widget Function(T item) row;
   final Future<void> Function(List<T> next) onReorder;
   final List<Widget> after;
 
@@ -408,15 +408,7 @@ class _ReorderableSectionState<T> extends State<ReorderableSection<T>> {
             itemCount: items.length,
             onReorder: _reorder,
             itemBuilder: (_, i) {
-              final row = widget.row(
-                items[i],
-                items.length < 2
-                    ? null
-                    : ReorderableDragStartListener(
-                        index: i,
-                        child: Icon(Symbols.drag_handle_rounded, color: c.tertiaryLabel),
-                      ),
-              );
+              final row = widget.row(items[i]);
               return Material(
                 key: ValueKey(widget.keyOf(items[i])),
                 color: c.surface,

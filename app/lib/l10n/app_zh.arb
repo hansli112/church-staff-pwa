@@ -229,6 +229,8 @@
     }
   },
   "swipeToDelete": "左滑刪除",
+  "holdToMoveSwipeToDelete": "按住拖曳排序，左滑刪除",
+  "@holdToMoveSwipeToDelete": {"description": "Under a list whose rows have no drag handle: held, a row moves; swiped left, it is deleted"},
   "@swipeToDelete": {"description": "Footnote under a list whose rows an admin swipes left to delete: 服事項目, 常用特別活動"},
   "dutyUpdated": "已更新{duty}",
   "@dutyUpdated": {

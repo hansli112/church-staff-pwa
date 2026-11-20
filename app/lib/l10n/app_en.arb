@@ -118,6 +118,7 @@
   "removeDuty": "Not needed this day",
   "dutyRemoved": "Removed {duty}",
   "swipeToDelete": "Swipe left to delete",
+  "holdToMoveSwipeToDelete": "Hold and drag to reorder, swipe left to delete",
   "dutyUpdated": "Updated {duty}",
   "pickerServes": "Suggested",
   "pickerOthers": "Other team members",

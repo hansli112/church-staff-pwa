@@ -403,6 +403,9 @@ class L10nEn extends L10n {
   String get swipeToDelete => 'Swipe left to delete';
 
   @override
+  String get holdToMoveSwipeToDelete => 'Hold and drag to reorder, swipe left to delete';
+
+  @override
   String dutyUpdated(String duty) {
     return 'Updated $duty';
   }

@@ -560,7 +560,7 @@ void main() {
       final b = seededChurch();
       await pumpApp(tester, b);
       await go(tester, '/me/groups/service/sunday');
-      expect(find.text('左滑刪除'), findsWidgets, reason: 'the swipe is not seen otherwise');
+      expect(find.textContaining('左滑刪除'), findsWidgets, reason: 'the swipe is not seen otherwise');
       await tester.drag(find.text('司琴').first, const Offset(-500, 0));
       await settle(tester);
       expect(b.services['grace']!.byId('sunday')!.duties, ['司會', '招待']);

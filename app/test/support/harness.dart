@@ -1,3 +1,4 @@
+import 'package:flutter/gestures.dart' show kLongPressTimeout;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -6,7 +7,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:intl/intl.dart' show Intl;
 import 'package:martha/app.dart';
 import 'package:martha/core/design/balanced_text.dart';
-import 'package:martha/core/design/components.dart' show DateBlock;
+import 'package:martha/core/design/components.dart' show DateBlock, ListRow;
 import 'package:martha/core/design/theme.dart';
 import 'package:martha/core/builtin_localizations.dart';
 import 'package:martha/core/languages.dart';
@@ -253,3 +254,20 @@ Finder shownText(String text) => find.byWidgetPredicate(
   (w) => w is Text && (w.data ?? w.textSpan?.toPlainText())?.replaceAll('⁠', '') == text,
   description: 'text "$text"',
 );
+
+/// Holds [text]'s row, then drags it [rows] rows down (up when negative):
+/// a list put in order shows no handle.
+Future<void> dragRow(WidgetTester tester, String text, int rows) async {
+  final row = find.ancestor(of: find.text(text).last, matching: find.byType(ListRow)).first;
+  final height = tester.getSize(row).height;
+  final gesture = await tester.startGesture(tester.getCenter(row));
+  await tester.pump(kLongPressTimeout + const Duration(milliseconds: 100));
+  // Picked up, then well into the row it goes to: the list only gives way
+  // once a row is mostly past.
+  await gesture.moveBy(Offset(0, rows.sign * 20.0));
+  await tester.pump(const Duration(milliseconds: 100));
+  await gesture.moveBy(Offset(0, height * (rows + rows.sign * 0.8)));
+  await tester.pump(const Duration(milliseconds: 500));
+  await gesture.up();
+  await settle(tester);
+}

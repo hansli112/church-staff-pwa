@@ -59,11 +59,9 @@ class ServiceListSection extends ConsumerWidget {
       items: list,
       keyOf: (s) => s.id,
       onReorder: save,
-      row: (s, handle) => ListRow(
+      row: (s) => ListRow(
         title: s.name,
         subtitle: weekdaysLabel(l10n, s.weekdays),
-        trailing: handle,
-        // Opens its page, which the handle alone does not say.
         chevron: true,
         onTap: () => context.push('/me/groups/service/${s.id}'),
       ),
@@ -476,10 +474,9 @@ Widget serviceBasicsSection(BuildContext context, WidgetRef ref, Service service
 /// them in order, swipes one away and adds one.
 Widget serviceDutiesSliver(BuildContext context, WidgetRef ref, Service service, {required bool admin}) {
   final l10n = L10n.of(context);
-  ListRow row(String d, Widget? handle) => ListRow(
+  ListRow row(String d) => ListRow(
     title: d,
     value: dutyPeopleLabel(ref, l10n, service.id, d),
-    trailing: handle,
     chevron: true,
     onTap: () => context.push(dutyPage(service.id, d)),
   );
@@ -487,18 +484,22 @@ Widget serviceDutiesSliver(BuildContext context, WidgetRef ref, Service service,
     return SliverToBoxAdapter(
       child: ListSection(
         header: l10n.templateDuties,
-        children: [for (final d in service.duties) row(d, null)],
+        children: [for (final d in service.duties) row(d)],
       ),
     );
   }
   final edits = ServiceEdits(context, ref, service);
   return ReorderableSection<String>(
     header: l10n.templateDuties,
-    footer: service.duties.isEmpty ? null : l10n.swipeToDelete,
+    footer: switch (service.duties.length) {
+      0 => null,
+      1 => l10n.swipeToDelete,
+      _ => l10n.holdToMoveSwipeToDelete,
+    },
     items: service.duties,
     keyOf: (d) => 'duty/$d',
     onReorder: (next) => edits.save(service.copyWith(duties: next)),
-    row: (d, handle) => Dismissible(
+    row: (d) => Dismissible(
       key: ValueKey('duty/$d'),
       direction: DismissDirection.endToStart,
       background: const SwipeDeleteBackground(),
@@ -506,7 +507,7 @@ Widget serviceDutiesSliver(BuildContext context, WidgetRef ref, Service service,
         await edits.removeDuty(d);
         return false; // The successful server change removes the row.
       },
-      child: row(d, handle),
+      child: row(d),
     ),
     after: [ListRow(title: l10n.addDuty, leading: const Icon(Symbols.add_rounded), onTap: edits.addDuty)],
   );
@@ -536,11 +537,15 @@ Widget serviceEventsSliver(BuildContext context, WidgetRef ref, Service service,
   ).events;
   return ReorderableSection<EventTag>(
     header: l10n.commonEvents,
-    footer: service.events.isEmpty ? null : l10n.swipeToDelete,
+    footer: switch (service.events.length) {
+      0 => null,
+      1 => l10n.swipeToDelete,
+      _ => l10n.holdToMoveSwipeToDelete,
+    },
     items: service.events,
     keyOf: (e) => 'event/${e.name}',
     onReorder: (next) => edits.save(service.copyWith(events: next)),
-    row: (e, handle) => Dismissible(
+    row: (e) => Dismissible(
       key: ValueKey('event/${e.name}'),
       direction: DismissDirection.endToStart,
       background: const SwipeDeleteBackground(),
@@ -551,7 +556,6 @@ Widget serviceEventsSliver(BuildContext context, WidgetRef ref, Service service,
       child: ListRow(
         title: e.name,
         leading: Tag.event(context, ' ', e.color),
-        trailing: handle,
         onTap: () => edits.eventActions(e, stale),
       ),
     ),

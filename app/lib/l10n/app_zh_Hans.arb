@@ -118,6 +118,7 @@
   "removeDuty": "这一天没有这项事奉",
   "dutyRemoved": "已移除{duty}",
   "swipeToDelete": "左滑删除",
+  "holdToMoveSwipeToDelete": "按住拖动排序，左滑删除",
   "dutyUpdated": "已更新{duty}",
   "pickerServes": "建议",
   "pickerOthers": "其他同工",

@@ -393,6 +393,9 @@ class L10nJa extends L10n {
   String get swipeToDelete => '左にスワイプして削除';
 
   @override
+  String get holdToMoveSwipeToDelete => '長押しで並べ替え、左にスワイプして削除';
+
+  @override
   String dutyUpdated(String duty) {
     return '$dutyを更新しました';
   }

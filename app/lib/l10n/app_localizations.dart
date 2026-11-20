@@ -808,6 +808,12 @@ abstract class L10n {
   /// **'左滑刪除'**
   String get swipeToDelete;
 
+  /// Under a list whose rows have no drag handle: held, a row moves; swiped left, it is deleted
+  ///
+  /// In zh, this message translates to:
+  /// **'按住拖曳排序，左滑刪除'**
+  String get holdToMoveSwipeToDelete;
+
   /// No description provided for @dutyUpdated.
   ///
   /// In zh, this message translates to:

@@ -393,6 +393,9 @@ class L10nZh extends L10n {
   String get swipeToDelete => '左滑刪除';
 
   @override
+  String get holdToMoveSwipeToDelete => '按住拖曳排序，左滑刪除';
+
+  @override
   String dutyUpdated(String duty) {
     return '已更新$duty';
   }
@@ -4002,6 +4005,9 @@ class L10nZhHans extends L10nZh {
 
   @override
   String get swipeToDelete => '左滑删除';
+
+  @override
+  String get holdToMoveSwipeToDelete => '按住拖动排序，左滑删除';
 
   @override
   String dutyUpdated(String duty) {

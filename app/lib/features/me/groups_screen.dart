@@ -982,10 +982,9 @@ class _SmallGroupsSectionState extends ConsumerState<_SmallGroupsSection> {
   @override
   Widget build(BuildContext context) {
     final l10n = L10n.of(context);
-    Widget row(SmallGroupDetails g, [Widget? handle]) => ListRow(
+    Widget row(SmallGroupDetails g) => ListRow(
       title: g.name,
       subtitle: widget.attendanceOn ? smallGroupMeetsLabel(l10n, g) : null,
-      trailing: handle,
       chevron: true,
       onTap: () => context.push('/me/groups/small/${g.id}'),
     );
