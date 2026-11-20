@@ -55,4 +55,15 @@ void main() {
     expect(launches.opened.single, startsWith('https://line.me/ti/g2/'));
     expect(launches.modes.single, PreferredLaunchMode.externalApplication);
   });
+
+  testWidgets('everyone finds the WhatsApp group next to it', (tester) async {
+    final launches = captureLaunches();
+    await pumpApp(tester, seededChurch(as: staffMei));
+    await go(tester, '/me');
+    await tester.scrollUntilVisible(find.text('WhatsApp 群組'), 200, scrollable: find.byType(Scrollable).first);
+    await tester.tap(find.text('WhatsApp 群組'));
+    await settle(tester);
+    expect(launches.opened.single, 'https://chat.whatsapp.com/G0HElUfVXs52OvW2hkMVN6');
+    expect(launches.modes.single, PreferredLaunchMode.externalApplication);
+  });
 }

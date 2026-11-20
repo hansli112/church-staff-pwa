@@ -21,6 +21,10 @@ import 'groups_screen.dart';
 /// The LINE OpenChat (馬大別忙 Martha, sit): help, and churches meeting each other.
 final lineCommunity = Uri.parse('https://line.me/ti/g2/irPvG8tKHa9Iwf2hK7D9lcjdW5O-DUx4Coafcg');
 
+/// The WhatsApp group, for the churches in Malaysia, Singapore and Hong
+/// Kong, who use WhatsApp rather than LINE.
+final whatsAppGroup = Uri.parse('https://chat.whatsapp.com/G0HElUfVXs52OvW2hkMVN6');
+
 /// 設定: my account, my church, settings. An admin's most used pages sit at
 /// the top under 管理教會, the rest in 教會資訊, so staff see a short page.
 /// What is rarely needed is a level down: signing in and out under my
@@ -183,6 +187,11 @@ class SettingsScreen extends ConsumerWidget {
                 leading: const IconTile(Symbols.forum_rounded, color: TileColors.line),
                 title: l10n.lineCommunity,
                 onTap: () => launchUrl(lineCommunity, mode: LaunchMode.externalApplication),
+              ),
+              ListRow(
+                leading: const IconTile(Symbols.forum_rounded, color: TileColors.whatsApp),
+                title: l10n.whatsAppGroup,
+                onTap: () => launchUrl(whatsAppGroup, mode: LaunchMode.externalApplication),
               ),
               ListRow(
                 leading: const IconTile(Symbols.info_rounded, color: TileColors.neutral),

@@ -554,6 +554,9 @@ class L10nJa extends L10n {
   String get lineCommunity => 'LINE オープンチャット';
 
   @override
+  String get whatsAppGroup => 'WhatsApp グループ';
+
+  @override
   String get members => 'メンバー';
 
   @override

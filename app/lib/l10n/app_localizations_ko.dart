@@ -555,6 +555,9 @@ class L10nKo extends L10n {
   String get lineCommunity => 'LINE 오픈채팅';
 
   @override
+  String get whatsAppGroup => 'WhatsApp 그룹';
+
+  @override
   String get members => '멤버';
 
   @override

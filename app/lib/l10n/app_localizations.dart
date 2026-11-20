@@ -1078,6 +1078,12 @@ abstract class L10n {
   /// **'LINE 社群'**
   String get lineCommunity;
 
+  /// No description provided for @whatsAppGroup.
+  ///
+  /// In zh, this message translates to:
+  /// **'WhatsApp 群組'**
+  String get whatsAppGroup;
+
   /// No description provided for @members.
   ///
   /// In zh, this message translates to:

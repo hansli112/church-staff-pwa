@@ -564,6 +564,9 @@ class L10nEn extends L10n {
   String get lineCommunity => 'LINE community';
 
   @override
+  String get whatsAppGroup => 'WhatsApp group';
+
+  @override
   String get members => 'Team members';
 
   @override

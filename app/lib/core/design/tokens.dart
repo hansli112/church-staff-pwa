@@ -241,6 +241,10 @@ abstract final class TileColors {
   /// The LINE community, in a darker LINE green.
   static const line = Color(0xFF05964A);
 
+  /// The WhatsApp group, in WhatsApp's teal (its bright green is too light
+  /// for a white icon).
+  static const whatsApp = Color(0xFF128C7E);
+
   /// Everything else: language, account, the website's pages.
   static const neutral = Color(0xFF7C7C82);
 

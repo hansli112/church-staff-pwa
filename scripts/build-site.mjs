@@ -78,6 +78,8 @@ export const LANGUAGES = {
     terms: '服務條款',
     issues: '問題回報',
     contact: '聯絡我們',
+    line: 'LINE 社群',
+    whatsApp: 'WhatsApp 群組',
     social: '社群',
     help: '幫助',
     policies: '政策',
@@ -106,6 +108,8 @@ export const LANGUAGES = {
     terms: '服务条款',
     issues: '问题反馈',
     contact: '联系我们',
+    line: 'LINE 社群',
+    whatsApp: 'WhatsApp 群组',
     social: '社交媒体',
     help: '帮助',
     policies: '政策',
@@ -134,6 +138,8 @@ export const LANGUAGES = {
     terms: 'Terms of Service',
     issues: 'Report a problem',
     contact: 'Contact us',
+    line: 'LINE community',
+    whatsApp: 'WhatsApp group',
     social: 'Social media',
     help: 'Help',
     policies: 'Legal',
@@ -165,6 +171,8 @@ export const LANGUAGES = {
     terms: '利用規約',
     issues: '不具合の報告',
     contact: 'お問い合わせ',
+    line: 'LINE オープンチャット',
+    whatsApp: 'WhatsApp グループ',
     social: 'SNS',
     help: 'ヘルプ',
     policies: '規約',
@@ -196,6 +204,8 @@ export const LANGUAGES = {
     terms: '서비스 이용약관',
     issues: '문제 신고',
     contact: '문의하기',
+    line: 'LINE 오픈채팅',
+    whatsApp: 'WhatsApp 그룹',
     social: '소셜 미디어',
     help: '도움말',
     policies: '약관',
@@ -370,6 +380,10 @@ export const SOCIAL = [
   ['YouTube', 'https://www.youtube.com/@marthasitapp', 'M23.498 6.186a3.016 3.016 0 0 0-2.122-2.136C19.505 3.545 12 3.545 12 3.545s-7.505 0-9.377.505A3.017 3.017 0 0 0 .502 6.186C0 8.07 0 12 0 12s0 3.93.502 5.814a3.016 3.016 0 0 0 2.122 2.136c1.871.505 9.376.505 9.376.505s7.505 0 9.377-.505a3.015 3.015 0 0 0 2.122-2.136C24 15.93 24 12 24 12s0-3.93-.502-5.814zM9.545 15.568V8.432L15.818 12l-6.273 3.568z'],
 ];
 
+/** Where churches ask and meet each other, as on the app's 設定 (app/lib/features/me/me_screen.dart). */
+const LINE_COMMUNITY = 'https://line.me/ti/g2/irPvG8tKHa9Iwf2hK7D9lcjdW5O-DUx4Coafcg';
+const WHATSAPP_GROUP = 'https://chat.whatsapp.com/G0HElUfVXs52OvW2hkMVN6';
+
 function footer(language, page) {
   const w = LANGUAGES[language];
   const at = (p) => sitePath(language, p);
@@ -390,6 +404,8 @@ function footer(language, page) {
       ${column(w.help, [
         `<a href="https://github.com/hansli112/church-staff-pwa/issues">${w.issues}</a>`,
         `<a href="mailto:support@marthasit.com">${w.contact}</a>`,
+        `<a href="${LINE_COMMUNITY}">${w.line}</a>`,
+        `<a href="${WHATSAPP_GROUP}">${w.whatsApp}</a>`,
       ])}
       ${column(w.policies, [
         `<a href="${at('/privacy')}">${w.privacy}</a>`,
