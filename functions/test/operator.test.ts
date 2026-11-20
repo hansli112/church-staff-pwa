@@ -212,5 +212,8 @@ describe('client error log', () => {
     const odd = logged({ screen: 42, during: 'x'.repeat(201), library: '', fatal: 'yes' });
     assert.deepEqual([odd.screen, odd.during, odd.library, odd.fatal], [null, null, null, null]);
     assert.equal(logged({ during: 'building a@example.com' }).during, 'building <email>');
+    const agent = 'Mozilla/5.0 (Linux; Android 14) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Mobile Safari/537.36';
+    assert.equal(logged({ agent }).agent, agent, 'which browser, for errors of its engine');
+    assert.equal(logged({ agent: 'x'.repeat(301) }).agent, null);
   });
 });

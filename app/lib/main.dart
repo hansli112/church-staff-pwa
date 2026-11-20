@@ -101,15 +101,7 @@ Future<void> main() async {
   final native = !kIsWeb && env != Env.demo;
   final SupportStore store = native ? StoreKitPlayStore() : const NoStore();
   final AppIconSwitcher icons = native ? ChannelIconSwitcher() : const NoIconSwitcher();
-  FlutterError.onError = (details) {
-    FlutterError.presentError(details);
-    telemetry.recordError(
-      details.exception,
-      details.stack ?? StackTrace.empty,
-      during: errorPhase(details),
-      library: details.library,
-    );
-  };
+  FlutterError.onError = flutterErrorReporter(telemetry);
   PlatformDispatcher.instance.onError = (error, stack) {
     telemetry.recordError(error, stack, fatal: true);
     return true;

@@ -3,6 +3,7 @@ import 'package:firebase_crashlytics/firebase_crashlytics.dart';
 import 'package:flutter/foundation.dart';
 
 import '../data/backend.dart';
+import 'web_page.dart';
 
 /// Crash and error reporting plus product analytics.
 ///
@@ -71,6 +72,37 @@ String? errorPhase(FlutterErrorDetails details) {
 
 final _phaseEnd = RegExp('\\((?!\\))|[\\[#:"\'\\n]');
 
+/// [stack] as text; empty when it cannot be read, as a browser error whose
+/// JavaScript stack is gone throws when printed.
+String stackText(StackTrace stack) {
+  try {
+    return stack.toString();
+  } catch (_) {
+    return '';
+  }
+}
+
+/// FlutterError.onError: reports the error to [telemetry] first, then
+/// prints it ([present], FlutterError.presentError). Printing can throw
+/// (a JavaScript stack that is gone), and the error it was about would
+/// then never be reported: on the web only what it broke afterwards was.
+FlutterExceptionHandler flutterErrorReporter(
+  Telemetry telemetry, {
+  void Function(FlutterErrorDetails)? present,
+}) => (details) {
+  telemetry.recordError(
+    details.exception,
+    details.stack ?? StackTrace.empty,
+    during: errorPhase(details),
+    library: details.library,
+  );
+  try {
+    (present ?? FlutterError.presentError)(details);
+  } catch (_) {
+    // Reported above; the console only misses it.
+  }
+};
+
 class NoTelemetry implements Telemetry {
   const NoTelemetry();
 
@@ -120,7 +152,8 @@ class FirebaseTelemetry implements Telemetry {
       if (message == null) return;
       _cloud.logError(
         message: message.length > 1000 ? message.substring(0, 1000) : message,
-        stack: _trim(stack.toString(), 8000),
+        stack: _trim(stackText(stack), 8000),
+        agent: _trim(userAgent(), 300),
         churchId: _churchId,
         screen: _screen,
         during: during,

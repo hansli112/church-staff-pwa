@@ -7,6 +7,7 @@ import { scrub } from './redact.js';
 const MAX_MESSAGE = 1000;
 const MAX_STACK = 8000;
 const MAX_FIELD = 200;
+const MAX_AGENT = 300;
 
 /**
  * Web clients report uncaught errors here (Crashlytics does not support
@@ -17,7 +18,7 @@ const MAX_FIELD = 200;
  * roster content. With it, to tell where it happened: the page up (its
  * route's pattern), what the framework was doing ("while dispatching a
  * pointer event", cut before any widget's arguments by the app), its
- * library, and whether nothing caught it (fatal). These are fields of the
+ * library, whether nothing caught it (fatal), and the browser (agent). These are fields of the
  * entry, not of the message, so they do not split Error Reporting's groups;
  * an app too old to send them, or one sending something else, still has
  * its error logged.
@@ -26,7 +27,7 @@ export function logClientError(caller: Caller | null, data: unknown) {
   const c = requireCaller(caller);
   const input = data as {
     message?: unknown; stack?: unknown; churchId?: unknown;
-    screen?: unknown; during?: unknown; library?: unknown; fatal?: unknown;
+    screen?: unknown; during?: unknown; library?: unknown; fatal?: unknown; agent?: unknown;
   };
   if (typeof input?.message !== 'string' || input.message.length > MAX_MESSAGE) {
     fail('invalid-argument', 'unknown');
@@ -51,6 +52,8 @@ export function logClientError(caller: Caller | null, data: unknown) {
     during: short(input.during),
     library: short(input.library),
     fatal: typeof input.fatal === 'boolean' ? input.fatal : null,
+    // The browser: an error can be its engine's (skwasm), not the app's.
+    agent: typeof input.agent === 'string' && input.agent.length <= MAX_AGENT ? scrub(input.agent) : null,
   });
   return {};
 }

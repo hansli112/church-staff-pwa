@@ -2183,6 +2183,7 @@ class FirebaseCloudApi implements CloudApi {
     String? during,
     String? library,
     bool fatal = false,
+    String? agent,
   }) => _calls.report({
     'message': message,
     'stack': stack,
@@ -2191,5 +2192,6 @@ class FirebaseCloudApi implements CloudApi {
     'during': ?during,
     'library': ?library,
     'fatal': fatal,
+    if (agent != null && agent.isNotEmpty) 'agent': agent,
   });
 }

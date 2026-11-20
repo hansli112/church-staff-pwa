@@ -1048,7 +1048,8 @@ abstract interface class CloudApi {
 
   /// Reports an uncaught error. Never throws. [screen]: the page up, by its
   /// route's pattern; [during] and [library]: where the framework caught it;
-  /// [fatal]: nothing caught it.
+  /// [fatal]: nothing caught it; [agent]: the browser's user agent, as an
+  /// error can be its engine's.
   Future<void> logError({
     required String message,
     required String stack,
@@ -1057,6 +1058,7 @@ abstract interface class CloudApi {
     String? during,
     String? library,
     bool fatal = false,
+    String? agent,
   });
 }
 

@@ -3288,6 +3288,7 @@ class MemoryCloud implements CloudApi {
     String? during,
     String? library,
     bool fatal = false,
+    String? agent,
   }) async => loggedErrors.add(message);
 }
 
