@@ -825,6 +825,12 @@ describe('設定 (settings)', () => {
     await assertFails(deleteDoc(ref));
   });
 
+  it('聚會可以刪到一個都不剩，ids 留著', async () => {
+    const ref = doc(as(ADMIN_A), `churches/${A}/settings/services`);
+    await assertSucceeds(setDoc(ref, { services: [], ids: ['sunday', 'youth', 'prayer'] }));
+    await assertFails(setDoc(ref, { services: [], ids: ['sunday'] }));
+  });
+
   it('有聚會好幾天（severalDays）之後，沒寫 severalDays 的舊版 App 不能整份覆蓋掉', async () => {
     const ref = doc(as(ADMIN_A), `churches/${A}/settings/services`);
     const all = services(['sunday', 'youth', 'prayer']);

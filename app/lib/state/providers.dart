@@ -95,12 +95,19 @@ final ministriesProvider = StreamProvider<MinistrySettings>((ref) => openChurch(
 
 /// The church's 小組 (#85), as it lists them (inChurchOrder): by service,
 /// then in the order dragged.
+/// Not those of a service deleted: they went with it.
 final smallGroupsProvider = StreamProvider<List<SmallGroupDetails>>((ref) {
   // The services' order, as text: a list read anew would be another each time.
   final services = ref.watch(
-    servicesProvider.select((s) => [for (final x in s.value?.services ?? const <Service>[]) x.id].join('\u0000')),
+    servicesProvider.select((s) => s.value == null ? null : [for (final x in s.value!.services) x.id].join('\u0000')),
   );
-  return openChurch(ref).smallGroups().map((list) => list.inChurchOrder(services.split('\u0000')));
+  final order = services?.split('\u0000');
+  return openChurch(ref).smallGroups().map(
+    (list) => [
+      for (final g in list.inChurchOrder(order ?? const []))
+        if (order == null || order.contains(g.service)) g,
+    ],
+  );
 });
 
 /// The church's 其他聚會 (回報人數), in the order dragged (byOrder).
@@ -433,11 +440,15 @@ final myServicesProvider = Provider<AsyncValue<List<MyService>>>((ref) {
   // Riverpod would then schedule its rebuild during a build.
   ref.watch(churchDataProvider);
   final saved = ref.watch(savedRostersProvider);
+  final settings = ref.watch(servicesProvider);
   final uid = ref.watch(uidProvider);
   if (saved.hasError) return AsyncError(saved.error!, saved.stackTrace!);
+  if (settings.hasError) return AsyncError(settings.error!, settings.stackTrace!);
   final rosters = saved.value;
-  if (rosters == null || uid == null) return const AsyncLoading();
-  return AsyncData(myServices(rosters, uid: uid));
+  final services = settings.value;
+  if (rosters == null || services == null || uid == null) return const AsyncLoading();
+  // Not a deleted service's: its rosters stay saved, out of sight.
+  return AsyncData(myServices(rosters.where((r) => r.isEvent || services.byId(r.type) != null), uid: uid));
 });
 
 /// Where the app is, which decides the screen the router shows.

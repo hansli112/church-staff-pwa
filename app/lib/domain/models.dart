@@ -617,7 +617,6 @@ class Service {
     required this.id,
     required this.name,
     required this.weekdays,
-    this.enabled = true,
     this.duties = const [],
     this.events = const [],
     this.manyDuties,
@@ -630,9 +629,6 @@ class Service {
   /// The days it meets, 1 = Monday … 7 = Sunday: at least one, in that
   /// order. Each has its own roster (晨更 週一到週五).
   final List<int> weekdays;
-
-  /// A disabled service keeps its old rosters but gets no new ones.
-  final bool enabled;
 
   /// The roster template: duties a new roster starts with, in order.
   final List<String> duties;
@@ -650,7 +646,6 @@ class Service {
   Service copyWith({
     String? name,
     List<int>? weekdays,
-    bool? enabled,
     List<String>? duties,
     List<EventTag>? events,
     List<String>? manyDuties,
@@ -658,7 +653,6 @@ class Service {
     id: id,
     name: name ?? this.name,
     weekdays: weekdays ?? this.weekdays,
-    enabled: enabled ?? this.enabled,
     duties: duties ?? this.duties,
     events: events ?? this.events,
     manyDuties: manyDuties ?? this.manyDuties,
@@ -670,7 +664,6 @@ class Service {
       other.id == id &&
       other.name == name &&
       listEquals(other.weekdays, weekdays) &&
-      other.enabled == enabled &&
       listEquals(other.duties, duties) &&
       listEquals(other.events, events) &&
       listEquals(other.manyDuties, manyDuties);
@@ -680,7 +673,6 @@ class Service {
     id,
     name,
     Object.hashAll(weekdays),
-    enabled,
     Object.hashAll(duties),
     Object.hashAll(events),
     manyDuties == null ? null : Object.hashAll(manyDuties!),
@@ -691,15 +683,12 @@ class Service {
 class ServiceSettings {
   const ServiceSettings({required this.services, this.ids = const []});
 
+  /// The church's services, in its order. Deleting one takes it off
+  /// here; its rosters stay saved, out of sight, and 復原 puts it back.
   final List<Service> services;
 
-  /// Every service ID ever configured. Only grows.
+  /// Every service ID ever configured, a deleted one's too. Only grows.
   final List<String> ids;
-
-  List<Service> get enabled => [
-    for (final service in services)
-      if (service.enabled) service,
-  ];
 
   Service? byId(String id) {
     for (final service in services) {

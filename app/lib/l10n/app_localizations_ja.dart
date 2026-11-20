@@ -936,13 +936,23 @@ class L10nJa extends L10n {
   String get serviceAdd => '集会を追加';
 
   @override
+  String get deleteService => '集会を削除';
+
+  @override
+  String deleteServiceTitle(String name) {
+    return '「$name」を削除しますか？';
+  }
+
+  @override
+  String deleteServiceArranged(int count) {
+    return '組んである $count 日分の奉仕表も削除されます';
+  }
+
+  @override
   String get serviceName => '集会名';
 
   @override
   String get weekday => '曜日';
-
-  @override
-  String get serviceEnabled => '実施中';
 
   @override
   String dutyPeopleCount(int count) {
@@ -1016,9 +1026,6 @@ class L10nJa extends L10n {
 
   @override
   String get accountDeleted => 'アカウントを削除しました';
-
-  @override
-  String get serviceDisabled => '停止中';
 
   @override
   String get adminSearchHint => '教会名または ID';

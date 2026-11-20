@@ -5,8 +5,7 @@ import 'package:martha/domain/models.dart';
 
 const sunday = Service(id: 'sunday', name: '主日崇拜', weekdays: [DateTime.sunday], duties: ['司會', '司琴']);
 const youth = Service(id: 'youth', name: '青年崇拜', weekdays: [DateTime.saturday], duties: ['司會']);
-const closed = Service(id: 'closed', name: '晚堂', weekdays: [DateTime.sunday], enabled: false);
-const services = ServiceSettings(services: [sunday, youth, closed]);
+const services = ServiceSettings(services: [sunday, youth]);
 const worship = Ministry(id: 'worship', name: '敬拜團', duties: [MinistryDuty('youth', '司琴')]);
 const care = Ministry(id: 'care', name: '關懷事工');
 const joy = SmallGroupDetails(id: 'joy', name: '喜樂小組', service: 'sunday');
@@ -264,9 +263,9 @@ void main() {
     );
   });
 
-  test('a 牧者 of some services does it for each one still held, open or not', () {
+  test('a 牧者 of some services does it for each one the church still has', () {
     final pastor = staff.withIdentities(const [
-      PastorIdentity(['sunday', 'youth', 'closed', 'gone']),
+      PastorIdentity(['sunday', 'youth', 'gone']),
     ]);
     expect(
       left(
@@ -284,7 +283,7 @@ void main() {
         (step: StartStep.planWeeks, group: const ServiceGroup('sunday')),
         (step: StartStep.addStaff, group: const ServiceGroup('youth')),
       ],
-      reason: 'a disabled service and one no longer there are left out',
+      reason: 'one deleted is left out',
     );
   });
 

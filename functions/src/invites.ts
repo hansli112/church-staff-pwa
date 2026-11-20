@@ -10,6 +10,7 @@ import { tellJoined } from './joinedPushes.js';
 import { personName } from './limits.js';
 import type { PushDeps } from './push.js';
 import { loggable } from './redact.js';
+import { keptServices } from './rosters.js';
 
 /**
  * Invites live at invites/{code}. Admins create and revoke them from the app
@@ -50,11 +51,8 @@ async function usableInvite(deps: Deps, data: unknown) {
 async function inviteZoneTypes(deps: Deps, cid: string, raw: unknown): Promise<string[]> {
   if (!Array.isArray(raw) || raw.length === 0) return [];
   const settings = await deps.db.doc(`churches/${cid}/settings/services`).get();
-  const services = settings.get('services');
   const have = new Set(
-    Array.isArray(services)
-      ? services.map((s: { id?: unknown }) => s?.id).filter((id): id is string => typeof id === 'string')
-      : [],
+    keptServices<{ id?: unknown }>(settings).map((s) => s?.id).filter((id): id is string => typeof id === 'string'),
   );
   return [...new Set(raw.filter((t): t is string => typeof t === 'string' && have.has(t)))];
 }

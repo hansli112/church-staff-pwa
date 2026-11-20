@@ -426,7 +426,6 @@ Service serviceFromJson(Json data) => Service(
   id: data['id'] as String,
   name: data['name'] as String? ?? '',
   weekdays: _weekdays(data),
-  enabled: data['enabled'] as bool? ?? true,
   duties: _strings(data['duties']),
   events: [
     if (data['events'] is List)
@@ -457,7 +456,9 @@ Json serviceToJson(Service s) => {
   'name': s.name,
   'weekday': s.weekdays.first,
   if (s.weekdays.length > 1) 'weekdays': s.weekdays,
-  'enabled': s.enabled,
+  // Older apps and editService still read it: a service turned off
+  // (停用) before 聚會 could be deleted.
+  'enabled': true,
   'duties': s.duties,
   'events': [for (final e in s.events) _eventToJson(e)],
   'manyDuties': ?s.manyDuties,
@@ -469,7 +470,8 @@ ServiceSettings serviceSettingsFromJson(Json? data) {
     services: [
       if (data['services'] is List)
         for (final s in data['services'] as List<dynamic>)
-          if (s is Map && s['id'] is String) serviceFromJson(Map<String, dynamic>.from(s)),
+          // One turned off (停用) is as good as deleted: it goes at the next save.
+          if (s is Map && s['id'] is String && s['enabled'] != false) serviceFromJson(Map<String, dynamic>.from(s)),
     ],
     ids: _strings(data['ids']),
   );

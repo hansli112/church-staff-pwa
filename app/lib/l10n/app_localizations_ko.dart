@@ -937,13 +937,23 @@ class L10nKo extends L10n {
   String get serviceAdd => '예배 추가';
 
   @override
+  String get deleteService => '예배 삭제';
+
+  @override
+  String deleteServiceTitle(String name) {
+    return '‘$name’을(를) 삭제할까요?';
+  }
+
+  @override
+  String deleteServiceArranged(int count) {
+    return '이미 짠 $count일의 봉사표도 함께 삭제돼요';
+  }
+
+  @override
   String get serviceName => '예배 이름';
 
   @override
   String get weekday => '요일';
-
-  @override
-  String get serviceEnabled => '진행 중';
 
   @override
   String dutyPeopleCount(int count) {
@@ -1017,9 +1027,6 @@ class L10nKo extends L10n {
 
   @override
   String get accountDeleted => '계정을 삭제했어요';
-
-  @override
-  String get serviceDisabled => '중지됨';
 
   @override
   String get adminSearchHint => '교회 이름 또는 ID';

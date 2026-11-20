@@ -105,7 +105,6 @@ Map<String, Object?> exportJson(ChurchSnapshot s, DateTime exportedAt) => {
           'name': svc.name,
           'weekday': svc.weekdays.first,
           if (svc.weekdays.length > 1) 'weekdays': svc.weekdays,
-          'enabled': svc.enabled,
           'duties': svc.duties,
           'events': [
             for (final e in svc.events) {'name': e.name, 'color': e.color},

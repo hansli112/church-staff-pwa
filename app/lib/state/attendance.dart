@@ -41,7 +41,7 @@ typedef AttendanceGroup = ({ChurchGroup group, String name, Meets Function(Day d
 /// when that day has a roster, unless its 聚會時間 says otherwise
 /// (AttendanceRecord.time).
 final attendanceGroupsProvider = Provider.autoDispose<List<AttendanceGroup>>((ref) {
-  final services = ref.watch(servicesProvider).value?.enabled ?? const <Service>[];
+  final services = ref.watch(servicesProvider).value?.services ?? const <Service>[];
   final smallGroups = ref.watch(smallGroupsProvider).value ?? const <SmallGroupDetails>[];
   final gatherings = ref.watch(gatheringsProvider).value ?? const <Gathering>[];
   final rosters = ref.watch(_recentRostersProvider).value ?? const <Roster>[];

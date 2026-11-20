@@ -139,6 +139,20 @@ describe('reminders', () => {
     ]);
   });
 
+  test("a deleted service's days are not reminded, nor one turned off (停用) before it could be deleted", async () => {
+    await dayBeforeChurch();
+    await db.doc('churches/C1/settings/services').set({
+      services: [{ id: 'youth', name: '青年崇拜', enabled: false }],
+      ids: ['sunday', 'youth'],
+    });
+    for (const type of ['sunday', 'youth']) {
+      await db.doc(`churches/C1/rosters/2026-10-04_${type}`).set({ type, dateKey: '2026-10-04', duties: duties(['美玉'], []) });
+    }
+    const { sent, messaging } = fakePush();
+    await sendReminders({ db, messaging, now, appUrl });
+    assert.equal(sent.length, 0);
+  });
+
   test('suspended churches send no reminders', async () => {
     await dayBeforeChurch();
     await db.doc('churches/C1').update({ status: 'suspended' });

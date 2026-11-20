@@ -36,11 +36,9 @@ List<({Day month, List<Roster> days})> planMonths({
     for (final r in saved)
       if (r.type == service.id && !r.isEvent && !r.day.isBefore(start) && r.day.isBefore(end)) r.day: r,
   };
-  if (service.enabled) {
-    for (final w in service.weekdays) {
-      for (var d = start.nextOnOrAfter(w); d.isBefore(end); d = d.addDays(7)) {
-        days.putIfAbsent(d, () => draftRoster(service, d));
-      }
+  for (final w in service.weekdays) {
+    for (var d = start.nextOnOrAfter(w); d.isBefore(end); d = d.addDays(7)) {
+      days.putIfAbsent(d, () => draftRoster(service, d));
     }
   }
   final byMonth = <Day, List<Roster>>{};

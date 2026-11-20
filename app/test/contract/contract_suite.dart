@@ -1167,10 +1167,11 @@ void contractTests(Future<ContractWorld> Function() open) {
       );
     });
 
-    test('admins save the services, never none; IDs once used stay valid', () async {
+    test('admins save the services, none too (the last deleted); IDs once used stay valid', () async {
       final g = await Grace.open(w);
-      await expectLater(g.church.putServices(const []), denied());
-      const renamed = Service(id: 'sunday', name: '主日', weekdays: [DateTime.sunday], duties: ['司會'], enabled: false);
+      await g.church.putServices(const []);
+      expect((await g.church.services().first).services, isEmpty);
+      const renamed = Service(id: 'sunday', name: '主日', weekdays: [DateTime.sunday], duties: ['司會']);
       await g.church.putServices(const [renamed]);
       final settings = await g.church.services().first;
       expect(settings.services, const [renamed]);

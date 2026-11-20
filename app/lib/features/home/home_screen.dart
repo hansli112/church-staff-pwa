@@ -36,8 +36,8 @@ import '../rosters/swap_asking.dart';
 final _waitingForZoneProvider = Provider.autoDispose<int>((ref) {
   if (!(ref.watch(meProvider).value?.isAdmin ?? false)) return 0;
   final members = ref.watch(membersProvider).value ?? const [];
-  final enabled = ref.watch(servicesProvider).value?.enabled ?? const [];
-  return members.where((m) => m.waitsForZone(enabled)).length;
+  final services = ref.watch(servicesProvider).value?.services ?? const [];
+  return members.where((m) => m.waitsForZone(services)).length;
 });
 
 /// 首頁: the days I serve next. That is what most people open the app for.
@@ -107,7 +107,7 @@ class HomeScreen extends ConsumerWidget {
           // an admin puts them in one, so the page says that instead.
           final welcome = ref.watch(
             meProvider.select(
-              (m) => m.value != null && !m.value!.isAdmin && m.value!.waitsForZone(services?.enabled ?? const []),
+              (m) => m.value != null && !m.value!.isAdmin && m.value!.waitsForZone(services?.services ?? const []),
             ),
           );
           final addToHome = AddToHomeCard.shown(ref);
@@ -115,11 +115,12 @@ class HomeScreen extends ConsumerWidget {
           final attendance = AttendanceDueCard.shown(ref);
           final missing = AttendanceMissingRow.shown(ref);
           // 找人代／交換 asking me (#92): first among what is mine to do.
+          // Not of a deleted service's day.
           final asks = waitingOnMe(
             ref.watch(swapRequestsToMeProvider).value ?? const [],
             ref.watch(uidProvider),
             today,
-          );
+          ).where((r) => services == null || services.byId(r.serviceId) != null).toList();
           if (list.isEmpty &&
               !welcome &&
               asks.isEmpty &&

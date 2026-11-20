@@ -99,10 +99,10 @@ class MemberEditorScreen extends ConsumerWidget {
     final zoneTypes = member.zoneTypes.toSet();
     final joinable = [
       for (final s in services.services)
-        if (s.enabled && !zoneTypes.contains(s.id)) s,
+        if (!zoneTypes.contains(s.id)) s,
     ];
     Future<bool> save(Member next) => _save(context, ref, member, next);
-    final mergeFirst = member.waitsForZone(services.enabled);
+    final mergeFirst = member.waitsForZone(services.services);
     // Just joined, in no service: likely someone the rosters already have,
     // so first. In a service already, last (2026-11-19): nothing says who
     // was merged, but one put on a duty before being merged still can be.
@@ -228,7 +228,7 @@ class _NoAccountScreen extends ConsumerWidget {
     final zoneTypes = person.zoneTypes.toSet();
     final joinable = [
       for (final s in services.services)
-        if (s.enabled && !zoneTypes.contains(s.id)) s,
+        if (!zoneTypes.contains(s.id)) s,
     ];
     return Scaffold(
       appBar: AppBar(title: Text(name)),

@@ -61,16 +61,6 @@ void main() {
     expect(rosters.single.day.key, '2026-10-04');
   });
 
-  test('a disabled service shows only what was saved', () {
-    final rosters = upcomingRosters(
-      service: sunday.copyWith(enabled: false),
-      saved: [Roster(type: 'sunday', day: Day(2026, 10, 11))],
-      from: thursday,
-      weeks: 4,
-    );
-    expect(rosters.map((r) => r.day.key), ['2026-10-11']);
-  });
-
   test('includes today', () {
     final rosters = upcomingRosters(
       service: sunday,

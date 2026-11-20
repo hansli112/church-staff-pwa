@@ -128,7 +128,7 @@ service cloud.firestore {
       let data = request.resource.data;
       let before = resource == null ? [] : resource.data.get('ids', []);
       return data.keys().hasOnly(['services', 'ids', 'severalDays', 'updatedAt'])
-        && data.services is list && data.services.size() >= 1 && data.services.size() <= 20
+        && data.services is list && data.services.size() <= 20
         && data.ids is list && data.ids.size() <= 100
         && data.ids.hasAll(before)
         // A service on several days (its `weekdays`) is lost on an older

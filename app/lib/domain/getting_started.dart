@@ -114,7 +114,7 @@ List<GettingStarted> gettingStarted({
       rosters.any((r) => r.duties.any((d) => d.people.isNotEmpty && counts(r, d)));
   final anyArranged = arranged((_, _) => true);
   final joined = members.any((m) => m.uid != me.uid);
-  bool open(String service) => services.byId(service)?.enabled ?? false;
+  bool open(String service) => services.byId(service) != null;
   StartState doneIf(bool done) => done ? StartState.done : StartState.todo;
   GettingStartedStep step(StartStep step, bool done, [ChurchGroup? group]) =>
       (step: step, group: group, state: doneIf(done));
@@ -125,7 +125,7 @@ List<GettingStarted> gettingStarted({
   ];
 
   List<GettingStartedStep> forAdmin() {
-    final opened = [for (final s in services.enabled) ServiceGroup(s.id)];
+    final opened = [for (final s in services.services) ServiceGroup(s.id)];
     final staffed = anyArranged || opened.any(someoneElseIn);
     // Arranging comes before inviting (2026-11-20): a name typed is a 同工
     // without an account, who takes their days on joining.

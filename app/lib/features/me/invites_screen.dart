@@ -50,7 +50,7 @@ class _InvitesScreenState extends ConsumerState<InvitesScreen> {
 
   /// The 牧區 the next invite joins: what was picked, or with nothing
   /// picked, a church's only service, which nearly every invite wants.
-  Set<String> _zonesOf(List<Service> enabled) => _picked ?? {if (enabled.length == 1) enabled.single.id};
+  Set<String> _zonesOf(List<Service> services) => _picked ?? {if (services.length == 1) services.single.id};
 
   /// How long the next invite works.
   int _days = 7;
@@ -60,7 +60,7 @@ class _InvitesScreenState extends ConsumerState<InvitesScreen> {
     setState(() => _busy = true);
     final Invite invite;
     try {
-      final services = ref.read(servicesProvider).value?.enabled ?? const <Service>[];
+      final services = ref.read(servicesProvider).value?.services ?? const <Service>[];
       final zones = _zonesOf(services);
       invite = await ref.churchData.createInvite(
         validFor: Duration(days: days),
@@ -167,8 +167,8 @@ class _InvitesScreenState extends ConsumerState<InvitesScreen> {
     final church = ref.watch(churchProvider).value;
     final live = ref.watch(_liveInvitesProvider);
     final services = ref.watch(servicesProvider).value;
-    final enabled = services?.enabled ?? const <Service>[];
-    final zones = _zonesOf(enabled);
+    final all = services?.services ?? const <Service>[];
+    final zones = _zonesOf(all);
     final clock = ChurchClock.of(context, ref);
     String? zonesOf(Invite i) {
       final names = [for (final t in i.zoneTypes) ?services?.byId(t)?.name];
@@ -180,12 +180,12 @@ class _InvitesScreenState extends ConsumerState<InvitesScreen> {
       body: ListView(
         children: [
           // Any number of 牧區: an empty circle says it can be ticked.
-          if (enabled.isNotEmpty)
+          if (all.isNotEmpty)
             ListSection(
               header: l10n.inviteZones,
               footer: l10n.inviteZonesFooter,
               children: [
-                for (final s in enabled)
+                for (final s in all)
                   Semantics(
                     selected: zones.contains(s.id),
                     child: ListRow(

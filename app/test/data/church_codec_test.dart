@@ -49,4 +49,16 @@ void main() {
       expect(serviceToJson(serviceFromJson(json).copyWith(weekdays: [7])), {...json, 'weekday': 7}..remove('weekdays'));
     },
   );
+
+  test('a service turned off (停用) before 聚會 could be deleted reads as deleted; its ID stays taken', () {
+    final settings = serviceSettingsFromJson({
+      'services': [
+        {'id': 'sunday', 'name': '主日崇拜', 'weekday': 7, 'enabled': true},
+        {'id': 'trial', 'name': '試試看', 'weekday': 3, 'enabled': false},
+      ],
+      'ids': ['sunday', 'trial'],
+    });
+    expect(settings.services.map((s) => s.id), ['sunday']);
+    expect(settings.ids, ['sunday', 'trial']);
+  });
 }

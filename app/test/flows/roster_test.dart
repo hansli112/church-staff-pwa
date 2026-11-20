@@ -928,10 +928,13 @@ void main() {
     });
 
     testWidgets('nobody to swap with: no 和別週交換', (tester) async {
-      // A service that no longer runs has no drafts; with one saved day
-      // there is nobody to swap with.
+      // 司琴 is no longer one of its duties, so no other week has it; with
+      // one saved day there is nobody to swap with.
       final b = seededChurch();
-      b.setServices('grace', [sundayService.copyWith(enabled: false), youthService]);
+      b.setServices('grace', [
+        sundayService.copyWith(duties: ['司會', '招待']),
+        youthService,
+      ]);
       b.rosters['grace']!.remove(Roster.idFor('sunday', Day(2026, 10, 11)));
       await pumpApp(tester, b);
       await go(tester, '/rosters/sunday/2026-10-04');

@@ -73,7 +73,8 @@ export async function sendReminders(deps: PushDeps & { now: () => Date }) {
     const services = await serviceNames(deps, cid);
     const perUid = new Map<string, DutyLine[]>();
     for (const day of docs.map(rosterDay)) {
-      if (!day || day.cancelled) continue;
+      // Nor a deleted service's: its rosters stay saved, out of sight.
+      if (!day || day.cancelled || (!day.event && !services(day.serviceId!))) continue;
       for (const [uid, roles] of day.holders) {
         perUid.set(uid, [...(perUid.get(uid) ?? []), { dateKey: day.dateKey, name: day.name(services), roles, link: rosterLink(day) }]);
       }

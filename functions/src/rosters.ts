@@ -35,13 +35,23 @@ export function dutiesByUid(value: unknown): Map<string, string[]> {
   return out;
 }
 
-/** A service's name by its id; '' for one the church no longer has. */
+/**
+ * The services in settings/services [doc] the church has: not one deleted
+ * (taken off the list), nor one turned off (停用) before 聚會 could be
+ * deleted, which is as good as deleted.
+ */
+export function keptServices<T extends object>(doc: DocumentSnapshot): T[] {
+  const list = doc.get('services');
+  return Array.isArray(list) ? (list as (T & { enabled?: unknown })[]).filter((s) => s?.enabled !== false) : [];
+}
+
+/** A service's name by its id; '' for one the church no longer has (deleted). */
 export type ServiceNames = (serviceId: string) => string;
 
 /** The church's services' names, read once. */
 export async function serviceNames(deps: Pick<Deps, 'db'>, cid: string): Promise<ServiceNames> {
   const settings = await deps.db.doc(`churches/${cid}/settings/services`).get();
-  const list = (settings.get('services') as { id: string; name: string }[] | undefined) ?? [];
+  const list = keptServices<{ id: string; name: string }>(settings);
   const byId = new Map(list.map((s) => [s.id, s.name]));
   return (id) => byId.get(id) ?? '';
 }

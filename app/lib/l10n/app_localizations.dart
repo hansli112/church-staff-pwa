@@ -1738,6 +1738,24 @@ abstract class L10n {
   /// **'新增聚會'**
   String get serviceAdd;
 
+  /// Destructive row at the bottom of a service's page (admins)
+  ///
+  /// In zh, this message translates to:
+  /// **'刪除聚會'**
+  String get deleteService;
+
+  /// Dialog title before deleting a service that has days arranged
+  ///
+  /// In zh, this message translates to:
+  /// **'刪除「{name}」？'**
+  String deleteServiceTitle(String name);
+
+  /// Dialog body: its saved rosters from today on go with it
+  ///
+  /// In zh, this message translates to:
+  /// **'已經排好的 {count} 天服事表會一起刪除'**
+  String deleteServiceArranged(int count);
+
   /// No description provided for @serviceName.
   ///
   /// In zh, this message translates to:
@@ -1749,12 +1767,6 @@ abstract class L10n {
   /// In zh, this message translates to:
   /// **'星期'**
   String get weekday;
-
-  /// No description provided for @serviceEnabled.
-  ///
-  /// In zh, this message translates to:
-  /// **'啟用'**
-  String get serviceEnabled;
 
   /// Beside a duty: how many are on its list
   ///
@@ -1875,12 +1887,6 @@ abstract class L10n {
   /// In zh, this message translates to:
   /// **'帳號已刪除'**
   String get accountDeleted;
-
-  /// No description provided for @serviceDisabled.
-  ///
-  /// In zh, this message translates to:
-  /// **'已停用'**
-  String get serviceDisabled;
 
   /// No description provided for @adminSearchHint.
   ///

@@ -5,6 +5,23 @@ import '../../domain/models.dart';
 import '../../l10n/app_localizations.dart';
 import '../../state/support.dart';
 
+/// Whether 身分 [i] is of something the church still has: not of a
+/// deleted service, nor of a 小組 that went with it. Kept while [services]
+/// or [smallGroups] are not known.
+bool identityStands(Identity i, {required ServiceSettings? services, List<SmallGroupDetails>? smallGroups}) =>
+    switch (i) {
+      ServiceLead(service: final id) => services == null || services.byId(id) != null,
+      PastorIdentity(services: final ids?) => services == null || ids.any((id) => services.byId(id) != null),
+      SmallGroupLead(:final smallGroup) => smallGroups == null || smallGroups.byId(smallGroup) != null,
+      _ => true,
+    };
+
+/// The names of [ids] among [services], not of one deleted.
+String _serviceNames(L10n l10n, List<String> ids, ServiceSettings? services) => [
+  for (final id in ids)
+    if (services == null) id else ?services.byId(id)?.name,
+].join(l10n.listSeparator);
+
 /// How a 身分 (#82) is shown, e.g. 「敬拜團 負責人」, with the names of the
 /// church's [services], [ministries] and [smallGroups].
 String identityLabel(
@@ -19,7 +36,7 @@ String identityLabel(
     AdminIdentity() => l10n.roleAdmin,
     OfficeIdentity() => l10n.identityOffice,
     PastorIdentity(services: null) => l10n.identityPastorChurch,
-    PastorIdentity(:final services?) => l10n.identityPastorOf(services.map(service).join(l10n.listSeparator)),
+    PastorIdentity(services: final ids?) => l10n.identityPastorOf(_serviceNames(l10n, ids, services)),
     ServiceLead(service: final id) => l10n.identityLeadOf(service(id)),
     MinistryLead(:final ministry) => l10n.identityLeadOf(ministries?.nameOf(ministry, services) ?? ministry),
     SmallGroupLead(:final smallGroup) => l10n.identitySmallGroupLeadOf(smallGroupName(smallGroups, smallGroup)),
@@ -41,7 +58,7 @@ String identityCan(
   return switch (i) {
     AdminIdentity() || PastorIdentity(services: null) => l10n.canAdmin,
     OfficeIdentity() => l10n.canOffice,
-    PastorIdentity(:final services?) => l10n.canServiceLead(services.map(service).join(l10n.listSeparator)),
+    PastorIdentity(services: final ids?) => l10n.canServiceLead(_serviceNames(l10n, ids, services)),
     ServiceLead(service: final id) => l10n.canServiceLead(service(id)),
     MinistryLead(:final ministry) => l10n.canMinistryLead(ministries?.nameOf(ministry, services) ?? ministry),
     SmallGroupLead(:final smallGroup) => l10n.canSmallGroupLead(smallGroupName(smallGroups, smallGroup)),
@@ -57,6 +74,7 @@ String identitiesLine(
   required MinistrySettings? ministries,
   List<SmallGroupDetails> smallGroups = const [],
 }) => member.identities
+    .where((i) => identityStands(i, services: services))
     .map((i) => identityLabel(l10n, i, services: services, ministries: ministries, smallGroups: smallGroups))
     .join(l10n.listSeparator);
 

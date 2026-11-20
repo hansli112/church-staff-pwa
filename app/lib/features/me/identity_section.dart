@@ -28,26 +28,29 @@ class IdentitySection extends ConsumerWidget {
     final l10n = L10n.of(context);
     final services = ref.watch(servicesProvider).value;
     final ministries = ref.watch(ministriesProvider).value;
-    final smallGroups = ref.watch(smallGroupsProvider).value ?? const <SmallGroupDetails>[];
+    final groups = ref.watch(smallGroupsProvider).value;
+    final smallGroups = groups ?? const <SmallGroupDetails>[];
     final held = member.identities;
     String label(Identity i) =>
         identityLabel(l10n, i, services: services, ministries: ministries, smallGroups: smallGroups);
     return ListSection(
       header: l10n.role,
       children: [
+        // Not one of a deleted service: it comes back with 復原.
         for (final i in held)
-          ListRow(
-            title: label(i),
-            chevron: false,
-            // Taken away at once, with 復原 (docs/design-principles.md).
-            trailing: _removable(i)
-                ? RowButton(
-                    label: l10n.removeShort,
-                    semanticsLabel: l10n.removeIdentityLabel(label(i)),
-                    onPressed: () => _set(context, ref, [...held]..remove(i), l10n.identityRemoved(label(i))),
-                  )
-                : null,
-          ),
+          if (identityStands(i, services: services, smallGroups: groups))
+            ListRow(
+              title: label(i),
+              chevron: false,
+              // Taken away at once, with 復原 (docs/design-principles.md).
+              trailing: _removable(i)
+                  ? RowButton(
+                      label: l10n.removeShort,
+                      semanticsLabel: l10n.removeIdentityLabel(label(i)),
+                      onPressed: () => _set(context, ref, [...held]..remove(i), l10n.identityRemoved(label(i))),
+                    )
+                  : null,
+            ),
         ListRow(
           title: l10n.addIdentity,
           leading: const Icon(Symbols.add_rounded),
@@ -98,7 +101,7 @@ class IdentitySection extends ConsumerWidget {
   /// A 身分 to add: its kind, then where it applies.
   Future<Identity?> _pick(BuildContext context, WidgetRef ref, List<Identity> held) async {
     final l10n = L10n.of(context);
-    final services = ref.read(servicesProvider).value?.enabled ?? const <Service>[];
+    final services = ref.read(servicesProvider).value?.services ?? const <Service>[];
     final ministries = ref.read(ministriesProvider).value?.ministries ?? const <Ministry>[];
     final led = {
       for (final i in held)

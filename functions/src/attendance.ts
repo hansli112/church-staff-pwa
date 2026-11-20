@@ -5,6 +5,7 @@ import { fail, record, type Caller, type Deps } from './common.js';
 import { LIMITS, TEXT_LIMITS, withinTextLimit } from './limits.js';
 import { attendanceGroupOf, powersOf, type ChurchGroup } from './powers.js';
 import { notifyMembers, type PushDeps } from './push.js';
+import { keptServices } from './rosters.js';
 import { dateKeyIn, timeZoneOf, timeZonesAt } from './timeZones.js';
 
 /**
@@ -196,8 +197,8 @@ async function dueOn(deps: { db: PushDeps['db'] }, cid: string, day: string): Pr
     deps.db.collection(`churches/${cid}/smallGroups`).where('weekday', '==', weekday).get(),
     deps.db.collection(`churches/${cid}/gatherings`).where('weekday', '==', weekday).get(),
   ]);
-  const meetingServices = ((services.get('services') as Service[] | undefined) ?? [])
-    .filter((s) => s.enabled !== false && weekdaysOf(s).includes(weekday));
+  const kept = keptServices<Service>(services);
+  const meetingServices = kept.filter((s) => weekdaysOf(s).includes(weekday));
   const [rosters, states] = meetingServices.length === 0
     ? [[], []]
     : await Promise.all([
@@ -211,7 +212,8 @@ async function dueOn(deps: { db: PushDeps['db'] }, cid: string, day: string): Pr
       leads: { field: 'leadTypes' as const, id: s.id },
       meets: serviceMeets(s, rosters[i].exists, states[i]),
     })),
-    ...smallGroups.docs.map((g) => ({
+    // A deleted service's 小組 went with it.
+    ...smallGroups.docs.filter((g) => kept.some((s) => s.id === g.get('service'))).map((g) => ({
       key: `small:${g.id}`,
       name: (g.get('name') as string | undefined) ?? '',
       leads: { field: 'leadSmallGroups' as const, id: g.id },

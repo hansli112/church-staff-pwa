@@ -5,8 +5,8 @@ final _groups = ChurchGroups(
   services: const ServiceSettings(
     services: [
       Service(id: 'sunday', name: '主日崇拜', weekdays: [7]),
-      Service(id: 'old', name: '晨禱', weekdays: [3], enabled: false),
     ],
+    ids: ['sunday', 'old'],
   ),
   ministries: const MinistrySettings(
     ministries: [Ministry(id: 'worship', name: '敬拜團')],
@@ -30,7 +30,7 @@ void main() {
     final joy = _groups.byKey('small:joy')!;
     expect(joy.name, '喜樂小組');
     expect((joy.group as SmallGroup).service, 'sunday');
-    expect(_groups.byKey('service:old')?.name, '晨禱', reason: 'not in use, still named');
+    expect(_groups.byKey('service:old'), isNull, reason: 'deleted');
     expect(_groups.byKey('small:gone'), isNull);
     expect(_groups.byKey(''), isNull, reason: "the church's");
   });
@@ -45,9 +45,15 @@ void main() {
     const me = Member(
       uid: 'u',
       name: 'u',
-      identities: [SmallGroupLead('joy'), MinistryLead('worship'), ServiceLead('old'), ServiceLead('gone')],
+      identities: [
+        SmallGroupLead('joy'),
+        MinistryLead('worship'),
+        ServiceLead('sunday'),
+        ServiceLead('old'),
+        ServiceLead('gone'),
+      ],
     );
-    expect([for (final g in _groups.ledBy(me)) g.name], ['晨禱', '敬拜團', '喜樂小組']);
+    expect([for (final g in _groups.ledBy(me)) g.name], ['主日崇拜', '敬拜團', '喜樂小組']);
   });
 
   test('a 事工 belongs to the one service its duties are in, or it was added on; else to none', () {

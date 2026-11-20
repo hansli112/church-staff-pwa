@@ -67,7 +67,7 @@ class GroupsScreen extends ConsumerWidget {
                   if (m.service == null || services?.byId(m.service!) == null)
                     ListRow(
                       title: m.name,
-                      subtitle: ministryLine(l10n, m, services?.enabled ?? const [], members),
+                      subtitle: ministryLine(l10n, m, services?.services ?? const [], members),
                       onTap: () => context.push('/me/groups/ministry/${m.id}'),
                     ),
                 ListRow(
@@ -681,6 +681,21 @@ class GroupScreen extends ConsumerWidget {
           // A 小組's, here; a 事工's are those on its duties' lists (#94).
           else if (ministry == null)
             box(GroupStaffSections(group: group, name: name)),
+          if (admin && service != null)
+            box(
+              ListSection(
+                children: [
+                  ListRow(
+                    title: l10n.deleteService,
+                    destructive: true,
+                    chevron: false,
+                    onTap: () async {
+                      if (await ServiceEdits(context, ref, service).delete() && context.mounted) context.pop();
+                    },
+                  ),
+                ],
+              ),
+            ),
           if (admin && ministry != null)
             box(
               ListSection(
@@ -1054,7 +1069,7 @@ class _MinistryDuties extends ConsumerWidget {
     final places = {for (final d in duties) d.service.id}.length;
     return ListSection(
       header: l10n.ministryDuties,
-      footer: ministrySummary(l10n, ministry, services.where((s) => s.enabled).toList(), leaders),
+      footer: ministrySummary(l10n, ministry, services, leaders),
       children: [
         // An admin has each with its list on its service's page; its
         // 負責人, who may not open that, here.
@@ -1197,7 +1212,7 @@ class _DutyPickerState extends ConsumerState<_DutyPicker> {
   @override
   Widget build(BuildContext context) {
     final l10n = L10n.of(context);
-    final services = ref.watch(servicesProvider).value?.enabled ?? const <Service>[];
+    final services = ref.watch(servicesProvider).value?.services ?? const <Service>[];
     final anyDuty = services.any((s) => s.duties.isNotEmpty);
     return UnsavedChanges(
       changed: () => !setEquals(_done().toSet(), widget.initial.toSet()),

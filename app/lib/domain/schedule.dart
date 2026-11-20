@@ -24,24 +24,22 @@ List<Roster> upcomingRosters({
     for (final roster in saved)
       if (roster.type == service.id && !roster.day.isBefore(from)) roster,
   ];
-  if (service.enabled) {
-    final byWeek = <Day, List<Day>>{};
-    for (final r in result) {
-      (byWeek[r.day.weekStart] ??= []).add(r.day);
-    }
-    for (var week = 0; week < weeks; week++) {
-      final start = from.weekStart.addDays(week * 7);
-      final taken = byWeek[start] ?? const <Day>[];
-      final free = [
-        for (final w in service.weekdays)
-          if (start.nextOnOrAfter(w) case final day when !taken.contains(day)) day,
-      ];
-      if (service.weekdays.length == 1 && taken.isNotEmpty) free.clear();
-      result.addAll([
-        for (final day in free)
-          if (!day.isBefore(from)) draftRoster(service, day),
-      ]);
-    }
+  final byWeek = <Day, List<Day>>{};
+  for (final r in result) {
+    (byWeek[r.day.weekStart] ??= []).add(r.day);
+  }
+  for (var week = 0; week < weeks; week++) {
+    final start = from.weekStart.addDays(week * 7);
+    final taken = byWeek[start] ?? const <Day>[];
+    final free = [
+      for (final w in service.weekdays)
+        if (start.nextOnOrAfter(w) case final day when !taken.contains(day)) day,
+    ];
+    if (service.weekdays.length == 1 && taken.isNotEmpty) free.clear();
+    result.addAll([
+      for (final day in free)
+        if (!day.isBefore(from)) draftRoster(service, day),
+    ]);
   }
   result.sort((a, b) => a.day.compareTo(b.day));
   return result;

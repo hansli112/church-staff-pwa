@@ -53,7 +53,7 @@ class _MembersScreenState extends ConsumerState<MembersScreen> {
     final services = ref.watch(servicesProvider).value;
     final ministries = ref.watch(ministriesProvider).value;
     final smallGroups = ref.watch(smallGroupsProvider).value ?? const <SmallGroupDetails>[];
-    final enabled = services?.enabled ?? const <Service>[];
+    final serviceList = services?.services ?? const <Service>[];
     // A member's 小組 (#85).
     String? memberSmallGroups(Member m) => [
       for (final g in smallGroups)
@@ -102,7 +102,7 @@ class _MembersScreenState extends ConsumerState<MembersScreen> {
                 // admins' push opens here), then admins, whoever holds a
                 // 身分, everyone else.
                 int rank(Member m) => switch (m) {
-                  _ when !m.isAdmin && m.identities.isEmpty && m.waitsForZone(enabled) => 0,
+                  _ when !m.isAdmin && m.identities.isEmpty && m.waitsForZone(serviceList) => 0,
                   _ when m.isAdmin => 1,
                   _ when m.identities.isNotEmpty => 2,
                   _ => 3,
@@ -218,7 +218,7 @@ class _MembersScreenState extends ConsumerState<MembersScreen> {
                                 ministries: ministries,
                                 smallGroups: smallGroups,
                               ).ifEmpty(null),
-                              if (m.waitsForZone(enabled)) l10n.waitsForZone,
+                              if (m.waitsForZone(serviceList)) l10n.waitsForZone,
                               memberSmallGroups(m),
                             ].nonNulls.join(l10n.dotSeparator).ifEmpty(null);
                             return _grouped(

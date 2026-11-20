@@ -4,6 +4,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
 import 'package:martha/data/backend.dart';
 import 'package:martha/data/memory/memory_backend.dart';
+import 'package:martha/domain/day.dart';
 import 'package:martha/domain/models.dart';
 import 'package:martha/state/session.dart';
 
@@ -18,6 +19,12 @@ Future<void> tapText(WidgetTester tester, String text) async {
 
 Future<void> go(WidgetTester tester, String location) async {
   GoRouter.of(tester.element(find.byType(Scaffold).first)).go(location);
+  await settle(tester);
+}
+
+/// Scrolls the page down until [text] is on it.
+Future<void> scrollTo(WidgetTester tester, String text) async {
+  await tester.scrollUntilVisible(findShown(text), 300, scrollable: find.byType(Scrollable).first);
   await settle(tester);
 }
 
@@ -440,15 +447,57 @@ void main() {
       );
     });
 
-    testWidgets('disabling a service hides it from the roster tab but keeps its rosters', (tester) async {
+    testWidgets('a service with no day arranged is deleted at once; 復原 brings it back', (tester) async {
       final b = seededChurch();
       await pumpApp(tester, b);
       await go(tester, '/me/groups/service/youth');
-      await tapText(tester, '啟用');
-      expect(b.services['grace']!.byId('youth')!.enabled, isFalse);
-      expect(b.services['grace']!.ids, containsAll(['sunday', 'youth']));
-      await go(tester, '/rosters');
+      expect(find.text('啟用'), findsNothing, reason: 'deleted, not turned off');
+      await scrollTo(tester, '刪除聚會');
+      await tapText(tester, '刪除聚會');
+      expect(find.text('刪除「青年崇拜」？'), findsNothing, reason: 'nothing arranged to lose');
+      expect(b.services['grace']!.byId('youth'), isNull);
+      expect(b.services['grace']!.ids, containsAll(['sunday', 'youth']), reason: 'an ID is never reused');
+      expect(find.text('聚會與事工'), findsOneWidget, reason: 'back on the list');
       expect(find.text('青年崇拜'), findsNothing);
+      await tapText(tester, '復原');
+      expect(b.services['grace']!.services, const [sundayService, youthService]);
+    });
+
+    testWidgets('deleting a service with days arranged asks first; it leaves 服事表 and 首頁', (tester) async {
+      final b = seededChurch();
+      await pumpApp(tester, b);
+      await go(tester, '/me/groups/service/sunday');
+      await scrollTo(tester, '刪除聚會');
+      await tapText(tester, '刪除聚會');
+      expect(find.text('刪除「主日崇拜」？'), findsOneWidget);
+      expect(findShown('已經排好的 2 天服事表會一起刪除'), findsOneWidget);
+      await tapText(tester, '取消');
+      expect(b.services['grace']!.byId('sunday'), isNotNull);
+      await tapText(tester, '刪除聚會');
+      await tapText(tester, '刪除');
+      expect(b.services['grace']!.byId('sunday'), isNull);
+      expect(find.text('已刪除「主日崇拜」'), findsOneWidget);
+      expect(b.rosters['grace']!.keys, contains(Roster.idFor('sunday', Day(2026, 10, 11))), reason: 'kept, for 復原');
+      await tester.pump(const Duration(seconds: 10));
+      await go(tester, '/rosters');
+      expect(find.textContaining('主日崇拜'), findsNothing);
+      await go(tester, '/');
+      expect(find.textContaining('主日崇拜'), findsNothing, reason: "王牧師's 司會 on 10/11 went with it");
+    });
+
+    testWidgets("a deleted service's 負責人 is not shown as one, by name or by its ID", (tester) async {
+      final b = seededChurch(
+        extra: const [
+          Member(uid: 'lead', name: '張青年', identities: [ServiceLead('youth')]),
+        ],
+      );
+      b.setServices('grace', const [sundayService]);
+      await pumpApp(tester, b);
+      await go(tester, '/me/members');
+      expect(find.textContaining('youth'), findsNothing);
+      await go(tester, '/me/members/lead');
+      expect(find.textContaining('youth'), findsNothing);
+      expect(find.textContaining('負責人'), findsNothing);
     });
 
     testWidgets('a service meets on several weekdays, each with its own roster; at least one stays ticked', (

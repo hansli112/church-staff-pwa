@@ -965,13 +965,29 @@ class L10nEn extends L10n {
   String get serviceAdd => 'Add service';
 
   @override
+  String get deleteService => 'Delete service';
+
+  @override
+  String deleteServiceTitle(String name) {
+    return 'Delete “$name”?';
+  }
+
+  @override
+  String deleteServiceArranged(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'The $count days already scheduled will be deleted with it',
+      one: 'The 1 day already scheduled will be deleted with it',
+    );
+    return '$_temp0';
+  }
+
+  @override
   String get serviceName => 'Service name';
 
   @override
   String get weekday => 'Day';
-
-  @override
-  String get serviceEnabled => 'Active';
 
   @override
   String dutyPeopleCount(int count) {
@@ -1053,9 +1069,6 @@ class L10nEn extends L10n {
 
   @override
   String get accountDeleted => 'Account deleted';
-
-  @override
-  String get serviceDisabled => 'Inactive';
 
   @override
   String get adminSearchHint => 'Church name or ID';

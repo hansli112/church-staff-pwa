@@ -27,7 +27,7 @@ class ChurchGroups {
   /// Every group to pick from, in order: the services in use, the 事工,
   /// the 小組; not a 其他聚會, which is only for its 人數.
   List<NamedGroup> get all => [
-    for (final s in _services.enabled) (group: ServiceGroup(s.id), name: s.name),
+    for (final s in _services.services) (group: ServiceGroup(s.id), name: s.name),
     for (final m in _ministries.ministries) (group: MinistryGroup(m.id), name: _ministries.nameOf(m.id, _services)),
     for (final g in _smallGroups) (group: g.group, name: g.name),
   ];

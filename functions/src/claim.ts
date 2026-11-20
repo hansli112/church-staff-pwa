@@ -9,6 +9,8 @@ import { renameInChurch, rewriteDutiesOf } from './renames.js';
 import { dateKeyIn, timeZoneOf } from './timeZones.js';
 import { callerKeys, dropPending, emailKey, waitingFor, waitsFor, type ClaimDeps } from './pendingMembers.js';
 import { claimedSmallGroups, smallGroupsByName } from './smallGroups.js';
+import { isEvent } from './eventRosters.js';
+import { keptServices } from './rosters.js';
 
 /**
  * 認領與合併: a pending member (moved from self-host) becomes a real member.
@@ -91,7 +93,7 @@ export async function servesOf(
   const pid = pending.id;
   const settings = await deps.db.doc(`churches/${cid}/settings/services`).get();
   const services = new Map(
-    ((settings.get('services') as { id?: unknown; name?: unknown }[] | undefined) ?? [])
+    keptServices<{ id?: unknown; name?: unknown }>(settings)
       .filter((s) => typeof s?.id === 'string')
       .map((s) => [s.id as string, typeof s.name === 'string' ? s.name : '']),
   );
@@ -100,6 +102,8 @@ export async function servesOf(
     const duty = ((r.get('duties') as { role?: unknown; uids?: Record<string, unknown> }[] | undefined) ?? [])
       .find((d) => Object.values(d?.uids ?? {}).includes(pid));
     if (!r.exists || r.get('cancelledAt') !== undefined || typeof duty?.role !== 'string') return null;
+    // Not a deleted service's day: its roster stays saved, out of sight.
+    if (!isEvent(r) && !services.has(r.get('type') as string)) return null;
     return { dateKey: r.id.slice(0, 10), service: services.get(r.get('type') as string) ?? '', duty: duty.role };
   };
   // The days ahead, whether recorded or not: one put on a day in the app

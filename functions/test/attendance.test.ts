@@ -224,6 +224,15 @@ describe('回報人數 reminders (#85)', () => {
     assert.equal(sent.length, 1);
   });
 
+  test("a deleted service's 小組 are asked nothing: they went with it", async () => {
+    await church();
+    await joy();
+    await db.doc('churches/C1/settings/services').update({ services: [] });
+    const { sent, messaging } = fakePush();
+    await sendAttendanceReminders({ db, messaging, now: () => new Date('2026-10-16T21:00:00+08:00'), appUrl });
+    assert.equal(sent.length, 0);
+  });
+
   test('nobody is asked once someone filled it in, marked 這次沒聚會, or paused it', async () => {
     await church();
     await roster('2026-10-18');

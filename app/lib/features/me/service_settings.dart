@@ -20,11 +20,11 @@ import '../common/labels.dart';
 import '../common/saving_indicator.dart';
 
 // A service's settings (#94), on its page in 聚會與事工: what used to be
-// 服事設定. IDs only ever grow: a disabled service keeps its old rosters
-// and 同工, and simply stops getting new days.
+// 服事設定. IDs only ever grow: a deleted service's rosters stay saved
+// under its ID, out of sight, and 復原 brings it back as it was.
 
-/// 聚會 in 聚會與事工: every service, a disabled one too, put in order by
-/// dragging, and 新增聚會; each opens its page. Admins only.
+/// 聚會 in 聚會與事工: every service, put in order by dragging, and
+/// 新增聚會; each opens its page. Admins only.
 class ServiceListSection extends ConsumerWidget {
   const ServiceListSection({super.key});
 
@@ -61,9 +61,7 @@ class ServiceListSection extends ConsumerWidget {
       onReorder: save,
       row: (s, handle) => ListRow(
         title: s.name,
-        subtitle: s.enabled
-            ? weekdaysLabel(l10n, s.weekdays)
-            : '${weekdaysLabel(l10n, s.weekdays)}${l10n.dotSeparator}${l10n.serviceDisabled}',
+        subtitle: weekdaysLabel(l10n, s.weekdays),
         trailing: handle,
         // Opens its page, which the handle alone does not say.
         chevron: true,
@@ -148,6 +146,35 @@ class ServiceEdits {
     message ?? _l10n.serviceSettingsSaved,
     () => ref.read(churchWritesProvider).service(service, next, dutyRename: dutyRename),
   );
+
+  /// 刪除聚會: off the church's list, with 復原; its rosters stay saved,
+  /// out of sight. With days arranged from today on, asked first; none
+  /// (one added to try it out), at once. True once deleted.
+  Future<bool> delete() async {
+    final l10n = _l10n;
+    final before = ref.read(servicesProvider).value?.services;
+    if (before == null) return false;
+    final rosters = await ref.read(savedRostersProvider.future);
+    final arranged = rosters.where((r) => r.type == service.id && r.duties.any((d) => d.people.isNotEmpty)).length;
+    if (!context.mounted) return false;
+    if (arranged > 0) {
+      final ok = await confirmDestructive(
+        context,
+        title: l10n.deleteServiceTitle(service.name),
+        message: l10n.deleteServiceArranged(arranged),
+        action: l10n.delete,
+      );
+      if (!ok || !context.mounted) return false;
+    }
+    return runWithUndo(
+      context,
+      l10n.deletedName(service.name),
+      () => ref.read(churchWritesProvider).serviceList(before, [
+        for (final s in before)
+          if (s.id != service.id) s,
+      ]),
+    );
+  }
 
   /// 改名 for the service.
   Future<void> rename() async {
@@ -421,8 +448,8 @@ class ServiceEdits {
   }
 }
 
-/// The top of a service's page: its name, weekdays and whether it still
-/// runs; an admin changes them, anyone else reads them.
+/// The top of a service's page: its name and weekdays; an admin changes
+/// them, anyone else reads them.
 Widget serviceBasicsSection(BuildContext context, WidgetRef ref, Service service, {required bool admin}) {
   final l10n = L10n.of(context);
   final edits = ServiceEdits(context, ref, service);
@@ -440,12 +467,6 @@ Widget serviceBasicsSection(BuildContext context, WidgetRef ref, Service service
         chevron: admin,
         onTap: admin ? edits.pickWeekdays : null,
       ),
-      if (admin)
-        SwitchRow(
-          title: l10n.serviceEnabled,
-          value: service.enabled,
-          onChanged: (v) => edits.save(service.copyWith(enabled: v)),
-        ),
     ],
   );
 }

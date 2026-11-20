@@ -936,13 +936,23 @@ class L10nZh extends L10n {
   String get serviceAdd => '新增聚會';
 
   @override
+  String get deleteService => '刪除聚會';
+
+  @override
+  String deleteServiceTitle(String name) {
+    return '刪除「$name」？';
+  }
+
+  @override
+  String deleteServiceArranged(int count) {
+    return '已經排好的 $count 天服事表會一起刪除';
+  }
+
+  @override
   String get serviceName => '聚會名稱';
 
   @override
   String get weekday => '星期';
-
-  @override
-  String get serviceEnabled => '啟用';
 
   @override
   String dutyPeopleCount(int count) {
@@ -1016,9 +1026,6 @@ class L10nZh extends L10n {
 
   @override
   String get accountDeleted => '帳號已刪除';
-
-  @override
-  String get serviceDisabled => '已停用';
 
   @override
   String get adminSearchHint => '教會名稱或 ID';
@@ -4524,13 +4531,23 @@ class L10nZhHans extends L10nZh {
   String get serviceAdd => '添加聚会';
 
   @override
+  String get deleteService => '删除聚会';
+
+  @override
+  String deleteServiceTitle(String name) {
+    return '删除“$name”？';
+  }
+
+  @override
+  String deleteServiceArranged(int count) {
+    return '已经排好的 $count 天事奉表会一起删除';
+  }
+
+  @override
   String get serviceName => '聚会名称';
 
   @override
   String get weekday => '星期';
-
-  @override
-  String get serviceEnabled => '启用';
 
   @override
   String dutyPeopleCount(int count) {
@@ -4604,9 +4621,6 @@ class L10nZhHans extends L10nZh {
 
   @override
   String get accountDeleted => '账号已删除';
-
-  @override
-  String get serviceDisabled => '已停用';
 
   @override
   String get adminSearchHint => '教会名称或 ID';

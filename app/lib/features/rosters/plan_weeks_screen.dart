@@ -404,7 +404,7 @@ class _PlanWeeksScreenState extends ConsumerState<PlanWeeksScreen> with SingleTi
     final me = ref.watch(meProvider).value;
     final ministries = ref.watch(ministriesProvider).value?.ministries ?? const <Ministry>[];
     final mine = [
-      for (final s in me?.rosterServices(settings?.enabled ?? const [], ministries: ministries) ?? const <Service>[])
+      for (final s in me?.rosterServices(settings?.services ?? const [], ministries: ministries) ?? const <Service>[])
         if (me!.arranges(ministries, s.id).any) s,
     ];
     final service = settings?.byId(_type);

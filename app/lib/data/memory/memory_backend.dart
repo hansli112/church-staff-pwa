@@ -1583,7 +1583,7 @@ class MemoryChurchData implements ChurchData {
   @override
   Future<void> compareAndSetServiceList({required List<Service> before, required List<Service> after}) async {
     _requireAdmin();
-    if (after.isEmpty || after.length > Limits.services) {
+    if (after.length > Limits.services) {
       throw const CloudException(CloudErrorCode.permissionDenied);
     }
     await _b.write(() {

@@ -42,7 +42,7 @@ class RostersScreen extends ConsumerWidget {
     final meValue = ref.watch(meProvider);
     final me = meValue.value;
     final ministries = ref.watch(ministriesProvider).value?.ministries ?? const <Ministry>[];
-    final mine = me?.rosterServices(settings.value?.enabled ?? const [], ministries: ministries) ?? const <Service>[];
+    final mine = me?.rosterServices(settings.value?.services ?? const [], ministries: ministries) ?? const <Service>[];
     final selectedId = ref.watch(selectedServiceProvider);
     final shown = mine.where((s) => s.id == selectedId).firstOrNull ?? mine.firstOrNull;
     final canImport = shown != null && ref.watch(arrangesProvider(shown.id)).any;
@@ -71,7 +71,7 @@ class RostersScreen extends ConsumerWidget {
           onRetry: () => ref.invalidate(servicesProvider),
         ),
         data: (settings) {
-          if (settings.enabled.isEmpty) {
+          if (settings.services.isEmpty) {
             return EmptyState(
               icon: Symbols.view_agenda_rounded,
               message: l10n.noServicesConfigured,
@@ -175,7 +175,7 @@ class ServiceRosterList extends ConsumerWidget {
         return ListView.builder(
           key: PageStorageKey('rosters-${service.id}'),
           padding: const EdgeInsets.only(bottom: Space.l),
-          itemCount: top + list.length + (service.enabled ? 1 : 0),
+          itemCount: top + list.length + 1,
           itemBuilder: (context, index) {
             if (index == 0) return _ShowEarlier(serviceType: service.id, earlier: earlier);
             if (index < pastRows) {
