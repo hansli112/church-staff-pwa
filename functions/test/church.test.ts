@@ -95,6 +95,24 @@ describe('createChurch', () => {
     await rejectsWith(createChurch(deps, caller('alice'), { name: '   ' }), 'unknown');
     await rejectsWith(createChurch(deps, caller('alice'), { name: 'x'.repeat(61) }), 'unknown');
   });
+
+  test('a name with "/" is a name like any other; the slash that looks the same is the same name', async () => {
+    const { churchId } = await createChurch(deps, caller('alice'), { name: '生命樹平安堂/livingtreepeacechurch' });
+    assert.equal((await db.doc(`churches/${churchId}`).get()).get('name'), '生命樹平安堂/livingtreepeacechurch');
+    assert.equal((await db.doc('churchNames/生命樹平安堂∕livingtreepeacechurch').get()).get('cid'), churchId);
+    await rejectsWith(createChurch(deps, caller('bob'), { name: '生命樹平安堂 / LivingTreePeaceChurch' }), 'duplicateName');
+    await rejectsWith(createChurch(deps, caller('bob'), { name: '生命樹平安堂∕livingtreepeacechurch' }), 'duplicateName');
+    await createChurch(deps, caller('bob'), { name: '/' });
+  });
+
+  test('names Firestore cannot keep as a reservation are refused, not failed on', async () => {
+    for (const name of ['.', '..', '__恩典__', '__ 恩典 __']) {
+      await rejectsWith(createChurch(deps, caller('alice'), { name }), 'unknown');
+    }
+    assert.equal((await db.collection('churches').get()).size, 0);
+    await createChurch(deps, caller('alice'), { name: '...' });
+    await createChurch(deps, caller('alice'), { name: '__恩典' });
+  });
 });
 
 describe("a church's time zone", () => {
@@ -119,6 +137,14 @@ describe("a church's time zone", () => {
     // 14:00 on the 3rd in Chicago, tried there today already: tomorrow's 4:30.
     const nextAt = (await db.doc('linkSources/C1').get()).get('nextAt') as Timestamp;
     assert.equal(nextAt.toDate().toISOString(), new Date('2026-10-04T04:30:00-05:00').toISOString());
+  });
+
+  test('a church without a calendar changes it without a warning in the logs', async (t) => {
+    await seedChurch('C1', { alice: 'admin' });
+    const warn = t.mock.method(console, 'warn', () => {});
+    await setChurchTimeZone(purgeDeps, caller('alice'), { churchId: 'C1', timeZone: 'America/Chicago' });
+    assert.equal((await db.doc('churches/C1').get()).get('timeZone'), 'America/Chicago');
+    assert.deepEqual(warn.mock.calls.map((c) => c.arguments[0]), []);
   });
 });
 

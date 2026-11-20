@@ -239,7 +239,10 @@ export async function calendarAccess(deps: CalDeps, churchId: string) {
   try {
     return await access(deps, churchId);
   } catch (e) {
-    console.warn(`calendar access ${churchId}`, loggable(e));
+    // Most churches never connect a calendar: nothing to tell.
+    if (!(e instanceof HttpsError && (e.details as { detail?: unknown } | undefined)?.detail === 'notConnected')) {
+      console.warn(`calendar access ${churchId}`, loggable(e));
+    }
     return null;
   }
 }

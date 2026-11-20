@@ -3,7 +3,7 @@ import { createHash } from 'node:crypto';
 import { Timestamp } from 'firebase-admin/firestore';
 import type { Storage } from 'firebase-admin/storage';
 
-import { makersLanguage, newChurchTimeZone, openChurch } from './church.js';
+import { churchNamePath, makersLanguage, newChurchTimeZone, openChurch } from './church.js';
 import { fail, requireCaller, text, type Caller, type Deps } from './common.js';
 import { buildImport, type SelfHostSnapshot, type SourceDoc } from './importer.js';
 import { TEXT_LIMITS } from './limits.js';
@@ -177,7 +177,7 @@ async function makeChurch(
   const { db } = deps;
   // The name is checked again in openChurch's transaction; this only spares
   // writing everything for a name that is already taken.
-  if ((await db.doc(`churchNames/${nameKey(churchName)}`).get()).exists) fail('already-exists', 'duplicateName');
+  if ((await db.doc(churchNamePath(nameKey(churchName))).get()).exists) fail('already-exists', 'duplicateName');
   const root = db.doc(`churches/${cid}`);
   // Which roster days name each person, so claiming rewrites only those.
   const rosterIds = new Map<string, string[]>();

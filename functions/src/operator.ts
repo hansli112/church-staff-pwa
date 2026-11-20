@@ -1,4 +1,5 @@
 import { churchClosed, churchId } from './access.js';
+import { churchNamePath } from './church.js';
 import { fail, id, requireOperator, serverTime, text, type Caller, type Deps } from './common.js';
 import { identitiesOf, makesAdmin, parse, withIdentities, type Identity } from './identities.js';
 import { TEXT_LIMITS } from './limits.js';
@@ -53,10 +54,10 @@ export async function adminRenameChurch(deps: Deps, caller: Caller | null, data:
     if (!church.exists) fail('not-found', 'unknown');
     const oldKey = church.get('nameKey') as string | undefined;
     if (oldKey !== key) {
-      const reserved = await tx.get(db.doc(`churchNames/${key}`));
+      const reserved = await tx.get(db.doc(churchNamePath(key)));
       if (reserved.exists && reserved.get('cid') !== cid) fail('already-exists', 'duplicateName');
-      tx.set(db.doc(`churchNames/${key}`), { cid, createdAt: serverTime() });
-      if (oldKey) tx.delete(db.doc(`churchNames/${oldKey}`));
+      tx.set(db.doc(churchNamePath(key)), { cid, createdAt: serverTime() });
+      if (oldKey) tx.delete(db.doc(churchNamePath(oldKey)));
     }
     tx.update(ref, { name, nameKey: key });
   });

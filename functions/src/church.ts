@@ -20,6 +20,19 @@ import { DEFAULT_TIME_ZONE, isChurchTimeZone, type ChurchTimeZone } from './time
 export const RESTORE_DAYS = 30;
 
 /**
+ * The reservation of the name with key [key] (nameKey): churchNames/{key},
+ * with "/" (a path separator to Firestore) as the division slash "∕" that
+ * looks the same, so 「生命樹平安堂/living」 and 「生命樹平安堂∕living」 are
+ * one name. A key Firestore cannot take as an ID at all ("." and "..",
+ * "__…__") is refused.
+ */
+export function churchNamePath(key: string): string {
+  const docId = key.replaceAll('/', '∕');
+  if (docId === '.' || docId === '..' || /^__.*__$/su.test(docId)) fail('invalid-argument', 'unknown');
+  return `churchNames/${docId}`;
+}
+
+/**
  * Creates a church with the caller as its admin.
  *
  * Names are unique after normalization. The reservation lives in
@@ -103,6 +116,7 @@ export async function openChurch(
   if (!c.emailVerified) fail('failed-precondition', 'unverifiedEmail');
   const key = nameKey(name);
   if (!key) fail('invalid-argument', 'unknown');
+  const namePath = churchNamePath(key);
 
   const { db } = deps;
   const churchRef = opts.cid ? db.doc(`churches/${opts.cid}`) : db.collection('churches').doc();
@@ -113,9 +127,9 @@ export async function openChurch(
   const services = opts.services ?? { services: defaults, ids: defaults.map((s) => s.id) };
 
   await db.runTransaction(async (tx) => {
-    const reserved = await tx.get(db.doc(`churchNames/${key}`));
+    const reserved = await tx.get(db.doc(namePath));
     if (reserved.exists) fail('already-exists', 'duplicateName');
-    tx.create(db.doc(`churchNames/${key}`), { cid, createdAt: serverTime() });
+    tx.create(db.doc(namePath), { cid, createdAt: serverTime() });
     tx.create(churchRef, {
       name,
       nameKey: key,
@@ -218,7 +232,7 @@ export async function purgeDeletedChurches(deps: PurgeDeps) {
     }
     await deps.db.recursiveDelete(doc.ref);
     const key = doc.get('nameKey') as string | undefined;
-    if (key) await deps.db.doc(`churchNames/${key}`).delete();
+    if (key) await deps.db.doc(churchNamePath(key)).delete();
     purged.push(doc.id);
   }
   return purged;
