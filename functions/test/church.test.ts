@@ -121,7 +121,7 @@ describe("a church's time zone", () => {
     assert.equal((await db.doc(`churches/${la}`).get()).get('timeZone'), 'America/Los_Angeles');
     const { churchId: old } = await createChurch(deps, caller('alice'), { name: '恩典堂' });
     assert.equal((await db.doc(`churches/${old}`).get()).get('timeZone'), 'Asia/Taipei');
-    await rejectsWith(createChurch(deps, caller('alice'), { name: '上海堂', timeZone: 'Asia/Shanghai' }), 'unknown');
+    await rejectsWith(createChurch(deps, caller('alice'), { name: '上海堂', timeZone: 'Asia/Kolkata' }), 'unknown');
   });
 
   test("an admin changes it: the calendar's cached months go, the church link's next fetch moves", async () => {
@@ -130,7 +130,7 @@ describe("a church's time zone", () => {
     await db.doc('calendarCache/C1_2026-10').set({ cid: 'C1', month: '2026-10', timeZone: 'Asia/Taipei', events: [] });
     await db.doc('linkSources/C1').set({ source: 'https://feed.example/x', fetchMinute: 270, lastAttemptDay: '2026-10-03', nextAt: Timestamp.fromDate(new Date('2026-10-04T04:30:00+08:00')) });
     await rejectsWith(setChurchTimeZone(purgeDeps, caller('bob'), { churchId: 'C1', timeZone: 'America/Chicago' }), 'permissionDenied');
-    await rejectsWith(setChurchTimeZone(purgeDeps, caller('alice'), { churchId: 'C1', timeZone: 'Asia/Shanghai' }), 'unknown');
+    await rejectsWith(setChurchTimeZone(purgeDeps, caller('alice'), { churchId: 'C1', timeZone: 'Asia/Kolkata' }), 'unknown');
     await setChurchTimeZone(purgeDeps, caller('alice'), { churchId: 'C1', timeZone: 'America/Chicago' });
     assert.equal((await db.doc('churches/C1').get()).get('timeZone'), 'America/Chicago');
     assert.equal((await db.doc('calendarCache/C1_2026-10').get()).exists, false);

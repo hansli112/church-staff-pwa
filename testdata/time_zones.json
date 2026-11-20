@@ -529,6 +529,11 @@
       "changes": []
     },
     {
+      "id": "Pacific/Guam",
+      "offset": 600,
+      "changes": []
+    },
+    {
       "id": "Asia/Tokyo",
       "offset": 540,
       "changes": []
@@ -549,12 +554,27 @@
       "changes": []
     },
     {
+      "id": "Asia/Shanghai",
+      "offset": 480,
+      "changes": []
+    },
+    {
       "id": "Asia/Singapore",
       "offset": 480,
       "changes": []
     },
     {
       "id": "Asia/Kuala_Lumpur",
+      "offset": 480,
+      "changes": []
+    },
+    {
+      "id": "Asia/Manila",
+      "offset": 480,
+      "changes": []
+    },
+    {
+      "id": "Australia/Perth",
       "offset": 480,
       "changes": []
     },
@@ -1089,6 +1109,11 @@
           0
         ]
       ]
+    },
+    {
+      "id": "America/Sao_Paulo",
+      "offset": -180,
+      "changes": []
     },
     {
       "id": "America/New_York",

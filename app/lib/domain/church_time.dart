@@ -17,17 +17,22 @@ enum ChurchTimeZone {
   sydney('Australia/Sydney', 10 * 60, _australia),
   melbourne('Australia/Melbourne', 10 * 60, _australia),
   brisbane('Australia/Brisbane', 10 * 60),
+  guam('Pacific/Guam', 10 * 60),
   tokyo('Asia/Tokyo', 9 * 60),
   seoul('Asia/Seoul', 9 * 60),
   taipei('Asia/Taipei', 8 * 60),
   hongKong('Asia/Hong_Kong', 8 * 60),
+  beijing('Asia/Shanghai', 8 * 60),
   singapore('Asia/Singapore', 8 * 60),
   kualaLumpur('Asia/Kuala_Lumpur', 8 * 60),
+  manila('Asia/Manila', 8 * 60),
+  perth('Australia/Perth', 8 * 60),
   bangkok('Asia/Bangkok', 7 * 60),
   jakarta('Asia/Jakarta', 7 * 60),
   berlin('Europe/Berlin', 60, _centralEurope),
   paris('Europe/Paris', 60, _centralEurope),
   london('Europe/London', 0, _europe),
+  saoPaulo('America/Sao_Paulo', -3 * 60),
   newYork('America/New_York', -5 * 60, _northAmerica),
   toronto('America/Toronto', -5 * 60, _northAmerica),
   chicago('America/Chicago', -6 * 60, _northAmerica),
@@ -59,7 +64,7 @@ enum ChurchTimeZone {
   /// The zone for a phone in IANA zone [deviceId] whose clock is [offset]
   /// ahead of UTC at [now]: that zone if it is one of these; else the first
   /// on the same clock now, one in the same part of the world (`America/`,
-  /// `Asia/`…) first, as the list is ordered (Shanghai gets Taipei); else
+  /// `Asia/`…) first, as the list is ordered (Macau gets Taipei); else
   /// the first whose standard time it is (Fiji gets Auckland in summer);
   /// else [fallback]. A wrong one the church's admin changes.
   static ChurchTimeZone forDevice(String? deviceId, Duration offset, DateTime now) {

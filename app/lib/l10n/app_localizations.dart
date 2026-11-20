@@ -5032,6 +5032,36 @@ abstract class L10n {
   /// **'檀香山'**
   String get cityHonolulu;
 
+  /// No description provided for @cityGuam.
+  ///
+  /// In zh, this message translates to:
+  /// **'關島'**
+  String get cityGuam;
+
+  /// No description provided for @cityBeijing.
+  ///
+  /// In zh, this message translates to:
+  /// **'北京'**
+  String get cityBeijing;
+
+  /// No description provided for @cityManila.
+  ///
+  /// In zh, this message translates to:
+  /// **'馬尼拉'**
+  String get cityManila;
+
+  /// No description provided for @cityPerth.
+  ///
+  /// In zh, this message translates to:
+  /// **'伯斯'**
+  String get cityPerth;
+
+  /// No description provided for @citySaoPaulo.
+  ///
+  /// In zh, this message translates to:
+  /// **'聖保羅'**
+  String get citySaoPaulo;
+
   /// No description provided for @signInMethods.
   ///
   /// In zh, this message translates to:

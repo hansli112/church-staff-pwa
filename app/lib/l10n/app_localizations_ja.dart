@@ -2831,6 +2831,21 @@ class L10nJa extends L10n {
   String get cityHonolulu => 'ホノルル';
 
   @override
+  String get cityGuam => 'グアム';
+
+  @override
+  String get cityBeijing => '北京';
+
+  @override
+  String get cityManila => 'マニラ';
+
+  @override
+  String get cityPerth => 'パース';
+
+  @override
+  String get citySaoPaulo => 'サンパウロ';
+
+  @override
   String get signInMethods => 'ログイン方法';
 
   @override

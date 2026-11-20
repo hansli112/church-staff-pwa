@@ -57,10 +57,16 @@ void main() {
       expect(ChurchTimeZone.forDevice('Asia/Kuala_Lumpur', h * 8, summer), ChurchTimeZone.kualaLumpur);
       expect(ChurchTimeZone.forDevice('Australia/Brisbane', h * 10, winter), ChurchTimeZone.brisbane);
       expect(ChurchTimeZone.forDevice('America/Phoenix', -h * 7, winter), ChurchTimeZone.phoenix);
+      expect(ChurchTimeZone.forDevice('Asia/Shanghai', h * 8, summer), ChurchTimeZone.beijing);
+      expect(ChurchTimeZone.forDevice('Australia/Perth', h * 8, summer), ChurchTimeZone.perth);
+      expect(ChurchTimeZone.forDevice('Asia/Manila', h * 8, summer), ChurchTimeZone.manila);
+      expect(ChurchTimeZone.forDevice('Pacific/Guam', h * 10, summer), ChurchTimeZone.guam);
+      expect(ChurchTimeZone.forDevice('America/Sao_Paulo', -h * 3, summer), ChurchTimeZone.saoPaulo);
     });
     test('another is the first on the same clock, in its part of the world first', () {
-      expect(ChurchTimeZone.forDevice('Asia/Shanghai', h * 8, summer), ChurchTimeZone.taipei);
-      expect(ChurchTimeZone.forDevice('Australia/Perth', h * 8, summer), ChurchTimeZone.taipei);
+      expect(ChurchTimeZone.forDevice('Asia/Macau', h * 8, summer), ChurchTimeZone.taipei);
+      expect(ChurchTimeZone.forDevice('Pacific/Saipan', h * 10, summer), ChurchTimeZone.guam);
+      expect(ChurchTimeZone.forDevice('America/Argentina/Buenos_Aires', -h * 3, winter), ChurchTimeZone.saoPaulo);
       expect(ChurchTimeZone.forDevice('America/Tijuana', -h * 7, summer), ChurchTimeZone.losAngeles);
       expect(ChurchTimeZone.forDevice('America/Hermosillo', -h * 7, winter), ChurchTimeZone.denver);
       expect(ChurchTimeZone.forDevice('Asia/Ho_Chi_Minh', h * 7, summer), ChurchTimeZone.bangkok);

@@ -2980,6 +2980,21 @@ class L10nEn extends L10n {
   String get cityHonolulu => 'Honolulu';
 
   @override
+  String get cityGuam => 'Guam';
+
+  @override
+  String get cityBeijing => 'Beijing';
+
+  @override
+  String get cityManila => 'Manila';
+
+  @override
+  String get cityPerth => 'Perth';
+
+  @override
+  String get citySaoPaulo => 'São Paulo';
+
+  @override
   String get signInMethods => 'Sign-In Methods';
 
   @override
