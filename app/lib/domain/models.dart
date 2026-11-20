@@ -759,6 +759,66 @@ class Duty {
   );
 }
 
+/// A file on a roster's 備註: 樂譜, a picture, 練唱音檔.
+@immutable
+class NoteFile {
+  const NoteFile({required this.id, required this.name, required this.type, required this.size, required this.url});
+
+  /// Its name in Storage, under the roster's note.
+  final String id;
+
+  /// The name it was picked with.
+  final String name;
+
+  /// Its content type: a PDF, `image/…` or `audio/…`.
+  final String type;
+
+  /// In bytes.
+  final int size;
+
+  /// Where it opens.
+  final String url;
+
+  bool get isImage => type.startsWith('image/');
+  bool get isAudio => type.startsWith('audio/');
+
+  NoteFile copyWith({String? name}) => NoteFile(id: id, name: name ?? this.name, type: type, size: size, url: url);
+
+  @override
+  bool operator ==(Object other) =>
+      other is NoteFile &&
+      other.id == id &&
+      other.name == name &&
+      other.type == type &&
+      other.size == size &&
+      other.url == url;
+
+  @override
+  int get hashCode => Object.hash(id, name, type, size, url);
+}
+
+/// What a file on a 備註 may be: a PDF, a picture or sound
+/// (functions/src/rosterNotes.ts noteFileType, storage.rules).
+bool noteFileType(String type) => RegExp(r'^(application/pdf|image/[\w.+-]+|audio/[\w.+-]+)$').hasMatch(type);
+
+/// A day's 備註 on its roster: some text, and files. Whoever arranges any
+/// of the roster writes it; it goes Limits.noteDays after the last day.
+@immutable
+class RosterNote {
+  const RosterNote({this.text = '', this.files = const []});
+
+  final String text;
+  final List<NoteFile> files;
+
+  bool get isEmpty => text.trim().isEmpty && files.isEmpty;
+
+  @override
+  bool operator ==(Object other) => other is RosterNote && other.text == text && listEquals(other.files, files);
+
+  @override
+  int get hashCode => Object.hash(text, Object.hashAll(files));
+}
+
 /// The calendar event a 活動的服事表 belongs to, as the roster keeps it:
 /// the title and days are copied from the calendar, which has the say.
 @immutable

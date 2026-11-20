@@ -406,6 +406,39 @@ class L10nEn extends L10n {
   String get holdToMoveSwipeToDelete => 'Hold and drag to reorder, swipe left to delete';
 
   @override
+  String get rosterNote => 'Notes';
+
+  @override
+  String get addRosterNote => 'Add Notes';
+
+  @override
+  String get rosterHasNote => 'Has notes';
+
+  @override
+  String get noteAddFile => 'Add File';
+
+  @override
+  String get noteFilesFooter => 'PDFs, images or audio, up to 5, 20 MB each. Deleted 30 days after the day.';
+
+  @override
+  String noteFileTooBig(String name) {
+    return '“$name” is over 20 MB';
+  }
+
+  @override
+  String noteFileFailed(String name) {
+    return 'Couldn’t upload “$name”';
+  }
+
+  @override
+  String noteRemoveFile(String name) {
+    return 'Remove “$name”';
+  }
+
+  @override
+  String get noteTooManyFiles => 'Up to 5 files';
+
+  @override
   String dutyUpdated(String duty) {
     return 'Updated $duty';
   }

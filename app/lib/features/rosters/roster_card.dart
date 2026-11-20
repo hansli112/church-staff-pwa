@@ -56,6 +56,7 @@ class RosterCard extends ConsumerWidget {
       title: dayBesideBlock(l10n, roster.day, today),
       highlightUid: uid,
       onTap: onTap,
+      noted: ref.watch(rosterNotesProvider.select((n) => !(n.value?[rosterId]?.isEmpty ?? true))),
     );
   }
 }
@@ -82,7 +83,11 @@ class RosterDayView extends ConsumerWidget {
     this.onMyDuty,
     this.asked = const {},
     this.past = false,
+    this.noted = false,
   });
+
+  /// The day has a 備註: a small icon by the title says so, to open it.
+  final bool noted;
 
   final Roster roster;
   final String title;
@@ -156,7 +161,25 @@ class RosterDayView extends ConsumerWidget {
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Text(title, style: AppText.headline.copyWith(color: past ? c.secondaryLabel : null)),
+                          Row(
+                            children: [
+                              Flexible(
+                                child: Text(
+                                  title,
+                                  style: AppText.headline.copyWith(color: past ? c.secondaryLabel : null),
+                                ),
+                              ),
+                              if (noted) ...[
+                                const SizedBox(width: 6),
+                                Icon(
+                                  Symbols.sticky_note_2_rounded,
+                                  size: 18,
+                                  color: c.tertiaryLabel,
+                                  semanticLabel: l10n.rosterHasNote,
+                                ),
+                              ],
+                            ],
+                          ),
                           if (roster.events.isNotEmpty) ...[
                             const SizedBox(height: Space.xs),
                             Wrap(

@@ -53,6 +53,7 @@ import * as operator from './operator.js';
 import * as photo from './photo.js';
 import { monitoringUsageReader, writeDailyStats } from './stats.js';
 import * as rosterChange from './rosterChange.js';
+import * as rosterNotes from './rosterNotes.js';
 import * as serviceSettings from './serviceSettings.js';
 import * as smallGroups from './smallGroups.js';
 import * as triggers from './triggers.js';
@@ -157,6 +158,7 @@ export const purgeDeletedChurches = using(
         churches: () => church.purgeDeletedChurches({ ...make(), bucket: bucket() }),
         joinRequests: () => joinRequests.forgetOldJoinRequests(deps()),
         notifications: () => notificationList.forgetOldNotifications(deps()),
+        rosterNotes: () => rosterNotes.forgetOldRosterNotes({ ...deps(), bucket: bucket() }),
       });
     }),
 );
@@ -223,6 +225,20 @@ export const editLedDuties = callable(ledDuties.editLedDuties);
 export const notifyPlanned = callable(rosterChange.notifyPlanned, pushDeps);
 export const askUnavailable = callable(unavailable.askUnavailable, pushDeps);
 export const saveUnavailableDays = callable(unavailable.saveUnavailableDays);
+// 備註 of a day's roster, and its files.
+export const saveRosterNote = callable(rosterNotes.saveRosterNote, () => ({ ...deps(), bucket: bucket() }));
+export const onRosterNoteWritten = onDocumentWritten(
+  { region: REGION, document: 'churches/{cid}/rosterNotes/{rosterId}', retry: true },
+  async (event) => {
+    await rosterNotes.onRosterNoteWritten(
+      { bucket: bucket() },
+      event.params.cid,
+      event.params.rosterId,
+      event.data?.before.exists ? event.data.before.data()! : null,
+      event.data?.after.exists ? event.data.after.data()! : null,
+    );
+  },
+);
 // 回報人數 (#93): 提醒 on 人數總覽, and 小組 that met together.
 export const remindAttendance = callable(attendance.remindAttendance, pushDeps);
 export const fillAttendanceTogether = callable(attendance.fillAttendanceTogether);

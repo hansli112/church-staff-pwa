@@ -25,6 +25,8 @@ export const TEXT_LIMITS = {
   joinNote: 100,
   /** What a member says about days they cannot serve (不能服事的日子, #91). */
   unavailableNote: 30,
+  /** A day's 備註 on its roster. */
+  rosterNote: 500,
 } as const;
 
 /** URLs and secrets in UTF-16 code units, services as a count. */
@@ -55,6 +57,16 @@ export const LIMITS = {
   unavailableSpans: 100,
   /** A service's 小組, or the 其他聚會, put in order by hand. */
   ordered: 200,
+  /** Files on a roster's 備註. */
+  noteFiles: 5,
+  /** The most a file on a 備註 can be, in bytes (20 MB; storage.rules too). */
+  noteFileBytes: 20971520,
+  /** A file's name on a 備註, in UTF-16 code units. */
+  noteFileName: 200,
+  /** A file's download URL on a 備註. */
+  noteFileUrl: 2048,
+  /** A 備註 goes this many days after its roster's last day. */
+  noteDays: 30,
 } as const;
 
 /**

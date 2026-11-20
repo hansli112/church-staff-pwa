@@ -397,6 +397,39 @@ class L10nKo extends L10n {
   String get holdToMoveSwipeToDelete => '길게 눌러 순서 변경, 왼쪽으로 밀어서 삭제';
 
   @override
+  String get rosterNote => '메모';
+
+  @override
+  String get addRosterNote => '메모 추가';
+
+  @override
+  String get rosterHasNote => '메모 있음';
+
+  @override
+  String get noteAddFile => '파일 추가';
+
+  @override
+  String get noteFilesFooter => 'PDF·이미지·오디오, 최대 5개, 각 20MB. 그날로부터 30일 후 삭제돼요.';
+
+  @override
+  String noteFileTooBig(String name) {
+    return '‘$name’이(가) 20MB를 넘어요';
+  }
+
+  @override
+  String noteFileFailed(String name) {
+    return '‘$name’을(를) 올리지 못했어요';
+  }
+
+  @override
+  String noteRemoveFile(String name) {
+    return '‘$name’ 삭제';
+  }
+
+  @override
+  String get noteTooManyFiles => '파일은 최대 5개예요';
+
+  @override
   String dutyUpdated(String duty) {
     return '$duty 담당을 수정했어요';
   }

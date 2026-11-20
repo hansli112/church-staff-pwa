@@ -13,6 +13,8 @@
 /// Storage or a function, is a [CloudException].
 library;
 
+import 'dart:typed_data';
+
 import '../core/languages.dart';
 import '../domain/day.dart';
 import '../domain/models.dart';
@@ -220,6 +222,8 @@ abstract interface class ChurchData {
   PhotoData get photos;
 
   AttendanceData get attendance;
+
+  RosterNoteData get rosterNotes;
 
   ReadOnceData get readOnce;
 
@@ -552,6 +556,30 @@ abstract interface class WebhookData {
 
   /// Sends a test notice now.
   Future<WebhookDelivery> test();
+}
+
+/// 備註 of each day's roster, and its files.
+abstract interface class RosterNoteData {
+  /// Every roster's 備註 in the church, by roster ID. Everyone reads them.
+  Stream<Map<String, RosterNote>> watch();
+
+  /// Uploads a file picked for roster [rosterId]'s 備註, telling
+  /// [onProgress] how far (0 to 1). It is the note's once [save] keeps it.
+  /// For whoever arranges rosters.
+  Future<NoteFile> upload(
+    String rosterId, {
+    required String name,
+    required String type,
+    required Uint8List bytes,
+    void Function(double done)? onProgress,
+  });
+
+  /// Takes back [file], uploaded and then not kept.
+  Future<void> discard(String rosterId, NoteFile file);
+
+  /// Keeps [note] as roster [rosterId]'s 備註, for whoever arranges any of
+  /// it; an empty one deletes it. Its new files must be [upload]ed first.
+  Future<void> save(String rosterId, RosterNote note);
 }
 
 /// Reading rosters from photos (匯入).

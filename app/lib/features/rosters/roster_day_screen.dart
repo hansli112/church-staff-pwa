@@ -19,6 +19,7 @@ import 'event_sheet.dart';
 import 'format.dart';
 import 'future_changes.dart';
 import 'roster_card.dart';
+import 'roster_note.dart';
 import 'swap_asking.dart';
 import '../common/saving_indicator.dart';
 
@@ -114,6 +115,7 @@ class RosterDayScreen extends ConsumerWidget {
               onEditEvents: editEvents,
               onAddDuty: whole || addable.isNotEmpty ? () => _addDuty(context, ref, roster, addable, any: whole) : null,
             ),
+          RosterNoteSection(rosterId: roster.id, canEdit: canEdit),
         ],
       ),
     );

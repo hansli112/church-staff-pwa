@@ -150,6 +150,9 @@ final eventArrangesProvider = Provider.family<Arranges, String?>((ref, group) {
   return me.arrangesEvent(ministries, group);
 });
 
+/// Every roster's 備註 in the church, by roster ID.
+final rosterNotesProvider = StreamProvider<Map<String, RosterNote>>((ref) => openChurch(ref).rosterNotes.watch());
+
 /// The church link at the top of the home page, or null.
 final churchLinkProvider = StreamProvider<ChurchLink?>((ref) => openChurch(ref).churchLink.watch());
 

@@ -719,3 +719,18 @@ SwapRequest? swapRequestFromJson(String id, Map<String, dynamic> data) {
     takerName: data['takerName'] as String?,
   );
 }
+
+RosterNote rosterNoteFromJson(Json j) => RosterNote(
+  text: j['text'] is String ? j['text'] as String : '',
+  files: [
+    for (final f in (j['files'] is List ? j['files'] as List : const []))
+      if (f is Map && f['id'] is String && f['url'] is String)
+        NoteFile(
+          id: f['id'] as String,
+          name: f['name'] is String ? f['name'] as String : f['id'] as String,
+          type: f['type'] is String ? f['type'] as String : '',
+          size: f['size'] is num ? (f['size'] as num).toInt() : 0,
+          url: f['url'] as String,
+        ),
+  ],
+);

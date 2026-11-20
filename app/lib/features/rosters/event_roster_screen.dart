@@ -19,6 +19,7 @@ import 'format.dart';
 import 'future_changes.dart';
 import 'roster_card.dart';
 import '../common/saving_indicator.dart';
+import 'roster_note.dart';
 
 /// The days an event's roster is on, as its heading says them.
 String eventDaysLabel(L10n l10n, Roster r, Day today) => r.lastDay == r.day
@@ -166,6 +167,11 @@ class EventRosterScreen extends ConsumerWidget {
                 title: eventDaysLabel(l10n, roster, today),
                 highlightUid: ref.watch(uidProvider),
               ),
+            // Kept with the roster, so once it is saved.
+            RosterNoteSection(
+              rosterId: roster.id,
+              canEdit: canEdit && saved != null && !roster.lastDay.isBefore(today),
+            ),
           ],
         ),
         AsyncValue(hasValue: false) => const SizedBox.shrink(),

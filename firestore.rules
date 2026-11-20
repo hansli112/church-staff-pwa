@@ -543,6 +543,13 @@ service cloud.firestore {
         allow read: if (isSelf(uid) && isMember(cid)) || arrangesRosters(cid);
       }
 
+      // 備註 of a day's roster (rosterNotes/{rosterId}: text, files,
+      // dateKey, by): the church reads it; saveRosterNote writes it, as
+      // only it can tell a 事工's 負責人 arranges there.
+      match /rosterNotes/{rosterId} {
+        allow read: if isMember(cid);
+      }
+
       // 找人代／交換 (#92): who asked, everyone a 請人代 asked, and the one a
       // 交換 asked read it; only the backend writes (askCover, askSwap,
       // answerSwap, undoSwap, withdrawSwap).

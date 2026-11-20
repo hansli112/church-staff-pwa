@@ -275,6 +275,7 @@ class _PastCard extends ConsumerWidget {
       highlightUid: ref.watch(uidProvider),
       onTap: onTap,
       past: true,
+      noted: ref.watch(rosterNotesProvider.select((n) => !(n.value?[roster.id]?.isEmpty ?? true))),
     );
   }
 }

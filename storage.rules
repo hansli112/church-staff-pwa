@@ -3,8 +3,8 @@ rules_version = '2';
 // Cloud Storage rules for 馬大別忙.
 //
 // Client uploads: a church logo at churches/{cid}/logo.png (the app resizes
-// it to 512px before upload; these rules are the real limit) and a move file
-// at moves/{uid}/….
+// it to 512px before upload; these rules are the real limit), a 備註's files
+// and a move file at moves/{uid}/….
 // Membership and admin role come from Firestore, the same documents
 // firestore.rules checks, so the tenant boundary is the same.
 service firebase.storage {
@@ -33,6 +33,28 @@ service firebase.storage {
         && request.resource.size < 1024 * 1024
         && request.resource.contentType.matches('image/.*');
       allow delete: if isAdmin(cid);
+    }
+
+    // Whoever arranges any roster: admins, 行政 and every lead. The
+    // function that keeps a note (saveRosterNote) checks they arrange
+    // that roster, and a file no note keeps goes after a day.
+    function arrangesSome(cid) {
+      let m = firestore.get(memberDoc(cid)).data;
+      return isAdmin(cid) || (isMember(cid) && ('roster-editors' in m.get('groups', [])
+        || m.get('leadTypes', []).size() > 0 || m.get('leadMinistries', []).size() > 0
+        || m.get('leadSmallGroups', []).size() > 0));
+    }
+
+    // 備註's files (樂譜, 練唱音檔…): the church reads them; who arranges
+    // uploads PDFs, pictures and sound up to 20 MB, saying it is theirs,
+    // and may take back their own before it is kept.
+    match /churches/{cid}/rosterNotes/{rosterId}/{fileId} {
+      allow read: if isMember(cid);
+      allow create: if arrangesSome(cid)
+        && request.resource.size <= 20 * 1024 * 1024
+        && request.resource.contentType.matches('application/pdf|image/.+|audio/.+')
+        && request.resource.metadata.get('uploader', '') == request.auth.uid;
+      allow delete: if request.auth != null && resource.metadata.get('uploader', '') == request.auth.uid;
     }
 
     // 搬家檔: only its uploader reads or writes it, up to 20MB. The move

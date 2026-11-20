@@ -8,7 +8,7 @@ import {
   initializeTestEnvironment,
 } from '@firebase/rules-unit-testing';
 import { doc, setDoc } from 'firebase/firestore';
-import { getBytes, ref, uploadBytes } from 'firebase/storage';
+import { deleteObject, getBytes, ref, uploadBytes } from 'firebase/storage';
 
 let testEnv;
 const [fsHost, fsPort] = (process.env.FIRESTORE_EMULATOR_HOST ?? '127.0.0.1:8181').split(':');
@@ -41,6 +41,8 @@ before(async () => {
     await setDoc(doc(db, 'churches/A/members/admin-a'), { uid: 'admin-a', role: 'admin' });
     await setDoc(doc(db, 'churches/A/members/staff-a'), { uid: 'staff-a', role: 'staff' });
     await setDoc(doc(db, 'churches/B/members/admin-b'), { uid: 'admin-b', role: 'admin' });
+    await setDoc(doc(db, 'churches/A/members/lead-a'), { uid: 'lead-a', role: 'staff', leadMinistries: ['worship'] });
+    await setDoc(doc(db, 'churches/A/members/office-a'), { uid: 'office-a', role: 'staff', groups: ['roster-editors'] });
     await setDoc(doc(db, 'churches/S/members/admin-s'), { uid: 'admin-s', role: 'admin' });
   });
 });
@@ -97,5 +99,33 @@ describe('搬家檔', () => {
   it('最大 20MB', async () => {
     const big = new Uint8Array(20 * 1024 * 1024 + 1);
     await assertFails(uploadBytes(ref(storageAs('mover'), 'moves/mover/big.json'), big, meta));
+  });
+});
+
+describe('備註的檔案', () => {
+  const path = (id) => `churches/A/rosterNotes/2030-12-22_sunday/${id}`;
+  const pdf = (uid) => ({ contentType: 'application/pdf', customMetadata: { uploader: uid } });
+
+  it('管理員、行政、負責人上傳 PDF、圖片、音檔，教會的人讀得到', async () => {
+    await assertSucceeds(uploadBytes(ref(storageAs('admin-a'), path('a')), png, pdf('admin-a')));
+    await assertSucceeds(uploadBytes(ref(storageAs('office-a'), path('b')), png, { contentType: 'image/jpeg', customMetadata: { uploader: 'office-a' } }));
+    await assertSucceeds(uploadBytes(ref(storageAs('lead-a'), path('c')), png, { contentType: 'audio/mp4', customMetadata: { uploader: 'lead-a' } }));
+    await assertSucceeds(getBytes(ref(storageAs('staff-a'), path('a'))));
+    await assertFails(getBytes(ref(storageAs('admin-b'), path('a'))));
+  });
+
+  it('一般同工、別的教會不能上傳；別的類型、超過 20MB、沒說是誰傳的都不行', async () => {
+    await assertFails(uploadBytes(ref(storageAs('staff-a'), path('d')), png, pdf('staff-a')));
+    await assertFails(uploadBytes(ref(storageAs('admin-b'), path('d')), png, pdf('admin-b')));
+    await assertFails(uploadBytes(ref(storageAs('admin-a'), path('d')), png, { contentType: 'text/html', customMetadata: { uploader: 'admin-a' } }));
+    await assertFails(uploadBytes(ref(storageAs('admin-a'), path('d')), png, { contentType: 'application/pdf' }));
+    await assertFails(uploadBytes(ref(storageAs('admin-a'), path('d')), png, pdf('lead-a')));
+    await assertFails(uploadBytes(ref(storageAs('admin-a'), path('d')), new Uint8Array(20 * 1024 * 1024 + 1), pdf('admin-a')));
+  });
+
+  it('上傳的人可以收回自己傳的，別人不行', async () => {
+    await assertSucceeds(uploadBytes(ref(storageAs('lead-a'), path('e')), png, pdf('lead-a')));
+    await assertFails(deleteObject(ref(storageAs('admin-a'), path('e'))));
+    await assertSucceeds(deleteObject(ref(storageAs('lead-a'), path('e'))));
   });
 });

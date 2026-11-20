@@ -178,6 +178,9 @@ class EchoingChurchData implements ChurchData {
   AttendanceData get attendance => _inner.attendance;
 
   @override
+  RosterNoteData get rosterNotes => _inner.rosterNotes;
+
+  @override
   ReadOnceData get readOnce => _inner.readOnce;
 
   @override

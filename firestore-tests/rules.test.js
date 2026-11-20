@@ -525,6 +525,18 @@ describe('不能服事的日子 (unavailable)', () => {
   });
 });
 
+describe('備註 (rosterNotes)', () => {
+  it('教會的人讀得到，別的教會讀不到；只有後端寫（saveRosterNote）', async () => {
+    await seed(`churches/${A}/rosterNotes/2030-12-22_sunday`, { text: '歌單', files: [], dateKey: '2030-12-22' });
+    const note = (uid, church = A) => doc(as(uid), `churches/${church}/rosterNotes/2030-12-22_sunday`);
+    await assertSucceeds(getDoc(note(MEMBER_A)));
+    await assertSucceeds(getDocs(collection(as(MEMBER_A), `churches/${A}/rosterNotes`)));
+    await assertFails(getDoc(doc(as(ADMIN_B), `churches/${A}/rosterNotes/2030-12-22_sunday`)));
+    await assertFails(setDoc(note(ADMIN_A), { text: 'x', files: [], dateKey: '2030-12-22' }));
+    await assertFails(deleteDoc(note(ADMIN_A)));
+  });
+});
+
 describe('找人代／交換 (swapRequests)', () => {
   it('問的人、被問的人讀得到，其他人讀不到；只有後端寫', async () => {
     await seed(`churches/${A}/swapRequests/c1`, { kind: 'cover', from: MEMBER_A, asked: [EDITOR_A], status: 'open' });

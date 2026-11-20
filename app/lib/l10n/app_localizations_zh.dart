@@ -396,6 +396,39 @@ class L10nZh extends L10n {
   String get holdToMoveSwipeToDelete => '按住拖曳排序，左滑刪除';
 
   @override
+  String get rosterNote => '備註';
+
+  @override
+  String get addRosterNote => '新增備註';
+
+  @override
+  String get rosterHasNote => '有備註';
+
+  @override
+  String get noteAddFile => '加入檔案';
+
+  @override
+  String get noteFilesFooter => 'PDF、圖片或音檔，最多 5 個，每個 20 MB。那天過後 30 天刪除。';
+
+  @override
+  String noteFileTooBig(String name) {
+    return '「$name」超過 20 MB';
+  }
+
+  @override
+  String noteFileFailed(String name) {
+    return '「$name」沒有上傳成功';
+  }
+
+  @override
+  String noteRemoveFile(String name) {
+    return '移除「$name」';
+  }
+
+  @override
+  String get noteTooManyFiles => '最多 5 個檔案';
+
+  @override
   String dutyUpdated(String duty) {
     return '已更新$duty';
   }
@@ -4008,6 +4041,39 @@ class L10nZhHans extends L10nZh {
 
   @override
   String get holdToMoveSwipeToDelete => '按住拖动排序，左滑删除';
+
+  @override
+  String get rosterNote => '备注';
+
+  @override
+  String get addRosterNote => '添加备注';
+
+  @override
+  String get rosterHasNote => '有备注';
+
+  @override
+  String get noteAddFile => '添加文件';
+
+  @override
+  String get noteFilesFooter => 'PDF、图片或音频，最多 5 个，每个 20 MB。那天过后 30 天删除。';
+
+  @override
+  String noteFileTooBig(String name) {
+    return '“$name”超过 20 MB';
+  }
+
+  @override
+  String noteFileFailed(String name) {
+    return '“$name”没有上传成功';
+  }
+
+  @override
+  String noteRemoveFile(String name) {
+    return '移除“$name”';
+  }
+
+  @override
+  String get noteTooManyFiles => '最多 5 个文件';
 
   @override
   String dutyUpdated(String duty) {

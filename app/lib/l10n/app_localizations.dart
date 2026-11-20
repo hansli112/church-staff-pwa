@@ -814,6 +814,60 @@ abstract class L10n {
   /// **'按住拖曳排序，左滑刪除'**
   String get holdToMoveSwipeToDelete;
 
+  /// Header over a day roster's note (text and files) at the bottom of its page
+  ///
+  /// In zh, this message translates to:
+  /// **'備註'**
+  String get rosterNote;
+
+  /// Row at the bottom of a day roster, for who arranges it, when it has no note yet
+  ///
+  /// In zh, this message translates to:
+  /// **'新增備註'**
+  String get addRosterNote;
+
+  /// Screen-reader label of the small icon on a roster card whose day has a note
+  ///
+  /// In zh, this message translates to:
+  /// **'有備註'**
+  String get rosterHasNote;
+
+  /// Button after a note's files, in the sheet editing it
+  ///
+  /// In zh, this message translates to:
+  /// **'加入檔案'**
+  String get noteAddFile;
+
+  /// Under the files in the sheet editing a day's note
+  ///
+  /// In zh, this message translates to:
+  /// **'PDF、圖片或音檔，最多 5 個，每個 20 MB。那天過後 30 天刪除。'**
+  String get noteFilesFooter;
+
+  /// Toast when a picked file is too big to add to a note
+  ///
+  /// In zh, this message translates to:
+  /// **'「{name}」超過 20 MB'**
+  String noteFileTooBig(String name);
+
+  /// Toast when a file picked for a note did not upload
+  ///
+  /// In zh, this message translates to:
+  /// **'「{name}」沒有上傳成功'**
+  String noteFileFailed(String name);
+
+  /// Screen-reader label of the × on a file in the note sheet
+  ///
+  /// In zh, this message translates to:
+  /// **'移除「{name}」'**
+  String noteRemoveFile(String name);
+
+  /// Toast when more files are picked than a note may have
+  ///
+  /// In zh, this message translates to:
+  /// **'最多 5 個檔案'**
+  String get noteTooManyFiles;
+
   /// No description provided for @dutyUpdated.
   ///
   /// In zh, this message translates to:

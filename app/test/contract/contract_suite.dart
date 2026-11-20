@@ -13,6 +13,8 @@
 /// security rules refused a direct read or write or a function refused.
 library;
 
+import 'dart:typed_data';
+
 import 'package:flutter_test/flutter_test.dart';
 import 'package:martha/core/languages.dart';
 import 'package:martha/data/backend.dart';
@@ -1221,6 +1223,44 @@ void contractTests(Future<ContractWorld> Function() open) {
       );
       expect(await g.church.askUnavailable('sunday', from: Day(2030, 12, 1), to: Day(2031, 1, 1)), 1);
       expect(await g.church.lastUnavailableAsk('sunday').firstWhere((at) => at != null).timeout(wait), isNotNull);
+    });
+  });
+
+  group('備註', () {
+    test('whoever arranges the day keeps its note and files; everyone reads it, nobody else writes', () async {
+      final g = await Grace.open(w);
+      const wait = Duration(seconds: 30);
+      const id = '2030-12-22_sunday';
+      await w.signIn(Grace.editorEmail);
+      final file = await g.church.rosterNotes.upload(
+        id,
+        name: '恩典夠我用.pdf',
+        type: 'application/pdf',
+        bytes: Uint8List.fromList([1, 2, 3]),
+      );
+      expect(file.size, 3);
+      await g.church.rosterNotes.save(id, RosterNote(text: '歌單', files: [file]));
+      final note = (await g.church.rosterNotes.watch().firstWhere((n) => n.containsKey(id)).timeout(wait))[id]!;
+      expect(note.text, '歌單');
+      expect([for (final f in note.files) (f.name, f.type, f.size)], [('恩典夠我用.pdf', 'application/pdf', 3)]);
+      await expectLater(
+        g.church.rosterNotes.save('2030-12-22_youth', const RosterNote(text: 'x')),
+        denied(),
+        reason: 'not a service he arranges',
+      );
+
+      await w.signIn(Grace.meiEmail);
+      expect((await g.church.rosterNotes.watch().firstWhere((n) => n.containsKey(id)).timeout(wait))[id], note);
+      await expectLater(g.church.rosterNotes.save(id, const RosterNote(text: 'x')), denied());
+      await expectLater(
+        g.church.rosterNotes.upload(id, name: 'a.pdf', type: 'application/pdf', bytes: Uint8List(1)),
+        throwsA(isA<CloudException>()),
+        reason: 'she arranges nothing',
+      );
+
+      await w.signIn(Grace.editorEmail);
+      await g.church.rosterNotes.save(id, const RosterNote());
+      expect(await g.church.rosterNotes.watch().firstWhere((n) => !n.containsKey(id)).timeout(wait), isEmpty);
     });
   });
 

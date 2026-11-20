@@ -180,6 +180,8 @@ const _rosterKeys = {
   'addDuty',
   'events',
   'emptySlot',
+  'rosterNote',
+  'addRosterNote',
 };
 
 const _churchInfoKeys = {

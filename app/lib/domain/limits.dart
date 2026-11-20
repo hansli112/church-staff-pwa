@@ -39,6 +39,9 @@ abstract final class TextLimits {
 
   /// What a member says about days they cannot serve (不能服事的日子, #91).
   static const unavailableNote = 30;
+
+  /// A day's 備註 on its roster.
+  static const rosterNote = 500;
 }
 
 /// Limits whose unit is the same everywhere: URLs and secrets in UTF-16
@@ -86,6 +89,21 @@ abstract final class Limits {
 
   /// A service's 小組, or the 其他聚會, put in order by hand.
   static const ordered = 200;
+
+  /// Files on a roster's 備註.
+  static const noteFiles = 5;
+
+  /// The most a file on a 備註 can be, in bytes (20 MB; storage.rules too).
+  static const noteFileBytes = 20971520;
+
+  /// A file's name on a 備註, in UTF-16 code units.
+  static const noteFileName = 200;
+
+  /// A file's download URL on a 備註.
+  static const noteFileUrl = 2048;
+
+  /// A 備註 goes this many days after its roster's last day.
+  static const noteDays = 30;
 }
 
 /// firestore.rules counts UTF-16 code units, not characters, so for a

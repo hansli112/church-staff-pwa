@@ -396,6 +396,39 @@ class L10nJa extends L10n {
   String get holdToMoveSwipeToDelete => '長押しで並べ替え、左にスワイプして削除';
 
   @override
+  String get rosterNote => 'メモ';
+
+  @override
+  String get addRosterNote => 'メモを追加';
+
+  @override
+  String get rosterHasNote => 'メモあり';
+
+  @override
+  String get noteAddFile => 'ファイルを追加';
+
+  @override
+  String get noteFilesFooter => 'PDF・画像・音声、5 個まで、各 20 MB。その日の 30 日後に削除されます。';
+
+  @override
+  String noteFileTooBig(String name) {
+    return '「$name」は 20 MB を超えています';
+  }
+
+  @override
+  String noteFileFailed(String name) {
+    return '「$name」をアップロードできませんでした';
+  }
+
+  @override
+  String noteRemoveFile(String name) {
+    return '「$name」を削除';
+  }
+
+  @override
+  String get noteTooManyFiles => 'ファイルは 5 個までです';
+
+  @override
   String dutyUpdated(String duty) {
     return '$dutyを更新しました';
   }

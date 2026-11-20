@@ -622,6 +622,9 @@ class FirestoreChurchData implements ChurchData {
   late final AttendanceData attendance = _FirestoreAttendance(this);
 
   @override
+  late final RosterNoteData rosterNotes = _FirestoreRosterNotes(this);
+
+  @override
   late final ReadOnceData readOnce = _FirestoreReadOnce(this);
 
   @override
@@ -1381,6 +1384,63 @@ class _FirestoreWebhook implements WebhookData {
 }
 
 /// [PhotoData] of a [FirestoreChurchData].
+class _FirestoreRosterNotes implements RosterNoteData {
+  _FirestoreRosterNotes(this._c);
+
+  final FirestoreChurchData _c;
+
+  Reference _file(String rosterId, String id) => _c._storage.ref('churches/${_c.churchId}/rosterNotes/$rosterId/$id');
+
+  @override
+  Stream<Map<String, RosterNote>> watch() => _c
+      ._col('rosterNotes')
+      .live()
+      .map((snap) => {for (final d in snap.docs) d.id: rosterNoteFromJson(d.data())})
+      .translated();
+
+  @override
+  Future<NoteFile> upload(
+    String rosterId, {
+    required String name,
+    required String type,
+    required Uint8List bytes,
+    void Function(double done)? onProgress,
+  }) => _online(_c._calls._connectivity, () async {
+    final id = _c._db.collection('_').doc().id;
+    final ref = _file(rosterId, id);
+    final task = ref.putData(
+      bytes,
+      SettableMetadata(
+        contentType: type,
+        contentDisposition: "inline; filename*=UTF-8''${Uri.encodeComponent(name)}",
+        customMetadata: {'uploader': _c._calls._auth.currentUser?.uid ?? ''},
+      ),
+    );
+    final progress = task.snapshotEvents.listen((e) {
+      if (e.totalBytes > 0) onProgress?.call(e.bytesTransferred / e.totalBytes);
+    }, onError: (_) {});
+    try {
+      await task;
+    } finally {
+      await progress.cancel();
+    }
+    return NoteFile(id: id, name: name, type: type, size: bytes.length, url: await ref.getDownloadURL());
+  }, write: true);
+
+  @override
+  Future<void> discard(String rosterId, NoteFile file) =>
+      _online(_c._calls._connectivity, () => _file(rosterId, file.id).delete(), write: true);
+
+  @override
+  Future<void> save(String rosterId, RosterNote note) => _c._call('saveRosterNote', {
+    'rosterId': rosterId,
+    'text': note.text,
+    'files': [
+      for (final f in note.files) {'id': f.id, 'name': f.name, 'url': f.url},
+    ],
+  });
+}
+
 class _FirestorePhotos implements PhotoData {
   _FirestorePhotos(this._c);
 
