@@ -3284,6 +3284,10 @@ class MemoryCloud implements CloudApi {
     required String message,
     required String stack,
     String? churchId,
+    String? screen,
+    String? during,
+    String? library,
+    bool fatal = false,
   }) async => loggedErrors.add(message);
 }
 

@@ -11,7 +11,10 @@ import '../data/backend.dart';
 /// ID and the error are reported, never names, emails or roster content
 /// (docs/design.md, 數據與監控).
 abstract interface class Telemetry {
-  void recordError(Object error, StackTrace stack, {bool fatal = false});
+  /// [fatal]: uncaught (PlatformDispatcher.onError), not reported by the
+  /// framework. [during] and [library]: where the framework caught it
+  /// ([errorPhase], [FlutterErrorDetails.library]).
+  void recordError(Object error, StackTrace stack, {bool fatal = false, String? during, String? library});
 
   /// Sets the GA4 user property `church_id` and the Crashlytics key.
   void setChurch(String? churchId);
@@ -52,11 +55,27 @@ class WebErrorFilter {
   }
 }
 
+/// What the framework was doing when it caught [details]' error, in a few
+/// words: 「while dispatching a pointer event」, 「during performLayout()」,
+/// 「building Text」. Cut before the first `(` (but an empty `()`), `[`, `#`,
+/// `:`, `"`, `'` or line break, where a widget or render object would go on
+/// with its arguments, keys and state, which can be names or roster text.
+String? errorPhase(FlutterErrorDetails details) {
+  final context = details.context?.toDescription();
+  if (context == null) return null;
+  final cut = context.indexOf(_phaseEnd);
+  final phase = (cut < 0 ? context : context.substring(0, cut)).trim();
+  if (phase.isEmpty) return null;
+  return phase.length > 100 ? phase.substring(0, 100) : phase;
+}
+
+final _phaseEnd = RegExp('\\((?!\\))|[\\[#:"\'\\n]');
+
 class NoTelemetry implements Telemetry {
   const NoTelemetry();
 
   @override
-  void recordError(Object error, StackTrace stack, {bool fatal = false}) {}
+  void recordError(Object error, StackTrace stack, {bool fatal = false, String? during, String? library}) {}
 
   @override
   void setChurch(String? churchId) {}
@@ -89,10 +108,13 @@ class FirebaseTelemetry implements Telemetry {
   final FirebaseAnalytics? _analytics;
   String? _churchId;
 
+  /// The page up now, by its route's pattern ([logScreen]).
+  String? _screen;
+
   final _webErrors = WebErrorFilter();
 
   @override
-  void recordError(Object error, StackTrace stack, {bool fatal = false}) {
+  void recordError(Object error, StackTrace stack, {bool fatal = false, String? during, String? library}) {
     if (kIsWeb) {
       final message = _webErrors.admit(error);
       if (message == null) return;
@@ -100,6 +122,10 @@ class FirebaseTelemetry implements Telemetry {
         message: message.length > 1000 ? message.substring(0, 1000) : message,
         stack: _trim(stack.toString(), 8000),
         churchId: _churchId,
+        screen: _screen,
+        during: during,
+        library: library,
+        fatal: fatal,
       );
       return;
     }
@@ -138,6 +164,7 @@ class FirebaseTelemetry implements Telemetry {
 
   @override
   void logScreen(String name) {
+    _screen = name;
     _analytics?.logScreenView(screenName: name, screenClass: name);
   }
 

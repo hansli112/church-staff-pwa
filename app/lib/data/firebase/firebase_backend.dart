@@ -1038,6 +1038,7 @@ class FirestoreChurchData implements ChurchData {
       tx.set(ref, {
         'services': [for (final s in next.services) serviceToJson(s)],
         'ids': next.ids,
+        'severalDays': severalDays(next.services),
         'updatedAt': FieldValue.serverTimestamp(),
       });
     });
@@ -2172,5 +2173,17 @@ class FirebaseCloudApi implements CloudApi {
     required String message,
     required String stack,
     String? churchId,
-  }) => _calls.report({'message': message, 'stack': stack, 'churchId': ?churchId});
+    String? screen,
+    String? during,
+    String? library,
+    bool fatal = false,
+  }) => _calls.report({
+    'message': message,
+    'stack': stack,
+    'churchId': ?churchId,
+    'screen': ?screen,
+    'during': ?during,
+    'library': ?library,
+    'fatal': fatal,
+  });
 }

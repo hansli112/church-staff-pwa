@@ -18,7 +18,8 @@ class _Errors extends NoTelemetry {
   final errors = <Object>[];
 
   @override
-  void recordError(Object error, StackTrace stack, {bool fatal = false}) => errors.add(error);
+  void recordError(Object error, StackTrace stack, {bool fatal = false, String? during, String? library}) =>
+      errors.add(error);
 }
 
 Future<void> tapText(WidgetTester tester, String text) async {

@@ -1045,11 +1045,17 @@ abstract interface class CloudApi {
   /// [CloudErrorCode.notFound] when no such payment came in.
   Future<OnlinePayment> adminRefundOnlineSupport(String orderNo, {required bool refunded});
 
-  /// Reports an uncaught error. Never throws.
+  /// Reports an uncaught error. Never throws. [screen]: the page up, by its
+  /// route's pattern; [during] and [library]: where the framework caught it;
+  /// [fatal]: nothing caught it.
   Future<void> logError({
     required String message,
     required String stack,
     String? churchId,
+    String? screen,
+    String? during,
+    String? library,
+    bool fatal = false,
   });
 }
 

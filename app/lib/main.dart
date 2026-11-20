@@ -103,7 +103,12 @@ Future<void> main() async {
   final AppIconSwitcher icons = native ? ChannelIconSwitcher() : const NoIconSwitcher();
   FlutterError.onError = (details) {
     FlutterError.presentError(details);
-    telemetry.recordError(details.exception, details.stack ?? StackTrace.empty);
+    telemetry.recordError(
+      details.exception,
+      details.stack ?? StackTrace.empty,
+      during: errorPhase(details),
+      library: details.library,
+    );
   };
   PlatformDispatcher.instance.onError = (error, stack) {
     telemetry.recordError(error, stack, fatal: true);

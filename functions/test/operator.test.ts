@@ -186,4 +186,31 @@ describe('client error log', () => {
     assert.throws(() => logClientError(caller('a'), { message: 'x', stack: 'y'.repeat(8001) }), /unknown/);
     assert.deepEqual(logClientError(caller('a'), { message: 'boom', stack: 'at main.dart' }), {});
   });
+
+  test('where it happened goes along as fields, not in the message; what is not as sent is left out', (t) => {
+    // The Functions logger writes through the console it kept at load time.
+    const lines: string[] = [];
+    for (const out of [process.stdout, process.stderr]) {
+      t.mock.method(out, 'write', (s: unknown) => (lines.push(String(s)), true));
+    }
+    const logged = (data: Record<string, unknown>) => {
+      lines.length = 0;
+      logClientError(caller('a'), { message: 'boom', stack: 'at main.dart', ...data });
+      return JSON.parse(lines.find((l) => l.includes('boom'))!) as Record<string, unknown>;
+    };
+
+    const entry = logged({ screen: '/rosters/:id', during: 'while dispatching a pointer event', library: 'gestures library', fatal: true });
+    assert.equal(entry.message, 'boom\nat main.dart');
+    assert.equal(entry.screen, '/rosters/:id');
+    assert.equal(entry.during, 'while dispatching a pointer event');
+    assert.equal(entry.library, 'gestures library');
+    assert.equal(entry.fatal, true);
+
+    const old = logged({});
+    assert.equal(old.screen, null);
+    assert.equal(old.fatal, null);
+    const odd = logged({ screen: 42, during: 'x'.repeat(201), library: '', fatal: 'yes' });
+    assert.deepEqual([odd.screen, odd.during, odd.library, odd.fatal], [null, null, null, null]);
+    assert.equal(logged({ during: 'building a@example.com' }).during, 'building <email>');
+  });
 });
