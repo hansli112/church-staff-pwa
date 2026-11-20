@@ -32,6 +32,14 @@ export function churchNamePath(key: string): string {
   return `churchNames/${docId}`;
 }
 
+/** Church [church]'s name reservation, while it is still that church's. */
+export async function churchNameOf(db: FirebaseFirestore.Firestore, church: FirebaseFirestore.DocumentSnapshot) {
+  const key = church.get('nameKey') as string | undefined;
+  if (!key) return null;
+  const ref = db.doc(churchNamePath(key));
+  return (await ref.get()).get('cid') === church.id ? ref : null;
+}
+
 /**
  * Creates a church with the caller as its admin.
  *
@@ -231,8 +239,9 @@ export async function purgeDeletedChurches(deps: PurgeDeps) {
       continue;
     }
     await deps.db.recursiveDelete(doc.ref);
-    const key = doc.get('nameKey') as string | undefined;
-    if (key) await deps.db.doc(churchNamePath(key)).delete();
+    // Not when its name went to a new church already (deleteAccount).
+    const name = await churchNameOf(deps.db, doc);
+    if (name) await name.delete();
     purged.push(doc.id);
   }
   return purged;
