@@ -8,7 +8,7 @@ description: 從登入、建立教會，照著「開始使用」設定聚會、�
 
 ## 1. 登入
 
-<span data-from-app="hide">打開[網頁版](/home)，</span>選「使用 Google 登入」。
+<span data-from-app="hide">從 [App Store](https://apps.apple.com/app/id6823826952) 或 [Google Play](https://play.google.com/store/apps/details?id=app.marthasit&hl=zh-TW) 下載馬大別忙，打開後</span>選「使用 Google 登入」。<span data-from-app="hide">在電腦上用[網頁版](/home)也可以。</span>
 
 沒有 Google 帳號也可以選「用 email 登入」，再點「註冊新帳號」。用 email 註冊的話，要先到信箱點開驗證信裡的連結，App 就會自己往下走，接著就能建立教會。
 
@@ -65,7 +65,7 @@ description: 從登入、建立教會，照著「開始使用」設定聚會、�
 
 如果連結打不開，同工也可以登入後在「加入你的教會」選「輸入邀請碼」，輸入邀請碼，或直接貼上整段連結。
 
-在手機瀏覽器加入的同工，接著會看到怎麼「加入主畫面」。iPhone 要從主畫面的圖示打開，才收得到通知，詳見[收不到通知怎麼辦](/blog/notifications/)。
+同工用手機點邀請連結，會先看到下載 App 的按鈕，裝好後再點一次邀請連結就好。選「用網頁版」的同工，接著會看到怎麼「加入主畫面」；iPhone 要從主畫面的圖示打開，才收得到通知，詳見[收不到通知怎麼辦](/blog/notifications/)。
 
 ## 接下來
 

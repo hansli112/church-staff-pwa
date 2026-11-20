@@ -8,7 +8,7 @@ description: 从登录、创建教会，照着「开始使用」设置聚会、�
 
 ## 1. 登录
 
-<span data-from-app="hide">打开[网页版](/home)，</span>选「使用 Google 登录」。
+<span data-from-app="hide">从 [App Store](https://apps.apple.com/app/id6823826952) 或 [Google Play](https://play.google.com/store/apps/details?id=app.marthasit&hl=zh-CN) 下载马大别忙，打开后</span>选「使用 Google 登录」。<span data-from-app="hide">在电脑上用[网页版](/home)也可以。</span>
 
 没有 Google 账号也可以选「用邮箱登录」，再点「注册新账号」。用邮箱注册的话，要先去邮箱打开验证邮件，点里面的链接，App 就会自己往下走，接着就能创建教会。
 
@@ -65,7 +65,7 @@ description: 从登录、创建教会，照着「开始使用」设置聚会、�
 
 如果链接打不开，同工也可以登录后在「加入你的教会」选「输入邀请码」，输入邀请码，或直接粘贴整个链接。
 
-用手机浏览器加入的同工，接着会看到怎么「添加到主屏幕」。iPhone 要从主屏幕的图标打开，才能收到通知，详见[收不到通知怎么办](/zh-Hans/blog/notifications/)。
+同工用手机点邀请链接，会先看到下载 App 的按钮，装好后再点一次邀请链接就好。选「用网页版」的同工，接着会看到怎么「添加到主屏幕」；iPhone 要从主屏幕的图标打开，才能收到通知，详见[收不到通知怎么办](/zh-Hans/blog/notifications/)。
 
 ## 接下来
 

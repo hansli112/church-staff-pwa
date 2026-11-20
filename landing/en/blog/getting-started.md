@@ -8,7 +8,7 @@ This guide is for admins using Martha, sit for the first time, from signing in t
 
 ## 1. Sign in
 
-Choose **Sign in with Google**<span data-from-app="hide"> in the [web app](/home)</span>.
+Choose **Sign in with Google**<span data-from-app="hide"> in the app, from the [App Store](https://apps.apple.com/app/id6823826952) or [Google Play](https://play.google.com/store/apps/details?id=app.marthasit&hl=en). On a computer, the [web app](/home) works too</span>.
 
 No Google account? Choose **Sign in with email**, then tap **Create account**. If you sign up with email, open the verification email in your inbox first and tap its link. The app moves on by itself, and then you can create a church.
 
@@ -65,7 +65,7 @@ If you typed their name in when arranging serving, they’re asked when they joi
 
 If the link won’t open, they can sign in, choose **Enter invite code** on the **Join your church** screen, and type the invite code or paste the whole link.
 
-Team members who join from a phone’s browser will then see how to **Add to Home Screen**. On iPhone, they need to open the app from the Home Screen icon to get notifications. See [Not getting notifications?](/en/blog/notifications/)
+On a phone, the invite link first offers the app: once it’s installed, they tap the link again. Those who choose **Use the web version** will then see how to **Add to Home Screen**. On iPhone, they need to open it from the Home Screen icon to get notifications. See [Not getting notifications?](/en/blog/notifications/)
 
 ## What’s next
 

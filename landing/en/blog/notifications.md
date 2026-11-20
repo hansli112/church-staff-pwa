@@ -1,7 +1,7 @@
 ---
 title: Not getting notifications?
 date: 2026-10-31
-description: On a phone, add the web app to your Home Screen first. On a computer or in the phone app, allow notifications. Also covers which notifications there are and when they’re sent.
+description: In the phone app, allow notifications. On the web, add it to your phone’s Home Screen first, or allow notifications in your computer’s browser. Also covers which notifications there are and when they’re sent.
 ---
 
 Martha, sit notifies you when you’re scheduled to serve or when the schedule changes. If you’re not getting notifications, most likely this phone or computer hasn’t allowed them yet. Find the section below for how you use the app.
@@ -11,6 +11,12 @@ Martha, sit notifies you when you’re scheduled to serve or when the schedule c
 If you see **Turn on notifications** or **Add to Home Screen** at the top of Home, this device isn’t set up yet. Tap it and follow the steps.
 
 Even without push notifications, you won’t miss anything: the bell at the top right of Home lists the last 30 days of notifications, with a red dot when there’s something new.
+
+## Phone app
+
+The first time you open the app, it asks about notifications. Tap **Turn on notifications**, then tap **Allow**.
+
+If you chose not to allow them back then, Home and **Settings** → **Notifications** show **Turn on in system settings**. Tap it to go straight to Martha, sit’s notifications in your phone’s settings. Turn them on, then come back to the app.
 
 ## Web app on a phone
 
@@ -29,12 +35,6 @@ If you opened the link inside LINE, you’re in LINE’s built-in browser, which
 Tap **Turn on notifications** on Home, and click **Allow** when your browser asks.
 
 If you blocked notifications before, your browser won’t ask again. Go to your browser’s site settings and change notifications for Martha, sit to Allow.
-
-## Phone app
-
-The first time you open the app, it asks about notifications. Tap **Turn on notifications**, then tap **Allow**.
-
-If you chose not to allow them back then, Home and **Settings** → **Notifications** show **Turn on in system settings**. Tap it to go straight to Martha, sit’s notifications in your phone’s settings. Turn them on, then come back to the app.
 
 ## Which notifications there are
 
