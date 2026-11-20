@@ -88,8 +88,8 @@ void main() {
     final b = seededChurch();
     b.connectCalendar('grace', calendarName: '教會行事曆', calendarId: 'cal-1');
     b.calendarChoices = const [
-      (id: 'cal-1', name: '教會行事曆', timeZone: 'America/Edmonton'),
-      (id: 'cal-2', name: '青年行事曆', timeZone: 'Asia/Hong_Kong'),
+      (id: 'cal-1', name: '教會行事曆', timeZone: 'America/Edmonton', primary: false),
+      (id: 'cal-2', name: '青年行事曆', timeZone: 'Asia/Hong_Kong', primary: false),
     ];
     await pumpApp(tester, b);
     await go(tester, '/me/calendar');

@@ -1250,7 +1250,7 @@
   },
   "claimJoin": "加入",
   "claimDecline": "不加入",
-  "movedPasswordNote": "從舊版搬過來的同工：舊的密碼不能用，\n請用同一個 email 註冊新帳號，或用 Google 登入",
+  "movedPasswordNote": "從舊版搬過來的同工：請用同一個 email 註冊新帳號\n原本用 Google 信箱的，也可以直接用 Google 登入",
   "pendingDelete": "刪除這筆資料",
   "pendingDeleteTitle": "刪除「{name}」的資料？",
   "@pendingDeleteTitle": {

@@ -102,40 +102,49 @@ class CalendarSettingsScreen extends ConsumerWidget {
                 ],
               ),
             )
-          else ...[
+          else
             Consumer(
               builder: (context, ref, _) {
                 final list = ref.watch(_calendarListProvider);
-                return list.when(
-                  // The first call after a while can wait on a cold start.
-                  loading: () => const Padding(
-                    padding: EdgeInsets.all(Space.xl),
-                    child: Center(child: CircularProgressIndicator.adaptive()),
-                  ),
-                  error: (e, _) =>
-                      ErrorRetry(message: l10n.loadFailed, onRetry: () => ref.invalidate(_calendarListProvider)),
-                  data: (calendars) => _CalendarPicker(calendars: calendars, settings: settings),
+                // The account's own calendar is listed under its email.
+                final account = list.value?.where((cal) => cal.primary).firstOrNull?.id;
+                return Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    // Which account is connected, and right under it the way
+                    // off it: disconnecting then connecting switches accounts.
+                    ListSection(
+                      children: [
+                        if (account != null) ListRow(leading: const _GoogleMark(), title: account),
+                        ListRow(
+                          title: l10n.calDisconnect,
+                          destructive: true,
+                          onTap: () async {
+                            final ok = await confirmDestructive(
+                              context,
+                              title: l10n.calDisconnectTitle,
+                              message: l10n.calDisconnectBody,
+                              action: l10n.calDisconnect,
+                            );
+                            if (ok) await church!.calendar.disconnect();
+                          },
+                        ),
+                      ],
+                    ),
+                    list.when(
+                      // The first call after a while can wait on a cold start.
+                      loading: () => const Padding(
+                        padding: EdgeInsets.all(Space.xl),
+                        child: Center(child: CircularProgressIndicator.adaptive()),
+                      ),
+                      error: (e, _) =>
+                          ErrorRetry(message: l10n.loadFailed, onRetry: () => ref.invalidate(_calendarListProvider)),
+                      data: (calendars) => _CalendarPicker(calendars: calendars, settings: settings),
+                    ),
+                  ],
                 );
               },
             ),
-            ListSection(
-              children: [
-                ListRow(
-                  title: l10n.calDisconnect,
-                  destructive: true,
-                  onTap: () async {
-                    final ok = await confirmDestructive(
-                      context,
-                      title: l10n.calDisconnectTitle,
-                      message: l10n.calDisconnectBody,
-                      action: l10n.calDisconnect,
-                    );
-                    if (ok) await church!.calendar.disconnect();
-                  },
-                ),
-              ],
-            ),
-          ],
         ],
       ),
     );
@@ -201,4 +210,18 @@ class _CalendarPickerState extends ConsumerState<_CalendarPicker> {
       ],
     );
   }
+}
+
+/// Google's G on white, as on its sign-in button and on 登入方式.
+class _GoogleMark extends StatelessWidget {
+  const _GoogleMark();
+
+  @override
+  Widget build(BuildContext context) => Container(
+    width: 22,
+    height: 22,
+    alignment: Alignment.center,
+    decoration: const BoxDecoration(color: Colors.white, shape: BoxShape.circle),
+    child: Image.asset('assets/icons/google_g.png', width: 14, height: 14, excludeFromSemantics: true),
+  );
 }

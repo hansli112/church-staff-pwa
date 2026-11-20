@@ -138,8 +138,8 @@ class MemoryBackend implements Backend {
 
   /// What the Google account offers to pick from (calendarList).
   List<CalendarChoice> calendarChoices = const [
-    (id: 'cal-1', name: '教會行事曆', timeZone: 'Asia/Taipei'),
-    (id: 'cal-2', name: '青年行事曆', timeZone: 'Asia/Taipei'),
+    (id: 'cal-1', name: '教會行事曆', timeZone: 'Asia/Taipei', primary: false),
+    (id: 'cal-2', name: '青年行事曆', timeZone: 'Asia/Taipei', primary: false),
   ];
   final churchLinks = <String, ChurchLink>{};
   final linkContents = <String, LinkContent>{};

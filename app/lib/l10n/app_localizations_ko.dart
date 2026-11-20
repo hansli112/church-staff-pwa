@@ -2052,7 +2052,7 @@ class L10nKo extends L10n {
   String get claimDecline => '가입 안 함';
 
   @override
-  String get movedPasswordNote => '구버전에서 옮겨 온 멤버는 기존 비밀번호를 쓸 수 없어요. 같은 이메일로 새 계정을 만들거나 Google로 로그인해 주세요.';
+  String get movedPasswordNote => '구버전에서 옮겨 온 멤버는 같은 이메일로 새 계정을 만들어 주세요. Google 이메일이었다면 Google로 로그인해도 돼요.';
 
   @override
   String get pendingDelete => '이 정보 삭제';

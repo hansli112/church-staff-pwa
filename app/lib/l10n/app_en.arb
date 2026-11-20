@@ -633,7 +633,7 @@
   "claimByNameDone": "“{name}”’s schedules are yours now",
   "claimJoin": "Join",
   "claimDecline": "Don’t join",
-  "movedPasswordNote": "Moved from the old version? Your old password won’t work. Sign up for a new account with the same email, or sign in with Google.",
+  "movedPasswordNote": "Moved from the old version? Sign up for a new account with the same email. If it’s a Google address, you can also sign in with Google.",
   "pendingDelete": "Delete this record",
   "pendingDeleteTitle": "Delete the record for “{name}”?",
   "pendingDeleteBody": "They won’t be able to claim it by email. Their name stays on schedules.",

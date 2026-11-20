@@ -633,7 +633,7 @@
   "claimByNameDone": "「{name}」の奉仕を引き継ぎました",
   "claimJoin": "参加",
   "claimDecline": "参加しない",
-  "movedPasswordNote": "旧バージョンから移行したメンバーの方へ：古いパスワードは使えません。同じメールアドレスで新しくアカウントを登録するか、Google でログインしてください。",
+  "movedPasswordNote": "旧バージョンから移行したメンバーの方へ：同じメールアドレスで新しくアカウントを登録してください。Google のメールアドレスなら、Google でログインもできます。",
   "pendingDelete": "このデータを削除",
   "pendingDeleteTitle": "「{name}」のデータを削除しますか？",
   "pendingDeleteBody": "この人はメールアドレスで引き継げなくなります。奉仕表上の名前は残ります。",

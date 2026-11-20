@@ -646,8 +646,9 @@ abstract interface class ReadOnceData {
 }
 
 /// A calendar the admin may pick, with its own time zone (an IANA id, when
-/// Google says).
-typedef CalendarChoice = ({String id, String name, String? timeZone});
+/// Google says). The account's own calendar is [primary], its id the
+/// account's email.
+typedef CalendarChoice = ({String id, String name, String? timeZone, bool primary});
 
 /// What 通知同工 did: how many [people] it told, or, in quiet hours
 /// ([later]), will tell at 7:00.

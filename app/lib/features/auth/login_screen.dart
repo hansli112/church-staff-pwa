@@ -44,6 +44,10 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
   /// Google button does otherwise.
   bool _appleRunning = false;
   String? _error;
+
+  /// The email or password was wrong: the note for those moved from the
+  /// old version, whose old password never works here, goes under it.
+  bool _wrongPassword = false;
   final _form = GlobalKey<FormState>();
   final _name = TextEditingController();
   final _email = TextEditingController();
@@ -66,6 +70,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
       _busy = true;
       _appleRunning = apple;
       _error = null;
+      _wrongPassword = false;
     });
     // Read now: signed in, the page may go before [action] returns.
     final auth = _auth;
@@ -76,7 +81,10 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
     } catch (e) {
       if (!mounted) return;
       final text = errorText(L10n.of(context), e);
-      setState(() => _error = text.isEmpty ? null : text);
+      setState(() {
+        _error = text.isEmpty ? null : text;
+        _wrongPassword = e is AuthException && e.code == AuthErrorCode.invalidCredential;
+      });
     } finally {
       if (mounted) setState(() => _busy = false);
     }
@@ -100,7 +108,10 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
     final l10n = L10n.of(context);
     final email = _email.text.trim();
     if (email.isEmpty) {
-      setState(() => _error = l10n.emailRequired);
+      setState(() {
+        _error = l10n.emailRequired;
+        _wrongPassword = false;
+      });
       return;
     }
     final language = AppLanguage.shownIn(context);
@@ -120,6 +131,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                 onPressed: () => setState(() {
                   _mode = _Mode.choose;
                   _error = null;
+                  _wrongPassword = false;
                 }),
               ),
             ),
@@ -247,6 +259,11 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
     ],
   ];
 
+  Widget _movedNote(AppColors c) => BalancedText(
+    L10n.of(context).movedPasswordNote,
+    style: AppText.footnote.copyWith(color: c.secondaryLabel),
+  );
+
   Widget _emailForm(L10n l10n, AppColors c) {
     final register = _mode == _Mode.register;
     return Form(
@@ -301,6 +318,10 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
             ),
             // Under the fields it is about, above the keyboard if it stays up.
             ..._errorText(c),
+            if (!register && _wrongPassword) ...[
+              const SizedBox(height: Space.xs),
+              _movedNote(c),
+            ],
             const SizedBox(height: Space.l),
             PrimaryButton(
               label: register ? l10n.register : l10n.signIn,
@@ -314,6 +335,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
               onPressed: () => setState(() {
                 _mode = register ? _Mode.signIn : _Mode.register;
                 _error = null;
+                _wrongPassword = false;
               }),
             ),
             if (!register) ...[
@@ -322,11 +344,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                 expand: true,
                 onPressed: _busy ? null : _forgot,
               ),
-              const SizedBox(height: Space.m),
-              BalancedText(
-                l10n.movedPasswordNote,
-                style: AppText.footnote.copyWith(color: AppColors.of(context).secondaryLabel),
-              ),
+              if (!_wrongPassword) ...[const SizedBox(height: Space.m), _movedNote(c)],
             ],
           ],
         ),

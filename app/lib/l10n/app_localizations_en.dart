@@ -2176,7 +2176,7 @@ class L10nEn extends L10n {
 
   @override
   String get movedPasswordNote =>
-      'Moved from the old version? Your old password won’t work. Sign up for a new account with the same email, or sign in with Google.';
+      'Moved from the old version? Sign up for a new account with the same email. If it’s a Google address, you can also sign in with Google.';
 
   @override
   String get pendingDelete => 'Delete this record';

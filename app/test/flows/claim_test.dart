@@ -245,10 +245,32 @@ void main() {
     expect(find.textContaining('加入〈恩典堂〉？'), findsNothing);
   });
 
-  testWidgets('the sign-in page tells old password users to register again', (tester) async {
+  testWidgets('the sign-in page tells old password users to register again, right under a wrong password', (
+    tester,
+  ) async {
     await pumpApp(tester, MemoryBackend(clock: testClock));
     await tapText(tester, '用 email 登入');
-    expect(findShownContaining('從舊版搬過來的同工：舊的密碼不能用'), findsOneWidget);
+    final note = findShownContaining('從舊版搬過來的同工：請用同一個 email 註冊新帳號');
+    expect(note, findsOneWidget);
+    expect(
+      tester.getRect(note).top,
+      greaterThan(tester.getRect(find.widgetWithText(TextButton, '忘記密碼')).bottom),
+      reason: 'at the bottom until a password is wrong',
+    );
+
+    final fields = find.byType(TextFormField);
+    await tester.enterText(fields.at(0), 'mei@example.com');
+    await tester.enterText(fields.at(1), 'old-password');
+    await tester.tap(find.widgetWithText(FilledButton, '登入'));
+    await settle(tester);
+    final error = findShown('email 或密碼不對');
+    expect(note, findsOneWidget, reason: 'moved, not repeated');
+    expect(tester.getRect(note).top, greaterThan(tester.getRect(error).bottom));
+    expect(
+      tester.getRect(note).bottom,
+      lessThan(tester.getRect(find.widgetWithText(FilledButton, '登入')).top),
+      reason: 'under the error, before anything else',
+    );
   });
 
   testWidgets('an admin can delete pending data, after confirming', (tester) async {

@@ -1246,7 +1246,13 @@ class _FirestoreCalendar implements CalendarData {
     final d = await _c._call('calendarList');
     return [
       for (final c in d['calendars'] as List<dynamic>? ?? const [])
-        if (c is Map) (id: c['id'] as String, name: c['name'] as String? ?? '', timeZone: c['timeZone'] as String?),
+        if (c is Map)
+          (
+            id: c['id'] as String,
+            name: c['name'] as String? ?? '',
+            timeZone: c['timeZone'] as String?,
+            primary: c['primary'] == true,
+          ),
     ];
   }
 

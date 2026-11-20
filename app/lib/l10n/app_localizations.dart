@@ -3745,7 +3745,7 @@ abstract class L10n {
   /// No description provided for @movedPasswordNote.
   ///
   /// In zh, this message translates to:
-  /// **'從舊版搬過來的同工：舊的密碼不能用，\n請用同一個 email 註冊新帳號，或用 Google 登入'**
+  /// **'從舊版搬過來的同工：請用同一個 email 註冊新帳號\n原本用 Google 信箱的，也可以直接用 Google 登入'**
   String get movedPasswordNote;
 
   /// No description provided for @pendingDelete.

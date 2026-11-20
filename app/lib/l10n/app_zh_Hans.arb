@@ -633,7 +633,7 @@
   "claimByNameDone": "已接上“{name}”的事奉",
   "claimJoin": "加入",
   "claimDecline": "不加入",
-  "movedPasswordNote": "从旧版迁移过来的同工：旧的密码不能用，\n请用同一个邮箱注册新账号，或用 Google 登录",
+  "movedPasswordNote": "从旧版迁移过来的同工：请用同一个邮箱注册新账号\n原本用 Google 邮箱的，也可以直接用 Google 登录",
   "pendingDelete": "删除这条记录",
   "pendingDeleteTitle": "删除“{name}”的记录？",
   "pendingDeleteBody": "对方就不能用邮箱认领了。事奉表上的名字会保留。",

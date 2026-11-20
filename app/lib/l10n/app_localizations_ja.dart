@@ -2053,7 +2053,8 @@ class L10nJa extends L10n {
   String get claimDecline => '参加しない';
 
   @override
-  String get movedPasswordNote => '旧バージョンから移行したメンバーの方へ：古いパスワードは使えません。同じメールアドレスで新しくアカウントを登録するか、Google でログインしてください。';
+  String get movedPasswordNote =>
+      '旧バージョンから移行したメンバーの方へ：同じメールアドレスで新しくアカウントを登録してください。Google のメールアドレスなら、Google でログインもできます。';
 
   @override
   String get pendingDelete => 'このデータを削除';

@@ -2049,7 +2049,7 @@ class L10nZh extends L10n {
   String get claimDecline => '不加入';
 
   @override
-  String get movedPasswordNote => '從舊版搬過來的同工：舊的密碼不能用，\n請用同一個 email 註冊新帳號，或用 Google 登入';
+  String get movedPasswordNote => '從舊版搬過來的同工：請用同一個 email 註冊新帳號\n原本用 Google 信箱的，也可以直接用 Google 登入';
 
   @override
   String get pendingDelete => '刪除這筆資料';
@@ -5647,7 +5647,7 @@ class L10nZhHans extends L10nZh {
   String get claimDecline => '不加入';
 
   @override
-  String get movedPasswordNote => '从旧版迁移过来的同工：旧的密码不能用，\n请用同一个邮箱注册新账号，或用 Google 登录';
+  String get movedPasswordNote => '从旧版迁移过来的同工：请用同一个邮箱注册新账号\n原本用 Google 邮箱的，也可以直接用 Google 登录';
 
   @override
   String get pendingDelete => '删除这条记录';

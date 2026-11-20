@@ -132,6 +132,31 @@ void main() {
     expect(find.text('19:30 – 21:00'), findsOneWidget);
   });
 
+  testWidgets('the Google account connected shows above 中斷連接, so it is plain what to disconnect to switch', (
+    tester,
+  ) async {
+    final b = seededChurch()..connectCalendar('grace', calendarName: '教會行事曆');
+    b.calendarChoices = const [
+      (id: 'grace.church@gmail.com', name: 'grace.church@gmail.com', timeZone: 'Asia/Taipei', primary: true),
+      (id: 'cal-1', name: '教會行事曆', timeZone: 'Asia/Taipei', primary: false),
+    ];
+    await pumpApp(tester, b);
+    await go(tester, '/me/calendar');
+    final account = find.widgetWithText(ListRow, 'grace.church@gmail.com');
+    final disconnect = find.widgetWithText(ListRow, '中斷連接');
+    expect(account, findsNWidgets(2), reason: 'the account above, its own calendar among those to pick');
+    expect(
+      tester.getRect(disconnect).top - tester.getRect(account.first).bottom,
+      lessThan(1),
+      reason: 'right above it',
+    );
+    expect(
+      tester.getRect(disconnect).bottom,
+      lessThan(tester.getRect(find.widgetWithText(ListRow, '教會行事曆')).top),
+      reason: 'both above the calendars to pick',
+    );
+  });
+
   testWidgets('the calendar picked shows as picked at once, while the backend wakes up', (tester) async {
     final b = seededChurch();
     b.connectCalendar('grace');
