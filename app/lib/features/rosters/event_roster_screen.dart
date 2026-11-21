@@ -28,11 +28,22 @@ String eventDaysLabel(L10n l10n, Roster r, Day today) => r.lastDay == r.day
 
 /// The saved roster of calendar event [eventId], if it has one on or after
 /// today.
-final _eventRosterProvider = Provider.autoDispose.family<Roster?, String>(
-  (ref, eventId) => ref.watch(
-    savedRostersProvider.select((v) => v.value?.where((r) => r.id == Roster.idForEvent(eventId)).firstOrNull),
-  ),
-);
+///
+/// Written anew rather than kept as the 1.0.5 store build had it: patched
+/// on iOS, that build's code here ran another page's closure on the event's
+/// ID and crashed (Crashlytics, 2026-11-21). A patch runs code it changes
+/// itself.
+final _eventRosterProvider = Provider.autoDispose.family<Roster?, String>((ref, eventId) {
+  final id = Roster.idForEvent(eventId);
+  return ref.watch(savedRostersProvider.select((v) => _withId(v.value, id)));
+});
+
+Roster? _withId(List<Roster>? rosters, String id) {
+  for (final r in rosters ?? const <Roster>[]) {
+    if (r.id == id) return r;
+  }
+  return null;
+}
 
 /// The roles a new roster for a day of a recurring event starts with: the
 /// latest earlier day's (預設沿用上一次). Read once, from every event's
