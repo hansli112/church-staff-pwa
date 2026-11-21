@@ -153,6 +153,11 @@ final eventArrangesProvider = Provider.family<Arranges, String?>((ref, group) {
 /// Every roster's 備註 in the church, by roster ID.
 final rosterNotesProvider = StreamProvider<Map<String, RosterNote>>((ref) => openChurch(ref).rosterNotes.watch());
 
+/// Whether roster [id] has a 備註, for the small icon on its card.
+final rosterNotedProvider = Provider.family<bool, String>(
+  (ref, id) => ref.watch(rosterNotesProvider.select((n) => !(n.value?[id]?.isEmpty ?? true))),
+);
+
 /// The church link at the top of the home page, or null.
 final churchLinkProvider = StreamProvider<ChurchLink?>((ref) => openChurch(ref).churchLink.watch());
 

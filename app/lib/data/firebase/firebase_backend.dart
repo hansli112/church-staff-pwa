@@ -1383,7 +1383,8 @@ class _FirestoreWebhook implements WebhookData {
       webhookDeliveryFromJson(await _c._call('webhookTest')) ?? const WebhookDelivery(ok: false);
 }
 
-/// [PhotoData] of a [FirestoreChurchData].
+/// [RosterNoteData] of a [FirestoreChurchData]: the note through
+/// saveRosterNote, its files in Storage.
 class _FirestoreRosterNotes implements RosterNoteData {
   _FirestoreRosterNotes(this._c);
 
@@ -1443,6 +1444,7 @@ class _FirestoreRosterNotes implements RosterNoteData {
   });
 }
 
+/// [PhotoData] of a [FirestoreChurchData].
 class _FirestorePhotos implements PhotoData {
   _FirestorePhotos(this._c);
 

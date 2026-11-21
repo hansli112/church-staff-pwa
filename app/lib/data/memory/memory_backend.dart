@@ -117,6 +117,9 @@ class MemoryBackend implements Backend {
   /// `rosterId/id`, kept or not.
   final rosterNotes = <String, Map<String, RosterNote>>{};
   final noteUploads = <String, Map<String, NoteFile>>{};
+
+  /// Who uploaded each of [noteUploads], by church, then rosterId/id.
+  final _noteUploaders = <String, Map<String, String>>{};
   var _noteFileIds = 0;
 
   /// 安排服事 (#90): per church, by `rosterId/uid`, someone put on or taken
@@ -2481,7 +2484,6 @@ class _MemoryWebhook implements WebhookData {
   }
 }
 
-/// [PhotoData] of a [MemoryChurchData].
 /// [RosterNoteData] of a [MemoryChurchData], refusing as saveRosterNote
 /// and storage.rules do.
 class _MemoryRosterNotes implements RosterNoteData {
@@ -2491,26 +2493,35 @@ class _MemoryRosterNotes implements RosterNoteData {
 
   Map<String, RosterNote> get _notes => _c._b.rosterNotes.putIfAbsent(_c.churchId, () => {});
   Map<String, NoteFile> get _uploads => _c._b.noteUploads.putIfAbsent(_c.churchId, () => {});
+  Map<String, String> get _uploaders => _c._b._noteUploaders.putIfAbsent(_c.churchId, () => {});
 
   static final _serviceDay = RegExp(r'^(\d{4}-\d{2}-\d{2})_(.+)$');
 
   /// Whoever arranges any of roster [rosterId] (Member.arranges,
-  /// Member.arrangesEvent).
+  /// Member.arrangesEvent), while its last day is not gone everywhere.
   void _requireArranges(String rosterId) {
     final me = _c._b.requireMember(_c.churchId);
     final ministries = (_c._b.ministries[_c.churchId] ?? const MinistrySettings()).ministries;
     final day = _serviceDay.firstMatch(rosterId);
     final Arranges arranges;
+    Day? lastDay;
     if (day != null) {
       final type = day.group(2)!;
       arranges = _c._b.services[_c.churchId]!.ids.contains(type) ? me.arranges(ministries, type) : Arranges.none;
+      lastDay = Day.parse(day.group(1)!);
     } else {
       final roster = _c._b.rosters[_c.churchId]![rosterId];
       arranges = roster?.forEvent == null || roster!.forEvent!.cancelled
           ? Arranges.none
           : me.arrangesEvent(ministries, roster.forEvent!.group);
+      lastDay = roster?.forEvent?.lastDay;
     }
     if (!arranges.any) throw const CloudException(CloudErrorCode.permissionDenied);
+    // saveRosterNote: a day before yesterday in UTC is gone.
+    final yesterday = _c._b.clock().toUtc().subtract(const Duration(days: 1));
+    if (lastDay != null && lastDay.isBefore(Day(yesterday.year, yesterday.month, yesterday.day))) {
+      throw const CloudException(CloudErrorCode.unknown);
+    }
   }
 
   @override
@@ -2545,6 +2556,7 @@ class _MemoryRosterNotes implements RosterNoteData {
         url: 'memory://notes/${_c.churchId}/$rosterId/$id',
       );
       _uploads['$rosterId/$id'] = file;
+      _uploaders['$rosterId/$id'] = me.uid;
     });
     onProgress?.call(1);
     return file;
@@ -2552,7 +2564,9 @@ class _MemoryRosterNotes implements RosterNoteData {
 
   @override
   Future<void> discard(String rosterId, NoteFile file) async {
-    _c._requireMember();
+    final me = _c._b.requireMember(_c.churchId);
+    // storage.rules: only who uploaded it takes it back.
+    if (_uploaders['$rosterId/${file.id}'] != me.uid) throw const CloudException(CloudErrorCode.permissionDenied);
     await _c._b.write(() => _uploads.remove('$rosterId/${file.id}'));
   }
 
@@ -2592,6 +2606,7 @@ class _MemoryRosterNotes implements RosterNoteData {
   }
 }
 
+/// [PhotoData] of a [MemoryChurchData].
 class _MemoryPhotos implements PhotoData {
   _MemoryPhotos(this._c);
 

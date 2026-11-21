@@ -10,6 +10,7 @@ import 'package:url_launcher/url_launcher.dart';
 
 import '../../core/design/components.dart';
 import '../../core/design/tokens.dart';
+import '../../data/backend.dart';
 import '../../domain/limits.dart';
 import '../../domain/models.dart';
 import '../../l10n/app_localizations.dart';
@@ -453,8 +454,21 @@ class _NoteSheetState extends ConsumerState<NoteSheet> {
   var _saving = false;
   var _picked = 0;
 
+  /// Read once: an upload may end, and the sheet close, after this is gone.
+  late final RosterNoteData _notes = ref.churchData.rosterNotes;
+
+  @override
+  void initState() {
+    super.initState();
+    _notes;
+  }
+
   @override
   void dispose() {
+    // Closed without 完成: what went up for it goes.
+    for (final f in _fresh) {
+      unawaited(_notes.discard(widget.rosterId, f).catchError((_) {}));
+    }
     _text.dispose();
     super.dispose();
   }
@@ -489,7 +503,7 @@ class _NoteSheetState extends ConsumerState<NoteSheet> {
       if (placeholder.isImage) _previews[temp] = f.bytes;
     });
     try {
-      final file = await ref.churchData.rosterNotes.upload(
+      final file = await _notes.upload(
         widget.rosterId,
         name: f.name,
         type: f.type,
@@ -498,12 +512,12 @@ class _NoteSheetState extends ConsumerState<NoteSheet> {
           if (mounted && _progress.containsKey(temp)) setState(() => _progress[temp] = p);
         },
       );
-      _fresh.add(file);
       if (!mounted || !_files.contains(placeholder)) {
         // Taken off, or the sheet closed, while it went up.
-        unawaited(ref.churchData.rosterNotes.discard(widget.rosterId, file).catchError((_) {}));
+        unawaited(_notes.discard(widget.rosterId, file).catchError((_) {}));
         return;
       }
+      _fresh.add(file);
       setState(() {
         _files[_files.indexOf(placeholder)] = file;
         _progress.remove(temp);
@@ -524,9 +538,10 @@ class _NoteSheetState extends ConsumerState<NoteSheet> {
     setState(() {
       _files.remove(file);
       _progress.remove(file.id);
+      _previews.remove(file.id);
     });
     if (_fresh.remove(file)) {
-      unawaited(ref.churchData.rosterNotes.discard(widget.rosterId, file).catchError((_) {}));
+      unawaited(_notes.discard(widget.rosterId, file).catchError((_) {}));
     }
   }
 
@@ -534,7 +549,7 @@ class _NoteSheetState extends ConsumerState<NoteSheet> {
     final l10n = L10n.of(context);
     setState(() => _saving = true);
     try {
-      await ref.churchData.rosterNotes.save(widget.rosterId, RosterNote(text: _text.text.trim(), files: _files));
+      await _notes.save(widget.rosterId, RosterNote(text: _text.text.trim(), files: _files));
       _fresh.clear();
       if (mounted) Navigator.pop(context, true);
     } on Object {
@@ -542,16 +557,6 @@ class _NoteSheetState extends ConsumerState<NoteSheet> {
       setState(() => _saving = false);
       showToast(context, l10n.saveFailed);
     }
-  }
-
-  @override
-  void deactivate() {
-    // Closed without 完成: what went up for it goes.
-    for (final f in _fresh) {
-      unawaited(ref.churchData.rosterNotes.discard(widget.rosterId, f).catchError((_) {}));
-    }
-    _fresh.clear();
-    super.deactivate();
   }
 
   @override

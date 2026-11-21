@@ -4,6 +4,7 @@ import { FieldValue } from 'firebase-admin/firestore';
 import { churchAccess } from './access.js';
 import { DAY_MS, fail, record, type Caller, type Deps } from './common.js';
 import { LIMITS, TEXT_LIMITS, withinTextLimit } from './limits.js';
+import { isCancelled, isEvent } from './eventRosters.js';
 import { ledDuties, ministriesOf } from './ministries.js';
 import { groupOf } from './powers.js';
 
@@ -15,7 +16,7 @@ import { groupOf } from './powers.js';
  * LIMITS.noteDays after the roster's last day ([forgetOldRosterNotes]).
  */
 
-export type NoteDeps = Deps & { bucket: Pick<ReturnType<Storage['bucket']>, 'file' | 'deleteFiles' | 'getFiles'> };
+export type NoteDeps = Deps & { bucket: Pick<ReturnType<Storage['bucket']>, 'name' | 'file' | 'deleteFiles' | 'getFiles'> };
 
 /** A file on a note, as the doc keeps it. */
 export interface NoteFile {
@@ -36,6 +37,27 @@ export const noteFileType = (type: unknown): type is string =>
 
 /** Where the files of roster [rosterId]'s note are, each at its id. */
 export const notePrefix = (cid: string, rosterId: string) => `churches/${cid}/rosterNotes/${rosterId}/`;
+
+/**
+ * Whether [url] is a download URL Storage gives for [path] in [bucket]:
+ * no other site's address goes on a note for everyone to open.
+ */
+function isDownloadUrl(url: string, bucket: string, path: string) {
+  let u: URL;
+  try {
+    u = new URL(url);
+  } catch {
+    return false;
+  }
+  // On the emulator, its port by whatever name the app reached it (localhost, a LAN address).
+  const emulator = process.env.FIREBASE_STORAGE_EMULATOR_HOST;
+  const host = (u.protocol === 'https:' && u.host === 'firebasestorage.googleapis.com')
+    || (emulator !== undefined && u.protocol === 'http:' && u.port === emulator.split(':').pop());
+  return host && u.username === '' && u.pathname === `/v0/b/${bucket}/o/${encodeURIComponent(path)}`;
+}
+
+/** The day before today anywhere: a day before it is gone for every church. */
+const yesterdayUtc = (now: Date) => new Date(now.getTime() - DAY_MS).toISOString().slice(0, 10);
 
 function filesOf(value: unknown): NoteFile[] {
   return Array.isArray(value) ? (value as NoteFile[]) : [];
@@ -76,7 +98,7 @@ export async function saveRosterNote(deps: NoteDeps, caller: Caller | null, data
     // An event's roster: whoever arranges all of it, or a 事工's 負責人
     // with a duty to arrange on events (Member.arrangesEvent).
     const roster = await deps.db.doc(`churches/${cid}/rosters/${rosterId}`).get();
-    if (!roster.exists || roster.get('kind') !== 'event' || roster.get('cancelledAt') !== undefined) {
+    if (!isEvent(roster) || isCancelled(roster)) {
       fail('permission-denied', 'permissionDenied');
     }
     const g = groupOf(roster.get('group'));
@@ -88,6 +110,8 @@ export async function saveRosterNote(deps: NoteDeps, caller: Caller | null, data
     if (!arranges) fail('permission-denied', 'permissionDenied');
     lastDay = roster.get('endDateKey') as string;
   }
+  // A day gone is read, not changed.
+  if (lastDay < yesterdayUtc(deps.now())) fail('failed-precondition', 'unknown');
 
   const ref = deps.db.doc(`churches/${cid}/rosterNotes/${rosterId}`);
   const before = filesOf((await ref.get()).get('files'));
@@ -101,7 +125,7 @@ export async function saveRosterNote(deps: NoteDeps, caller: Caller | null, data
     }
     const path = prefix + (f.id as string);
     // The URL Storage gave the uploader, for this very file.
-    if (!(f.url as string).includes(`/o/${encodeURIComponent(path)}?`)) fail('invalid-argument', 'unknown');
+    if (!isDownloadUrl(f.url as string, deps.bucket.name, path)) fail('invalid-argument', 'unknown');
     const [exists] = await deps.bucket.file(path).exists();
     if (!exists) fail('invalid-argument', 'unknown');
     const [meta] = await deps.bucket.file(path).getMetadata();
@@ -150,12 +174,25 @@ export async function forgetOldRosterNotes(deps: NoteDeps) {
   const now = deps.now().getTime();
   // A day early for nobody: the cut is in UTC, a day after the last day anywhere.
   const cut = new Date(now - (LIMITS.noteDays + 1) * DAY_MS).toISOString().slice(0, 10);
-  const old = await deps.db.collectionGroup('rosterNotes').where('dateKey', '<', cut).get();
+  const due = await deps.db.collectionGroup('rosterNotes').where('dateKey', '<', cut).get();
+  const old: typeof due.docs = [];
   const writer = deps.db.bulkWriter();
-  for (const d of old.docs) void writer.delete(d.ref);
+  for (const d of due.docs) {
+    // An event moved later since: its note keeps until its new last day.
+    if (d.id.startsWith('ev_')) {
+      const roster = await deps.db.doc(`churches/${d.ref.parent.parent!.id}/rosters/${d.id}`).get();
+      const lastDay = roster.get('endDateKey');
+      if (isEvent(roster) && typeof lastDay === 'string' && lastDay >= cut) {
+        void writer.update(d.ref, { dateKey: lastDay });
+        continue;
+      }
+    }
+    old.push(d);
+    void writer.delete(d.ref);
+  }
   await writer.close();
   await Promise.all(
-    old.docs.map((d) => deps.bucket.deleteFiles({ prefix: notePrefix(d.ref.parent.parent!.id, d.id) })),
+    old.map((d) => deps.bucket.deleteFiles({ prefix: notePrefix(d.ref.parent.parent!.id, d.id) })),
   );
 
   const [uploaded] = await deps.bucket.getFiles({ matchGlob: 'churches/*/rosterNotes/**' });
@@ -172,5 +209,5 @@ export async function forgetOldRosterNotes(deps: NoteDeps) {
     }
     if (!notes.get(key)?.has(id)) await file.delete({ ignoreNotFound: true });
   }
-  return old.size;
+  return old.length;
 }

@@ -10,7 +10,8 @@ const bucket = getStorage().bucket('demo-martha.appspot.com');
 const d: NoteDeps = { ...deps, bucket };
 
 const ROSTER = '2026-11-22_sunday';
-const urlOf = (path: string) => `https://firebasestorage.googleapis.com/v0/b/b/o/${encodeURIComponent(path)}?alt=media&token=t`;
+const urlOf = (path: string, site = 'https://firebasestorage.googleapis.com') =>
+  `${site}/v0/b/${bucket.name}/o/${encodeURIComponent(path)}?alt=media&token=t`;
 
 async function upload(rosterId: string, id: string, type = 'application/pdf', bytes = 3) {
   const path = `churches/C1/rosterNotes/${rosterId}/${id}`;
@@ -90,6 +91,26 @@ describe('備註 (saveRosterNote)', () => {
     await rejectsWith(saveRosterNote(d, caller('lead'), { churchId: 'C1', rosterId: ROSTER, text: 'x', files: [], by: 'mei' }), 'unknown');
   });
 
+  test("a file's address is Storage's own, not another site's", async () => {
+    const pdf = await upload(ROSTER, 'f1');
+    const path = `churches/C1/rosterNotes/${ROSTER}/f1`;
+    const save = (url: string) => saveRosterNote(d, caller('lead'), { churchId: 'C1', rosterId: ROSTER, text: '', files: [{ ...pdf, url }] });
+    await rejectsWith(save(urlOf(path, 'https://evil.example')), 'unknown');
+    await rejectsWith(save(`https://evil.example/x?u=/o/${encodeURIComponent(path)}?`), 'unknown');
+    await rejectsWith(save('not a url'), 'unknown');
+    // The emulator's, by the name the app reached it.
+    await save(urlOf(path, `http://localhost:${process.env.FIREBASE_STORAGE_EMULATOR_HOST!.split(':').pop()}`));
+    // Storage's own, for a file not on the note yet.
+    const other = await upload(ROSTER, 'f2');
+    await saveRosterNote(d, caller('lead'), { churchId: 'C1', rosterId: ROSTER, text: '', files: [other] });
+  });
+
+  test('a day gone is not changed', async () => {
+    await rejectsWith(saveRosterNote(d, caller('lead'), { churchId: 'C1', rosterId: '2026-11-15_sunday', text: 'x', files: [] }), 'unknown');
+    // Yesterday, somewhere it is still the day.
+    await saveRosterNote(d, caller('lead'), { churchId: 'C1', rosterId: '2026-11-19_sunday', text: 'x', files: [] });
+  });
+
   test("an event's cancelled roster takes no note", async () => {
     await db.doc('churches/C1/rosters/ev_e2').set({ kind: 'event', eventId: 'e2', title: '退修會', dateKey: '2026-12-01', endDateKey: '2026-12-01', duties: [], group: 'service:sunday', cancelledAt: '2026-11-19' });
     await rejectsWith(saveRosterNote(d, caller('admin'), { churchId: 'C1', rosterId: 'ev_e2', text: 'x', files: [] }), 'permissionDenied');
@@ -138,5 +159,14 @@ describe('備註的檔案', () => {
     setNow(new Date('2026-11-23T10:00:00+08:00'));
     await forgetOldRosterNotes(d);
     assert.deepEqual([await exists(ROSTER, 'keep'), await exists(ROSTER, 'dropped')], [true, false]);
+  });
+
+  test("an event moved later keeps its note until its new last day", async () => {
+    await db.doc('churches/C1/rosters/ev_e1').set({ kind: 'event', eventId: 'e1', title: '退修會', dateKey: '2027-02-15', endDateKey: '2027-02-15', duties: [], group: 'service:sunday' });
+    await db.doc('churches/C1/rosterNotes/ev_e1').set({ text: '帶睡袋', files: [], dateKey: '2026-10-01' });
+    await db.doc('churches/C1/rosterNotes/ev_gone').set({ text: 'x', files: [], dateKey: '2026-10-01' });
+    assert.equal(await forgetOldRosterNotes(d), 1);
+    assert.equal((await db.doc('churches/C1/rosterNotes/ev_e1').get()).get('dateKey'), '2027-02-15');
+    assert.equal((await db.doc('churches/C1/rosterNotes/ev_gone').get()).exists, false);
   });
 });

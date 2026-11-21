@@ -249,6 +249,24 @@ void main() {
     expect([for (final f in b.rosterNotes['grace']![_id]!.files) f.name], ['a.pdf']);
   });
 
+  testWidgets('closed while a file goes up, it is taken back once up', (tester) async {
+    final b = seededChurch(as: editor);
+    await pumpApp(tester, b, overrides: [picker]);
+    await go(tester, '/rosters/sunday/2026-10-11');
+    await tapText(tester, '新增備註');
+    b.writeDelay = const Duration(seconds: 2);
+    next = [pdf('a.pdf')];
+    await tester.tap(find.text('加入檔案'));
+    await tester.pump(const Duration(milliseconds: 500));
+    await tapText(tester, '取消');
+    await tapText(tester, '放棄變更');
+    expect(find.byType(NoteSheet), findsNothing);
+    await tester.pump(const Duration(seconds: 5));
+    await settle(tester);
+    expect(b.noteUploads['grace'] ?? const {}, isEmpty);
+    expect(tester.takeException(), isNull);
+  });
+
   testWidgets('a file taken off before 完成 is taken back at once', (tester) async {
     final b = seededChurch(as: editor);
     await pumpApp(tester, b, overrides: [picker]);

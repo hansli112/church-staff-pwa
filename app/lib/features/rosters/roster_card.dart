@@ -56,7 +56,7 @@ class RosterCard extends ConsumerWidget {
       title: dayBesideBlock(l10n, roster.day, today),
       highlightUid: uid,
       onTap: onTap,
-      noted: ref.watch(rosterNotesProvider.select((n) => !(n.value?[rosterId]?.isEmpty ?? true))),
+      noted: ref.watch(rosterNotedProvider(rosterId)),
     );
   }
 }

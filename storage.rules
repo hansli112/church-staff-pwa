@@ -63,7 +63,7 @@ service firebase.storage {
         && request.resource.size <= 20 * 1024 * 1024
         && opensSafely(request.resource)
         && request.resource.metadata.get('uploader', '') == request.auth.uid;
-      allow delete: if request.auth != null && resource.metadata.get('uploader', '') == request.auth.uid;
+      allow delete: if isMember(cid) && resource.metadata.get('uploader', '') == request.auth.uid;
     }
 
     // 搬家檔: only its uploader reads or writes it, up to 20MB. The move
