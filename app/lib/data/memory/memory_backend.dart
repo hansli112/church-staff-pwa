@@ -79,6 +79,9 @@ class MemoryBackend implements Backend {
   /// The oldest store builds still allowed to run.
   MinimumBuilds minimumBuilds = const MinimumBuilds();
 
+  /// How many times the app started reading [minimumBuilds].
+  int minimumBuildsReads = 0;
+
   /// The operator's cost list.
   List<CostItem> fundingCosts = [];
 
@@ -2944,7 +2947,10 @@ class _Platform implements PlatformData {
   Stream<Funding?> funding() => _b.watch(() => _b.funding);
 
   @override
-  Stream<MinimumBuilds> minimumBuilds() => _b.watch(() => _b.minimumBuilds);
+  Stream<MinimumBuilds> minimumBuilds() {
+    _b.minimumBuildsReads++;
+    return _b.watch(() => _b.minimumBuilds);
+  }
 }
 
 class MemoryCloud implements CloudApi {

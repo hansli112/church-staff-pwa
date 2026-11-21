@@ -57,6 +57,13 @@ void main() {
     },
   );
 
+  testWidgets('on the web, which is always the latest, the lowest builds are never read', (tester) async {
+    final b = seededChurch(as: staffMei)..minimumBuilds = const MinimumBuilds(android: 99, ios: 99);
+    await pumpApp(tester, b);
+    expect(find.text('首頁'), findsWidgets);
+    expect(b.minimumBuildsReads, 0);
+  });
+
   testWidgets('new enough, or nothing set: the app is as always', (tester) async {
     final b = seededChurch(as: staffMei)..minimumBuilds = const MinimumBuilds(android: 12, ios: 99);
     await pumpApp(tester, b, overrides: [appBuildProvider.overrideWithValue(_play12)]);

@@ -1499,6 +1499,21 @@ void contractTests(Future<ContractWorld> Function() open) {
       expect(await g.church.churchLink.watch().first, isNull);
     });
 
+    test('another device sees the settings an admin changes', () async {
+      final g = await Grace.open(w);
+      final elsewhere = w.anotherDevice(g.cid);
+      const link = ChurchLink(title: '官網', url: 'https://grace.example');
+      const renamed = Service(id: 'sunday', name: '主日', weekdays: [DateTime.sunday], duties: ['司會']);
+      await g.church.churchLink.save(link);
+      await g.church.putServices(const [renamed]);
+      await w.signIn(Grace.meiEmail);
+      await expectLater(elsewhere.churchLink.watch(), emitsThrough(link));
+      await expectLater(elsewhere.services().map((s) => s.services), emitsThrough(const [renamed]));
+      await w.signIn(Grace.pastorEmail);
+      await g.church.churchLink.save(null);
+      await expectLater(w.anotherDevice(g.cid).churchLink.watch(), emitsThrough(isNull));
+    });
+
     test('its content source: admins, https; a failed fetch is kept and said; it comes back with the link', () async {
       final g = await Grace.open(w);
       await expectLater(

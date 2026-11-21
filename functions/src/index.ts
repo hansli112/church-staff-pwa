@@ -55,6 +55,7 @@ import { monitoringUsageReader, writeDailyStats } from './stats.js';
 import * as rosterChange from './rosterChange.js';
 import * as rosterNotes from './rosterNotes.js';
 import * as serviceSettings from './serviceSettings.js';
+import * as sharedSettings from './sharedSettings.js';
 import * as smallGroups from './smallGroups.js';
 import * as triggers from './triggers.js';
 import * as webhook from './webhook.js';
@@ -371,6 +372,13 @@ export const logClientError = onCall({ ...callOpts, maxInstances: 3 }, (req) =>
 // fail, an instance not starting in time too (2026-10-27); each must come
 // to the same whether it runs once or again. Not those that push: a push
 // sent before a later step failed would be sent twice.
+// What the app reads of a church's settings on opening, copied to one doc.
+export const onSettingsWritten = onDocumentWritten(
+  { region: REGION, document: 'churches/{cid}/settings/{doc}', retry: true },
+  async (event) => {
+    if (sharedSettings.isSharedSetting(event.params.doc)) await sharedSettings.copySharedSettings(deps(), event.params.cid);
+  },
+);
 export const onUserWritten = onDocumentWritten(
   { region: REGION, document: 'users/{uid}', retry: true },
   async (event) => {

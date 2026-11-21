@@ -41,6 +41,10 @@ abstract interface class ContractWorld {
 
   /// Puts [n] in [uid]'s 通知列表, as a push the backend sent (#89).
   Future<void> addNotification(String uid, NotificationItem n);
+
+  /// The church as another device of the signed-in account reads it: one
+  /// that changed nothing there.
+  ChurchData anotherDevice(String churchId);
 }
 
 /// The password every contract account uses.

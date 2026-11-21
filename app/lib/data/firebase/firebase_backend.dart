@@ -633,6 +633,52 @@ class FirestoreChurchData implements ChurchData {
   DocumentReference<Json> get _church => _db.doc('churches/$churchId');
   CollectionReference<Json> _col(String name) => _church.collection(name);
 
+  /// The settings docs this device changed: read on their own from then
+  /// on, as settings/shared follows them only a moment later.
+  final _changedHere = <String>{};
+  final _changing = StreamController<String>.broadcast(sync: true);
+
+  /// Before changing settings [docs], or asking the backend to.
+  void _changesSettings(List<String> docs) {
+    for (final doc in docs) {
+      if (_changedHere.add(doc)) _changing.add(doc);
+    }
+  }
+
+  /// Settings doc [doc]'s data, null when there is none. Read from
+  /// settings/shared, the backend's copy of the settings the app reads on
+  /// opening (functions/src/sharedSettings.ts): one listen instead of five,
+  /// and each is read again when the app comes back after half an hour.
+  /// Read on its own while the copy has no key for it, and once this device
+  /// has changed it.
+  Stream<Json?> _setting(String doc) {
+    Stream<Json?> alone() => _col('settings').doc(doc).live().map((s) => s.data());
+    if (_changedHere.contains(doc)) return alone();
+    return Stream.multi((out) {
+      StreamSubscription<Object?>? copy;
+      StreamSubscription<Json?>? own;
+      void readAlone() => own ??= alone().listen(out.add, onError: out.addError);
+      final changing = _changing.stream.where((d) => d == doc).listen((_) {
+        unawaited(copy?.cancel());
+        copy = null;
+        readAlone();
+      });
+      copy = _col('settings').doc('shared').live().listen((s) {
+        final data = s.data();
+        if (data == null || !data.containsKey(doc)) return readAlone();
+        unawaited(own?.cancel());
+        own = null;
+        final value = data[doc];
+        out.add(value is Map ? Map<String, dynamic>.from(value) : null);
+      }, onError: out.addError);
+      out.onCancel = () {
+        unawaited(changing.cancel());
+        unawaited(copy?.cancel());
+        unawaited(own?.cancel());
+      };
+    });
+  }
+
   Future<T> _transaction<T>(Future<T> Function(Transaction tx) update) =>
       _onlineTransaction(_db, _calls._auth, _calls._connectivity, update);
 
@@ -780,15 +826,14 @@ class FirestoreChurchData implements ChurchData {
       _write(_church, (tx) => tx.update(_church, {'joinRequestsClosed': on ? FieldValue.delete() : true}));
 
   @override
-  Stream<ServiceSettings> services() =>
-      _col('settings').doc('services').live().map((s) => serviceSettingsFromJson(s.data())).translated();
+  Stream<ServiceSettings> services() => _setting('services').map(serviceSettingsFromJson).translated();
 
   @override
-  Stream<MinistrySettings> ministries() =>
-      _col('settings').doc('ministries').live().map((s) => ministrySettingsFromJson(s.data())).translated();
+  Stream<MinistrySettings> ministries() => _setting('ministries').map(ministrySettingsFromJson).translated();
 
   @override
   Future<void> compareAndSetMinistries({required List<Ministry> before, required List<Ministry> after}) {
+    _changesSettings(const ['ministries']);
     final ref = _col('settings').doc('ministries');
     // Merge ids inside the transaction: the rules reject shrinking ids.
     return _transaction((tx) async {
@@ -1032,6 +1077,7 @@ class FirestoreChurchData implements ChurchData {
 
   @override
   Future<void> compareAndSetServiceList({required List<Service> before, required List<Service> after}) {
+    _changesSettings(const ['services']);
     final ref = _col('settings').doc('services');
     // Merge ids inside the transaction: the rules reject shrinking ids.
     return _transaction((tx) async {
@@ -1054,6 +1100,8 @@ class FirestoreChurchData implements ChurchData {
     ({String from, String to})? dutyRename,
   }) async {
     if (before.id != after.id) throw ArgumentError('service id cannot change');
+    // A 職務 renamed is renamed in the 事工 too.
+    _changesSettings(const ['services', 'ministries']);
     await _call('editService', {
       'before': serviceToJson(before),
       'after': serviceToJson(after),
@@ -1235,14 +1283,16 @@ class _FirestoreCalendar implements CalendarData {
   final FirestoreChurchData _c;
 
   @override
-  Stream<CalendarSettings> settings() =>
-      _c._col('settings').doc('calendar').live().map((s) => calendarSettingsFromJson(s.data())).translated();
+  Stream<CalendarSettings> settings() => _c._setting('calendar').map(calendarSettingsFromJson).translated();
 
   // The phone app's browser sheet ends on a page saying to go back; the web
   // app's tab comes back to the web app.
   @override
-  Future<Uri> authUrl() async =>
-      Uri.parse((await _c._call('calendarAuthUrl', {if (!kIsWeb) 'from': 'app'}))['url'] as String);
+  Future<Uri> authUrl() async {
+    // Google sends the connection to the backend, which writes it.
+    _c._changesSettings(const ['calendar']);
+    return Uri.parse((await _c._call('calendarAuthUrl', {if (!kIsWeb) 'from': 'app'}))['url'] as String);
+  }
 
   @override
   Future<List<CalendarChoice>> choices() async {
@@ -1260,11 +1310,16 @@ class _FirestoreCalendar implements CalendarData {
   }
 
   @override
-  Future<void> select(String calendarId, String calendarName) =>
-      _c._call('calendarSelect', {'calendarId': calendarId, 'calendarName': calendarName});
+  Future<void> select(String calendarId, String calendarName) {
+    _c._changesSettings(const ['calendar']);
+    return _c._call('calendarSelect', {'calendarId': calendarId, 'calendarName': calendarName});
+  }
 
   @override
-  Future<void> disconnect() => _c._call('calendarDisconnect');
+  Future<void> disconnect() {
+    _c._changesSettings(const ['calendar']);
+    return _c._call('calendarDisconnect');
+  }
 
   @override
   Future<List<CalendarEvent>> events(String month) async {
@@ -1305,11 +1360,11 @@ class _FirestoreChurchLink implements ChurchLinkData {
   final FirestoreChurchData _c;
 
   @override
-  Stream<ChurchLink?> watch() =>
-      _c._col('settings').doc('link').live().map((s) => churchLinkFromJson(s.data())).translated();
+  Stream<ChurchLink?> watch() => _c._setting('link').map(churchLinkFromJson).translated();
 
   @override
   Future<LinkSourceResult> save(ChurchLink? link) async {
+    _c._changesSettings(const ['link', 'linkContent']);
     final ref = _c._col('settings').doc('link');
     if (link == null) {
       await _c._write(ref, (tx) => tx.delete(ref));
@@ -1335,6 +1390,7 @@ class _FirestoreChurchLink implements ChurchLinkData {
 
   @override
   Future<LinkSourceResult> refresh() async {
+    _c._changesSettings(const ['link', 'linkContent']);
     final d = await _c._call('setLinkSource', {'refresh': true});
     final content = d['content'];
     return LinkSourceResult(
@@ -1345,8 +1401,7 @@ class _FirestoreChurchLink implements ChurchLinkData {
   }
 
   @override
-  Stream<LinkContent?> content() =>
-      _c._col('settings').doc('linkContent').live().map((s) => linkContentFromJson(s.data())).translated();
+  Stream<LinkContent?> content() => _c._setting('linkContent').map(linkContentFromJson).translated();
 }
 
 /// [WebhookData] of a [FirestoreChurchData].

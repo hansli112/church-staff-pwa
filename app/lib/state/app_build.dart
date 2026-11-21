@@ -113,7 +113,9 @@ final minimumBuildsProvider = StreamProvider<MinimumBuilds>(
 /// be updated before anything else. Never on the web.
 final updateRequiredProvider = Provider<bool>((ref) {
   final build = ref.watch(appBuildProvider);
+  // Not read at all on the web: each listen is a read.
+  if (build == null) return false;
   final min = ref.watch(minimumBuildsProvider).value;
-  if (build == null || min == null) return false;
+  if (min == null) return false;
   return build.number < build.store.lowestIn(min);
 });

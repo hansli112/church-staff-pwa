@@ -931,6 +931,15 @@ describe('教會連結 (settings/link)', () => {
     await assertFails(deleteDoc(doc(as(ADMIN_A), `churches/${A}/settings/linkContent`)));
     await assertSucceeds(getDoc(doc(as(MEMBER_A), `churches/${A}/settings/linkContent`)));
   });
+
+  it('設定的副本（settings/shared）教會的人讀得到，只有後端寫', async () => {
+    const path = `churches/${A}/settings/shared`;
+    await seed(path, { services: null, link: null });
+    await assertSucceeds(getDoc(doc(as(MEMBER_A), path)));
+    await assertFails(getDoc(doc(as(ADMIN_B), path)));
+    await assertFails(setDoc(doc(as(ADMIN_A), path), { link: { title: 'x' } }));
+    await assertFails(deleteDoc(doc(as(ADMIN_A), path)));
+  });
 });
 
 describe('外部通知 (webhook)', () => {

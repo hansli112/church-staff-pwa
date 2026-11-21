@@ -571,9 +571,10 @@ service cloud.firestore {
 
       match /settings/{doc} {
         // Written only by the backend: the calendar connection, the church
-        // link's fetched content, the webhook settings.
+        // link's fetched content, the webhook settings, and `shared`, its
+        // copy of what the app reads on opening (functions/src/sharedSettings.ts).
         function serverOnly() {
-          return doc in ['calendar', 'linkContent', 'webhook', 'smallGroups'];
+          return doc in ['calendar', 'linkContent', 'webhook', 'smallGroups', 'shared'];
         }
 
         // 教會連結: a title, a body and an https link. Its content source and

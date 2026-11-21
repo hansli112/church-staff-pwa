@@ -40,6 +40,9 @@ class MemoryWorld implements ContractWorld {
   }
 
   @override
+  ChurchData anotherDevice(String churchId) => backend.church(churchId);
+
+  @override
   Future<void> connectCalendar(String churchId) => backend.church(churchId).calendar.select('cal-1', '教會行事曆');
 
   @override

@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'dart:js_interop';
 
 import 'package:martha/core/languages.dart';
+import 'package:martha/data/backend.dart';
 import 'package:martha/data/firebase/codec.dart';
 import 'package:martha/data/firebase/firebase_backend.dart';
 import 'package:martha/domain/models.dart';
@@ -46,6 +47,9 @@ class FirebaseWorld implements ContractWorld {
     }
     return uid;
   }
+
+  @override
+  ChurchData anotherDevice(String churchId) => FirebaseBackend(serverReads: true).church(churchId);
 
   @override
   Future<void> signIn(String email) => backend.auth.signInWithEmail(email, contractPassword);

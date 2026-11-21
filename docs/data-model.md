@@ -30,6 +30,7 @@
 | `churches/{cid}/settings/{doc}` | `services`（聚會別，`ids` 只增不減；刪除聚會就是從 `services` 拿掉，可以刪到一個都不剩，`ids` 留著，它的服事表、小組照舊存著但不顯示、不提醒；舊資料 `enabled: false`（以前的停用）當作已刪除，App 下次存時拿掉，新寫的一律 `enabled: true` 給舊版 App 和 `editService` 讀；每個聚會的 `weekday` 是星期幾（1 是週一…7 是週日），一週聚會好幾天的另有 `weekdays`（兩天以上、照順序，第一天就是 `weekday`，舊版 App 只讀 `weekday`），每一天各一張服事表；每個聚會的 `manyDuties` 是多人服事的服事項目，管理員第一次設之前沒有這個欄位，App 照前 8 週猜；`editService` 檢查都在 `duties` 裡，服事項目改名時跟著改）、`ministries`（事工：`ministries` 每個 `{id, name, duties: [{service, duty}]}`，最多 50 個；`ids` 只增不減）、`roster_templates` 等 |
 | `churches/{cid}/settings/link` | 首頁連結：`title`（1–30 字）、`body`（最多 120 字）、`url`（限 `https`）；`source`（每日內容來源，`https`）與 `fetchMinute`（每天抓取時間，教會時區午夜後的分鐘數，15 分鐘為單位）只能經 `setLinkSource` 設定 |
 | `churches/{cid}/settings/linkContent` | 只有後端寫，兩種形狀擇一：成功時 `source`、`date`（教會的今天，`YYYY-MM-DD`）、`title`、`body`、`link`、`fetchedAt`；失敗時只有 `source`、`error`、`errorStatus`、`errorAt`，不保留之前的內容 |
+| `churches/{cid}/settings/shared` | 只有後端寫（`onSettingsWritten`）：`services`、`ministries`、`calendar`、`link`、`linkContent` 各一份副本，沒有的是 `null`。App 打開時讀這一份，不用接五個；少了哪個 key 就單獨讀那份，自己剛改過的也單獨讀 |
 | `linkSources/{cid}` | 只有後端讀寫：內容來源的排程，`source`、`fetchMinute`、`epoch`（設定每變一次就換，晚到的結果不能寫回）、`nextAt`、`lastAttemptDay`（排程這天試過了）、`lastDay`（最後成功的那天）、`attemptId`（抓取中才有） |
 | `churches/{cid}/settings/webhook` | Webhook，只有後端寫、只有管理員讀：`url`（`https`）、`events`（`calendar`、`roster`）、`lastDelivery`（`at`、`event`、`ok`、`status`、`error`） |
 | `webhookSecrets/{cid}` | 只有後端讀寫：Webhook的密鑰，用行事曆 token 的金鑰以 AES-256-GCM 加密 |
@@ -136,7 +137,7 @@ App 與 Functions 各寫一次的教會資料規則也一樣：新教會的預�
 | 寫不能服事的日子 | 只有本人，經後端（`saveUnavailableDays`）；規則不讓 App 直接寫 |
 | 讀找人代／交換（`swapRequests`，#92） | 問的人、被問的人（請人代的 `asked`、交換的 `to`）；寫入都是後端 |
 | 讀小組 | 同工；寫只有 Cloud Functions（`editSmallGroup`） |
-| 寫設定 | admin；`services` 的 `ids` 只增不減，不能刪；`calendar`、`linkContent`、`webhook`、`smallGroups` 只有 Cloud Functions 能寫。服事項目改名要連同工的牧區與同工排序一起改，經 `editService`（比對改名前的那一個聚會，其他聚會照現在的保留；超過 500 筆寫入整筆拒絕） |
+| 寫設定 | admin；`services` 的 `ids` 只增不減，不能刪；`calendar`、`linkContent`、`webhook`、`smallGroups`、`shared` 只有 Cloud Functions 能寫。服事項目改名要連同工的牧區與同工排序一起改，經 `editService`（比對改名前的那一個聚會，其他聚會照現在的保留；超過 500 筆寫入整筆拒絕） |
 | 讀寫 `users/{uid}` | 本人（限上列欄位，`fcm` 最多 50 支裝置）；刪除由 Cloud Functions 處理 |
 | 讀 `users/{uid}/notifications` | 只有本人；寫入只有後端 |
 
