@@ -15,6 +15,7 @@ import '../../domain/roster_news.dart';
 import '../../l10n/app_localizations.dart';
 import '../../state/providers.dart';
 import '../../state/roster_actions.dart';
+import '../../state/staff_actions.dart';
 import '../common/errors.dart';
 import 'format.dart';
 import 'future_changes.dart';
@@ -33,7 +34,8 @@ Future<void> pickPeople(
   RosterVia via = RosterVia.app,
   List<Roster> swapDays = const [],
 }) async {
-  final members = ref.read(staffProvider).requireValue;
+  final staff = ref.read(staffProvider).requireValue;
+  final members = staff.all;
   final order = ref.read(rosterActionsProvider).orderOf(roster);
   final me = ref.read(meProvider).value;
   final l10n = L10n.of(context);
@@ -95,7 +97,7 @@ Future<void> pickPeople(
           if (!duty.uids.containsKey(name)) name,
       },
       guestSuggestions: guestSuggestions,
-      members: members,
+      staff: staff,
       order: order,
       canEditDutyList: canEditDutyList,
       canTakeOffList: editsList,
@@ -257,11 +259,10 @@ Future<void> _savePicked(
   final newIds = <String, String>{};
   final listed = ref.read(servicesProvider).value?.byId(roster.type)?.duties.contains(duty.role) ?? false;
   // Read before waiting: the page, and its ref, can be gone by then.
-  final data = ref.churchData;
+  final staff = ref.read(staffActionsProvider);
   for (final name in result.newStaff) {
     try {
-      final id = newIds[name] = await data.addByName(name, roster.type);
-      if (listed) await data.grantDuty(id, roster.type, duty.role);
+      newIds[name] = await staff.add(name, roster.type, duty: listed ? duty.role : null);
     } catch (e) {
       if (context.mounted) showToast(context, nameErrorText(l10n, e, name));
       return;

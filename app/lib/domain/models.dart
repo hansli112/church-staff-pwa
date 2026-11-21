@@ -1441,6 +1441,14 @@ class PendingMember {
     );
   }
 
+  /// With [duty] in [serviceType], as [Member.withDuty].
+  PendingMember withDuty(String serviceType, String duty) =>
+      copyWith(zones: asMember(const []).withDuty(serviceType, duty).zones);
+
+  /// Without [duty] in [serviceType], as [Member.withoutDuty].
+  PendingMember withoutDuty(String serviceType, String duty) =>
+      copyWith(zones: asMember(const []).withoutDuty(serviceType, duty).zones);
+
   PendingMember copyWith({List<Zone>? zones, Set<String>? smallGroups}) => PendingMember(
     id: id,
     name: name,

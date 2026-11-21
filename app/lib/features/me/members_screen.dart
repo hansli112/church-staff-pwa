@@ -112,16 +112,8 @@ class _MembersScreenState extends ConsumerState<MembersScreen> {
               });
           // Someone who joined under a name still on the pending list (no
           // email to claim it with, say): offered to the admin to merge.
-          final pendingByName = <String, List<PendingMember>>{};
-          if (isAdmin) {
-            for (final p in ref.watch(pendingMembersProvider).value ?? const <PendingMember>[]) {
-              if (p.name.isNotEmpty) (pendingByName[nameKey(p.name)] ??= []).add(p);
-            }
-          }
-          PendingMember? sameNamePending(Member m) => switch (pendingByName[nameKey(m.name)]) {
-            [final only] => only,
-            _ => null,
-          };
+          final staff = isAdmin ? ref.watch(staffProvider).value : null;
+          PendingMember? sameNamePending(Member m) => staff?.waitingToMerge(m);
           // 申請加入 (#88), on top: someone is waiting. Not anyone in already.
           final joined = {for (final m in all) m.uid};
           final requests = [

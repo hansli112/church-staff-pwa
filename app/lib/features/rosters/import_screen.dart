@@ -13,7 +13,7 @@ import '../../data/backend.dart';
 import '../../domain/day.dart';
 import '../../domain/models.dart';
 import '../../domain/roster_import.dart';
-import '../../domain/text.dart' show nameKey;
+import '../../domain/staff.dart';
 import '../../l10n/app_localizations.dart';
 import '../../state/app_update.dart';
 import '../../state/import_session.dart';
@@ -141,7 +141,7 @@ class _ImportScreenState extends ConsumerState<ImportScreen> {
       builder: (_) => _WhoSheet(
         name: raw,
         suggested: _session.candidates(raw),
-        everyone: ref.read(staffProvider).value ?? const [],
+        staff: ref.read(staffProvider).value ?? Staff.empty,
         addsStaff: _addsStaff(ref.read(meProvider).value),
       ),
     );
@@ -678,11 +678,11 @@ class _ImportScreenState extends ConsumerState<ImportScreen> {
     final repairable = _ready && !_busy && editsSettings;
     // Names on the sheet nobody in the church has, nor could be: added at
     // once, the first time a church's rosters come in.
-    final staffKeys = {for (final m in ref.watch(staffProvider).value ?? const <Member>[]) nameKey(m.name)};
+    final staff = ref.watch(staffProvider).value ?? Staff.empty;
     final newStaff = _addsStaff(ref.watch(meProvider).value)
         ? [
             for (final MapEntry(key: name, value: candidates) in report.unresolved.entries)
-              if (candidates.isEmpty && !staffKeys.contains(nameKey(name))) name,
+              if (candidates.isEmpty && !staff.hasName(name)) name,
           ]
         : const <String>[];
     final toFix = {
@@ -991,10 +991,10 @@ class _Staff extends _Who {
 /// may be first, then everyone; a search over the church; a name nobody
 /// has added as a 同工, or arranged this once, as on the sheet or typed.
 class _WhoSheet extends StatefulWidget {
-  const _WhoSheet({required this.name, required this.suggested, required this.everyone, required this.addsStaff});
+  const _WhoSheet({required this.name, required this.suggested, required this.staff, required this.addsStaff});
   final String name;
   final List<Member> suggested;
-  final List<Member> everyone;
+  final Staff staff;
 
   /// May add a 同工 to the service (Member.addsStaffTo).
   final bool addsStaff;
@@ -1009,22 +1009,18 @@ class _WhoSheetState extends State<_WhoSheet> {
   @override
   Widget build(BuildContext context) {
     final l10n = L10n.of(context);
-    final q = nameKey(_query);
     final typed = _query.trim();
     final name = typed.isEmpty ? widget.name : typed;
     final suggested = {for (final m in widget.suggested) m.uid};
-    final everyone = [...widget.everyone]..sort((a, b) => a.name.compareTo(b.name));
+    int byName(Member a, Member b) => a.name.compareTo(b.name);
     final others = [
-      for (final m in everyone)
+      for (final m in widget.staff.all)
         if (!suggested.contains(m.uid)) m,
-    ];
-    final found = [
-      for (final m in everyone)
-        if (nameKey(m.name).contains(q)) m,
-    ];
-    // Nobody in the church by that name, however written: addByName
-    // would refuse it.
-    final nameIsFree = !widget.everyone.any((m) => nameKey(m.name) == nameKey(name));
+    ]..sort(byName);
+    final found = [...widget.staff.search(_query)]..sort(byName);
+    // Nobody in the church by that name, however written: adding would
+    // refuse it.
+    final nameIsFree = !widget.staff.hasName(name);
     Widget member(Member m, {bool email = false}) => ListRow(
       title: m.name,
       subtitle: email && m.email.isNotEmpty ? m.email : null,
@@ -1043,7 +1039,7 @@ class _WhoSheetState extends State<_WhoSheet> {
             keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
             padding: EdgeInsets.only(bottom: Space.xl + MediaQuery.viewInsetsOf(context).bottom),
             children: [
-              if (q.isNotEmpty)
+              if (typed.isNotEmpty)
                 for (final m in found) member(m)
               else ...[
                 if (widget.suggested.isNotEmpty) ...[

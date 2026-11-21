@@ -8,6 +8,7 @@ import '../../core/perf.dart';
 import '../../core/design/tokens.dart';
 import '../../domain/event_roster.dart';
 import '../../domain/models.dart';
+import '../../domain/staff.dart';
 import '../../domain/staff_order.dart';
 import '../../domain/text.dart' show nameKey;
 import '../../l10n/app_localizations.dart';
@@ -81,7 +82,7 @@ class PeoplePicker extends StatefulWidget {
     required this.serviceType,
     required this.duty,
     required this.initial,
-    required this.members,
+    required this.staff,
     required this.order,
     required this.canEditDutyList,
     this.canTakeOffList = false,
@@ -112,7 +113,7 @@ class PeoplePicker extends StatefulWidget {
   final String? serviceType;
   final String duty;
   final List<String> initial;
-  final List<Member> members;
+  final Staff staff;
   final StaffOrder order;
   final Set<String> initialGuests;
   final List<String> guestSuggestions;
@@ -182,7 +183,7 @@ class _PeoplePickerState extends State<PeoplePicker> {
     final servingSet = <String>{};
     final serving = <String>[];
     final others = <Member>[];
-    for (final m in widget.members) {
+    for (final m in widget.staff.all) {
       final name = m.name.trim();
       if (name.isEmpty) continue;
       final type = widget.serviceType;
@@ -497,10 +498,9 @@ class _PeoplePickerState extends State<PeoplePicker> {
         rows.add(_Entry('guest/$name', (_) => _guestRow(name, c, l10n)));
       }
     }
-    // Nobody in the church by that name, however written: addByName
-    // would refuse it.
-    final typedKey = nameKey(typed);
-    if (!typedIsKnown && widget.canAddStaff && !widget.members.any((m) => nameKey(m.name) == typedKey)) {
+    // Nobody in the church by that name, however written: adding would
+    // refuse it.
+    if (!typedIsKnown && widget.canAddStaff && !widget.staff.hasName(typed)) {
       rows.add(
         _Entry(
           'typed-staff',

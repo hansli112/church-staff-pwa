@@ -11,11 +11,13 @@ import '../../core/design/components.dart';
 import '../../core/design/tokens.dart';
 import '../../domain/limits.dart';
 import '../../domain/models.dart';
+import '../../domain/staff.dart';
 import '../../domain/text.dart';
 import '../../l10n/app_localizations.dart';
 import '../../state/attendance.dart';
 import '../../state/church_writes.dart';
 import '../../state/providers.dart';
+import '../../state/staff_actions.dart';
 import '../common/errors.dart';
 import '../common/site_pages.dart';
 import '../common/saving_indicator.dart';
@@ -269,8 +271,9 @@ class GroupStaffSections extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final l10n = L10n.of(context);
     final me = ref.watch(meProvider).value;
-    final members = ref.watch(staffProvider).value;
-    if (me == null || members == null) return const SizedBox.shrink();
+    final everyone = ref.watch(staffProvider).value;
+    final members = everyone?.all;
+    if (me == null || everyone == null || members == null) return const SizedBox.shrink();
     String? lineOf(List<String> parts) => parts.isEmpty ? null : parts.join(l10n.dotSeparator);
     final (:staff, :addable, :candidates) = groupPeople(ref, me, members, group);
     // A service's takes someone new by name too, who may add a plain 同工.
@@ -281,7 +284,7 @@ class GroupStaffSections extends ConsumerWidget {
             title: l10n.addGroupStaff,
             leading: const Icon(Symbols.add_rounded),
             chevron: false,
-            onTap: () => _add(context, ref, addable, everyone: members, byName: byName),
+            onTap: () => _add(context, ref, addable, staff: everyone, byName: byName),
           );
     final shownStaff = [
       for (final m in staff)
@@ -370,14 +373,14 @@ class GroupStaffSections extends ConsumerWidget {
     BuildContext context,
     WidgetRef ref,
     List<Member> addable, {
-    required List<Member> everyone,
+    required Staff staff,
     required bool byName,
   }) async {
     final l10n = L10n.of(context);
     final picked = await showAppSheet<Object>(
       context,
       expand: true,
-      builder: (context) => _AddStaffSheet(addable: addable, everyone: everyone, byName: byName),
+      builder: (context) => _AddStaffSheet(addable: addable, staff: staff, byName: byName),
     );
     if (!context.mounted) return;
     switch (picked) {
@@ -390,7 +393,7 @@ class GroupStaffSections extends ConsumerWidget {
         if (added && group is ServiceGroup && context.mounted) await _edit(context, m);
       case final String typed:
         try {
-          final id = await ref.churchData.addByName(typed, group.id);
+          final id = await ref.read(staffActionsProvider).add(typed, group.id);
           if (!context.mounted) return;
           Haptics.success();
           showToast(context, l10n.addedToGroup(typed, name));
@@ -410,7 +413,9 @@ class GroupStaffSections extends ConsumerWidget {
     builder: (context) => SafeArea(
       child: Consumer(
         builder: (context, ref, _) {
-          final now = ref.watch(staffProvider.select((v) => v.value?.where((m) => m.uid == person.uid).firstOrNull));
+          final now = ref.watch(
+            staffProvider.select((v) => v.value?.all.where((m) => m.uid == person.uid).firstOrNull),
+          );
           final service = ref.watch(servicesProvider.select((v) => v.value?.byId(group.id)));
           final smallGroups = ref.watch(smallGroupsProvider).value ?? const <SmallGroupDetails>[];
           if (now == null || service == null) return const SizedBox.shrink();
@@ -438,10 +443,10 @@ class GroupStaffSections extends ConsumerWidget {
 /// [byName], a name nobody in [everyone] has is offered as someone new.
 /// Closes with the [Member] picked, or the name typed.
 class _AddStaffSheet extends StatefulWidget {
-  const _AddStaffSheet({required this.addable, required this.everyone, required this.byName});
+  const _AddStaffSheet({required this.addable, required this.staff, required this.byName});
 
   final List<Member> addable;
-  final List<Member> everyone;
+  final Staff staff;
   final bool byName;
 
   @override
@@ -455,7 +460,7 @@ class _AddStaffSheetState extends State<_AddStaffSheet> {
   Widget build(BuildContext context) {
     final l10n = L10n.of(context);
     final typed = _query.trim();
-    final known = widget.everyone.any((m) => nameKey(m.name) == nameKey(typed));
+    final known = widget.staff.hasName(typed);
     return SafeArea(
       child: Column(
         children: [
@@ -514,7 +519,7 @@ class GroupScreen extends ConsumerWidget {
     final services = ref.watch(servicesProvider).value;
     final ministries = ref.watch(ministriesProvider).value;
     final smallGroups = ref.watch(smallGroupsProvider).value ?? const <SmallGroupDetails>[];
-    final members = ref.watch(staffProvider).value;
+    final members = ref.watch(staffProvider).value?.all;
     final attendanceOn = ref.watch(churchProvider.select((c) => c.value?.attendanceSince != null));
     final service = switch (group) {
       ServiceGroup(:final id) => services?.byId(id),

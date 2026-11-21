@@ -372,18 +372,39 @@ class EchoingChurchData implements ChurchData {
     () => _inner.setGroupMember(uid, group, member: member, duties: duties, smallGroups: smallGroups),
   );
 
+  /// The new 同工 shows once the backend gives them an ID.
   @override
-  Future<String> addByName(String name, String serviceType) => _inner.addByName(name, serviceType);
+  Future<String> addByName(String name, String serviceType) async {
+    final echo = _Echo(pending: {});
+    late final String id;
+    await _send(echo, () async {
+      id = await _inner.addByName(name, serviceType);
+      echo.pending[id] = (p) =>
+          p ??
+          PendingMember(
+            id: id,
+            name: name.trim(),
+            zones: [Zone(serviceType: serviceType)],
+          );
+    });
+    return id;
+  }
 
   @override
   Future<void> grantDuty(String uid, String serviceType, String duty) => _send(
-    _Echo(members: {uid: (m) => m.withDuty(serviceType, duty)}),
+    _Echo(
+      members: {uid: (m) => m.withDuty(serviceType, duty)},
+      pending: {uid: (p) => p?.withDuty(serviceType, duty)},
+    ),
     () => _inner.grantDuty(uid, serviceType, duty),
   );
 
   @override
   Future<void> revokeDuty(String uid, String serviceType, String duty) => _send(
-    _Echo(members: {uid: (m) => m.withoutDuty(serviceType, duty)}),
+    _Echo(
+      members: {uid: (m) => m.withoutDuty(serviceType, duty)},
+      pending: {uid: (p) => p?.withoutDuty(serviceType, duty)},
+    ),
     () => _inner.revokeDuty(uid, serviceType, duty),
   );
 
@@ -411,7 +432,21 @@ class EchoingChurchData implements ChurchData {
   Stream<Church?> church() => _inner.church();
 
   @override
-  Stream<List<PendingMember>> pendingMembers() => _inner.pendingMembers();
+  Stream<List<PendingMember>> pendingMembers() => _echoed(_inner.pendingMembers(), (server, arrived) {
+    List<PendingMember>? shown;
+    for (final echo in _echoes) {
+      for (final MapEntry(key: id, value: change) in echo.pending.entries) {
+        final list = shown ?? server;
+        final current = list.where((p) => p.id == id).firstOrNull;
+        final next = change(current);
+        if (next == null) continue;
+        final inServer = server.where((p) => p.id == id).firstOrNull == next;
+        if (!_shows(echo, ('pending', id), inServer, arrived)) continue;
+        shown = current == null ? [...list, next] : [for (final p in list) p.id == id ? next : p];
+      }
+    }
+    return shown ?? server;
+  });
 
   @override
   Future<void> deletePendingMember(String id) => _inner.deletePendingMember(id);
@@ -534,6 +569,7 @@ class _Echo {
     this.staffOrders = const {},
     this.everyMember,
     this.smallGroups = const {},
+    this.pending = const {},
   });
 
   /// Each roster written, null for one deleted.
@@ -553,6 +589,10 @@ class _Echo {
 
   /// Each 小組 changed.
   final Map<String, SmallGroupDetails> smallGroups;
+
+  /// Each 同工 without an account changed or added, from what is shown of
+  /// them (null: not yet).
+  final Map<String, PendingMember? Function(PendingMember?)> pending;
 
   /// Null while being written; once written, until when it may still show.
   DateTime? until;

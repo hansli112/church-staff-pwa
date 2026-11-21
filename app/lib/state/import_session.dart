@@ -11,6 +11,7 @@ import 'church_writes.dart';
 import 'providers.dart';
 import 'roster_actions.dart';
 import 'session.dart';
+import 'staff_actions.dart';
 
 /// What is being imported into one service before it is applied: the rows,
 /// from photos or pasted JSON, as edited, merged into the days; who each
@@ -216,22 +217,12 @@ class ImportSession extends Notifier<ImportDraft> {
   /// as picking someone for a duty does. Done once the church's list has
   /// them, the rows' [name] theirs: until then, busy, so nobody adds them
   /// twice.
-  Future<void> addStaff(String name) => _repair(() async {
-    final id = await ref.churchData.addByName(name, serviceType);
-    bool listed(AsyncValue<List<Member>> staff) => staff.value?.any((m) => m.uid == id) ?? false;
-    if (listed(ref.read(staffProvider))) return;
-    final shown = Completer<void>();
-    final sub = ref.listen(staffProvider, (_, staff) {
-      if (listed(staff) && !shown.isCompleted) shown.complete();
-    });
-    // Not for ever: one who cannot read the list still has them added.
-    await shown.future.timeout(const Duration(seconds: 10), onTimeout: () {}).whenComplete(sub.close);
-  });
+  Future<void> addStaff(String name) => _repair(() => ref.read(staffActionsProvider).add(name, serviceType));
 
   /// The members [name] could be: same name, or what it may shorten.
   List<Member> candidates(String name) {
     // The 同工 without an account too, as the plan matches them.
-    final members = ref.read(staffProvider).value ?? const <Member>[];
+    final members = ref.read(staffProvider).value?.all ?? const <Member>[];
     final hints = ImportReport();
     NameMatcher(members).resolve(name, hints);
     return [

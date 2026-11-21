@@ -47,7 +47,7 @@ class RosterActions {
   List<Roster> get _saved => _loaded(_ref.read(savedRostersProvider), 'rosters');
 
   /// Names to IDs: the members', and those of the 同工 without an account.
-  Map<String, String> get _nameIds => uniqueNameIds(_loaded(_ref.read(staffProvider), 'members'));
+  Map<String, String> get _nameIds => uniqueNameIds(_loaded(_ref.read(staffProvider), 'members').all);
 
   StaffOrder _order(String type) => _loaded(_ref.read(staffOrderProvider(type)), 'staff order');
 
@@ -372,7 +372,7 @@ class RosterActions {
   }) => planImport(
     rows: rows,
     service: _services.byId(type) ?? (throw StateError('No service $type')),
-    members: _loaded(_ref.read(staffProvider), 'members'),
+    members: _loaded(_ref.read(staffProvider), 'members').all,
     saved: _saved,
     order: _order(type),
     today: _ref.read(todayProvider),

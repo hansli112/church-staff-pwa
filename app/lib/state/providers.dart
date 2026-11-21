@@ -9,9 +9,9 @@ import '../domain/church_link.dart';
 import '../domain/day.dart';
 import '../domain/models.dart';
 import '../domain/schedule.dart';
+import '../domain/staff.dart';
 import '../domain/staff_order.dart';
 import '../domain/swap.dart';
-import '../domain/text.dart';
 import 'current_church.dart';
 
 export 'current_church.dart';
@@ -230,23 +230,14 @@ final pendingMembersProvider = StreamProvider<List<PendingMember>>((ref) {
   return openChurch(ref).pendingMembers();
 });
 
-/// Everyone a roster can name (#94): the members, and, as members, the
-/// 同工 without an account yet (pending members: moved from self-host, or
-/// added by name), who are 同工 all the same. One with a member's name is
-/// left out: the same person, waiting to be merged. Like [membersProvider],
-/// only for those who read the member list.
-final staffProvider = Provider<AsyncValue<List<Member>>>((ref) {
+/// Everyone a roster can name (#94): the members and the 同工 without an
+/// account, as [Staff] has them. Like [membersProvider], only for those
+/// who read the member list.
+final staffProvider = Provider<AsyncValue<Staff>>((ref) {
   final members = ref.watch(membersProvider);
   final pending = ref.watch(pendingMembersProvider).value ?? const <PendingMember>[];
   final smallGroups = ref.watch(smallGroupsProvider).value ?? const <SmallGroupDetails>[];
-  return members.whenData((list) {
-    final names = {for (final m in list) nameKey(m.name)};
-    return [
-      ...list,
-      for (final p in pending)
-        if (!names.contains(nameKey(p.name))) p.asMember(smallGroups),
-    ];
-  });
+  return members.whenData((list) => Staff(list, pending: pending, smallGroups: smallGroups));
 });
 
 /// The IDs of those in [staffProvider] without an account: nobody to

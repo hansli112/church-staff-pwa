@@ -238,6 +238,24 @@ void main() {
     await Future.wait([done, timing]);
   });
 
+  test('a 同工 without an account put on a duty, or taken off, shows at once', () async {
+    final id = await data.addByName('王小明', 'sunday');
+    final pending = Seen(data.pendingMembers());
+    await pumpEventQueue();
+    expect(pending.last.single.id, id);
+
+    final granted = data.grantDuty(id, 'sunday', '司琴');
+    await pumpEventQueue();
+    expect(pending.last.single.zones.single.duties, ['司琴']);
+    await granted;
+    final revoked = data.revokeDuty(id, 'sunday', '司琴');
+    await pumpEventQueue();
+    expect(pending.last.single.zones.single.duties, isEmpty);
+    await revoked;
+    await pumpEventQueue();
+    expect(pending.last.single.zones.single.duties, isEmpty, reason: "the backend's copy agrees");
+  });
+
   test("an admin's member edits show at once", () async {
     final all = Seen(data.members());
     await pumpEventQueue();
