@@ -48,20 +48,33 @@ final _churchesProvider = AsyncNotifierProvider.autoDispose<SavedRead<List<Churc
   ),
 );
 
+/// How long typing pauses before a search goes: each one reads every church.
+const adminSearchPause = Duration(milliseconds: 400);
+
 class _AdminScreenState extends ConsumerState<AdminScreen> {
   /// The churches found for [_query]; with none typed, [_churchesProvider].
   List<ChurchSummary>? _found;
   String _query = '';
+  Timer? _typing;
+
+  @override
+  void dispose() {
+    _typing?.cancel();
+    super.dispose();
+  }
 
   Future<void> _search() async {
-    if (_query.isEmpty) {
+    _typing?.cancel();
+    final query = _query;
+    if (query.isEmpty) {
       setState(() => _found = null);
       // A failure shows on the list itself, with its retry.
       return _retry(ref.read(_churchesProvider.notifier));
     }
     try {
-      final r = await ref.read(backendProvider).cloud.adminSearchChurches(_query);
-      if (mounted) setState(() => _found = r);
+      final r = await ref.read(backendProvider).cloud.adminSearchChurches(query);
+      // Not one typed over since.
+      if (mounted && query == _query) setState(() => _found = r);
     } catch (e) {
       if (mounted) showToast(context, errorText(L10n.of(context), e));
     }
@@ -95,7 +108,12 @@ class _AdminScreenState extends ConsumerState<AdminScreen> {
               hint: l10n.adminSearchHint,
               onChanged: (q) {
                 _query = q;
-                _search();
+                _typing?.cancel();
+                if (q.isEmpty) {
+                  _search();
+                } else {
+                  _typing = Timer(adminSearchPause, _search);
+                }
               },
             ),
           ),

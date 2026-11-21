@@ -91,6 +91,10 @@ class MemoryBackend implements Backend {
   final refundedOnline = <String>{};
 
   final churches = <String, Church>{};
+
+  /// Each query the back office searched churches for, as the backend
+  /// scans every church for each one.
+  final adminSearches = <String>[];
   final members = <String, Map<String, Member>>{};
   final services = <String, ServiceSettings>{};
 
@@ -3301,6 +3305,7 @@ class MemoryCloud implements CloudApi {
   @override
   Future<List<ChurchSummary>> adminSearchChurches(String query) async {
     _requireOperator();
+    _b.adminSearches.add(query);
     return [
       for (final c in _b.churches.values)
         if (matchesSearch(c.name, query) || c.id == query.trim())

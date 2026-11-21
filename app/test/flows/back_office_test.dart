@@ -242,4 +242,22 @@ void main() {
     await settle(tester);
     expect(find.text('舊教會'), findsOneWidget);
   });
+
+  testWidgets('a search waits for typing to pause, as each one reads every church', (tester) async {
+    final b = seededChurch();
+    b.auth.operators.add('pastor');
+    b.addChurch('舊教會', status: ChurchStatus.deleted);
+    await pumpApp(tester, b);
+    await go(tester, '/admin');
+    b.adminSearches.clear();
+
+    for (final typed in ['舊', '舊教']) {
+      await tester.enterText(find.byType(TextField), typed);
+      await tester.pump(const Duration(milliseconds: 100));
+    }
+    expect(b.adminSearches, isEmpty);
+    await settle(tester);
+    expect(b.adminSearches, ['舊教']);
+    expect(find.text('舊教會'), findsOneWidget);
+  });
 }
