@@ -23,8 +23,12 @@ export const MAX_IMAGES = 3;
 export const MAX_IMAGE_BYTES = LIMITS.photoBytes;
 const IMAGE_TYPES = new Set(['image/jpeg', 'image/png', 'image/webp', 'image/heic']);
 
-/** Pinned models, tried in order (self-host measured these on real sheets). */
-export const DEFAULT_MODELS = ['gemini-3.6-flash', 'gemini-3.7-flash'];
+/**
+ * Pinned models, tried in order. gemini-3.6-flash, first until 2026-11-19,
+ * was retired on Vertex that day: it still answered, slower, with 429s.
+ * Measured 2026-11-21 on a quarter's sheet, these read every cell.
+ */
+export const DEFAULT_MODELS = ['gemini-3.7-flash', 'gemini-3.8-flash'];
 
 /** GEMINI_MODELS, comma separated, or [DEFAULT_MODELS] when it names none. */
 export function geminiModels(env: string | undefined): string[] {
@@ -209,6 +213,9 @@ export function geminiClient(vertex: VertexConfig, models: string[] = DEFAULT_MO
       ],
       generationConfig: {
         temperature: 0,
+        // Reading a sheet needs little thought: LOW read the same cells as the
+        // default (MEDIUM) in about half the time (15 s, not 20 to 45 s).
+        thinkingConfig: { thinkingLevel: 'LOW' },
         responseMimeType: 'application/json',
         maxOutputTokens: 16384,
         responseSchema: {

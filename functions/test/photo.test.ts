@@ -254,6 +254,20 @@ describe('geminiClient', () => {
     assert.equal(event.properties.color.maximum, 5);
   });
 
+  test('asks for little thinking: reading a sheet needs none, and it took up to a minute', async (t) => {
+    const fetch = t.mock.method(globalThis, 'fetch', async () => Response.json({
+      candidates: [{ content: { parts: [{ text: '[]' }] } }],
+    }));
+    await geminiClient(vertex, ['gemini-x'])('prompt', [image]);
+    const request = JSON.parse((fetch.mock.calls[0].arguments[1] as RequestInit).body as string);
+    assert.deepEqual(request.generationConfig.thinkingConfig, { thinkingLevel: 'LOW' });
+  });
+
+  test('no model Vertex has retired is tried first', () => {
+    // gemini-3.6-flash went 2026-11-19; it still answered, slower and with 429s.
+    assert.ok(!DEFAULT_MODELS.includes('gemini-3.6-flash'));
+  });
+
   test('non-canonical fenced output fails explicitly instead of being silently downgraded', async (t) => {
     t.mock.method(globalThis, 'fetch', async () => Response.json({
       candidates: [{ content: { parts: [{ text: '```json\n[]\n```' }] } }],
