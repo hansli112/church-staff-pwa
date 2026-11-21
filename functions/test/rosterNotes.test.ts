@@ -79,6 +79,22 @@ describe('備註 (saveRosterNote)', () => {
     await save(six.slice(0, 5), 'x'.repeat(500));
   });
 
+  test('refuses a file Storage has over 20 MB, and one with no type', async () => {
+    const save = (files: unknown[]) => saveRosterNote(d, caller('lead'), { churchId: 'C1', rosterId: ROSTER, text: '', files });
+    const big = await upload(ROSTER, 'big', 'application/pdf', 20 * 1024 * 1024 + 1);
+    await rejectsWith(save([big]), 'unknown');
+    const path = `churches/C1/rosterNotes/${ROSTER}/bare`;
+    await bucket.file(path).save(Buffer.alloc(3));
+    await bucket.file(path).setMetadata({ contentType: null });
+    await rejectsWith(save([{ id: 'bare', name: 'bare', url: urlOf(path) }]), 'unknown');
+    await rejectsWith(saveRosterNote(d, caller('lead'), { churchId: 'C1', rosterId: ROSTER, text: 'x', files: [], by: 'mei' }), 'unknown');
+  });
+
+  test("an event's cancelled roster takes no note", async () => {
+    await db.doc('churches/C1/rosters/ev_e2').set({ kind: 'event', eventId: 'e2', title: '退修會', dateKey: '2026-12-01', endDateKey: '2026-12-01', duties: [], group: 'service:sunday', cancelledAt: '2026-11-19' });
+    await rejectsWith(saveRosterNote(d, caller('admin'), { churchId: 'C1', rosterId: 'ev_e2', text: 'x', files: [] }), 'permissionDenied');
+  });
+
   test('any kind of file: a Word file is kept as it is', async () => {
     const docx = 'application/vnd.openxmlformats-officedocument.wordprocessingml.document';
     const word = await upload(ROSTER, 'w1', docx);

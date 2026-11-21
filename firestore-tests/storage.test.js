@@ -43,6 +43,8 @@ before(async () => {
     await setDoc(doc(db, 'churches/B/members/admin-b'), { uid: 'admin-b', role: 'admin' });
     await setDoc(doc(db, 'churches/A/members/lead-a'), { uid: 'lead-a', role: 'staff', leadMinistries: ['worship'] });
     await setDoc(doc(db, 'churches/A/members/office-a'), { uid: 'office-a', role: 'staff', groups: ['roster-editors'] });
+    await setDoc(doc(db, 'churches/A/members/sunday-lead-a'), { uid: 'sunday-lead-a', role: 'staff', leadTypes: ['sunday'] });
+    await setDoc(doc(db, 'churches/A/members/group-lead-a'), { uid: 'group-lead-a', role: 'staff', leadSmallGroups: ['g1'] });
     await setDoc(doc(db, 'churches/S/members/admin-s'), { uid: 'admin-s', role: 'admin' });
   });
 });
@@ -110,7 +112,7 @@ describe('備註的檔案', () => {
     await assertSucceeds(uploadBytes(ref(storageAs('admin-a'), path('a')), png, pdf('admin-a')));
     await assertSucceeds(uploadBytes(ref(storageAs('office-a'), path('b')), png, { contentType: 'image/jpeg', customMetadata: { uploader: 'office-a' } }));
     await assertSucceeds(uploadBytes(ref(storageAs('lead-a'), path('c')), png, { contentType: 'audio/mp4', customMetadata: { uploader: 'lead-a' } }));
-    await assertSucceeds(uploadBytes(ref(storageAs('lead-a'), path('w')), png, { contentType: 'application/vnd.ms-powerpoint', customMetadata: { uploader: 'lead-a' } }));
+    await assertSucceeds(uploadBytes(ref(storageAs('lead-a'), path('w')), png, { contentType: 'application/vnd.ms-powerpoint', contentDisposition: 'attachment', customMetadata: { uploader: 'lead-a' } }));
     await assertSucceeds(getBytes(ref(storageAs('staff-a'), path('a'))));
     await assertFails(getBytes(ref(storageAs('admin-b'), path('a'))));
   });
@@ -121,6 +123,26 @@ describe('備註的檔案', () => {
     await assertFails(uploadBytes(ref(storageAs('admin-a'), path('d')), png, { contentType: 'application/pdf' }));
     await assertFails(uploadBytes(ref(storageAs('admin-a'), path('d')), png, pdf('lead-a')));
     await assertFails(uploadBytes(ref(storageAs('admin-a'), path('d')), new Uint8Array(20 * 1024 * 1024 + 1), pdf('admin-a')));
+  });
+
+  it('瀏覽器會直接打開的只有 PDF、圖片、聲音、影片、純文字；其他都要下載', async () => {
+    const as = (contentType, contentDisposition) => ({ contentType, contentDisposition, customMetadata: { uploader: 'lead-a' } });
+    await assertSucceeds(uploadBytes(ref(storageAs('lead-a'), path('i1')), png, as('application/pdf', 'inline')));
+    await assertSucceeds(uploadBytes(ref(storageAs('lead-a'), path('i2')), png, as('text/html', "attachment; filename*=UTF-8''a.html")));
+    await assertFails(uploadBytes(ref(storageAs('lead-a'), path('i3')), png, as('text/html', 'inline')));
+    await assertFails(uploadBytes(ref(storageAs('lead-a'), path('i4')), png, { contentType: 'text/html', customMetadata: { uploader: 'lead-a' } }));
+    await assertFails(uploadBytes(ref(storageAs('lead-a'), path('i5')), png, as('image/svg+xml', 'inline')));
+  });
+
+  it('聚會負責人、小組長也能上傳', async () => {
+    await assertSucceeds(uploadBytes(ref(storageAs('sunday-lead-a'), path('t')), png, pdf('sunday-lead-a')));
+    await assertSucceeds(uploadBytes(ref(storageAs('group-lead-a'), path('g')), png, pdf('group-lead-a')));
+  });
+
+  it('傳上去的檔案不能被換掉，連上傳的人也不行', async () => {
+    await assertSucceeds(uploadBytes(ref(storageAs('lead-a'), path('r')), png, pdf('lead-a')));
+    await assertFails(uploadBytes(ref(storageAs('lead-a'), path('r')), png, pdf('lead-a')));
+    await assertFails(uploadBytes(ref(storageAs('admin-a'), path('r')), png, pdf('admin-a')));
   });
 
   it('上傳的人可以收回自己傳的，別人不行', async () => {

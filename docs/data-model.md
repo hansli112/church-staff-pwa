@@ -186,5 +186,5 @@ App 看不到這個差別：在一間教會裡做的事，不管是 Firestore、
 |---|---|
 | `churches/{cid}/logo.png` | 同工讀；管理員寫，1MB 以內的圖片 |
 | `churches/{cid}/logo-{版本}-*.png` | 只有後端（主畫面 icon，經教會頁 Function 提供） |
-| `churches/{cid}/rosterNotes/{rosterId}/{id}` | 同工讀；管理員、行政和各種負責人上傳 20MB 以內的檔案（什麼類型都可以），要帶 `uploader`（自己的 uid），還沒存進備註前可以自己收回；其他由後端刪（見上面 `rosterNotes`） |
+| `churches/{cid}/rosterNotes/{rosterId}/{id}` | 同工讀；管理員、行政和各種負責人上傳 20MB 以內的檔案（什麼類型都可以），要帶 `uploader`（自己的 uid），每個檔案一個新名字、不能蓋掉已經在的；PDF、圖片（SVG 除外）、聲音、影片、純文字以外的要設成下載（`contentDisposition: attachment`），免得有人放的網頁從 bucket 打開。還沒存進備註前可以自己收回；其他由後端刪（見上面 `rosterNotes`） |
 | `moves/{uid}/*` | 只有上傳者本人讀寫，20MB 以內（搬家檔，用完即刪；沒搬的一天後由 bucket 的生命週期規則刪掉，`storage-lifecycle.json`） |

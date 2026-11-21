@@ -423,6 +423,13 @@ void main() {
     expect(b.services['grace']!.byId('sunday')!.duties, ['司琴', '司會', '招待']);
   });
 
+  testWidgets('with one duty there is nothing to put in order: the note only says to swipe', (tester) async {
+    await pumpApp(tester, seededChurch());
+    await go(tester, '/me/groups/service/youth');
+    expect(findShown('左滑刪除'), findsWidgets);
+    expect(find.textContaining('按住拖曳排序'), findsNothing);
+  });
+
   testWidgets("行政 reads a service's 同工 on their page, and moves nobody; a search with no one says so", (tester) async {
     await pumpApp(tester, seededChurch(as: office, extra: [office]));
     await go(tester, '/me/groups/service/sunday');

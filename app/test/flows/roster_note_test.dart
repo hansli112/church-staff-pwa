@@ -3,6 +3,8 @@ import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
+import 'package:martha/core/design/components.dart' show SecondaryButton;
+import 'package:martha/domain/day.dart';
 import 'package:martha/domain/models.dart';
 import 'package:martha/features/rosters/roster_note.dart';
 import 'package:material_symbols_icons/symbols.dart';
@@ -188,5 +190,112 @@ void main() {
       find.descendant(of: find.byType(RosterNoteSection), matching: find.byIcon(Symbols.chevron_right_rounded)),
       findsNothing,
     );
+  });
+
+  testWidgets('a link in it opens out of the app, without the 。 after it', (tester) async {
+    final b = seededChurch(as: staffMei);
+    b.rosterNotes['grace'] = {_id: const RosterNote(text: '和弦譜：https://drive.google.com/x。')};
+    final launched = captureLaunches();
+    await pumpApp(tester, b);
+    await go(tester, '/rosters/sunday/2026-10-11');
+    await tester.tapOnText(find.textRange.ofSubstring('drive.google.com/x'));
+    await settle(tester);
+    expect(launched.opened, ['https://drive.google.com/x']);
+  });
+
+  testWidgets('a picture shows as a picture, not by its name', (tester) async {
+    final b = seededChurch(as: editor);
+    await pumpApp(tester, b, overrides: [picker]);
+    await go(tester, '/rosters/sunday/2026-10-11');
+    await tapText(tester, '新增備註');
+    next = [(name: '座位圖.png', type: 'image/png', bytes: Uint8List(4))];
+    await tapText(tester, '加入檔案');
+    await tapText(tester, '完成');
+    expect(b.rosterNotes['grace']![_id]!.files.single.isImage, isTrue);
+    final section = find.byType(RosterNoteSection);
+    expect(find.descendant(of: section, matching: find.text('座位圖.png')), findsNothing);
+    expect(find.descendant(of: section, matching: find.bySemanticsLabel('座位圖.png')), findsOneWidget);
+  });
+
+  testWidgets('a file that does not go up is left off, and it says so', (tester) async {
+    final b = seededChurch(as: editor);
+    await pumpApp(tester, b, overrides: [picker]);
+    await go(tester, '/rosters/sunday/2026-10-11');
+    await tapText(tester, '新增備註');
+    b.failNextWrite = Exception('offline');
+    next = [pdf('a.pdf')];
+    await tapText(tester, '加入檔案');
+    expect(find.text('「a.pdf」沒有上傳成功'), findsOneWidget);
+    expect(find.descendant(of: find.byType(NoteSheet), matching: find.text('a.pdf')), findsNothing);
+    expect(b.noteUploads['grace'] ?? const {}, isEmpty);
+  });
+
+  testWidgets('完成 waits for the files still going up', (tester) async {
+    final b = seededChurch(as: editor);
+    await pumpApp(tester, b, overrides: [picker]);
+    await go(tester, '/rosters/sunday/2026-10-11');
+    await tapText(tester, '新增備註');
+    b.writeDelay = const Duration(seconds: 2);
+    next = [pdf('a.pdf')];
+    await tester.tap(find.text('加入檔案'));
+    await tester.pump(const Duration(milliseconds: 500));
+    expect(find.text('a.pdf'), findsOneWidget, reason: 'on the sheet while it goes up');
+    SecondaryButton done() => tester.widget(find.widgetWithText(SecondaryButton, '完成'));
+    expect(done().onPressed, isNull);
+    await tester.pump(const Duration(seconds: 2));
+    expect(done().onPressed, isNotNull, reason: 'up');
+    b.writeDelay = Duration.zero;
+    await tapText(tester, '完成');
+    expect([for (final f in b.rosterNotes['grace']![_id]!.files) f.name], ['a.pdf']);
+  });
+
+  testWidgets('a file taken off before 完成 is taken back at once', (tester) async {
+    final b = seededChurch(as: editor);
+    await pumpApp(tester, b, overrides: [picker]);
+    await go(tester, '/rosters/sunday/2026-10-11');
+    await tapText(tester, '新增備註');
+    next = [pdf('a.pdf')];
+    await tapText(tester, '加入檔案');
+    expect(b.noteUploads['grace'], hasLength(1));
+    await tester.tap(find.descendant(of: find.byType(NoteSheet), matching: find.byIcon(Symbols.close_rounded)));
+    await settle(tester);
+    expect(b.noteUploads['grace'], isEmpty);
+  });
+
+  group("an event's roster", () {
+    Roster party({required Day day}) => Roster(
+      type: '',
+      day: day,
+      duties: const [
+        Duty(role: '主持', people: ['李美玉'], uids: {'李美玉': 'mei'}),
+      ],
+      forEvent: RosterEvent(eventId: 'xmas', title: '聖誕晚會', lastDay: day),
+    );
+
+    testWidgets('who arranges it writes its note once it is saved', (tester) async {
+      final b = seededChurch(extra: const [office], as: office);
+      b.rosters['grace']!['ev_xmas'] = party(day: Day(2026, 10, 9));
+      await pumpApp(tester, b, overrides: [picker]);
+      await go(tester, '/rosters/event/xmas');
+      await tapText(tester, '新增備註');
+      await tester.enterText(find.descendant(of: find.byType(NoteSheet), matching: find.byType(TextField)), '6:00 彩排');
+      await tapText(tester, '完成');
+      expect(b.rosterNotes['grace']!['ev_xmas']!.text, '6:00 彩排');
+      expect(find.text('6:00 彩排'), findsOneWidget);
+    });
+
+    testWidgets('not while it is a draft nobody saved', (tester) async {
+      final b = seededChurch(extra: const [office], as: office);
+      b.connectCalendar('grace', calendarName: '教會行事曆');
+      b.calendarEvents['grace'] = [
+        CalendarEvent(id: 'xmas', title: '聖誕晚會', start: DateTime(2026, 10, 9, 19), end: DateTime(2026, 10, 9, 21)),
+      ];
+      await pumpApp(tester, b);
+      await go(tester, '/calendar');
+      await tapText(tester, '聖誕晚會');
+      await tapText(tester, '安排服事');
+      expect(find.text('沿用其他活動'), findsOneWidget, reason: 'on its roster');
+      expect(find.text('新增備註'), findsNothing);
+    });
   });
 }

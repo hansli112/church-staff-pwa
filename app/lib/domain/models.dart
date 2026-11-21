@@ -804,9 +804,12 @@ class NoteFile {
 bool noteFileType(String type) => type.length <= 200 && RegExp(r'^[\w.+-]+/[\w.+-]+$').hasMatch(type);
 
 /// Whether a file of [type] on a 備註 opens in the browser as it is; any
-/// other kind is downloaded.
+/// other kind is downloaded, an SVG too, as it may hold a script
+/// (storage.rules' opensSafely).
 bool opensInline(String type) =>
-    type == 'application/pdf' || type == 'text/plain' || RegExp('^(image|audio|video)/').hasMatch(type);
+    type == 'application/pdf' ||
+    type == 'text/plain' ||
+    (RegExp('^(image|audio|video)/').hasMatch(type) && !type.startsWith('image/svg'));
 
 /// A day's 備註 on its roster: some text, and files. Whoever arranges any
 /// of the roster writes it; it goes Limits.noteDays after the last day.

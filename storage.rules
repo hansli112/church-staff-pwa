@@ -45,13 +45,23 @@ service firebase.storage {
         || m.get('leadSmallGroups', []).size() > 0));
     }
 
+    // A file a browser shows as it is, or one it downloads: no page of
+    // someone's making opens from the bucket (as opensInline in the app).
+    function opensSafely(file) {
+      return (file.contentType.matches('application/pdf|text/plain|(image|audio|video)/[A-Za-z0-9.+-]+')
+          && !file.contentType.matches('image/svg.*'))
+        || file.contentDisposition.matches('attachment.*');
+    }
+
     // 備註's files (樂譜, 練唱音檔, 投影片…): the church reads them; who
     // arranges uploads any kind up to 20 MB, saying it is theirs, and may
-    // take back their own before it is kept.
+    // take back their own before it is kept. Each goes to a new name: one
+    // already up is not written over (an upload there counts as a create).
     match /churches/{cid}/rosterNotes/{rosterId}/{fileId} {
       allow read: if isMember(cid);
-      allow create: if arrangesSome(cid)
+      allow create: if resource == null && arrangesSome(cid)
         && request.resource.size <= 20 * 1024 * 1024
+        && opensSafely(request.resource)
         && request.resource.metadata.get('uploader', '') == request.auth.uid;
       allow delete: if request.auth != null && resource.metadata.get('uploader', '') == request.auth.uid;
     }
