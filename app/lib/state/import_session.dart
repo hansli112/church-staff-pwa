@@ -160,7 +160,7 @@ class ImportSession extends Notifier<ImportDraft> {
   /// read from photos rather than pasted.
   void load(List<dynamic> rows, {bool fromPhotos = false}) => state = state.copyWith(
     // Never share the recognizer's response or a caller's list.
-    rows: _scoped(rows),
+    rows: _scoped(fromPhotos ? mergeRepeats(rows) : rows),
     loaded: true,
     people: const {},
     clearError: true,

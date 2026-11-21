@@ -1893,16 +1893,6 @@
       }
     }
   },
-  "importIssueResolvedDuplicatePeople": "{role}：確認後人名重複，請移除重複的人名",
-  "@importIssueResolvedDuplicatePeople": {
-    "description": "ImportIssueCode.resolvedDuplicatePeople; role is the imported duty label",
-    "placeholders": {
-      "role": {
-        "type": "String",
-        "example": "招待"
-      }
-    }
-  },
   "appRunningVersion": "目前版本",
   "@appRunningVersion": {
     "description": "The release that actually booted the running PWA, never the server-latest release. Its opaque release id is shown as the row subtitle."

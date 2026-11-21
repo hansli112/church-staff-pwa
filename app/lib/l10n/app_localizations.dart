@@ -4546,12 +4546,6 @@ abstract class L10n {
   /// **'第 {index} 個特別活動的 color 請填 0 到 5 的整數'**
   String importIssueEventColor(int index);
 
-  /// ImportIssueCode.resolvedDuplicatePeople; role is the imported duty label
-  ///
-  /// In zh, this message translates to:
-  /// **'{role}：確認後人名重複，請移除重複的人名'**
-  String importIssueResolvedDuplicatePeople(String role);
-
   /// The release that actually booted the running PWA, never the server-latest release. Its opaque release id is shown as the row subtitle.
   ///
   /// In zh, this message translates to:

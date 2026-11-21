@@ -34,11 +34,10 @@ enum ImportIssueCode {
   eventObject,
   eventName,
   eventColor,
-  resolvedDuplicatePeople,
 }
 
 /// A language-neutral validation problem. Item positions are one-based
-/// `index` arguments; a resolved-name collision carries its `role`.
+/// `index` arguments.
 class ImportIssue {
   const ImportIssue(this.code, {this.args = const {}});
   final ImportIssueCode code;
@@ -155,6 +154,82 @@ class NameMatcher {
   }
 }
 
+/// [rows] read from photos, with what reading them repeats merged: a day
+/// on two rows (the same week on two photos), a duty twice in a day (one
+/// split over two columns), a name twice on a duty. The first keeps its
+/// place; a later one adds only what is new. Anything not in the
+/// documented format is left as it is, for the preview to point out.
+List<dynamic> mergeRepeats(List<dynamic> rows) {
+  final out = <dynamic>[];
+  final byDate = <String, Map<String, dynamic>>{};
+  for (final row in rows) {
+    final date = row is Map ? row['date'] : null;
+    if (row is! Map || date is! String) {
+      out.add(row);
+      continue;
+    }
+    final into = byDate[date.trim()];
+    if (into == null) {
+      final first = <String, dynamic>{for (final e in row.entries) '${e.key}': e.value};
+      if (first['duties'] is List) first['duties'] = _mergeDuties(const [], first['duties'] as List<dynamic>);
+      byDate[date.trim()] = first;
+      out.add(first);
+      continue;
+    }
+    for (final e in row.entries) {
+      final key = '${e.key}';
+      if (key == 'duties' && into['duties'] is List && e.value is List) {
+        into['duties'] = _mergeDuties(into['duties'] as List<dynamic>, e.value as List<dynamic>);
+      } else if (key == 'events' && into['events'] is List && e.value is List) {
+        final names = {
+          for (final ev in into['events'] as List<dynamic>)
+            if (ev is Map) ev['name'],
+        };
+        into['events'] = [
+          ...into['events'] as List<dynamic>,
+          for (final ev in e.value as List<dynamic>)
+            if (ev is! Map || names.add(ev['name'])) ev,
+        ];
+      } else {
+        into.putIfAbsent(key, () => e.value);
+      }
+    }
+  }
+  return out;
+}
+
+/// [more] duties added to [duties]: one already there by its role gets
+/// only the names it lacks.
+List<dynamic> _mergeDuties(List<dynamic> duties, List<dynamic> more) {
+  final out = <dynamic>[];
+  final byRole = <String, Map<String, dynamic>>{};
+  for (final duty in [...duties, ...more]) {
+    final role = duty is Map ? duty['role'] : null;
+    final people = duty is Map ? duty['people'] : null;
+    if (duty is! Map || role is! String || people is! List || duty.keys.any((k) => k != 'role' && k != 'people')) {
+      out.add(duty);
+      continue;
+    }
+    final into = byRole[role.trim()];
+    if (into == null) {
+      final first = {'role': role, 'people': <dynamic>[]};
+      byRole[role.trim()] = first;
+      out.add(first);
+      _addNames(first['people']! as List<dynamic>, people);
+    } else {
+      _addNames(into['people'] as List<dynamic>, people);
+    }
+  }
+  return out;
+}
+
+void _addNames(List<dynamic> names, List<dynamic> more) {
+  for (final name in more) {
+    if (name is String && names.any((n) => n is String && n.trim() == name.trim())) continue;
+    names.add(name);
+  }
+}
+
 /// Builds the days to write from [rows] (the JSON array), for [service].
 ///
 /// The only accepted format is an array of {date, duties, events?} rows:
@@ -260,14 +335,11 @@ ImportPlan planImport({
             }
           }
         }
-        if (names.toSet().length != names.length) {
-          if (!report.badRows.contains(i + 1)) report.badRows.add(i + 1);
-          report.errors
-              .putIfAbsent(i + 1, () => [])
-              .add(
-                ImportIssue(ImportIssueCode.resolvedDuplicatePeople, args: {'role': role}),
-              );
-        }
+        // Two names on the sheet confirmed as one person: on it once.
+        final once = names.toSet().toList();
+        names
+          ..clear()
+          ..addAll(once);
         for (final uid in ids.values) {
           final member = members.firstWhere((m) => m.uid == uid);
           if (!member.serves(service.id, role) &&

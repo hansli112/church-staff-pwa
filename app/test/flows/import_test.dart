@@ -240,6 +240,53 @@ void main() {
     expect(b.photosUsed['grace'], 1);
   });
 
+  testWidgets("a photo's repeats are merged, not refused: a day twice, a duty twice, a name twice", (tester) async {
+    final oldPicker = ImagePickerPlatform.instance;
+    ImagePickerPlatform.instance = _PhotoPicker();
+    addTearDown(() => ImagePickerPlatform.instance = oldPicker);
+    final b = agreedChurch();
+    b.recognized = [
+      {
+        'date': '2026-10-18',
+        'duties': [
+          {
+            'role': '司琴',
+            'people': ['李美玉', '李美玉'],
+          },
+          {
+            'role': '招待',
+            'people': ['陳志豪'],
+          },
+          {
+            'role': '招待',
+            'people': ['林同工'],
+          },
+        ],
+      },
+      // The same week on a second photo.
+      {
+        'date': '2026-10-18',
+        'duties': [
+          {
+            'role': '招待',
+            'people': ['陳志豪', '王牧師'],
+          },
+        ],
+        'events': [
+          {'name': '聖餐', 'color': 5},
+        ],
+      },
+    ];
+    await pumpApp(tester, b);
+    await go(tester, '/rosters/import/sunday');
+    await tapText(tester, '選照片');
+    expect(find.text('請修正資料後再匯入'), findsNothing);
+    await tapText(tester, '套用到服事表');
+    expect(peopleOn(b, 18, '司琴'), ['李美玉']);
+    expect(peopleOn(b, 18, '招待'), ['陳志豪', '林同工', '王牧師']);
+    expect(savedDay(b, 18).events, [const EventTag(name: '聖餐', color: 5)]);
+  });
+
   testWidgets('pasted JSON needs candidate confirmation or explicit guest before applying', (tester) async {
     final b = agreedChurch();
     final telemetry = RecordingTelemetry();

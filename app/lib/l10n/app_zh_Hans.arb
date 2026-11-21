@@ -760,7 +760,6 @@
   "importIssueEventObject": "第 {index} 个特别活动请填 {example}",
   "importIssueEventName": "第 {index} 个特别活动的 name 请填不重复的名称",
   "importIssueEventColor": "第 {index} 个特别活动的 color 请填 0 到 5 的整数",
-  "importIssueResolvedDuplicatePeople": "{role}：确认后人名重复，请移除重复的人名",
   "appRunningVersion": "当前版本",
   "appVersionWithFix": "{version} · 修正 {patch}",
   "appVersionDevelopment": "开发版本（还没有发布版本）",

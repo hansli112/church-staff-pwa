@@ -453,7 +453,7 @@ void main() {
     expect(p.report.errors[3]!.single.code, ImportIssueCode.rowObject);
   });
 
-  test('two sheet labels resolving to one name block import rather than collapsing an assignment', () {
+  test('two sheet labels confirmed as one person put them on the duty once', () {
     final p = planImport(
       rows: [
         {
@@ -473,9 +473,11 @@ void main() {
       order: StaffOrder(),
       people: const {'小明': ImportPersonChoice.member('u1')},
     );
-    expect(p.canApply, isFalse);
-    expect(p.report.errors[1]!.single.code, ImportIssueCode.resolvedDuplicatePeople);
-    expect(p.report.errors[1]!.single.args, {'role': '招待'});
+    expect(p.canApply, isTrue);
+    expect(p.report.badRows, isEmpty);
+    final duty = p.rosters.single.duties.firstWhere((d) => d.role == '招待');
+    expect(duty.people, ['陳小明']);
+    expect(duty.uids, {'陳小明': 'u1'});
   });
 
   test('a guest sharing a member name cannot alter that member staff ranking', () {

@@ -890,7 +890,6 @@ String importIssueText(L10n l10n, ImportIssue issue) {
     ),
     ImportIssueCode.eventName => l10n.importIssueEventName(index()),
     ImportIssueCode.eventColor => l10n.importIssueEventColor(index()),
-    ImportIssueCode.resolvedDuplicatePeople => l10n.importIssueResolvedDuplicatePeople(issue.args['role'] as String),
   };
 }
 

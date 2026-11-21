@@ -2554,11 +2554,6 @@ class L10nJa extends L10n {
   }
 
   @override
-  String importIssueResolvedDuplicatePeople(String role) {
-    return '$role：確認後に名前が重複しています。重複した名前を削除してください。';
-  }
-
-  @override
   String get appRunningVersion => '現在のバージョン';
 
   @override

@@ -2552,11 +2552,6 @@ class L10nKo extends L10n {
   }
 
   @override
-  String importIssueResolvedDuplicatePeople(String role) {
-    return '$role: 확인 후 이름이 중복돼요. 중복된 이름을 삭제해 주세요.';
-  }
-
-  @override
   String get appRunningVersion => '현재 버전';
 
   @override

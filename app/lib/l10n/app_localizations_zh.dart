@@ -2549,11 +2549,6 @@ class L10nZh extends L10n {
   }
 
   @override
-  String importIssueResolvedDuplicatePeople(String role) {
-    return '$role：確認後人名重複，請移除重複的人名';
-  }
-
-  @override
   String get appRunningVersion => '目前版本';
 
   @override
@@ -6193,11 +6188,6 @@ class L10nZhHans extends L10nZh {
   @override
   String importIssueEventColor(int index) {
     return '第 $index 个特别活动的 color 请填 0 到 5 的整数';
-  }
-
-  @override
-  String importIssueResolvedDuplicatePeople(String role) {
-    return '$role：确认后人名重复，请移除重复的人名';
   }
 
   @override

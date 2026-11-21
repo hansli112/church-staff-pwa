@@ -760,7 +760,6 @@
   "importIssueEventObject": "Occasion {index} must be {example}",
   "importIssueEventName": "Occasion {index}: name must be unique",
   "importIssueEventColor": "Occasion {index}: color must be a whole number from 0 to 5",
-  "importIssueResolvedDuplicatePeople": "{role}: names are duplicated after confirming. Remove the duplicates.",
   "appRunningVersion": "Current version",
   "appVersionWithFix": "{version} · fix {patch}",
   "appVersionDevelopment": "Development build (no release yet)",

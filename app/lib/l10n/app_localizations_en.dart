@@ -2691,11 +2691,6 @@ class L10nEn extends L10n {
   }
 
   @override
-  String importIssueResolvedDuplicatePeople(String role) {
-    return '$role: names are duplicated after confirming. Remove the duplicates.';
-  }
-
-  @override
   String get appRunningVersion => 'Current version';
 
   @override
