@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 
 import 'package:flutter/foundation.dart';
@@ -212,9 +213,20 @@ class ImportSession extends Notifier<ImportDraft> {
   ]);
 
   /// Makes [name] one of the service's 同工 without an account (新增同工),
-  /// as picking someone for a duty does; the rows' [name] is theirs once
-  /// the church's list has them.
-  Future<void> addStaff(String name) => _repair(() => ref.churchData.addByName(name, serviceType));
+  /// as picking someone for a duty does. Done once the church's list has
+  /// them, the rows' [name] theirs: until then, busy, so nobody adds them
+  /// twice.
+  Future<void> addStaff(String name) => _repair(() async {
+    final id = await ref.churchData.addByName(name, serviceType);
+    bool listed(AsyncValue<List<Member>> staff) => staff.value?.any((m) => m.uid == id) ?? false;
+    if (listed(ref.read(staffProvider))) return;
+    final shown = Completer<void>();
+    final sub = ref.listen(staffProvider, (_, staff) {
+      if (listed(staff) && !shown.isCompleted) shown.complete();
+    });
+    // Not for ever: one who cannot read the list still has them added.
+    await shown.future.timeout(const Duration(seconds: 10), onTimeout: () {}).whenComplete(sub.close);
+  });
 
   /// The members [name] could be: same name, or what it may shorten.
   List<Member> candidates(String name) {

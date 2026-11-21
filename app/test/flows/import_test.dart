@@ -394,6 +394,10 @@ void main() {
     ]);
     await tester.tap(find.widgetWithText(ListRow, '建議：李美玉'));
     await settle(tester);
+    await tester.enterText(find.byType(TextField).last, '陳志豪');
+    await settle(tester);
+    expect(findShown('新增同工「陳志豪」'), findsNothing, reason: 'someone has the name: them, listed');
+    expect(findShown('臨時排「陳志豪」'), findsNothing);
     await tester.enterText(find.byType(TextField).last, '李美鈺');
     await settle(tester);
     expect(findShown('新增同工「李美鈺」'), findsOneWidget);

@@ -535,6 +535,14 @@ class _ImportScreenState extends ConsumerState<ImportScreen> {
     );
   }
 
+  /// What is wrong with a day as a whole ([text]): fixed in its JSON.
+  Widget _jsonFixRow(String text, L10n l10n) => ListRow(
+    title: l10n.importJsonEdit,
+    subtitle: text,
+    subtitleAlert: true,
+    onTap: _ready && !_busy ? _editJson : null,
+  );
+
   /// One imported day, what is wrong with it ([issues]) said where it is:
   /// tapped, it is fixed there.
   Widget _inputRow(int index, Map<dynamic, dynamic> row, List<ImportIssue> issues, L10n l10n) {
@@ -555,8 +563,7 @@ class _ImportScreenState extends ConsumerState<ImportScreen> {
     return ListSection(
       header: day == null ? l10n.importNoDay : dayLabel(l10n, day, ref.read(todayProvider)),
       children: [
-        if (wrong('row') case final text?)
-          ListRow(title: l10n.importJsonEdit, subtitle: text, subtitleAlert: true, onTap: enabled ? _editJson : null),
+        if (wrong('row') case final text?) _jsonFixRow(text, l10n),
         ListRow(
           title: l10n.importDateLabel,
           subtitle: switch (dateIssue?.code) {
@@ -590,6 +597,7 @@ class _ImportScreenState extends ConsumerState<ImportScreen> {
           for (final (i, event) in events.indexed)
             ListRow(
               title: event is Map && event['name'] is String ? event['name'] as String : l10n.importFixEvent,
+              // Only ever what is wrong with it.
               subtitle: wrong('event/${i + 1}'),
               subtitleAlert: true,
               leading:
@@ -744,14 +752,12 @@ class _ImportScreenState extends ConsumerState<ImportScreen> {
                   ListSection(
                     header: l10n.importRow(i + 1),
                     children: [
-                      ListRow(
-                        title: l10n.importJsonEdit,
-                        subtitle: [
+                      _jsonFixRow(
+                        [
                           for (final issue in report.errors[i + 1] ?? const <ImportIssue>[])
                             importIssueText(l10n, issue),
                         ].join('\n'),
-                        subtitleAlert: true,
-                        onTap: _ready && !_busy ? _editJson : null,
+                        l10n,
                       ),
                     ],
                   ),
@@ -1059,12 +1065,15 @@ class _WhoSheetState extends State<_WhoSheet> {
                   chevron: false,
                   onTap: () => Navigator.pop(context, _Staff(name)),
                 ),
-              ListRow(
-                title: l10n.pickerOnce(name),
-                leading: const Icon(Symbols.add_rounded),
-                chevron: false,
-                onTap: () => Navigator.pop(context, _Once(name)),
-              ),
+              // A typed name someone has is them, listed above: not for
+              // the whole sheet's 「X」 to lose its link to them.
+              if (typed.isEmpty || nameIsFree)
+                ListRow(
+                  title: l10n.pickerOnce(name),
+                  leading: const Icon(Symbols.add_rounded),
+                  chevron: false,
+                  onTap: () => Navigator.pop(context, _Once(name)),
+                ),
             ],
           ),
         ),
