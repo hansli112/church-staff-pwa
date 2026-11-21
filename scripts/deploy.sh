@@ -38,6 +38,7 @@ if [[ ",$only," == *",hosting,"* ]]; then
   # the web app reports say wasm-function[4284], which
   # `node scripts/wasm-names.mjs name .firebase/wasm-names/<project>` names.
   node "$root/scripts/wasm-names.mjs" strip "$root/app/build/web" "$root/.firebase/wasm-names/$project"
+  "$root/scripts/storage-cors.sh" "$env_name"
 fi
 
 firebase() { "$root/scripts/firebase.sh" "$project" "$@"; }
