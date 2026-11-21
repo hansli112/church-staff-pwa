@@ -2485,8 +2485,32 @@ abstract class L10n {
   /// The import button while names are still to be confirmed
   ///
   /// In zh, this message translates to:
-  /// **'先確認 {count} 個人名'**
+  /// **'還有 {count} 個人名要確認'**
   String importConfirmNamesFirst(int count);
+
+  /// The import button while something on the days is still to fix
+  ///
+  /// In zh, this message translates to:
+  /// **'還有 {count} 處要修'**
+  String importFixFirst(int count);
+
+  /// Heads an imported day whose date could not be read
+  ///
+  /// In zh, this message translates to:
+  /// **'看不出是哪一天'**
+  String get importNoDay;
+
+  /// Heads the sheet that says who an imported name is
+  ///
+  /// In zh, this message translates to:
+  /// **'「{name}」是誰'**
+  String importWhoIs(String name);
+
+  /// Adds every imported name nobody in the church has as a team member without an account
+  ///
+  /// In zh, this message translates to:
+  /// **'全部新增成同工'**
+  String get importAddAllStaff;
 
   /// No description provided for @importApplied.
   ///
@@ -4174,24 +4198,6 @@ abstract class L10n {
   /// **'請填 JSON 陣列'**
   String get importJsonArrayRequired;
 
-  /// Import identity confirmation sheet title
-  ///
-  /// In zh, this message translates to:
-  /// **'確認「{name}」'**
-  String importConfirmName(String name);
-
-  /// Explains that a confirmed raw-name mapping covers this import only
-  ///
-  /// In zh, this message translates to:
-  /// **'這次匯入的同名人名都用這個對應'**
-  String get importSameNameScope;
-
-  /// Explicitly preserve an imported name without linking any member UID
-  ///
-  /// In zh, this message translates to:
-  /// **'保留「{name}」為無帳號'**
-  String importGuestChoice(String name);
-
   /// Import row date editor sheet title
   ///
   /// In zh, this message translates to:
@@ -4255,7 +4261,7 @@ abstract class L10n {
   /// Import row has no string date
   ///
   /// In zh, this message translates to:
-  /// **'請填日期'**
+  /// **'點這裡選'**
   String get importDateMissing;
 
   /// Malformed import duty edit action
@@ -4339,74 +4345,14 @@ abstract class L10n {
   /// Imported name has no member candidate and requires an explicit decision
   ///
   /// In zh, this message translates to:
-  /// **'請保留為無帳號或修正人名'**
+  /// **'找不到這個人'**
   String get importNoCandidate;
 
   /// Unconfirmed import name member candidates
   ///
   /// In zh, this message translates to:
-  /// **'候選：{names}'**
+  /// **'建議：{names}'**
   String importCandidates(String names);
-
-  /// Imported name explicitly remains an unlinked guest
-  ///
-  /// In zh, this message translates to:
-  /// **'無帳號'**
-  String get importGuestUnlinked;
-
-  /// Import name identity still needs confirmation
-  ///
-  /// In zh, this message translates to:
-  /// **'請確認人名'**
-  String get importNameNeedsConfirm;
-
-  /// Imported raw name is linked to this member
-  ///
-  /// In zh, this message translates to:
-  /// **'同工：{name}'**
-  String importLinkedMember(String name);
-
-  /// Import merge or replacement mode section heading
-  ///
-  /// In zh, this message translates to:
-  /// **'匯入方式'**
-  String get importMode;
-
-  /// Default import mode keeps unmentioned arrangements
-  ///
-  /// In zh, this message translates to:
-  /// **'合併（保留未提到的安排）'**
-  String get importMerge;
-
-  /// Explicit import replacement mode
-  ///
-  /// In zh, this message translates to:
-  /// **'取代當天全部安排'**
-  String get importReplace;
-
-  /// Import replacement affects only the previewed dates
-  ///
-  /// In zh, this message translates to:
-  /// **'移除沒提到的服事項目與特別活動；不影響其他日期'**
-  String get importReplaceHelp;
-
-  /// Invalid canonical import data blocks all writes
-  ///
-  /// In zh, this message translates to:
-  /// **'請修正資料後再匯入'**
-  String get importFixData;
-
-  /// Import row correction action hint
-  ///
-  /// In zh, this message translates to:
-  /// **'請修正這一列資料'**
-  String get importFixRow;
-
-  /// Imported name identity mapping section heading
-  ///
-  /// In zh, this message translates to:
-  /// **'人名對應'**
-  String get importNameLinks;
 
   /// Unconfirmed import names block all writes
   ///

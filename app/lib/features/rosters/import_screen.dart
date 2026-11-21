@@ -13,6 +13,7 @@ import '../../data/backend.dart';
 import '../../domain/day.dart';
 import '../../domain/models.dart';
 import '../../domain/roster_import.dart';
+import '../../domain/text.dart' show nameKey;
 import '../../l10n/app_localizations.dart';
 import '../../state/app_update.dart';
 import '../../state/import_session.dart';
@@ -125,39 +126,59 @@ class _ImportScreenState extends ConsumerState<ImportScreen> {
     _session.paste(_json.text);
   }
 
-  Future<void> _resolveName(String raw, List<Member> candidates) => _during(() => _confirmName(raw, candidates));
+  /// Whether [me] may add a 同工 to the service, as 新增同工 does.
+  bool _addsStaff(Member? me) => me?.addsStaffTo(ServiceGroup(widget.serviceType)) ?? false;
 
-  Future<void> _confirmName(String raw, List<Member> candidates) async {
+  Future<void> _resolveName(String raw) => _during(() => _confirmName(raw));
+
+  /// Asks who [raw] is, as picking someone for a duty does: someone in the
+  /// church, a 同工 to add by that name or one typed, or arranged this once.
+  Future<void> _confirmName(String raw) async {
     final key = _session.draftKey;
-    final choice = await showAppSheet<ImportPersonChoice>(
+    final who = await showAppSheet<_Who>(
       context,
-      builder: (sheetContext) => ListView(
-        shrinkWrap: true,
-        children: [
-          // The name heads the choices; as a row it read as one of them.
-          ListSection(
-            header: L10n.of(context).importConfirmName(raw),
-            footer: L10n.of(context).importSameNameScope,
-            children: [
-              for (final member in candidates)
-                ListRow(
-                  title: member.name,
-                  subtitle: member.email.isEmpty ? member.uid : member.email,
-                  onTap: () => Navigator.pop(sheetContext, ImportPersonChoice.member(member.uid)),
-                ),
-              ListRow(
-                title: L10n.of(context).importGuestChoice(raw),
-                onTap: () => Navigator.pop(sheetContext, const ImportPersonChoice.guest()),
-              ),
-              ListRow(title: L10n.of(context).cancel, onTap: () => Navigator.pop(sheetContext)),
-            ],
-          ),
-        ],
+      expand: true,
+      builder: (_) => _WhoSheet(
+        name: raw,
+        suggested: _session.candidates(raw),
+        everyone: ref.read(staffProvider).value ?? const [],
+        addsStaff: _addsStaff(ref.read(meProvider).value),
       ),
     );
-    if (choice == null || !_ready || !(mounted && _sameDraft(key))) return;
-    _session.choose(raw, choice);
+    if (who == null || !_ready || _busy || !(mounted && _sameDraft(key))) return;
+    switch (who) {
+      case _Member(:final uid):
+        _session.choose(raw, ImportPersonChoice.member(uid));
+      case _Once(:final name):
+        if (name != raw) _session.rename(raw, name);
+        _session.choose(name, const ImportPersonChoice.guest());
+      case _Staff(:final name):
+        if (!await _addStaff([name], key)) return;
+        if (name != raw && mounted && _sameDraft(key)) _session.rename(raw, name);
+    }
   }
+
+  /// Adds [names] as 同工 without an account, in turn; one refused says
+  /// so, and stops there. Whether all were added.
+  Future<bool> _addStaff(List<String> names, Object key) async {
+    final l10n = L10n.of(context);
+    for (final name in names) {
+      try {
+        await _session.addStaff(name);
+      } catch (e) {
+        if (mounted && _sameDraft(key)) showToast(context, nameErrorText(l10n, e, name));
+        return false;
+      }
+      if (!(mounted && _sameDraft(key))) return false;
+    }
+    return true;
+  }
+
+  Future<void> _addAllStaff(List<String> names) => _during(() async {
+    if (!_ready || _busy) return;
+    final key = _session.draftKey;
+    if (await _addStaff(names, key) && mounted && _sameDraft(key)) Haptics.success();
+  });
 
   Future<_ImportEdit?> _edit({
     required String title,
@@ -514,29 +535,50 @@ class _ImportScreenState extends ConsumerState<ImportScreen> {
     );
   }
 
-  Widget _inputRow(int index, Map<dynamic, dynamic> row, L10n l10n) {
+  /// One imported day, what is wrong with it ([issues]) said where it is:
+  /// tapped, it is fixed there.
+  Widget _inputRow(int index, Map<dynamic, dynamic> row, List<ImportIssue> issues, L10n l10n) {
     final rawDate = row['date'];
     final day = rawDate is String ? Day.tryParse(rawDate) : null;
     final duties = row['duties'];
     final events = row['events'];
     final enabled = _ready && !_busy;
+    String? wrong(String place) {
+      final texts = [
+        for (final issue in issues)
+          if (_placeOf(issue) == place) importIssueText(l10n, issue),
+      ];
+      return texts.isEmpty ? null : texts.join('\n');
+    }
+
+    final dateIssue = issues.where((i) => _placeOf(i) == 'date').firstOrNull;
     return ListSection(
-      header: day == null ? l10n.importRow(index + 1) : dayLabel(l10n, day, ref.read(todayProvider)),
+      header: day == null ? l10n.importNoDay : dayLabel(l10n, day, ref.read(todayProvider)),
       children: [
+        if (wrong('row') case final text?)
+          ListRow(title: l10n.importJsonEdit, subtitle: text, subtitleAlert: true, onTap: enabled ? _editJson : null),
         ListRow(
           title: l10n.importDateLabel,
-          subtitle: rawDate is String ? rawDate : l10n.importDateMissing,
+          subtitle: switch (dateIssue?.code) {
+            ImportIssueCode.date => l10n.importDateMissing,
+            ImportIssueCode.duplicateDate => l10n.importIssueDuplicateDate,
+            _ => rawDate is String ? rawDate : l10n.importDateMissing,
+          },
+          subtitleAlert: dateIssue != null,
           onTap: enabled ? () => _editDate(index, row) : null,
         ),
         if (duties is List)
           for (final (i, duty) in duties.indexed)
             ListRow(
               title: duty is Map && duty['role'] is String ? duty['role'] as String : l10n.importFixDuty,
-              subtitle: duty is Map && duty['people'] is List
-                  ? (duty['people'] as List<dynamic>).isEmpty
-                        ? l10n.nobodyYet
-                        : (duty['people'] as List<dynamic>).join(l10n.listSeparator)
-                  : l10n.importPeopleArrayHint,
+              subtitle:
+                  wrong('duty/${i + 1}') ??
+                  (duty is Map && duty['people'] is List
+                      ? (duty['people'] as List<dynamic>).isEmpty
+                            ? l10n.nobodyYet
+                            : (duty['people'] as List<dynamic>).join(l10n.listSeparator)
+                      : l10n.importPeopleArrayHint),
+              subtitleAlert: wrong('duty/${i + 1}') != null,
               onTap: enabled ? () => _editDuty(index, row, i) : null,
             ),
         ListRow(
@@ -548,6 +590,8 @@ class _ImportScreenState extends ConsumerState<ImportScreen> {
           for (final (i, event) in events.indexed)
             ListRow(
               title: event is Map && event['name'] is String ? event['name'] as String : l10n.importFixEvent,
+              subtitle: wrong('event/${i + 1}'),
+              subtitleAlert: true,
               leading:
                   event is Map &&
                       event['color'] is int &&
@@ -620,26 +664,23 @@ class _ImportScreenState extends ConsumerState<ImportScreen> {
     return rows.isEmpty ? [ListRow(title: l10n.importNoChange)] : rows;
   }
 
-  String _nameStatus(String raw, ImportDraft draft, ImportReport report, L10n l10n) {
-    if (report.unresolved.containsKey(raw)) {
-      final candidates = report.unresolved[raw]!;
-      return candidates.isEmpty
-          ? l10n.importNoCandidate
-          : l10n.importCandidates(candidates.map((m) => m.name).join(l10n.listSeparator));
-    }
-    final choice = draft.people[raw];
-    if (choice != null && choice.uid == null) return l10n.importGuestUnlinked;
-    final member = _session
-        .candidates(raw)
-        .where((m) => choice == null ? m.name.trim() == raw : m.uid == choice.uid)
-        .firstOrNull;
-    return member == null ? l10n.importNameNeedsConfirm : l10n.importLinkedMember(member.name);
-  }
-
   Widget _preview(ImportPlan plan, ImportDraft draft, L10n l10n) {
     final report = plan.report;
     final editsSettings = ref.watch(meProvider).value?.editsServiceSettings ?? false;
     final repairable = _ready && !_busy && editsSettings;
+    // Names on the sheet nobody in the church has, nor could be: added at
+    // once, the first time a church's rosters come in.
+    final staffKeys = {for (final m in ref.watch(staffProvider).value ?? const <Member>[]) nameKey(m.name)};
+    final newStaff = _addsStaff(ref.watch(meProvider).value)
+        ? [
+            for (final MapEntry(key: name, value: candidates) in report.unresolved.entries)
+              if (candidates.isEmpty && !staffKeys.contains(nameKey(name))) name,
+          ]
+        : const <String>[];
+    final toFix = {
+      for (final MapEntry(key: row, value: issues) in report.errors.entries)
+        for (final issue in issues) (row, _placeOf(issue)),
+    }.length;
     return Column(
       children: [
         Expanded(
@@ -647,47 +688,27 @@ class _ImportScreenState extends ConsumerState<ImportScreen> {
             padding: const EdgeInsets.only(bottom: Space.xl),
             children: [
               if (draft.rows.isEmpty) EmptyState(message: l10n.importNothing),
-              ListSection(
-                header: l10n.importMode,
-                children: [
-                  ListRow(
-                    title: l10n.importMerge,
-                    selected: draft.mode == ImportMode.merge,
-                    onTap: _ready && !_busy ? () => _session.setMode(ImportMode.merge) : null,
-                  ),
-                  // Not for a 事工's 負責人: the rest of the day is not theirs.
-                  if (_session.arranges.all)
-                    ListRow(
-                      title: l10n.importReplace,
-                      selected: draft.mode == ImportMode.replace,
-                      subtitle: l10n.importReplaceHelp,
-                      onTap: _ready && !_busy ? () => _session.setMode(ImportMode.replace) : null,
-                    ),
-                ],
-              ),
-              if (report.badRows.isNotEmpty)
+              // Only those still to confirm: a name confirmed, or matched
+              // by itself, leaves the list.
+              if (report.unresolved.isNotEmpty)
                 ListSection(
-                  header: l10n.importFixData,
+                  header: l10n.importNamesNeedConfirm,
                   children: [
-                    for (final row in report.badRows)
+                    if (newStaff.length > 1)
                       ListRow(
-                        title: l10n.importRow(row),
-                        subtitle:
-                            report.errors[row]?.map((issue) => importIssueText(l10n, issue)).join('\n') ??
-                            l10n.importFixRow,
-                        onTap: _ready && !_busy ? _editJson : null,
+                        title: l10n.importAddAllStaff,
+                        subtitle: newStaff.join(l10n.listSeparator),
+                        leading: const Icon(Symbols.group_add_rounded),
+                        tinted: true,
+                        onTap: _ready && !_busy ? () => _addAllStaff(newStaff) : null,
                       ),
-                  ],
-                ),
-              if (draft.names.isNotEmpty)
-                ListSection(
-                  header: report.unresolved.isEmpty ? l10n.importNameLinks : l10n.importNamesNeedConfirm,
-                  children: [
-                    for (final name in {...report.unresolved.keys, ...draft.names})
+                    for (final MapEntry(key: name, value: candidates) in report.unresolved.entries)
                       ListRow(
                         title: name,
-                        subtitle: _nameStatus(name, draft, report, l10n),
-                        onTap: _ready && !_busy ? () => _resolveName(name, _session.candidates(name)) : null,
+                        subtitle: candidates.isEmpty
+                            ? l10n.importNoCandidate
+                            : l10n.importCandidates(candidates.map((m) => m.name).join(l10n.listSeparator)),
+                        onTap: _ready && !_busy ? () => _resolveName(name) : null,
                       ),
                   ],
                 ),
@@ -717,7 +738,23 @@ class _ImportScreenState extends ConsumerState<ImportScreen> {
                   children: [for (final day in report.pastDays) ListRow(title: day)],
                 ),
               for (final (i, row) in draft.rows.indexed)
-                if (row is Map) _inputRow(i, row, l10n),
+                if (row is Map)
+                  _inputRow(i, row, report.errors[i + 1] ?? const [], l10n)
+                else
+                  ListSection(
+                    header: l10n.importRow(i + 1),
+                    children: [
+                      ListRow(
+                        title: l10n.importJsonEdit,
+                        subtitle: [
+                          for (final issue in report.errors[i + 1] ?? const <ImportIssue>[])
+                            importIssueText(l10n, issue),
+                        ].join('\n'),
+                        subtitleAlert: true,
+                        onTap: _ready && !_busy ? _editJson : null,
+                      ),
+                    ],
+                  ),
               for (final change in plan.changes.values)
                 ListSection(
                   header: l10n.importDiff(dayLabel(l10n, change.after.day, ref.read(todayProvider))),
@@ -731,10 +768,12 @@ class _ImportScreenState extends ConsumerState<ImportScreen> {
           child: Padding(
             padding: const EdgeInsets.all(Space.m),
             child: PrimaryButton(
-              // Waiting on names: says so, not only greyed out.
-              label: report.unresolved.isEmpty
-                  ? l10n.importApply
-                  : l10n.importConfirmNamesFirst(report.unresolved.length),
+              // Waiting on something: says so, not only greyed out.
+              label: toFix > 0
+                  ? l10n.importFixFirst(toFix)
+                  : report.unresolved.isNotEmpty
+                  ? l10n.importConfirmNamesFirst(report.unresolved.length)
+                  : l10n.importApply,
               busy: _busy,
               onPressed: _ready && plan.canApply ? () => _apply(plan) : null,
             ),
@@ -901,3 +940,135 @@ String _colorName(L10n l10n, int i) => switch (i) {
   4 => l10n.colorName4,
   _ => l10n.colorName5,
 };
+
+/// Where on its day [issue] is said: its date, its n-th duty or event
+/// (one-based, as the issue counts them), or the day as a whole.
+String _placeOf(ImportIssue issue) => switch (issue.code) {
+  ImportIssueCode.date || ImportIssueCode.duplicateDate => 'date',
+  ImportIssueCode.dutyFields ||
+  ImportIssueCode.role ||
+  ImportIssueCode.peopleArray ||
+  ImportIssueCode.duplicatePeople => 'duty/${issue.args['index']}',
+  ImportIssueCode.eventObject ||
+  ImportIssueCode.eventName ||
+  ImportIssueCode.eventColor => 'event/${issue.args['index']}',
+  ImportIssueCode.rowObject ||
+  ImportIssueCode.rowFields ||
+  ImportIssueCode.dutiesArray ||
+  ImportIssueCode.eventsArray => 'row',
+};
+
+/// Who an imported name is, as [_WhoSheet] closes.
+sealed class _Who {
+  const _Who();
+}
+
+/// Someone in the church.
+class _Member extends _Who {
+  const _Member(this.uid);
+  final String uid;
+}
+
+/// [name] arranged this once (臨時排), without an account.
+class _Once extends _Who {
+  const _Once(this.name);
+  final String name;
+}
+
+/// [name] made one of the service's 同工 without an account (新增同工).
+class _Staff extends _Who {
+  const _Staff(this.name);
+  final String name;
+}
+
+/// Who an imported [name] is, picked as someone is for a duty: those it
+/// may be first, then everyone; a search over the church; a name nobody
+/// has added as a 同工, or arranged this once, as on the sheet or typed.
+class _WhoSheet extends StatefulWidget {
+  const _WhoSheet({required this.name, required this.suggested, required this.everyone, required this.addsStaff});
+  final String name;
+  final List<Member> suggested;
+  final List<Member> everyone;
+
+  /// May add a 同工 to the service (Member.addsStaffTo).
+  final bool addsStaff;
+
+  @override
+  State<_WhoSheet> createState() => _WhoSheetState();
+}
+
+class _WhoSheetState extends State<_WhoSheet> {
+  String _query = '';
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = L10n.of(context);
+    final q = nameKey(_query);
+    final typed = _query.trim();
+    final name = typed.isEmpty ? widget.name : typed;
+    final suggested = {for (final m in widget.suggested) m.uid};
+    final everyone = [...widget.everyone]..sort((a, b) => a.name.compareTo(b.name));
+    final others = [
+      for (final m in everyone)
+        if (!suggested.contains(m.uid)) m,
+    ];
+    final found = [
+      for (final m in everyone)
+        if (nameKey(m.name).contains(q)) m,
+    ];
+    // Nobody in the church by that name, however written: addByName
+    // would refuse it.
+    final nameIsFree = !widget.everyone.any((m) => nameKey(m.name) == nameKey(name));
+    Widget member(Member m, {bool email = false}) => ListRow(
+      title: m.name,
+      subtitle: email && m.email.isNotEmpty ? m.email : null,
+      chevron: false,
+      onTap: () => Navigator.pop(context, _Member(m.uid)),
+    );
+    return Column(
+      children: [
+        SheetBar(title: l10n.importWhoIs(widget.name), actions: const []),
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: Space.m),
+          child: SearchField(hint: l10n.pickerSearchHint, onChanged: (v) => setState(() => _query = v)),
+        ),
+        Expanded(
+          child: ListView(
+            keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
+            padding: EdgeInsets.only(bottom: Space.xl + MediaQuery.viewInsetsOf(context).bottom),
+            children: [
+              if (q.isNotEmpty)
+                for (final m in found) member(m)
+              else ...[
+                if (widget.suggested.isNotEmpty) ...[
+                  SectionHeader(l10n.pickerServes),
+                  for (final m in widget.suggested) member(m, email: true),
+                ],
+                if (others.isNotEmpty) ...[
+                  SectionHeader(widget.suggested.isEmpty ? l10n.pickerEveryone : l10n.pickerOthers),
+                  for (final m in others) member(m),
+                ],
+              ],
+              const SizedBox(height: Space.l),
+              if (widget.addsStaff && nameIsFree)
+                ListRow(
+                  title: l10n.pickerAddStaff(name),
+                  subtitle: l10n.pickerAddStaffDetail,
+                  leading: const Icon(Symbols.person_add_rounded),
+                  // Done at once: nothing further to open.
+                  chevron: false,
+                  onTap: () => Navigator.pop(context, _Staff(name)),
+                ),
+              ListRow(
+                title: l10n.pickerOnce(name),
+                leading: const Icon(Symbols.add_rounded),
+                chevron: false,
+                onTap: () => Navigator.pop(context, _Once(name)),
+              ),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+}

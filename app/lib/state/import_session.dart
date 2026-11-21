@@ -12,15 +12,14 @@ import 'roster_actions.dart';
 import 'session.dart';
 
 /// What is being imported into one service before it is applied: the rows,
-/// from photos or pasted JSON, as edited; who each name is; merge or
-/// replace. It belongs to the church and account that opened it.
+/// from photos or pasted JSON, as edited, merged into the days; who each
+/// name is. It belongs to the church and account that opened it.
 @immutable
 class ImportDraft {
   const ImportDraft({
     this.rows = const [],
     this.loaded = false,
     this.people = const {},
-    this.mode = ImportMode.merge,
     this.busy = false,
     this.error,
     this.scopeChanged = false,
@@ -33,10 +32,8 @@ class ImportDraft {
   /// Whether rows were loaded: an empty list from a photo still previews.
   final bool loaded;
 
-  /// Names the person said who they are: a member, or 無帳號 (no account).
+  /// Names the person said who they are: a member, or arranged this once.
   final Map<String, ImportPersonChoice> people;
-
-  final ImportMode mode;
 
   /// Recognizing photos or changing the service's settings.
   final bool busy;
@@ -66,7 +63,6 @@ class ImportDraft {
     List<dynamic>? rows,
     bool? loaded,
     Map<String, ImportPersonChoice>? people,
-    ImportMode? mode,
     bool? busy,
     Object? error,
     bool clearError = false,
@@ -75,7 +71,6 @@ class ImportDraft {
     rows: rows ?? this.rows,
     loaded: loaded ?? this.loaded,
     people: people ?? this.people,
-    mode: mode ?? this.mode,
     busy: busy ?? this.busy,
     error: clearError ? null : error ?? this.error,
     scopeChanged: scopeChanged && !clearError && error == null,
@@ -164,7 +159,6 @@ class ImportSession extends Notifier<ImportDraft> {
     loaded: true,
     people: const {},
     clearError: true,
-    mode: arranges.all ? null : ImportMode.merge,
     fromPhotos: fromPhotos,
   );
 
@@ -191,10 +185,36 @@ class ImportSession extends Notifier<ImportDraft> {
   void choose(String name, ImportPersonChoice choice) =>
       state = state.copyWith(people: {...state.people, name: choice});
 
-  /// Replacing a whole day is not a 事工's 負責人's to do.
-  void setMode(ImportMode mode) {
-    if (arranges.all) state = state.copyWith(mode: mode);
-  }
+  /// [from] written as [to] wherever the rows have it: a name the person
+  /// typed for one on the sheet. Who [to] is is asked as for any name.
+  void rename(String from, String to) => edit([
+    for (final row in state.rows)
+      if (row case {'duties': final List<dynamic> duties})
+        {
+          for (final e in row.entries) e.key: e.value,
+          'duties': [
+            for (final duty in duties)
+              if (duty case {
+                'people': final List<dynamic> people,
+              } when people.any((n) => n is String && n.trim() == from))
+                {
+                  for (final e in duty.entries) e.key: e.value,
+                  'people': {
+                    for (final name in people) name is String && name.trim() == from ? to : name,
+                  }.toList(),
+                }
+              else
+                duty,
+          ],
+        }
+      else
+        row,
+  ]);
+
+  /// Makes [name] one of the service's 同工 without an account (新增同工),
+  /// as picking someone for a duty does; the rows' [name] is theirs once
+  /// the church's list has them.
+  Future<void> addStaff(String name) => _repair(() => ref.churchData.addByName(name, serviceType));
 
   /// The members [name] could be: same name, or what it may shorten.
   List<Member> candidates(String name) {
@@ -265,7 +285,7 @@ class ImportSession extends Notifier<ImportDraft> {
   ChurchWrite apply(ImportPlan shown) {
     final write = ref
         .read(rosterActionsProvider)
-        .applyImport(serviceType, state.rows, people: state.people, mode: state.mode, preview: shown);
+        .applyImport(serviceType, state.rows, people: state.people, preview: shown);
     final telemetry = ref.read(telemetryProvider);
     final method = state.fromPhotos ? 'photo' : 'text';
     // Counted once written (GA4), by where the rows came from: photos go
@@ -296,5 +316,5 @@ final importPlanProvider = Provider.autoDispose.family<ImportPlan?, String>((ref
     ..watch(staffOrderProvider(serviceType))
     ..watch(todayProvider);
   if (!draft.loaded || !ready) return null;
-  return ref.read(rosterActionsProvider).previewImport(serviceType, draft.rows, people: draft.people, mode: draft.mode);
+  return ref.read(rosterActionsProvider).previewImport(serviceType, draft.rows, people: draft.people);
 });

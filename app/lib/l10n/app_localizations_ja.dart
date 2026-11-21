@@ -1356,8 +1356,24 @@ class L10nJa extends L10n {
 
   @override
   String importConfirmNamesFirst(int count) {
-    return '先に名前を$count件確認';
+    return 'あと$count人の名前を確認';
   }
+
+  @override
+  String importFixFirst(int count) {
+    return 'あと$countか所を修正';
+  }
+
+  @override
+  String get importNoDay => '日付が読み取れません';
+
+  @override
+  String importWhoIs(String name) {
+    return '「$name」は誰？';
+  }
+
+  @override
+  String get importAddAllStaff => '全員をメンバーに追加';
 
   @override
   String importApplied(int count) {
@@ -2314,19 +2330,6 @@ class L10nJa extends L10n {
   String get importJsonArrayRequired => 'JSON 配列を入力してください';
 
   @override
-  String importConfirmName(String name) {
-    return '「$name」を確認';
-  }
-
-  @override
-  String get importSameNameScope => 'この読み込みに含まれる同じ名前には、すべてこの対応を使います';
-
-  @override
-  String importGuestChoice(String name) {
-    return '「$name」をアカウントなしのままにする';
-  }
-
-  @override
   String get importEditDate => '日付を編集';
 
   @override
@@ -2359,7 +2362,7 @@ class L10nJa extends L10n {
   String get importDateLabel => '日付';
 
   @override
-  String get importDateMissing => '日付を入力してください';
+  String get importDateMissing => 'タップして選択';
 
   @override
   String get importFixDuty => '担当を修正';
@@ -2419,44 +2422,12 @@ class L10nJa extends L10n {
   String get importNoChange => '割り当ての変更はありません';
 
   @override
-  String get importNoCandidate => 'アカウントなしのままにするか、名前を修正してください';
+  String get importNoCandidate => 'この名前の人はいません';
 
   @override
   String importCandidates(String names) {
-    return '候補：$names';
+    return 'おすすめ：$names';
   }
-
-  @override
-  String get importGuestUnlinked => 'アカウントなし';
-
-  @override
-  String get importNameNeedsConfirm => '名前を確認してください';
-
-  @override
-  String importLinkedMember(String name) {
-    return 'メンバー：$name';
-  }
-
-  @override
-  String get importMode => '読み込み方法';
-
-  @override
-  String get importMerge => '統合（記載のない割り当ては残す）';
-
-  @override
-  String get importReplace => 'その日の割り当てをすべて置き換え';
-
-  @override
-  String get importReplaceHelp => '記載のない担当と特別行事を外します。ほかの日付には影響しません。';
-
-  @override
-  String get importFixData => 'データを修正してから読み込んでください';
-
-  @override
-  String get importFixRow => 'この行のデータを修正してください';
-
-  @override
-  String get importNameLinks => '名前の対応';
 
   @override
   String get importNamesNeedConfirm => '名前を確認すると読み込めます';

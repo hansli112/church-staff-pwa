@@ -1356,8 +1356,24 @@ class L10nZh extends L10n {
 
   @override
   String importConfirmNamesFirst(int count) {
-    return '先確認 $count 個人名';
+    return '還有 $count 個人名要確認';
   }
+
+  @override
+  String importFixFirst(int count) {
+    return '還有 $count 處要修';
+  }
+
+  @override
+  String get importNoDay => '看不出是哪一天';
+
+  @override
+  String importWhoIs(String name) {
+    return '「$name」是誰';
+  }
+
+  @override
+  String get importAddAllStaff => '全部新增成同工';
 
   @override
   String importApplied(int count) {
@@ -2309,19 +2325,6 @@ class L10nZh extends L10n {
   String get importJsonArrayRequired => '請填 JSON 陣列';
 
   @override
-  String importConfirmName(String name) {
-    return '確認「$name」';
-  }
-
-  @override
-  String get importSameNameScope => '這次匯入的同名人名都用這個對應';
-
-  @override
-  String importGuestChoice(String name) {
-    return '保留「$name」為無帳號';
-  }
-
-  @override
   String get importEditDate => '編輯日期';
 
   @override
@@ -2354,7 +2357,7 @@ class L10nZh extends L10n {
   String get importDateLabel => '日期';
 
   @override
-  String get importDateMissing => '請填日期';
+  String get importDateMissing => '點這裡選';
 
   @override
   String get importFixDuty => '修正服事項目';
@@ -2414,44 +2417,12 @@ class L10nZh extends L10n {
   String get importNoChange => '安排沒有變更';
 
   @override
-  String get importNoCandidate => '請保留為無帳號或修正人名';
+  String get importNoCandidate => '找不到這個人';
 
   @override
   String importCandidates(String names) {
-    return '候選：$names';
+    return '建議：$names';
   }
-
-  @override
-  String get importGuestUnlinked => '無帳號';
-
-  @override
-  String get importNameNeedsConfirm => '請確認人名';
-
-  @override
-  String importLinkedMember(String name) {
-    return '同工：$name';
-  }
-
-  @override
-  String get importMode => '匯入方式';
-
-  @override
-  String get importMerge => '合併（保留未提到的安排）';
-
-  @override
-  String get importReplace => '取代當天全部安排';
-
-  @override
-  String get importReplaceHelp => '移除沒提到的服事項目與特別活動；不影響其他日期';
-
-  @override
-  String get importFixData => '請修正資料後再匯入';
-
-  @override
-  String get importFixRow => '請修正這一列資料';
-
-  @override
-  String get importNameLinks => '人名對應';
 
   @override
   String get importNamesNeedConfirm => '確認人名後才能匯入';
@@ -4998,8 +4969,24 @@ class L10nZhHans extends L10nZh {
 
   @override
   String importConfirmNamesFirst(int count) {
-    return '先确认 $count 个人名';
+    return '还有 $count 个人名要确认';
   }
+
+  @override
+  String importFixFirst(int count) {
+    return '还有 $count 处要修';
+  }
+
+  @override
+  String get importNoDay => '看不出是哪一天';
+
+  @override
+  String importWhoIs(String name) {
+    return '“$name”是谁';
+  }
+
+  @override
+  String get importAddAllStaff => '全部新增成同工';
 
   @override
   String importApplied(int count) {
@@ -5951,19 +5938,6 @@ class L10nZhHans extends L10nZh {
   String get importJsonArrayRequired => '请填 JSON 数组';
 
   @override
-  String importConfirmName(String name) {
-    return '确认“$name”';
-  }
-
-  @override
-  String get importSameNameScope => '这次导入的同名人名都用这个对应';
-
-  @override
-  String importGuestChoice(String name) {
-    return '保留“$name”为无账号';
-  }
-
-  @override
   String get importEditDate => '编辑日期';
 
   @override
@@ -5996,7 +5970,7 @@ class L10nZhHans extends L10nZh {
   String get importDateLabel => '日期';
 
   @override
-  String get importDateMissing => '请填日期';
+  String get importDateMissing => '点这里选';
 
   @override
   String get importFixDuty => '修正事奉项目';
@@ -6056,44 +6030,12 @@ class L10nZhHans extends L10nZh {
   String get importNoChange => '安排没有更改';
 
   @override
-  String get importNoCandidate => '请保留为无账号或修正人名';
+  String get importNoCandidate => '找不到这个人';
 
   @override
   String importCandidates(String names) {
-    return '候选：$names';
+    return '建议：$names';
   }
-
-  @override
-  String get importGuestUnlinked => '无账号';
-
-  @override
-  String get importNameNeedsConfirm => '请确认人名';
-
-  @override
-  String importLinkedMember(String name) {
-    return '同工：$name';
-  }
-
-  @override
-  String get importMode => '导入方式';
-
-  @override
-  String get importMerge => '合并（保留没有提到的安排）';
-
-  @override
-  String get importReplace => '取代当天全部安排';
-
-  @override
-  String get importReplaceHelp => '移除没有提到的事奉项目与特别活动；不影响其他日期';
-
-  @override
-  String get importFixData => '请修正数据后再导入';
-
-  @override
-  String get importFixRow => '请修正这一行数据';
-
-  @override
-  String get importNameLinks => '人名对应';
 
   @override
   String get importNamesNeedConfirm => '确认人名后才能导入';

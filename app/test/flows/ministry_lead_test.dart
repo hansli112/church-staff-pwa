@@ -94,6 +94,37 @@ void main() {
     expect(find.text('你還沒加入任何聚會，請找管理員設定'), findsNothing);
   });
 
+  testWidgets('a name nobody has, importing, is arranged this once: adding 同工 is not its to do', (tester) async {
+    final b = withWorship();
+    b.users['mei'] = b.users['mei']!.copyWith(photoAiConsent: true);
+    await pumpApp(tester, b);
+    await go(tester, '/rosters/import/sunday');
+    await tapText(tester, '進階');
+    await tester.ensureVisible(find.byType(TextField).last);
+    await tester.pump();
+    await tester.enterText(
+      find.byType(TextField),
+      jsonEncode([
+        {
+          'date': '2026-10-18',
+          'duties': [
+            {
+              'role': '司琴',
+              'people': ['小芬'],
+            },
+          ],
+        },
+      ]),
+    );
+    await tester.scrollUntilVisible(find.text('預覽'), 200, scrollable: find.byType(Scrollable).first);
+    await tapText(tester, '預覽');
+    await tapText(tester, '找不到這個人');
+    expect(find.text('新增同工「小芬」'), findsNothing);
+    await tapText(tester, '臨時排「小芬」');
+    await tapText(tester, '套用到服事表');
+    expect(b.pendingMembers['grace'] ?? const {}, isEmpty);
+  });
+
   testWidgets('imports only the duties it leads, merged into the day', (tester) async {
     final b = withWorship();
     b.users['mei'] = b.users['mei']!.copyWith(photoAiConsent: true);

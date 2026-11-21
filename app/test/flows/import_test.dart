@@ -38,6 +38,16 @@ Future<void> openPasteJson(WidgetTester tester) async {
   await tester.pump();
 }
 
+/// Pastes [rows] under 進階 and opens their preview.
+Future<void> previewPasted(WidgetTester tester, List<Object> rows) async {
+  await go(tester, '/rosters/import/sunday');
+  await tapText(tester, '進階');
+  await openPasteJson(tester);
+  await tester.enterText(find.byType(TextField), jsonEncode(rows));
+  await tester.scrollUntilVisible(find.text('預覽'), 200, scrollable: find.byType(Scrollable).first);
+  await tapText(tester, '預覽');
+}
+
 /// The editor's church, the editor having agreed that photo recognition
 /// sends to Gemini.
 MemoryBackend agreedChurch() {
@@ -280,7 +290,7 @@ void main() {
     await pumpApp(tester, b);
     await go(tester, '/rosters/import/sunday');
     await tapText(tester, '選照片');
-    expect(find.text('請修正資料後再匯入'), findsNothing);
+    expect(findShownContaining('處要修'), findsNothing);
     await tapText(tester, '套用到服事表');
     expect(peopleOn(b, 18, '司琴'), ['李美玉']);
     expect(peopleOn(b, 18, '招待'), ['陳志豪', '林同工', '王牧師']);
@@ -291,51 +301,143 @@ void main() {
     final b = agreedChurch();
     final telemetry = RecordingTelemetry();
     await pumpApp(tester, b, overrides: [telemetryProvider.overrideWithValue(telemetry)]);
-    await go(tester, '/rosters/import/sunday');
-    await tapText(tester, '進階');
-    await openPasteJson(tester);
-    await tester.enterText(
-      find.byType(TextField),
-      jsonEncode([
-        {
-          'date': '2026-10-18',
-          'duties': [
-            {
-              'role': '司琴',
-              'people': ['美玉'],
-            },
-            {
-              'role': '招待',
-              'people': ['陳志明'],
-            },
-          ],
-        },
-      ]),
-    );
-    await tester.scrollUntilVisible(find.text('預覽'), 200, scrollable: find.byType(Scrollable).first);
-    await tapText(tester, '預覽');
+    await previewPasted(tester, [
+      {
+        'date': '2026-10-18',
+        'duties': [
+          {
+            'role': '司琴',
+            'people': ['美玉'],
+          },
+          {
+            'role': '招待',
+            'people': ['吳小芬'],
+          },
+        ],
+      },
+    ]);
+    expect(find.text('匯入方式'), findsNothing, reason: 'always merged into the day');
     // The button says what it waits for.
-    final waiting = find.widgetWithText(FilledButton, '先確認 2 個人名');
+    final waiting = find.widgetWithText(FilledButton, '還有 2 個人名要確認');
     expect(tester.widget<FilledButton>(waiting).onPressed, isNull);
-    await tester.tap(find.text('美玉').first);
-    await settle(tester);
-    await tapText(tester, '李美玉');
-    expect(find.widgetWithText(FilledButton, '先確認 1 個人名'), findsOneWidget);
-    await tester.tap(find.text('陳志明').first);
+    expect(find.widgetWithText(ListRow, '建議：李美玉'), findsOneWidget);
+    expect(find.widgetWithText(ListRow, '找不到這個人'), findsOneWidget);
+    await tester.tap(find.widgetWithText(ListRow, '建議：李美玉'));
     await settle(tester);
     // Its name heads the sheet: a heading, not a choice.
-    expect(find.widgetWithText(ListRow, '確認「陳志明」'), findsNothing);
-    expect(findShown('確認「陳志明」'), findsOneWidget);
-    await tapText(tester, '保留「陳志明」為無帳號');
+    expect(find.widgetWithText(ListRow, '「美玉」是誰'), findsNothing);
+    expect(findShown('「美玉」是誰'), findsOneWidget);
+    expect(findShown('建議'), findsOneWidget);
+    await tapText(tester, '李美玉');
+    expect(find.widgetWithText(FilledButton, '還有 1 個人名要確認'), findsOneWidget);
+    expect(find.widgetWithText(ListRow, '建議：李美玉'), findsNothing, reason: 'only the names still to confirm');
+    await tester.tap(find.widgetWithText(ListRow, '找不到這個人'));
+    await settle(tester);
+    await tapText(tester, '臨時排「吳小芬」');
     await tapText(tester, '套用到服事表');
     expect(peopleOn(b, 18, '司琴'), ['李美玉']);
-    expect(peopleOn(b, 18, '招待'), ['陳志明']);
+    expect(peopleOn(b, 18, '招待'), ['吳小芬']);
     expect(savedDay(b, 18).duties.firstWhere((d) => d.role == '司琴').uids, {'李美玉': 'mei'});
     expect(savedDay(b, 18).duties.firstWhere((d) => d.role == '招待').uids, isEmpty);
+    expect(b.pendingMembers['grace'] ?? const {}, isEmpty, reason: '臨時排 adds nobody');
     expect(telemetry.named('roster_import'), [
       {'method': 'text'},
     ]);
     expect(telemetry.named('roster_edit'), isEmpty, reason: 'counted as an import, not an edit');
+  });
+
+  testWidgets('a name nobody has becomes one of the service\'s 同工 without an account, as in the picker', (
+    tester,
+  ) async {
+    final b = agreedChurch();
+    await pumpApp(tester, b);
+    await previewPasted(tester, [
+      {
+        'date': '2026-10-18',
+        'duties': [
+          {
+            'role': '招待',
+            'people': ['吳小芬'],
+          },
+        ],
+      },
+    ]);
+    await tester.tap(find.widgetWithText(ListRow, '找不到這個人'));
+    await settle(tester);
+    expect(findShown('所有同工'), findsOneWidget, reason: 'nobody to suggest: everyone, to pick from');
+    await tapText(tester, '新增同工「吳小芬」');
+    final added = b.pendingMembers['grace']!.values.single;
+    expect(added.name, '吳小芬');
+    expect(added.zones.map((z) => z.serviceType), ['sunday']);
+    await tapText(tester, '套用到服事表');
+    expect(peopleOn(b, 18, '招待'), ['吳小芬']);
+    expect(savedDay(b, 18).duties.firstWhere((d) => d.role == '招待').uids, {'吳小芬': added.id});
+  });
+
+  testWidgets('a name typed in place of the sheet\'s is arranged this once, or added as a 同工', (tester) async {
+    final b = agreedChurch();
+    await pumpApp(tester, b);
+    await previewPasted(tester, [
+      {
+        'date': '2026-10-18',
+        'duties': [
+          {
+            'role': '司琴',
+            'people': ['美玉'],
+          },
+          {
+            'role': '招待',
+            'people': ['小芬'],
+          },
+        ],
+      },
+    ]);
+    await tester.tap(find.widgetWithText(ListRow, '建議：李美玉'));
+    await settle(tester);
+    await tester.enterText(find.byType(TextField).last, '李美鈺');
+    await settle(tester);
+    expect(findShown('新增同工「李美鈺」'), findsOneWidget);
+    await tapText(tester, '臨時排「李美鈺」');
+    await tester.tap(find.widgetWithText(ListRow, '找不到這個人'));
+    await settle(tester);
+    await tester.enterText(find.byType(TextField).last, '王小芬');
+    await settle(tester);
+    await tapText(tester, '新增同工「王小芬」');
+    await tapText(tester, '套用到服事表');
+    expect(peopleOn(b, 18, '司琴'), ['李美鈺']);
+    expect(savedDay(b, 18).duties.firstWhere((d) => d.role == '司琴').uids, isEmpty);
+    final added = b.pendingMembers['grace']!.values.single;
+    expect(added.name, '王小芬');
+    expect(peopleOn(b, 18, '招待'), ['王小芬']);
+    expect(savedDay(b, 18).duties.firstWhere((d) => d.role == '招待').uids, {'王小芬': added.id});
+  });
+
+  testWidgets('first time, everyone the sheet names that nobody has is added as 同工 at once', (tester) async {
+    final b = agreedChurch();
+    await pumpApp(tester, b);
+    await previewPasted(tester, [
+      {
+        'date': '2026-10-18',
+        'duties': [
+          {
+            'role': '司琴',
+            'people': ['美玉'],
+          },
+          {
+            'role': '招待',
+            'people': ['吳小芬', '張大衛'],
+          },
+        ],
+      },
+    ]);
+    // Not 美玉, who may be 李美玉.
+    final all = find.widgetWithText(ListRow, '全部新增成同工');
+    expect(find.descendant(of: all, matching: find.text('吳小芬、張大衛')), findsOneWidget);
+    await tester.tap(all);
+    await settle(tester);
+    expect({for (final p in b.pendingMembers['grace']!.values) p.name}, {'吳小芬', '張大衛'});
+    expect(find.widgetWithText(FilledButton, '還有 1 個人名要確認'), findsOneWidget);
+    expect(find.text('全部新增成同工'), findsNothing);
   });
 
   testWidgets('large text import preview keeps dates readable without horizontal overflow', (tester) async {
@@ -359,35 +461,6 @@ void main() {
     await tester.scrollUntilVisible(find.text('日期'), 200);
     await settle(tester);
     expect(tester.takeException(), isNull);
-  });
-
-  testWidgets('an exact member name can deliberately remain a guest without receiving a UID', (tester) async {
-    final b = agreedChurch();
-    await pumpApp(tester, b);
-    await go(tester, '/rosters/import/sunday');
-    await tapText(tester, '進階');
-    await openPasteJson(tester);
-    await tester.enterText(
-      find.byType(TextField),
-      jsonEncode([
-        {
-          'date': '2026-10-18',
-          'duties': [
-            {
-              'role': '司琴',
-              'people': ['李美玉'],
-            },
-          ],
-        },
-      ]),
-    );
-    await tester.scrollUntilVisible(find.text('預覽'), 200, scrollable: find.byType(Scrollable).first);
-    await tapText(tester, '預覽');
-    await tester.tap(find.text('李美玉').first);
-    await settle(tester);
-    await tapText(tester, '保留「李美玉」為無帳號');
-    await tapText(tester, '套用到服事表');
-    expect(savedDay(b, 18).duties.firstWhere((d) => d.role == '司琴').uids, isEmpty);
   });
 
   testWidgets('the shared preview edits date, duty, people and event color before applying', (tester) async {
@@ -467,42 +540,6 @@ void main() {
     await settle(tester);
     await tapText(tester, '套用到服事表');
     expect(peopleOn(b, 18, '司琴'), ['李美玉']);
-  });
-
-  testWidgets('replacement explicitly previews removed arrangements and can be undone', (tester) async {
-    final b = agreedChurch();
-    final before = savedDay(b, 11).copyWith(events: const [EventTag(name: '聖餐', color: 0)]);
-    b.rosters['grace']![before.id] = before;
-    await pumpApp(tester, b);
-    await go(tester, '/rosters/import/sunday');
-    await tapText(tester, '進階');
-    await openPasteJson(tester);
-    await tester.enterText(
-      find.byType(TextField),
-      jsonEncode([
-        {
-          'date': '2026-10-11',
-          'duties': [
-            {
-              'role': '司琴',
-              'people': ['李美玉'],
-            },
-          ],
-        },
-      ]),
-    );
-    await tester.scrollUntilVisible(find.text('預覽'), 200, scrollable: find.byType(Scrollable).first);
-    await tapText(tester, '預覽');
-    await tapText(tester, '取代當天全部安排');
-    await tester.scrollUntilVisible(find.text('移除司會：王牧師'), 200);
-    expect(find.text('移除司會：王牧師'), findsOneWidget);
-    await tester.scrollUntilVisible(find.text('移除特別活動：聖餐'), 200);
-    expect(find.text('移除特別活動：聖餐'), findsOneWidget);
-    await tapText(tester, '套用到服事表');
-    expect(savedDay(b, 11).duties.map((d) => d.role), ['司琴']);
-    expect(savedDay(b, 11).events, isEmpty);
-    await tapText(tester, '復原');
-    expect(savedDay(b, 11), before);
   });
 
   testWidgets('applying, an admin remembers who was scheduled for each duty, without asking', (tester) async {
@@ -629,9 +666,9 @@ void main() {
     );
     await tester.scrollUntilVisible(find.text('預覽'), 200, scrollable: find.byType(Scrollable).first);
     await tapText(tester, '預覽');
-    expect(find.text('請修正資料後再匯入'), findsOneWidget);
+    // Said on the day itself, not in a list to tap into.
     expect(findShownContaining('活動請填'), findsOneWidget);
-    expect(tester.widget<FilledButton>(find.widgetWithText(FilledButton, '套用到服事表')).onPressed, isNull);
+    expect(tester.widget<FilledButton>(find.widgetWithText(FilledButton, '還有 1 處要修')).onPressed, isNull);
     await tester.tap(find.byTooltip('編輯 JSON'));
     await settle(tester);
     await tester.enterText(
@@ -659,6 +696,29 @@ void main() {
     await tapText(tester, '套用到服事表');
     expect(peopleOn(b, 18, '司琴'), ['李美玉']);
     expect(savedDay(b, 25).events, [const EventTag(name: '聖餐', color: 0)]);
+  });
+
+  testWidgets('a day the sheet does not say is picked on the day itself', (tester) async {
+    final b = agreedChurch();
+    await pumpApp(tester, b);
+    await previewPasted(tester, [
+      {
+        'date': '10/18',
+        'duties': [
+          {
+            'role': '司琴',
+            'people': ['李美玉'],
+          },
+        ],
+      },
+    ]);
+    expect(findShown('看不出是哪一天'), findsOneWidget);
+    expect(tester.widget<FilledButton>(find.widgetWithText(FilledButton, '還有 1 處要修')).onPressed, isNull);
+    await tapText(tester, '點這裡選');
+    await tester.tap(find.descendant(of: find.byType(CalendarDatePicker), matching: find.text('18')));
+    await settle(tester);
+    await tapText(tester, '套用到服事表');
+    expect(peopleOn(b, 18, '司琴'), ['李美玉']);
   });
 
   testWidgets('ordinary editors can import one-day gaps without acquiring settings repair actions', (tester) async {

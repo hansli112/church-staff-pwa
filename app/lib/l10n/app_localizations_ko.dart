@@ -1357,8 +1357,24 @@ class L10nKo extends L10n {
 
   @override
   String importConfirmNamesFirst(int count) {
-    return '이름 $count개를 먼저 확인';
+    return '확인할 이름 $count개 남음';
   }
+
+  @override
+  String importFixFirst(int count) {
+    return '고칠 곳 $count곳 남음';
+  }
+
+  @override
+  String get importNoDay => '날짜를 알 수 없어요';
+
+  @override
+  String importWhoIs(String name) {
+    return '‘$name’ 님은 누구인가요?';
+  }
+
+  @override
+  String get importAddAllStaff => '모두 멤버로 추가';
 
   @override
   String importApplied(int count) {
@@ -2312,19 +2328,6 @@ class L10nKo extends L10n {
   String get importJsonArrayRequired => 'JSON 배열을 입력해 주세요';
 
   @override
-  String importConfirmName(String name) {
-    return '‘$name’ 확인';
-  }
-
-  @override
-  String get importSameNameScope => '이번 가져오기에서 같은 이름은 모두 이 연결을 사용해요';
-
-  @override
-  String importGuestChoice(String name) {
-    return '‘$name’ 계정 없이 두기';
-  }
-
-  @override
   String get importEditDate => '날짜 편집';
 
   @override
@@ -2357,7 +2360,7 @@ class L10nKo extends L10n {
   String get importDateLabel => '날짜';
 
   @override
-  String get importDateMissing => '날짜를 입력해 주세요';
+  String get importDateMissing => '눌러서 선택';
 
   @override
   String get importFixDuty => '담당 수정';
@@ -2417,44 +2420,12 @@ class L10nKo extends L10n {
   String get importNoChange => '배정 변경 없음';
 
   @override
-  String get importNoCandidate => '계정 없이 두거나 이름을 수정해 주세요';
+  String get importNoCandidate => '이 이름의 사람이 없어요';
 
   @override
   String importCandidates(String names) {
-    return '후보: $names';
+    return '추천: $names';
   }
-
-  @override
-  String get importGuestUnlinked => '계정 없음';
-
-  @override
-  String get importNameNeedsConfirm => '이름을 확인해 주세요';
-
-  @override
-  String importLinkedMember(String name) {
-    return '멤버: $name';
-  }
-
-  @override
-  String get importMode => '가져오기 방식';
-
-  @override
-  String get importMerge => '합치기(언급되지 않은 배정은 유지)';
-
-  @override
-  String get importReplace => '그날 배정 전체 바꾸기';
-
-  @override
-  String get importReplaceHelp => '언급되지 않은 담당과 특별 순서는 빠져요. 다른 날짜에는 영향이 없어요.';
-
-  @override
-  String get importFixData => '데이터를 수정한 뒤 가져와 주세요';
-
-  @override
-  String get importFixRow => '이 행을 수정해 주세요';
-
-  @override
-  String get importNameLinks => '이름 연결';
 
   @override
   String get importNamesNeedConfirm => '이름을 확인해야 가져올 수 있어요';

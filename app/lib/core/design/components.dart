@@ -467,10 +467,14 @@ class ListRow extends StatelessWidget {
     this.dimmed = false,
     this.selected,
     this.subtitleLines,
+    this.subtitleAlert = false,
   });
 
   final String title;
   final String? subtitle;
+
+  /// [subtitle] in the destructive color: something on the row to fix.
+  final bool subtitleAlert;
 
   /// At most this many lines of [subtitle], the rest cut with an
   /// ellipsis: a long address in a list, whole on the page it opens.
@@ -520,6 +524,7 @@ class ListRow extends StatelessWidget {
     final showChevron = chevron ?? (onTap != null && trailing == null && selected == null && !destructive && !tinted);
     final textScaler = MediaQuery.textScalerOf(context);
     final valueStyle = AppText.body.copyWith(color: c.secondaryLabel);
+    final subtitleStyle = AppText.subheadline.copyWith(color: subtitleAlert ? c.destructive : c.secondaryLabel);
     final row = InkWell(
       onTap: onTap,
       child: ConstrainedBox(
@@ -581,13 +586,13 @@ class ListRow extends StatelessWidget {
                                 ? BalancedText(
                                     subtitle!,
                                     textAlign: TextAlign.start,
-                                    style: AppText.subheadline.copyWith(color: c.secondaryLabel),
+                                    style: subtitleStyle,
                                   )
                                 : Text(
                                     subtitle!,
                                     maxLines: subtitleLines,
                                     overflow: TextOverflow.ellipsis,
-                                    style: AppText.subheadline.copyWith(color: c.secondaryLabel),
+                                    style: subtitleStyle,
                                   ),
                           ),
                       ],

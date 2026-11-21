@@ -1435,11 +1435,33 @@ class L10nEn extends L10n {
     String _temp0 = intl.Intl.pluralLogic(
       count,
       locale: localeName,
-      other: 'Confirm $count names first',
-      one: 'Confirm 1 name first',
+      other: '$count names to confirm',
+      one: '1 name to confirm',
     );
     return '$_temp0';
   }
+
+  @override
+  String importFixFirst(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count things to fix',
+      one: '1 thing to fix',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get importNoDay => 'Date unclear';
+
+  @override
+  String importWhoIs(String name) {
+    return 'Who is “$name”?';
+  }
+
+  @override
+  String get importAddAllStaff => 'Add all as team members';
 
   @override
   String importApplied(int count) {
@@ -2451,19 +2473,6 @@ class L10nEn extends L10n {
   String get importJsonArrayRequired => 'Enter a JSON array';
 
   @override
-  String importConfirmName(String name) {
-    return 'Confirm “$name”';
-  }
-
-  @override
-  String get importSameNameScope => 'Every instance of this name in this import uses this match';
-
-  @override
-  String importGuestChoice(String name) {
-    return 'Keep “$name” without an account';
-  }
-
-  @override
   String get importEditDate => 'Edit date';
 
   @override
@@ -2496,7 +2505,7 @@ class L10nEn extends L10n {
   String get importDateLabel => 'Date';
 
   @override
-  String get importDateMissing => 'Enter a date';
+  String get importDateMissing => 'Tap to pick';
 
   @override
   String get importFixDuty => 'Fix role';
@@ -2556,44 +2565,12 @@ class L10nEn extends L10n {
   String get importNoChange => 'No changes to assignments';
 
   @override
-  String get importNoCandidate => 'Keep without an account or fix the name';
+  String get importNoCandidate => 'No one by this name';
 
   @override
   String importCandidates(String names) {
-    return 'Possible matches: $names';
+    return 'Suggested: $names';
   }
-
-  @override
-  String get importGuestUnlinked => 'No account';
-
-  @override
-  String get importNameNeedsConfirm => 'Confirm the name';
-
-  @override
-  String importLinkedMember(String name) {
-    return 'Team member: $name';
-  }
-
-  @override
-  String get importMode => 'Import mode';
-
-  @override
-  String get importMerge => 'Merge (keep anything not mentioned)';
-
-  @override
-  String get importReplace => 'Replace everything on that day';
-
-  @override
-  String get importReplaceHelp => 'Removes roles and occasions not mentioned; other dates aren’t affected';
-
-  @override
-  String get importFixData => 'Fix the data before importing';
-
-  @override
-  String get importFixRow => 'Fix this row';
-
-  @override
-  String get importNameLinks => 'Name matches';
 
   @override
   String get importNamesNeedConfirm => 'Confirm names before importing';
