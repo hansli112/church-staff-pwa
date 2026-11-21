@@ -14,6 +14,8 @@ import '../domain/staff_order.dart';
 import '../domain/swap.dart';
 import 'current_church.dart';
 
+// The calls ([ChurchCalls]) on [churchData] by name, wherever it is read.
+export '../data/backend.dart' show ChurchCalls;
 export 'current_church.dart';
 
 /// Overridden in main() and in tests.

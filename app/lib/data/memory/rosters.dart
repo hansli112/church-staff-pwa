@@ -163,7 +163,6 @@ mixin _MemoryRosters on _MemoryChurchBase {
     return _b.planned[churchId]?.values.any((p) => p.service == serviceType) ?? false;
   });
 
-  @override
   Future<PlannedNotice> notifyPlanned(String serviceType) async {
     var people = 0;
     await _b.write(() {

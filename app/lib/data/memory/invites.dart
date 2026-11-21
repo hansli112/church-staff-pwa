@@ -12,7 +12,6 @@ mixin _MemoryInvites on _MemoryChurchBase {
   /// As answerJoinRequest: a no marks the request; a yes adds them as an
   /// invite would, unless the church takes no requests or it is not
   /// waiting.
-  @override
   Future<void> answerJoinRequest(String uid, {required bool allow}) async {
     _functionAdmin();
     _b.requireNetwork();

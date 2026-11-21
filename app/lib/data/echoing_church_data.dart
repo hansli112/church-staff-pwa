@@ -183,6 +183,43 @@ class EchoingChurchData implements ChurchData {
   @override
   ReadOnceData get readOnce => _inner.readOnce;
 
+  /// The calls that change what is listed show it at once: who is in a
+  /// group, on a duty's list, added by name; the rest as the backend has
+  /// them.
+  @override
+  Future<R> run<R>(ChurchCall<R> call) async {
+    final echo = switch (call) {
+      SetGroupMember(:final uid, :final group, :final member, :final duties, :final smallGroups) => _Echo(
+        members: {uid: (m) => m.inGroupAs(group, member: member, duties: duties, smallGroups: smallGroups)},
+      ),
+      SetDuty(:final uid, :final serviceType, :final duty, :final on) => _Echo(
+        members: {uid: (m) => on ? m.withDuty(serviceType, duty) : m.withoutDuty(serviceType, duty)},
+        pending: {uid: (p) => on ? p?.withDuty(serviceType, duty) : p?.withoutDuty(serviceType, duty)},
+      ),
+      // The new 同工 shows once the backend gives them an ID.
+      AddByName() => _Echo(pending: {}),
+      // Seconds on the backend, shown on its way (儲存中…) with nothing to echo.
+      MergePending() => _Echo(),
+      _ => null,
+    };
+    if (echo == null) return _inner.run(call);
+    late final R answer;
+    await _send(echo, () async {
+      answer = await _inner.run(call);
+      if (call case AddByName(:final name, :final serviceType)) {
+        final id = answer as String;
+        echo.pending[id] = (p) =>
+            p ??
+            PendingMember(
+              id: id,
+              name: name.trim(),
+              zones: [Zone(serviceType: serviceType)],
+            );
+      }
+    });
+    return answer;
+  }
+
   @override
   Stream<List<Roster>> rosters({required Day from}) => _echoed(_inner.rosters(from: from), (server, arrived) {
     Map<String, Roster>? byId;
@@ -287,9 +324,6 @@ class EchoingChurchData implements ChurchData {
   Stream<bool> plannedNews(String serviceType) => _inner.plannedNews(serviceType);
 
   @override
-  Future<PlannedNotice> notifyPlanned(String serviceType) => _inner.notifyPlanned(serviceType);
-
-  @override
   Stream<UnavailableDays> unavailableDays(String uid) => _inner.unavailableDays(uid);
 
   @override
@@ -308,27 +342,7 @@ class EchoingChurchData implements ChurchData {
   Stream<SwapRequest?> swapRequest(String id) => _inner.swapRequest(id);
 
   @override
-  Future<int> askCover(Roster roster, String duty) => _inner.askCover(roster, duty);
-
-  @override
-  Future<void> askSwap(Roster roster, String duty, Roster other, String uid) =>
-      _inner.askSwap(roster, duty, other, uid);
-
-  @override
-  Future<void> answerSwap(String id, {required bool yes}) => _inner.answerSwap(id, yes: yes);
-
-  @override
-  Future<void> undoSwap(String id) => _inner.undoSwap(id);
-
-  @override
-  Future<void> withdrawSwap(String id) => _inner.withdrawSwap(id);
-
-  @override
   Stream<DateTime?> lastUnavailableAsk(String serviceType) => _inner.lastUnavailableAsk(serviceType);
-
-  @override
-  Future<int> askUnavailable(String serviceType, {required Day from, required Day to}) =>
-      _inner.askUnavailable(serviceType, from: from, to: to);
 
   @override
   Future<void> compareAndSetMinistries({required List<Ministry> before, required List<Ministry> after}) => _send(
@@ -356,56 +370,6 @@ class EchoingChurchData implements ChurchData {
   Future<void> compareAndSetMember({required Member before, required Member after}) => _send(
     _Echo(members: {after.uid: (_) => after}),
     () => _inner.compareAndSetMember(before: before, after: after),
-  );
-
-  @override
-  Future<void> setGroupMember(
-    String uid,
-    ChurchGroup group, {
-    required bool member,
-    List<String> duties = const [],
-    List<String> smallGroups = const [],
-  }) => _send(
-    _Echo(
-      members: {uid: (m) => m.inGroupAs(group, member: member, duties: duties, smallGroups: smallGroups)},
-    ),
-    () => _inner.setGroupMember(uid, group, member: member, duties: duties, smallGroups: smallGroups),
-  );
-
-  /// The new 同工 shows once the backend gives them an ID.
-  @override
-  Future<String> addByName(String name, String serviceType) async {
-    final echo = _Echo(pending: {});
-    late final String id;
-    await _send(echo, () async {
-      id = await _inner.addByName(name, serviceType);
-      echo.pending[id] = (p) =>
-          p ??
-          PendingMember(
-            id: id,
-            name: name.trim(),
-            zones: [Zone(serviceType: serviceType)],
-          );
-    });
-    return id;
-  }
-
-  @override
-  Future<void> grantDuty(String uid, String serviceType, String duty) => _send(
-    _Echo(
-      members: {uid: (m) => m.withDuty(serviceType, duty)},
-      pending: {uid: (p) => p?.withDuty(serviceType, duty)},
-    ),
-    () => _inner.grantDuty(uid, serviceType, duty),
-  );
-
-  @override
-  Future<void> revokeDuty(String uid, String serviceType, String duty) => _send(
-    _Echo(
-      members: {uid: (m) => m.withoutDuty(serviceType, duty)},
-      pending: {uid: (p) => p?.withoutDuty(serviceType, duty)},
-    ),
-    () => _inner.revokeDuty(uid, serviceType, duty),
   );
 
   @override
@@ -452,9 +416,6 @@ class EchoingChurchData implements ChurchData {
   Future<void> deletePendingMember(String id) => _inner.deletePendingMember(id);
 
   @override
-  Future<void> renamePending(String id, String name) => _inner.renamePending(id, name);
-
-  @override
   Stream<List<ClaimAsk>> claimAsks() => _inner.claimAsks();
 
   @override
@@ -464,16 +425,7 @@ class EchoingChurchData implements ChurchData {
   Future<List<ClaimCandidate>> claimCandidates() => _inner.claimCandidates();
 
   @override
-  Future<void> askClaim(String? pendingId) => _inner.askClaim(pendingId);
-
-  @override
-  Future<void> answerClaim(String uid, {required bool allow}) => _inner.answerClaim(uid, allow: allow);
-
-  @override
   Stream<List<JoinRequest>> joinRequests() => _inner.joinRequests();
-
-  @override
-  Future<void> answerJoinRequest(String uid, {required bool allow}) => _inner.answerJoinRequest(uid, allow: allow);
 
   @override
   Future<void> setTakesJoinRequests(bool on) => _inner.setTakesJoinRequests(on);
@@ -537,26 +489,7 @@ class EchoingChurchData implements ChurchData {
   }
 
   @override
-  Future<void> deleteSmallGroup(String id) => _inner.deleteSmallGroup(id);
-
-  @override
-  Future<void> orderSmallGroups(String service, List<String> ids) => _inner.orderSmallGroups(service, ids);
-
-  @override
-  Future<void> setTimeZone(ChurchTimeZone timeZone) => _inner.setTimeZone(timeZone);
-
-  @override
   Future<void> uploadLogo(List<int> bytes) => _inner.uploadLogo(bytes);
-
-  @override
-  Future<void> deleteChurch() => _inner.deleteChurch();
-
-  @override
-  Future<void> restoreChurch() => _inner.restoreChurch();
-
-  @override
-  /// Seconds on the backend, shown on its way (儲存中…) with nothing to echo.
-  Future<void> mergePending(String pendingId, String uid) => _send(_Echo(), () => _inner.mergePending(pendingId, uid));
 }
 
 /// What one change makes of the documents it writes.

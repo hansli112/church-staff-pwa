@@ -93,7 +93,6 @@ mixin _MemorySmallGroups on _MemoryChurchBase {
     order: g.order,
   );
 
-  @override
   Future<void> orderSmallGroups(String service, List<String> ids) async {
     final me = _b.functionAccess(churchId)!;
     if (!me.mayEditSmallGroup(service, service)) throw const CloudException(CloudErrorCode.permissionDenied);
@@ -111,7 +110,6 @@ mixin _MemorySmallGroups on _MemoryChurchBase {
     });
   }
 
-  @override
   Future<void> deleteSmallGroup(String id) async {
     final me = _b.functionAccess(churchId)!;
     final was = _b.smallGroups[churchId]?[id];

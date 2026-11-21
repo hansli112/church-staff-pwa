@@ -24,6 +24,8 @@ import 'roster_change.dart';
 
 export 'roster_change.dart';
 
+part 'church_calls.dart';
+
 /// A way to sign in to an account.
 enum SignInMethod { password, google, apple }
 
@@ -227,6 +229,10 @@ abstract interface class ChurchData {
 
   ReadOnceData get readOnce;
 
+  /// Makes [call] (one of the callables, [ChurchCall]), answering what it
+  /// answers. [ChurchCalls] names each.
+  Future<R> run<R>(ChurchCall<R> call);
+
   Stream<Church?> church();
 
   /// The member doc of [uid]: role, groups, zones.
@@ -252,28 +258,9 @@ abstract interface class ChurchData {
   /// The pending members with a name, for a member to find themself among.
   Future<List<ClaimCandidate>> claimCandidates();
 
-  /// The caller says they are pending member [pendingId]; null takes it
-  /// back. The admins are told.
-  Future<void> askClaim(String? pendingId);
-
-  /// An admin answers member [uid]'s ask: [allow] merges the pending member
-  /// they named into them. Either way the ask goes.
-  Future<void> answerClaim(String uid, {required bool allow});
-
-  /// Renames pending member [id] (admins), on the rosters they are on too:
-  /// a typo fixed. [CloudErrorCode.duplicateName] for a name someone in the
-  /// church has.
-  Future<void> renamePending(String id, String name);
-
   /// Requests to join (申請加入, #88), answered or not; ones
   /// [JoinRequest.days] old may linger a day. Admins only.
   Stream<List<JoinRequest>> joinRequests();
-
-  /// Lets [uid] in, as an invite would (no 身分, no 牧區), or turns them
-  /// down (admins). Letting in a request no longer waiting is
-  /// [CloudReason.requestGone]; while the church takes none,
-  /// [CloudReason.requestsClosed].
-  Future<void> answerJoinRequest(String uid, {required bool allow});
 
   /// Whether someone with the church URL may ask to join (admins).
   Future<void> setTakesJoinRequests(bool on);
@@ -303,14 +290,6 @@ abstract interface class ChurchData {
     List<String>? leads,
     List<String>? leadsBefore,
   });
-
-  /// Closes 小組 [id], taking it off its 小組長 and 同工; its 人數 stay.
-  Future<void> deleteSmallGroup(String id);
-
-  /// Puts [service]'s 小組 in the order of [ids], every one of them: who
-  /// opens them (Member.mayEditSmallGroup). Refused
-  /// ([CloudErrorCode.conflict]) once its 小組 are not [ids].
-  Future<void> orderSmallGroups(String service, List<String> ids);
 
   /// Saved rosters from [from] on, of every service, oldest first, and
   /// events' rosters still on at [from] (a retreat begun the day before).
@@ -346,11 +325,6 @@ abstract interface class ChurchData {
   /// them yet. For those who read the member list.
   Stream<bool> plannedNews(String serviceType);
 
-  /// 通知同工 for [serviceType], by someone who arranges it: everyone put
-  /// on or taken off its days in 安排服事 since hears it, one push each.
-  /// In quiet hours ([PlannedNotice.later]) they wait until 7:00.
-  Future<PlannedNotice> notifyPlanned(String serviceType);
-
   /// [uid]'s 不能服事的日子 (#91): their own, or anyone's for whoever
   /// arranges rosters (Member.arrangesRosters).
   Stream<UnavailableDays> unavailableDays(String uid);
@@ -375,35 +349,9 @@ abstract interface class ChurchData {
   /// none.
   Stream<SwapRequest?> swapRequest(String id);
 
-  /// 請人代 for my [duty] on [roster], a service's day from today on:
-  /// everyone on the duty's list free that day ([coverAsked]). How many it
-  /// asked; with nobody, the leads and those serving that day are told
-  /// instead and it is 0. One open request per duty and day.
-  Future<int> askCover(Roster roster, String duty);
-
-  /// 和別週交換: my [duty] on [roster] for [uid]'s on [other], a day of the
-  /// same service from tomorrow on. Asks them alone.
-  Future<void> askSwap(Roster roster, String duty, Roster other, String uid);
-
-  /// 我來 or 接受 ([yes]), or 不方便, to request [id], by one it asks. A
-  /// request no longer open, or no longer holding, is refused with
-  /// [CloudReason.swapClosed].
-  Future<void> answerSwap(String id, {required bool yes});
-
-  /// 復原 of taking request [id], soon after and while the rosters are as
-  /// it left them; [CloudErrorCode.conflict] once they moved on.
-  Future<void> undoSwap(String id);
-
-  /// 收回: who asked takes request [id] back.
-  Future<void> withdrawSwap(String id);
-
   /// When 通知同工填 last asked for [serviceType], if ever: for whoever
   /// arranges rosters.
   Stream<DateTime?> lastUnavailableAsk(String serviceType);
-
-  /// 通知同工填 (#91), by whoever arranges [serviceType]: one push each to
-  /// [askedToFill], for the months of [from] to [to]. How many it told.
-  Future<int> askUnavailable(String serviceType, {required Day from, required Day to});
 
   /// Replaces the whole list of services (adding one, reordering), only
   /// if it is still [before]; otherwise [CloudErrorCode.conflict]. Never
@@ -423,34 +371,6 @@ abstract interface class ChurchData {
   /// if it is still [before]; otherwise [CloudErrorCode.conflict]. The
   /// member's own notification settings are left alone.
   Future<void> compareAndSetMember({required Member before, required Member after});
-
-  /// 加為同工 ([member] true; for a service with the [duties] they serve and
-  /// their [smallGroups] there) or 移出 [group], a service or a 小組 (a
-  /// 事工 has no 同工 of its own, #94): by an admin, or by its 負責人 for a
-  /// plain 同工 (Member.mayMove). Changes nothing else on member [uid].
-  Future<void> setGroupMember(
-    String uid,
-    ChurchGroup group, {
-    required bool member,
-    List<String> duties = const [],
-    List<String> smallGroups = const [],
-  });
-
-  /// 加入同工 by [name]: someone who does not use the app, made one of
-  /// [serviceType]'s 同工 without an account (a pending member, no email),
-  /// by whoever may add a plain 同工 to it. [CloudErrorCode.duplicateName]
-  /// for a name someone in the church has. Their ID.
-  Future<String> addByName(String name, String serviceType);
-
-  /// Puts member [uid] on the list of [duty] in [serviceType] (#94),
-  /// applied to the member as they are when written: one of its 同工 now
-  /// if they were not, and nothing else on them changes. Only a duty the
-  /// service has; by whoever edits its list (Member.editsDutyList).
-  Future<void> grantDuty(String uid, String serviceType, String duty);
-
-  /// Takes member [uid] off the list of [duty] in [serviceType], the same
-  /// way; still one of its 同工. Any duty, one gone from the service too.
-  Future<void> revokeDuty(String uid, String serviceType, String duty);
 
   /// Removes [uid] from the church: an admin removing someone, or a member
   /// leaving.
@@ -472,23 +392,8 @@ abstract interface class ChurchData {
   /// name.
   Future<void> setHomeName(String? name);
 
-  /// Sets the church's time zone (admins). Rosters keep their dates; the
-  /// calendar's times are then shown on the new clock.
-  Future<void> setTimeZone(ChurchTimeZone timeZone);
-
   /// Uploads [bytes] (already a 512px PNG) as the church logo.
   Future<void> uploadLogo(List<int> bytes);
-
-  /// Deletes the church while it is open (admins); restorable for 30 days.
-  Future<void> deleteChurch();
-
-  /// Reopens the church its admin deleted under 30 days ago; an open church
-  /// stays open. A suspended one, or one deleted longer ago, is
-  /// [CloudErrorCode.churchClosed].
-  Future<void> restoreChurch();
-
-  /// Merges a pending member into a member (admins).
-  Future<void> mergePending(String pendingId, String uid);
 }
 
 /// The church's Google Calendar (行事曆), proxied by the backend: admins

@@ -39,7 +39,6 @@ mixin _MemoryUnavailable on _MemoryChurchBase {
     return _b.unavailableAsks[churchId]?[serviceType]?.at;
   });
 
-  @override
   Future<int> askUnavailable(String serviceType, {required Day from, required Day to}) async {
     var told = 0;
     await _b.write(() {

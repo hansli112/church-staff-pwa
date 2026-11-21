@@ -44,7 +44,6 @@ mixin _MemoryGroupMembers on _MemoryChurchBase {
     });
   }
 
-  @override
   Future<void> setGroupMember(
     String uid,
     ChurchGroup group, {
@@ -113,7 +112,6 @@ mixin _MemoryGroupMembers on _MemoryChurchBase {
   static Member _pendingAsTarget(PendingMember p) =>
       Member(uid: p.id, name: p.name, role: p.role, groups: p.groups, zones: p.zones, smallGroups: p.smallGroups);
 
-  @override
   Future<String> addByName(String name, String serviceType) async {
     var id = '';
     await _b.write(() {
@@ -141,11 +139,9 @@ mixin _MemoryGroupMembers on _MemoryChurchBase {
     return id;
   }
 
-  @override
   Future<void> grantDuty(String uid, String serviceType, String duty) =>
       _setDuty(uid, serviceType, duty, (m) => m.withDuty(serviceType, duty), granting: true);
 
-  @override
   Future<void> revokeDuty(String uid, String serviceType, String duty) =>
       _setDuty(uid, serviceType, duty, (m) => m.withoutDuty(serviceType, duty), granting: false);
 

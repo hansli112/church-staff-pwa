@@ -693,6 +693,9 @@ class FirestoreChurchData implements ChurchData {
   Future<Map<String, Object?>> _call(String name, [Map<String, Object?> data = const {}]) async =>
       _asMap(await _calls.call(name, {'churchId': churchId, ...data}));
 
+  @override
+  Future<R> run<R>(ChurchCall<R> call) async => call.answer(await _call(call.callable, call.data));
+
   String? _logoVersion;
   String? _logoUrl;
 
@@ -818,10 +821,6 @@ class FirestoreChurchData implements ChurchData {
   ).live().map((snap) => [for (final d in snap.docs) joinRequestFromJson(d.id, d.data())]).translated();
 
   @override
-  Future<void> answerJoinRequest(String uid, {required bool allow}) =>
-      _call('answerJoinRequest', {'uid': uid, 'allow': allow});
-
-  @override
   Future<void> setTakesJoinRequests(bool on) =>
       _write(_church, (tx) => tx.update(_church, {'joinRequestsClosed': on ? FieldValue.delete() : true}));
 
@@ -867,13 +866,6 @@ class FirestoreChurchData implements ChurchData {
     });
     return d['id'] as String;
   }
-
-  @override
-  Future<void> deleteSmallGroup(String id) => _call('editSmallGroup', {'op': 'delete', 'id': id});
-
-  @override
-  Future<void> orderSmallGroups(String service, List<String> ids) =>
-      _call('editSmallGroup', {'op': 'order', 'service': service, 'ids': ids});
 
   @override
   Stream<List<Roster>> rosters({required Day from}) {
@@ -995,12 +987,6 @@ class FirestoreChurchData implements ChurchData {
       .translated();
 
   @override
-  Future<PlannedNotice> notifyPlanned(String serviceType) async {
-    final d = await _call('notifyPlanned', {'serviceId': serviceType});
-    return (people: (d['people'] as num?)?.toInt() ?? 0, later: d['later'] == true);
-  }
-
-  @override
   Stream<UnavailableDays> unavailableDays(String uid) =>
       _col('unavailable').doc(uid).live().map((s) => unavailableDaysFromJson(s.data())).translated();
 
@@ -1040,40 +1026,9 @@ class FirestoreChurchData implements ChurchData {
   ).doc(id).live().map((s) => s.exists ? swapRequestFromJson(id, s.data()!) : null).translated();
 
   @override
-  Future<int> askCover(Roster roster, String duty) async {
-    final d = await _call('askCover', {'serviceId': roster.type, 'dateKey': roster.day.key, 'duty': duty});
-    return (d['asked'] as num?)?.toInt() ?? 0;
-  }
-
-  @override
-  Future<void> askSwap(Roster roster, String duty, Roster other, String uid) => _call('askSwap', {
-    'serviceId': roster.type,
-    'dateKey': roster.day.key,
-    'duty': duty,
-    'with': uid,
-    'withDateKey': other.day.key,
-  });
-
-  @override
-  Future<void> answerSwap(String id, {required bool yes}) => _call('answerSwap', {'id': id, 'yes': yes});
-
-  @override
-  Future<void> undoSwap(String id) => _call('undoSwap', {'id': id});
-
-  @override
-  Future<void> withdrawSwap(String id) => _call('withdrawSwap', {'id': id});
-
-  @override
   Stream<DateTime?> lastUnavailableAsk(String serviceType) => _col(
     'unavailableAsks',
   ).doc(serviceType).live().map((s) => (s.data()?['at'] as Timestamp?)?.toDate()).translated();
-
-  @override
-  Future<int> askUnavailable(String serviceType, {required Day from, required Day to}) async {
-    String month(Day d) => d.key.substring(0, 7);
-    final d = await _call('askUnavailable', {'serviceId': serviceType, 'from': month(from), 'to': month(to)});
-    return (d['people'] as num?)?.toInt() ?? 0;
-  }
 
   @override
   Future<void> compareAndSetServiceList({required List<Service> before, required List<Service> after}) {
@@ -1120,35 +1075,6 @@ class FirestoreChurchData implements ChurchData {
       tx.update(ref, memberToJson(after));
     });
   }
-
-  @override
-  Future<void> setGroupMember(
-    String uid,
-    ChurchGroup group, {
-    required bool member,
-    List<String> duties = const [],
-    List<String> smallGroups = const [],
-  }) => _call('setGroupMember', {
-    'uid': uid,
-    ...switch (group) {
-      ServiceGroup(:final id) => {'service': id, if (member) 'duties': duties, if (member) 'smallGroups': smallGroups},
-      MinistryGroup() || GatheringGroup() => throw const CloudException(CloudErrorCode.unknown),
-      SmallGroup(:final id) => {'smallGroup': id},
-    },
-    'member': member,
-  });
-
-  @override
-  Future<String> addByName(String name, String serviceType) async =>
-      (await _call('addByName', {'name': name, 'service': serviceType}))['id']! as String;
-
-  @override
-  Future<void> grantDuty(String uid, String serviceType, String duty) =>
-      _call('setDuty', {'uid': uid, 'service': serviceType, 'duty': duty, 'on': true});
-
-  @override
-  Future<void> revokeDuty(String uid, String serviceType, String duty) =>
-      _call('setDuty', {'uid': uid, 'service': serviceType, 'duty': duty, 'on': false});
 
   @override
   Future<void> removeMember(String uid) {
@@ -1213,9 +1139,6 @@ class FirestoreChurchData implements ChurchData {
       _write(_church, (tx) => tx.update(_church, {'homeName': name ?? FieldValue.delete()}));
 
   @override
-  Future<void> setTimeZone(ChurchTimeZone timeZone) => _call('setChurchTimeZone', {'timeZone': timeZone.id});
-
-  @override
   Future<void> uploadLogo(List<int> bytes) async {
     await _transaction((tx) async {
       await tx.get(_church);
@@ -1231,19 +1154,6 @@ class FirestoreChurchData implements ChurchData {
       write: true,
     );
   }
-
-  @override
-  Future<void> deleteChurch() => _call('deleteChurch');
-
-  @override
-  Future<void> restoreChurch() => _call('restoreChurch');
-
-  @override
-  Future<void> mergePending(String pendingId, String uid) =>
-      _call('mergePending', {'pendingId': pendingId, 'uid': uid});
-
-  @override
-  Future<void> renamePending(String id, String name) => _call('renamePending', {'pendingId': id, 'name': name});
 
   @override
   Stream<List<ClaimAsk>> claimAsks() => _col(
@@ -1268,12 +1178,6 @@ class FirestoreChurchData implements ChurchData {
           ),
     ];
   }
-
-  @override
-  Future<void> askClaim(String? pendingId) => _call('askClaim', {'pendingId': pendingId});
-
-  @override
-  Future<void> answerClaim(String uid, {required bool allow}) => _call('answerClaim', {'uid': uid, 'allow': allow});
 }
 
 /// [CalendarData] of a [FirestoreChurchData].

@@ -15,7 +15,6 @@ mixin _MemoryChurch on _MemoryChurchBase {
 
   /// Its calendar's events are kept on the church's clock: unlike Google's,
   /// they do not move with it.
-  @override
   Future<void> setTimeZone(ChurchTimeZone timeZone) async {
     _functionAdmin();
     _b.churches[churchId] = _b.churches[churchId]!.copyWith(timeZone: timeZone);
@@ -32,7 +31,6 @@ mixin _MemoryChurch on _MemoryChurchBase {
     });
   }
 
-  @override
   Future<void> deleteChurch() async {
     // Only an open church: deleting and restoring a suspended one would
     // reopen it.
@@ -41,7 +39,6 @@ mixin _MemoryChurch on _MemoryChurchBase {
     _b.notify();
   }
 
-  @override
   Future<void> restoreChurch() async {
     _functionAdmin(allowClosed: true);
     final c = _b.churches[churchId]!;

@@ -2,7 +2,6 @@ part of 'memory_backend.dart';
 
 /// [MemoryChurchData] as functions/src/claim.ts and claimAsks.ts do it.
 mixin _MemoryClaim on _MemoryChurchBase {
-  @override
   Future<void> renamePending(String id, String name) async {
     // As functions/src/claim.ts renamePending.
     _functionAdmin();
@@ -77,7 +76,6 @@ mixin _MemoryClaim on _MemoryChurchBase {
     ];
   }
 
-  @override
   Future<void> askClaim(String? pendingId) async {
     // As functions/src/claimAsks.ts askClaim (the admins' push aside).
     final me = _b.functionAccess(churchId, allowed: (_) => true)!;
@@ -92,7 +90,6 @@ mixin _MemoryClaim on _MemoryChurchBase {
     _b.notify();
   }
 
-  @override
   Future<void> answerClaim(String uid, {required bool allow}) async {
     _functionAdmin();
     final ask = _b.claimAsks[churchId]?[uid];
@@ -102,7 +99,6 @@ mixin _MemoryClaim on _MemoryChurchBase {
     _b.notify();
   }
 
-  @override
   Future<void> mergePending(String pendingId, String uid) async {
     _functionAdmin();
     await _b.mergeHeld?.future;

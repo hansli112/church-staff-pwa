@@ -61,7 +61,6 @@ mixin _MemorySwaps on _MemoryChurchBase {
   String _nameOn(Roster roster, String duty, String uid) =>
       roster.duties.firstWhere((d) => d.role == duty).uids.entries.firstWhere((e) => e.value == uid).key;
 
-  @override
   Future<int> askCover(Roster roster, String duty) async {
     var asked = 0;
     await _b.write(() {
@@ -89,7 +88,6 @@ mixin _MemorySwaps on _MemoryChurchBase {
     return asked;
   }
 
-  @override
   Future<void> askSwap(Roster roster, String duty, Roster other, String uid) async {
     await _b.write(() {
       final (:me, :saved) = _asking(roster, duty);
@@ -127,7 +125,6 @@ mixin _MemorySwaps on _MemoryChurchBase {
     return r;
   }
 
-  @override
   Future<void> answerSwap(String id, {required bool yes}) async {
     await _b.write(() {
       final me = _b.requireMember(churchId);
@@ -167,7 +164,6 @@ mixin _MemorySwaps on _MemoryChurchBase {
     });
   }
 
-  @override
   Future<void> undoSwap(String id) async {
     await _b.write(() {
       final me = _b.requireMember(churchId);
@@ -192,7 +188,6 @@ mixin _MemorySwaps on _MemoryChurchBase {
     });
   }
 
-  @override
   Future<void> withdrawSwap(String id) async {
     await _b.write(() {
       final me = _b.requireMember(churchId);

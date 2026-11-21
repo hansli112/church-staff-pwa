@@ -13,6 +13,41 @@ class MemoryChurchData extends _MemoryChurchBase
         _MemoryClaim {
   MemoryChurchData(super._b, super.churchId);
 
+  /// Each call as its functions/src file makes it, in the part beside it.
+  @override
+  Future<R> run<R>(ChurchCall<R> call) async {
+    final Future<Object?> answer = switch (call) {
+      AnswerJoinRequest(:final uid, :final allow) => answerJoinRequest(uid, allow: allow),
+      DeleteSmallGroup(:final id) => deleteSmallGroup(id),
+      OrderSmallGroups(:final service, :final ids) => orderSmallGroups(service, ids),
+      NotifyPlanned(:final serviceType) => notifyPlanned(serviceType),
+      AskCover(:final roster, :final duty) => askCover(roster, duty),
+      AskSwap(:final roster, :final duty, :final other, :final uid) => askSwap(roster, duty, other, uid),
+      AnswerSwap(:final id, :final yes) => answerSwap(id, yes: yes),
+      UndoSwap(:final id) => undoSwap(id),
+      WithdrawSwap(:final id) => withdrawSwap(id),
+      AskUnavailable(:final serviceType, :final from, :final to) => askUnavailable(serviceType, from: from, to: to),
+      SetGroupMember(:final uid, :final group, :final member, :final duties, :final smallGroups) => setGroupMember(
+        uid,
+        group,
+        member: member,
+        duties: duties,
+        smallGroups: smallGroups,
+      ),
+      AddByName(:final name, :final serviceType) => addByName(name, serviceType),
+      SetDuty(:final uid, :final serviceType, :final duty, on: true) => grantDuty(uid, serviceType, duty),
+      SetDuty(:final uid, :final serviceType, :final duty, on: false) => revokeDuty(uid, serviceType, duty),
+      SetTimeZone(:final timeZone) => setTimeZone(timeZone),
+      DeleteChurch() => deleteChurch(),
+      RestoreChurch() => restoreChurch(),
+      MergePending(:final pendingId, :final uid) => mergePending(pendingId, uid),
+      RenamePending(:final id, :final name) => renamePending(id, name),
+      AskClaim(:final pendingId) => askClaim(pendingId),
+      AnswerClaim(:final uid, :final allow) => answerClaim(uid, allow: allow),
+    };
+    return await answer as R;
+  }
+
   @override
   late final CalendarData calendar = MemoryCalendarData(this);
 
