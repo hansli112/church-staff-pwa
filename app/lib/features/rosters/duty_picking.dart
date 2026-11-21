@@ -15,7 +15,8 @@ import '../../domain/roster_news.dart';
 import '../../l10n/app_localizations.dart';
 import '../../state/providers.dart';
 import '../../state/roster_actions.dart';
-import '../../state/staff_actions.dart';
+import '../../state/church_writes.dart';
+import '../../state/duty_pick.dart';
 import '../common/errors.dart';
 import 'format.dart';
 import 'future_changes.dart';
@@ -37,7 +38,6 @@ Future<void> pickPeople(
   final staff = ref.read(staffProvider).requireValue;
   final members = staff.all;
   final order = ref.read(rosterActionsProvider).orderOf(roster);
-  final me = ref.read(meProvider).value;
   final l10n = L10n.of(context);
   final around = ref.read(rosterActionsProvider).servingAroundOf(roster);
   final unavailable = unavailableOn(roster, ref.read(unavailableDaysProvider).value ?? const {});
@@ -73,18 +73,8 @@ Future<void> pickPeople(
   // link), its ref with it.
   final actions = ref.read(rosterActionsProvider);
   final guestSuggestions = actions.guestSuggestions(roster.isEvent ? null : roster.type, duty.role);
-  final arrangesAll = !roster.isEvent && ref.read(arrangesProvider(roster.type)).all;
-  // An event is in no service to add the duty to, and has no staff order
-  // of its own to drag; a duty only this day has, no list. Putting someone
-  // on the list moves the staff order too, so only whoever arranges all of
-  // the day; a 事工's 負責人 only takes off, and puts on from the duty's
-  // page (#94).
-  final editsList =
-      !roster.isEvent &&
-      (ref.read(servicesProvider).value?.byId(roster.type)?.duties.contains(duty.role) ?? false) &&
-      (me?.editsDutyList(ref.read(ministriesProvider).value?.ministries ?? const [], roster.type, duty.role) ?? false);
-  final canEditDutyList = arrangesAll && editsList;
   final onePerson = actions.takesOnePerson(roster, duty.role);
+  final rights = ref.read(dutyPickingProvider).rightsOn(roster, duty.role);
   final result = await showAppSheet<PickerResult>(
     context,
     expand: true,
@@ -99,16 +89,10 @@ Future<void> pickPeople(
       guestSuggestions: guestSuggestions,
       staff: staff,
       order: order,
-      canEditDutyList: canEditDutyList,
-      canTakeOffList: editsList,
-      // The staff order is the whole service's: not a 事工 leader's.
-      canReorder: arrangesAll,
+      rights: rights,
       canRemove: true,
       canSwapDay: swapDays.any((d) => canSwapDuty(duty.role, roster, d)),
       onePerson: onePerson,
-      canRemoveFutureGuests: !roster.isEvent,
-      // An event is in no service to add someone to.
-      canAddStaff: !roster.isEvent && (me?.addsStaffTo(ServiceGroup(roster.type)) ?? false),
       notes: notes,
       busy: busyNames,
       unavailable: unavailableNames,
@@ -249,72 +233,54 @@ Future<void> _savePicked(
   Set<String> unavailable = const {},
 }) async {
   final l10n = L10n.of(context);
-  final actions = ref.read(rosterActionsProvider);
   if (result.removeDuty) {
+    final actions = ref.read(rosterActionsProvider);
     await runWithUndo(context, l10n.dutyRemoved(duty.role), () => actions.removeDuty(roster, duty.role, via: via));
     return;
   }
-  // 新增同工 first, each on the duty's list (one the service has), so the
-  // day is theirs: one that fails says so, and the day is left as it was.
-  final newIds = <String, String>{};
-  final listed = ref.read(servicesProvider).value?.byId(roster.type)?.duties.contains(duty.role) ?? false;
-  // Read before waiting: the page, and its ref, can be gone by then.
-  final staff = ref.read(staffActionsProvider);
-  for (final name in result.newStaff) {
-    try {
-      newIds[name] = await staff.add(name, roster.type, duty: listed ? duty.role : null);
-    } catch (e) {
-      if (context.mounted) showToast(context, nameErrorText(l10n, e, name));
-      return;
-    }
+  final DutyPickSave save;
+  try {
+    save = await ref.read(dutyPickingProvider).save(roster, duty, result, via: via);
+  } on StaffNotAdded catch (e) {
+    if (context.mounted) showToast(context, nameErrorText(l10n, e.error, e.name));
+    return;
   }
-  // Not waited for: changes go to the backend in turn, and the pick
-  // shows at once. One that fails says so.
-  if (result.addDutyTo.isNotEmpty || result.takeDutyFrom.isNotEmpty) {
-    unawaited(
-      Future.wait([
-        for (final m in result.addDutyTo) actions.grantDuty(m, roster.type, duty.role),
-        for (final m in result.takeDutyFrom) actions.revokeDuty(m, roster.type, duty.role),
-      ]).then(
-        (_) {},
-        onError: (Object error) {
-          if (context.mounted) showToast(context, errorText(l10n, error));
-        },
-      ),
-    );
-  }
-  final changed = pickChanges(duty, result.people, guestNames: result.guestNames);
+  // Not waited for: they show at once. One that fails says so.
+  unawaited(
+    save.lists.then(
+      (_) {},
+      onError: (Object error) {
+        if (context.mounted) showToast(context, errorText(l10n, error));
+      },
+    ),
+  );
   if (!context.mounted) return;
-  if (changed || result.ranking != null) {
-    await _savePick(context, actions, roster, duty, result, changed, unavailable, via, newIds: newIds);
+  if (save.day case final day?) {
+    await _savePick(context, day, duty, result, save.peopleChanged, unavailable);
   }
   // Taken off the list alone: say so, with a way back. With the day
   // changed too, the day's 復原 comes first.
-  if (result.takeDutyFrom.isEmpty || changed || !context.mounted) return;
-  final taken = result.takeDutyFrom;
+  if (save.undoTakeOff == null || save.peopleChanged || !context.mounted) return;
   showToast(
     context,
-    l10n.dutyListRemoved(duty.role, {for (final m in taken) m.name}.join(l10n.listSeparator)),
-    onUndo: () => Future.wait([for (final m in taken) actions.grantDuty(m, roster.type, duty.role)]),
+    l10n.dutyListRemoved(duty.role, {for (final m in result.takeOffList) m.name}.join(l10n.listSeparator)),
+    onUndo: save.undoTakeOff,
   );
 }
 
 Future<void> _savePick(
   BuildContext context,
-  RosterActions actions,
-  Roster roster,
+  ChurchWrite Function() day,
   Duty duty,
-  PickerResult result,
+  DutyPick pick,
   bool changed,
   Set<String> unavailable,
-  RosterVia via, {
-  Map<String, String> newIds = const {},
-}) async {
+) async {
   final l10n = L10n.of(context);
   // Picked though they marked the day as one they cannot serve: said, so
   // it is not missed (#91).
   final unavailablePicked = [
-    for (final name in result.people)
+    for (final name in pick.people)
       if (unavailable.contains(name) && !duty.people.contains(name)) name,
   ];
   await runWithUndo(
@@ -324,15 +290,7 @@ Future<void> _savePick(
         : unavailablePicked.isEmpty
         ? l10n.dutyUpdated(duty.role)
         : l10n.dutyUpdatedUnavailable(duty.role, unavailablePicked.join(l10n.listSeparator)),
-    () => actions.setPeople(
-      roster,
-      duty.role,
-      result.people,
-      guestNames: result.guestNames,
-      ranking: result.ranking,
-      newIds: newIds,
-      via: via,
-    ),
+    day,
   );
 }
 

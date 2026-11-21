@@ -178,4 +178,59 @@ extension MemberPowers on Member {
   /// Whether this member sees the church's member list: admins, 行政 and
   /// whoever leads something.
   bool get readsMembers => inGroup(Group.rosterEditors) || leads;
+
+  /// What picking people for [duty] on [roster] may change besides who is
+  /// on it that day, the church's [services] and [ministries] as they are.
+  DutyRights rightsOnDuty(
+    Roster roster,
+    String duty, {
+    ServiceSettings? services,
+    List<Ministry> ministries = const [],
+  }) {
+    if (roster.isEvent) return const DutyRights();
+    final type = roster.type;
+    final arrangesAll = arranges(ministries, type).all;
+    // A duty only this day has: no list.
+    final editsList = (services?.byId(type)?.duties.contains(duty) ?? false) && editsDutyList(ministries, type, duty);
+    return DutyRights(
+      // Putting someone on the list moves the staff order too: only whoever
+      // arranges all of the day. A 事工's 負責人 only takes off, and puts
+      // on from the duty's page (#94).
+      putsOnList: arrangesAll && editsList,
+      takesOffList: editsList,
+      // The staff order is the whole service's: not a 事工 leader's.
+      reorders: arrangesAll,
+      addsStaff: addsStaffTo(ServiceGroup(type)),
+      dropsFutureGuests: true,
+    );
+  }
+}
+
+/// What picking people for a duty on a day may change besides who is on
+/// it: [MemberPowers.rightsOnDuty]. An event's roster is in no service:
+/// no list, no staff order of its own, no one to add to it.
+@immutable
+class DutyRights {
+  const DutyRights({
+    this.putsOnList = false,
+    this.takesOffList = false,
+    this.reorders = false,
+    this.addsStaff = false,
+    this.dropsFutureGuests = false,
+  });
+
+  /// Puts anyone on the duty's list, picking them.
+  final bool putsOnList;
+
+  /// Takes someone off the duty's list.
+  final bool takesOffList;
+
+  /// Drags the duty's staff order.
+  final bool reorders;
+
+  /// Adds a 同工 by a name typed (新增同工).
+  final bool addsStaff;
+
+  /// Takes a name arranged this once off the days ahead too (之後都不排).
+  final bool dropsFutureGuests;
 }

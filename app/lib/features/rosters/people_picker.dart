@@ -12,43 +12,25 @@ import '../../domain/staff.dart';
 import '../../domain/staff_order.dart';
 import '../../domain/text.dart' show nameKey;
 import '../../l10n/app_localizations.dart';
+import '../../state/duty_pick.dart';
 
 /// What the picker hands back when it closes.
-class PickerResult {
+class PickerResult extends DutyPick {
   const PickerResult({
-    required this.people,
-    this.ranking,
-    this.addDutyTo = const [],
-    this.takeDutyFrom = const [],
+    required super.people,
+    super.ranking,
+    super.putOnList,
+    super.takeOffList,
+    super.guestNames,
+    super.newStaff,
     this.removeDuty = false,
     this.swapDay = false,
-    this.guestNames = const {},
-    this.newStaff = const {},
     this.removeFutureGuest,
   });
-
-  /// Names typed to be 同工 without an account (新增同工), to add to the
-  /// service with the duty before the day is saved.
-  final Set<String> newStaff;
 
   /// A name arranged this once, to take off the days ahead too
   /// (之後都不排), swiped in 臨時排過的人.
   final String? removeFutureGuest;
-
-  /// Names explicitly arranged without binding a same-name member.
-  final Set<String> guestNames;
-
-  /// The chosen names, any order (the caller sorts by staff order).
-  final List<String> people;
-
-  /// The new staff order for this duty, only if someone dragged it.
-  final List<String>? ranking;
-
-  /// Members to give this duty to, so they show up first next time.
-  final List<Member> addDutyTo;
-
-  /// Members taken off this duty's list in 編輯.
-  final List<Member> takeDutyFrom;
 
   /// Take this duty off the day altogether.
   final bool removeDuty;
@@ -84,9 +66,7 @@ class PeoplePicker extends StatefulWidget {
     required this.initial,
     required this.staff,
     required this.order,
-    required this.canEditDutyList,
-    this.canTakeOffList = false,
-    required this.canReorder,
+    required this.rights,
     this.canRemove = false,
     this.canSwapDay = false,
     this.onePerson = false,
@@ -95,18 +75,13 @@ class PeoplePicker extends StatefulWidget {
     this.notes = const {},
     this.busy = const {},
     this.unavailable = const {},
-    this.canRemoveFutureGuests = false,
-    this.canAddStaff = false,
   });
 
-  /// A typed name nobody has can be a 同工 without an account in the
-  /// service (新增同工, addByName), not only arranged this once: one who
-  /// adds 同工 there, on a service's roster.
-  final bool canAddStaff;
-
-  /// Names arranged this once swipe away from the days ahead too: a
-  /// service's roster, not an event's.
-  final bool canRemoveFutureGuests;
+  /// What picking may change besides who is on the day: putting someone
+  /// picked on the list, swiping them off it, dragging the order, a typed
+  /// name made a 同工 (新增同工), a name arranged this once swiped off the
+  /// days ahead.
+  final DutyRights rights;
 
   /// The service, or null for an event's roster: then whoever serves the
   /// duty in any service is listed first.
@@ -117,16 +92,6 @@ class PeoplePicker extends StatefulWidget {
   final StaffOrder order;
   final Set<String> initialGuests;
   final List<String> guestSuggestions;
-
-  /// Whoever arranges all of the day and edits the duty's list: picking
-  /// someone puts them on it, a swipe takes them off.
-  final bool canEditDutyList;
-
-  /// Swiping takes someone off the duty's list, for a 事工's 負責人 too,
-  /// who arranges only its duties: taking off moves no one in the staff
-  /// order, while putting on would (#94).
-  final bool canTakeOffList;
-  final bool canReorder;
 
   /// Offer 「這一天沒有這項服事」 at the end of the list (the row also swipes away).
   final bool canRemove;
@@ -205,11 +170,11 @@ class _PeoplePickerState extends State<PeoplePicker> {
   PickerResult get result => PickerResult(
     people: _selected,
     ranking: _ranking,
-    addDutyTo: [
+    putOnList: [
       for (final m in _grant)
         if (_selected.contains(m.name)) m,
     ],
-    takeDutyFrom: _takeOff,
+    takeOffList: _takeOff,
     guestNames: _guests.intersection(_selected.toSet()),
     newStaff: _newStaff.intersection(_selected.toSet()),
   );
@@ -267,7 +232,7 @@ class _PeoplePickerState extends State<PeoplePicker> {
     // Remembered for the duty only if they are one of the service's 同工;
     // someone helping out is scheduled this once (#82), and shows on the
     // service's page to be added as a 同工.
-    if (widget.canEditDutyList && m.zoneTypes.contains(widget.serviceType)) {
+    if (widget.rights.putsOnList && m.zoneTypes.contains(widget.serviceType)) {
       _grant.add(m);
       _putOnList(m);
     }
@@ -279,7 +244,7 @@ class _PeoplePickerState extends State<PeoplePicker> {
     (_servingMembers[m.name] ??= []).add(m);
     setState(() {
       _serving = [..._serving, m.name];
-      if (widget.canReorder || widget.canEditDutyList) _ranking = _serving;
+      if (widget.rights.reorders || widget.rights.putsOnList) _ranking = _serving;
     });
   }
 
@@ -297,10 +262,10 @@ class _PeoplePickerState extends State<PeoplePicker> {
         if (n != name) n,
     ];
     // The staff order is the whole service's: not a 事工 leader's to write.
-    if (widget.canReorder || widget.canEditDutyList) _ranking = _serving;
+    if (widget.rights.reorders || widget.rights.putsOnList) _ranking = _serving;
   }
 
-  bool get _swipesOff => widget.canEditDutyList || widget.canTakeOffList;
+  bool get _swipesOff => widget.rights.putsOnList || widget.rights.takesOffList;
 
   /// Swiped off the list: [name] listed with everyone else, still picked
   /// for this day.
@@ -440,7 +405,7 @@ class _PeoplePickerState extends State<PeoplePicker> {
 
     // Ticking several, whoever may change the list's order drags it by the
     // handles: each part of it within itself, the day's people too.
-    final drags = !_tapReplaces && !searching && (widget.canEditDutyList || widget.canReorder);
+    final drags = !_tapReplaces && !searching && (widget.rights.putsOnList || widget.rights.reorders);
     final rows = <_Entry>[];
     void listRow(String n, int part) => rows.add(
       _Entry(
@@ -500,7 +465,7 @@ class _PeoplePickerState extends State<PeoplePicker> {
     }
     // Nobody in the church by that name, however written: adding would
     // refuse it.
-    if (!typedIsKnown && widget.canAddStaff && !widget.staff.hasName(typed)) {
+    if (!typedIsKnown && widget.rights.addsStaff && !widget.staff.hasName(typed)) {
       rows.add(
         _Entry(
           'typed-staff',
@@ -570,7 +535,7 @@ class _PeoplePickerState extends State<PeoplePicker> {
             chevron: false,
             onTap: () => Navigator.pop(
               context,
-              PickerResult(people: const [], ranking: _ranking, takeDutyFrom: _takeOff),
+              PickerResult(people: const [], ranking: _ranking, takeOffList: _takeOff),
             ),
           ),
         ),
@@ -635,7 +600,7 @@ class _PeoplePickerState extends State<PeoplePicker> {
   /// A name arranged before without an account; swiped, 之後都不排.
   Widget _guestRow(String name, AppColors c, L10n l10n) {
     final row = _row(name, c, l10n, onTap: () => _choose(name, guest: true));
-    if (!widget.canRemoveFutureGuests) return row;
+    if (!widget.rights.dropsFutureGuests) return row;
     void remove() => Navigator.pop(context, PickerResult(people: widget.initial, removeFutureGuest: name));
     return Semantics(
       customSemanticsActions: {CustomSemanticsAction(label: l10n.rosterRemoveFutureGuest): remove},
