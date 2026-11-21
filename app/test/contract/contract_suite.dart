@@ -2003,6 +2003,23 @@ void contractTests(Future<ContractWorld> Function() open) {
       );
     });
 
+    test('with Gemini down, a photo is given back and the app is not taken for offline', () async {
+      final g = await Grace.open(w);
+      await w.stopPhotoReading();
+      await w.signIn(Grace.editorEmail);
+      const photo = [PhotoInput(mimeType: 'image/png', bytes: png)];
+      await expectLater(
+        g.church.photos.recognize('sunday', photo),
+        throwsA(
+          isA<CloudException>()
+              .having((e) => e.code, 'code', CloudErrorCode.unavailable)
+              .having((e) => e.reason, 'reason', isNot(CloudReason.offlineReadOnly)),
+        ),
+      );
+      expect(w.backend.connectivity.online, isTrue);
+      expect((await g.church.photos.quota()).remaining, 30);
+    });
+
     test('only editors of a service the church has recognize photos for it', () async {
       final g = await Grace.open(w);
       const photo = [PhotoInput(mimeType: 'image/png', bytes: png)];

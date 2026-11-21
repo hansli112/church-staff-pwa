@@ -1891,6 +1891,14 @@ Future<T> _onlineTransaction<T>(
   }, write: true);
 }
 
+/// A function's own refusal, unavailable included (Gemini down, say): not
+/// the app being offline.
+class _Answered implements Exception {
+  const _Answered(this.error);
+
+  final CloudException error;
+}
+
 Future<T> _online<T>(TransportConnectivity connectivity, Future<T> Function() op, {bool write = false}) async {
   final release = write ? connectivity.beginWrite() : null;
   try {
@@ -1898,6 +1906,9 @@ Future<T> _online<T>(TransportConnectivity connectivity, Future<T> Function() op
     final result = await _guard(op);
     connectivity.observe(true);
     return result;
+  } on _Answered catch (answered, stack) {
+    connectivity.observe(true);
+    Error.throwWithStackTrace(answered.error, stack);
   } on CloudException catch (error) {
     if (error.code == CloudErrorCode.unavailable) {
       connectivity.observe(false);
@@ -1965,12 +1976,29 @@ class _Callables {
     }
   }
 
+  /// Functions that may take longer than the 60 seconds a call waits by
+  /// default: as long as each may run (functions/src/index.ts), and a bit.
+  /// Recognizing a photo takes 20 to 60 seconds; waiting less said 離線中
+  /// while the photo was still being read, and counted.
+  static const _waits = {
+    'recognizeRoster': Duration(seconds: 190),
+    'movePreview': Duration(seconds: 310),
+    'moveCommit': Duration(seconds: 310),
+  };
+
   Future<Object?> _callOnce(String name, Map<String, Object?>? data) => _online(_connectivity, () async {
     try {
-      final result = await _functions.httpsCallable(name).call<Object?>(data);
+      final wait = _waits[name];
+      final callable = wait == null
+          ? _functions.httpsCallable(name)
+          : _functions.httpsCallable(name, options: HttpsCallableOptions(timeout: wait));
+      final result = await callable.call<Object?>(data);
       return result.data;
     } on FirebaseFunctionsException catch (e) {
-      throw translate(e);
+      final error = translate(e);
+      // The function answered: whatever it says, the app is online.
+      if (e.details case {'reason': String _}) throw _Answered(error);
+      throw error;
     }
   });
 

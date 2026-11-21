@@ -1,4 +1,5 @@
 import 'package:martha/core/languages.dart';
+import 'package:martha/data/backend.dart';
 import 'package:martha/data/memory/memory_backend.dart';
 import 'package:martha/domain/models.dart';
 
@@ -40,6 +41,9 @@ class MemoryWorld implements ContractWorld {
 
   @override
   Future<void> connectCalendar(String churchId) => backend.church(churchId).calendar.select('cal-1', '教會行事曆');
+
+  @override
+  Future<void> stopPhotoReading() async => backend.recognizeFailure = const CloudException(CloudErrorCode.unavailable);
 
   @override
   Future<void> addNotification(String uid, NotificationItem n) async => backend.addNotification(uid, n);

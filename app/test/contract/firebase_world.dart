@@ -117,6 +117,9 @@ class FirebaseWorld implements ContractWorld {
       _write('churches/$churchId', {'deletedAt': DateTime.now().subtract(ago)}, mask: ['deletedAt']);
 
   @override
+  Future<void> stopPhotoReading() async {}
+
+  @override
   Future<void> addNotification(String uid, NotificationItem n) => _write('users/$uid/notifications/${n.id}', {
     'cid': n.churchId,
     'kind': n.kind?.name ?? 'later',

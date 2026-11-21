@@ -267,6 +267,9 @@ class MemoryBackend implements Backend {
   /// Scripted: photo recognition answers once this completes.
   Future<void>? recognizing;
 
+  /// Scripted: what recognition fails with (Gemini down), the photo given back.
+  Object? recognizeFailure;
+
   /// Set to make the next write fail, to test error handling.
   Object? failNextWrite;
 
@@ -2635,6 +2638,10 @@ class _MemoryPhotos implements PhotoData {
     if (used >= _c._b.photoLimit) throw const CloudException(CloudErrorCode.quotaExceeded, reason: CloudReason.church);
     _c._b.photosUsed[_c.churchId] = used + 1;
     await _c._b.recognizing;
+    if (_c._b.recognizeFailure case final failure?) {
+      _c._b.photosUsed[_c.churchId] = used;
+      throw failure;
+    }
     return _c._b.recognized;
   }
 
