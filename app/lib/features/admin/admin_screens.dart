@@ -1,8 +1,10 @@
 import 'dart:async';
+import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
 import 'package:material_symbols_icons/symbols.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:intl/intl.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../core/design/components.dart';
@@ -406,18 +408,31 @@ class _AdminChurchScreenState extends ConsumerState<AdminChurchScreen> {
 final _statsProvider = AsyncNotifierProvider.autoDispose<SavedRead<List<DailyStats>>, Saved<List<DailyStats>>>(
   () => SavedRead(
     'adminStats',
-    read: (ref) => ref.read(backendProvider).cloud.adminStats(days: 60),
+    read: (ref) => ref.read(backendProvider).cloud.adminStats(days: 30),
     encode: dailyStatsToJson,
     decode: dailyStatsFromJson,
   ),
 );
 
-/// Daily snapshots over the last 60 days, one small trend per metric.
-class AdminStatsScreen extends ConsumerWidget {
+/// Daily snapshots over the last 30 days: a bar a day for each metric.
+/// Touching or hovering a day shows that day on every card.
+class AdminStatsScreen extends ConsumerStatefulWidget {
   const AdminStatsScreen({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<AdminStatsScreen> createState() => _AdminStatsScreenState();
+}
+
+class _AdminStatsScreenState extends ConsumerState<AdminStatsScreen> {
+  /// The day shown, as an index into the days; null: the latest.
+  int? _picked;
+
+  /// Totals, which also show how much they changed from the day before;
+  /// the rest are each day's own usage.
+  static const _totals = {'users', 'churches_active', 'members', 'rosters'};
+
+  @override
+  Widget build(BuildContext context) {
     final l10n = L10n.of(context);
     final c = AppColors.of(context);
     final stats = ref.watch(_statsProvider);
@@ -439,82 +454,29 @@ class AdminStatsScreen extends ConsumerWidget {
           final days = saved.value;
           if (days.isEmpty) return EmptyState(message: l10n.statsNone);
           final ordered = [...days]..sort((a, b) => a.day.compareTo(b.day));
+          final shown = (_picked ?? ordered.length - 1).clamp(0, ordered.length - 1);
+          final day = ordered[shown].day;
+          final thisYear = day.year == ordered.last.day.year;
           return ListView(
             padding: const EdgeInsets.only(bottom: Space.xl),
             children: [
               _ReadNotice(saved, onRetry: () => _retry(ref.read(_statsProvider.notifier))),
+              Padding(
+                padding: const EdgeInsets.fromLTRB(Space.l, Space.s, Space.l, Space.s),
+                child: Text(
+                  (thisYear ? DateFormat.MMMEd() : DateFormat.yMMMEd()).format(day.midnight),
+                  style: AppText.title2,
+                ),
+              ),
               for (final (key, label) in metrics)
                 if (ordered.any((d) => d.values.containsKey(key)))
-                  Padding(
-                    padding: const EdgeInsets.fromLTRB(
-                      Space.m,
-                      Space.s,
-                      Space.m,
-                      Space.s,
-                    ),
-                    child: Material(
-                      color: c.surface,
-                      borderRadius: BorderRadius.circular(Radii.m),
-                      child: Padding(
-                        padding: const EdgeInsets.all(Space.m),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Row(
-                              children: [
-                                Expanded(
-                                  child: Text(
-                                    label,
-                                    style: AppText.subheadline.copyWith(
-                                      color: c.secondaryLabel,
-                                    ),
-                                  ),
-                                ),
-                                Text(
-                                  _fmt(ordered.last.values[key]),
-                                  style: AppText.title3,
-                                ),
-                              ],
-                            ),
-                            const SizedBox(height: Space.s),
-                            SizedBox(
-                              height: 64,
-                              child: Semantics(
-                                label: '$label ${ordered.first.day.key}–${ordered.last.day.key}',
-                                child: CustomPaint(
-                                  size: Size.infinite,
-                                  painter: _TrendPainter(
-                                    [
-                                      for (final d in ordered) (d.values[key] ?? 0).toDouble(),
-                                    ],
-                                    c.accent,
-                                    c.separator,
-                                  ),
-                                ),
-                              ),
-                            ),
-                            const SizedBox(height: Space.xs),
-                            Row(
-                              children: [
-                                Text(
-                                  ordered.first.day.key,
-                                  style: AppText.caption.copyWith(
-                                    color: c.secondaryLabel,
-                                  ),
-                                ),
-                                const Spacer(),
-                                Text(
-                                  ordered.last.day.key,
-                                  style: AppText.caption.copyWith(
-                                    color: c.secondaryLabel,
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ],
-                        ),
-                      ),
-                    ),
+                  _MetricCard(
+                    label: label,
+                    days: ordered,
+                    metric: key,
+                    shown: shown,
+                    total: _totals.contains(key),
+                    onPick: (i) => setState(() => _picked = i),
                   ),
               Padding(
                 padding: const EdgeInsets.all(Space.l),
@@ -530,50 +492,181 @@ class AdminStatsScreen extends ConsumerWidget {
       ),
     );
   }
+}
 
-  static String _fmt(num? v) {
-    if (v == null) return '–';
-    if (v is double && v != v.roundToDouble()) return v.toStringAsFixed(2);
-    return v.round().toString();
+/// One metric: its value on the day shown, and a bar for each day.
+class _MetricCard extends StatelessWidget {
+  const _MetricCard({
+    required this.label,
+    required this.days,
+    required this.metric,
+    required this.shown,
+    required this.total,
+    required this.onPick,
+  });
+
+  final String label;
+  final List<DailyStats> days;
+  final String metric;
+  final int shown;
+  final bool total;
+
+  /// A day touched or hovered; null when the pointer leaves (the latest).
+  final ValueChanged<int?> onPick;
+
+  static final _compact = NumberFormat.compact(locale: 'en');
+
+  /// 325K, 18.1K, 729 (as Firebase's console counts); the cost in dollars.
+  String _fmt(num v) => metric == 'cost_usd' ? v.toStringAsFixed(2) : _compact.format(v);
+
+  /// A round number at or above [max], for the top of the bars.
+  static double _ceiling(double max) {
+    if (max <= 0) return 1;
+    final e = math.pow(10, (math.log(max) / math.ln10).floor()).toDouble();
+    for (final k in const [1, 2, 2.5, 5]) {
+      if (k * e >= max) return k * e;
+    }
+    return 10 * e;
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final c = AppColors.of(context);
+    final values = [for (final d in days) (d.values[metric] ?? 0).toDouble()];
+    final value = days[shown].values[metric];
+    final change = total && shown > 0 && value != null ? value - (days[shown - 1].values[metric] ?? value) : 0;
+    final top = _ceiling(values.reduce(math.max));
+    final axis = AppText.caption.copyWith(color: c.secondaryLabel);
+    final md = DateFormat.Md();
+
+    int at(double x, double width) => (x / width * days.length).floor().clamp(0, days.length - 1);
+
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(Space.m, Space.xs, Space.m, Space.s),
+      child: Material(
+        color: c.surface,
+        borderRadius: BorderRadius.circular(Radii.m),
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(Space.m, Space.m, Space.m, Space.s),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                crossAxisAlignment: CrossAxisAlignment.baseline,
+                textBaseline: TextBaseline.alphabetic,
+                children: [
+                  Expanded(
+                    child: Text(label, style: AppText.subheadline.copyWith(color: c.secondaryLabel)),
+                  ),
+                  if (change != 0) ...[
+                    Text(
+                      change > 0 ? '+${_fmt(change)}' : '−${_fmt(-change)}',
+                      style: AppText.footnote.copyWith(color: change > 0 ? c.success : c.secondaryLabel),
+                    ),
+                    const SizedBox(width: Space.s),
+                  ],
+                  Text(value == null ? '–' : _fmt(value), style: AppText.title3),
+                ],
+              ),
+              const SizedBox(height: Space.m),
+              SizedBox(
+                key: Key('statsChart-$metric'),
+                height: 72,
+                child: LayoutBuilder(
+                  builder: (context, box) => MouseRegion(
+                    onHover: (e) => onPick(at(e.localPosition.dx, box.maxWidth)),
+                    onExit: (_) => onPick(null),
+                    child: GestureDetector(
+                      behavior: HitTestBehavior.opaque,
+                      onTapDown: (e) => onPick(at(e.localPosition.dx, box.maxWidth)),
+                      onHorizontalDragStart: (e) => onPick(at(e.localPosition.dx, box.maxWidth)),
+                      onHorizontalDragUpdate: (e) => onPick(at(e.localPosition.dx, box.maxWidth)),
+                      child: Semantics(
+                        label: '$label ${md.format(days.first.day.midnight)}–${md.format(days.last.day.midnight)}',
+                        child: CustomPaint(
+                          size: Size.infinite,
+                          painter: _BarsPainter(
+                            values: values,
+                            top: top,
+                            shown: shown,
+                            bar: c.accent,
+                            dim: c.accent.withValues(alpha: 0.25),
+                            baseline: c.separator,
+                          ),
+                          child: Align(
+                            alignment: Alignment.topLeft,
+                            child: Padding(
+                              padding: const EdgeInsets.only(top: 2),
+                              child: Text(_fmt(top), style: axis),
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+              const SizedBox(height: Space.xs),
+              Row(
+                children: [
+                  Text(md.format(days.first.day.midnight), style: axis),
+                  const Spacer(),
+                  Text(md.format(days.last.day.midnight), style: axis),
+                ],
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
   }
 }
 
-class _TrendPainter extends CustomPainter {
-  _TrendPainter(this.values, this.color, this.baseline);
+class _BarsPainter extends CustomPainter {
+  _BarsPainter({
+    required this.values,
+    required this.top,
+    required this.shown,
+    required this.bar,
+    required this.dim,
+    required this.baseline,
+  });
 
   final List<double> values;
-  final Color color;
+  final double top;
+  final int shown;
+  final Color bar;
+  final Color dim;
   final Color baseline;
 
   @override
   void paint(Canvas canvas, Size size) {
-    if (values.isEmpty) return;
-    final maxV = values.reduce((a, b) => a > b ? a : b);
-    final minV = values.reduce((a, b) => a < b ? a : b);
-    final span = (maxV - minV).abs() < 1e-9 ? 1.0 : maxV - minV;
-    canvas.drawLine(
-      Offset(0, size.height),
-      Offset(size.width, size.height),
-      Paint()..color = baseline,
-    );
-    final path = Path();
-    for (var i = 0; i < values.length; i++) {
-      final x = values.length == 1 ? size.width : size.width * i / (values.length - 1);
-      final y = size.height - (values[i] - minV) / span * (size.height - 4) - 2;
-      i == 0 ? path.moveTo(x, y) : path.lineTo(x, y);
+    final line = Paint()..color = baseline;
+    canvas.drawLine(Offset(0, size.height - 0.5), Offset(size.width, size.height - 0.5), line);
+    // The top of the scale, dashed.
+    for (var x = 0.0; x < size.width; x += 6) {
+      canvas.drawLine(Offset(x, 0.5), Offset(math.min(x + 3, size.width), 0.5), line);
     }
-    canvas.drawPath(
-      path,
-      Paint()
-        ..color = color
-        ..style = PaintingStyle.stroke
-        ..strokeWidth = 2
-        ..strokeJoin = StrokeJoin.round,
-    );
+    final n = values.length;
+    const gap = 3.0;
+    final width = math.max(1.0, (size.width - gap * (n - 1)) / n);
+    for (var i = 0; i < n; i++) {
+      final h = values[i] <= 0 ? 2.0 : math.max(2.0, values[i] / top * size.height);
+      final left = i * (width + gap);
+      canvas.drawRRect(
+        RRect.fromRectAndCorners(
+          Rect.fromLTWH(left, size.height - h, width, h),
+          topLeft: const Radius.circular(2),
+          topRight: const Radius.circular(2),
+        ),
+        Paint()..color = i == shown ? bar : dim,
+      );
+    }
   }
 
   @override
-  bool shouldRepaint(_TrendPainter old) => old.values != values || old.color != color;
+  bool shouldRepaint(_BarsPainter old) =>
+      old.values != values || old.shown != shown || old.top != top || old.bar != bar || old.dim != dim;
 }
 
 final _fundingProvider = AsyncNotifierProvider.autoDispose<SavedRead<FundingOverview>, Saved<FundingOverview>>(

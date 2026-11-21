@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
+import 'package:intl/intl.dart';
 import 'package:martha/core/design/components.dart';
 import 'package:martha/core/languages.dart';
 import 'package:martha/data/backend.dart';
@@ -62,6 +63,29 @@ void main() {
     await go(tester, '/admin/stats');
     expect(find.text('40'), findsOneWidget);
     expect(find.textContaining('顯示上次的資料'), findsOneWidget);
+  });
+
+  testWidgets('stats show the latest day in K, and a day touched on every card', (tester) async {
+    final b = seededChurch();
+    b.auth.operators.add('pastor');
+    final yesterday = testToday.addDays(-1);
+    b.cloud.stats
+      ..add(DailyStats(day: testToday, values: const {'users': 729, 'firestore_reads': 324861}))
+      ..add(DailyStats(day: yesterday, values: const {'users': 129, 'firestore_reads': 16727}));
+    await pumpApp(tester, b);
+    await go(tester, '/admin/stats');
+    expect(find.text(DateFormat.MMMEd().format(testToday.midnight)), findsOneWidget);
+    expect(find.text('729'), findsOneWidget);
+    expect(find.text('+600'), findsOneWidget, reason: 'a total says how much it grew');
+    expect(find.text('325K'), findsOneWidget);
+
+    final chart = find.byKey(const Key('statsChart-users'));
+    await tester.tapAt(tester.getTopLeft(chart) + const Offset(4, 36));
+    await settle(tester);
+    expect(find.text(DateFormat.MMMEd().format(yesterday.midnight)), findsOneWidget);
+    expect(find.text('129'), findsOneWidget);
+    expect(find.text('16.7K'), findsOneWidget, reason: 'every card shows the day touched');
+    expect(find.text('+600'), findsNothing);
   });
 
   testWidgets('a cost\'s name in the other languages is saved; one left empty is not', (tester) async {
