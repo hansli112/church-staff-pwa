@@ -126,8 +126,11 @@ void main() {
           ],
         );
         final roster = r['roster'] as String;
+        // The services every runner's church has.
         expect(
-          roster == 'event' ? member.canEditEventRoster(r['eventGroup'] as String?) : member.canEditRosters(roster),
+          roster == 'event'
+              ? member.canEditEventRoster(r['eventGroup'] as String?)
+              : member.editsRostersOf(roster, const ['sunday', 'youth']),
           r['may'],
         );
       });

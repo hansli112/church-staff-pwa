@@ -193,7 +193,10 @@
     { "why": "a 牧區 alone edits nothing", "role": "staff", "groups": [], "zoneTypes": ["sunday"], "leadTypes": [], "leadMinistries": [], "roster": "sunday", "may": false },
     { "why": "nor arranges events' rosters", "role": "staff", "groups": [], "zoneTypes": ["sunday"], "leadTypes": [], "leadMinistries": [], "roster": "event", "may": false },
     { "why": "calendar-editors alone edit the calendar, not rosters", "role": "staff", "groups": ["calendar-editors"], "zoneTypes": ["sunday"], "leadTypes": [], "leadMinistries": [], "roster": "event", "may": false },
-    { "why": "an old 小組長 (role leader) edits nothing", "role": "leader", "groups": [], "zoneTypes": ["sunday"], "leadTypes": [], "leadMinistries": [], "roster": "sunday", "may": false }
+    { "why": "an old 小組長 (role leader) edits nothing", "role": "leader", "groups": [], "zoneTypes": ["sunday"], "leadTypes": [], "leadMinistries": [], "roster": "sunday", "may": false },
+    { "why": "a service the church never had (it has sunday and youth): nobody edits its rosters, an admin neither", "role": "admin", "groups": [], "zoneTypes": [], "leadTypes": [], "leadMinistries": [], "roster": "retreat", "may": false },
+    { "why": "nor 行政", "role": "staff", "groups": ["roster-editors", "calendar-editors"], "zoneTypes": [], "leadTypes": [], "leadMinistries": [], "roster": "retreat", "may": false },
+    { "why": "nor one who leads it by that ID", "role": "staff", "groups": [], "zoneTypes": [], "leadTypes": ["retreat"], "leadMinistries": [], "roster": "retreat", "may": false }
   ],
   "memberListReading": [
     { "why": "an admin reads the member list", "member": {"role": "admin"}, "reads": true },

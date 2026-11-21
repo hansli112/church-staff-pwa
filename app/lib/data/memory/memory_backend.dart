@@ -878,7 +878,7 @@ class MemoryChurchData implements ChurchData {
   /// A service the church has configured, which the member may edit.
   void _requireRosterEditor(String type) {
     final me = _b.requireMember(churchId);
-    if (!_b.services[churchId]!.ids.contains(type) || !me.canEditRosters(type)) {
+    if (!me.editsRostersOf(type, _b.services[churchId]!.ids)) {
       throw const CloudException(CloudErrorCode.permissionDenied);
     }
   }
