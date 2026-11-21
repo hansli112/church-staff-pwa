@@ -123,7 +123,7 @@
   "addRosterNote": "Add Notes",
   "rosterHasNote": "Has notes",
   "noteAddFile": "Add File",
-  "noteFilesFooter": "PDFs, images or audio, up to 5, 20 MB each. Deleted 30 days after the day.",
+  "noteFilesFooter": "Up to 5 files, 20 MB each\nDeleted 30 days after the day",
   "noteFileTooBig": "“{name}” is over 20 MB",
   "noteFileFailed": "Couldn’t upload “{name}”",
   "noteRemoveFile": "Remove “{name}”",

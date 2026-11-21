@@ -15,10 +15,12 @@ import '../../domain/models.dart';
 import '../../l10n/app_localizations.dart';
 import '../../state/providers.dart';
 
-/// A file picked for a 備註, before it is uploaded.
-typedef PickedNoteFile = ({String name, String type, Uint8List bytes});
+/// A file picked for a 備註, before it is uploaded; no [bytes] when it is
+/// over Limits.noteFileBytes, which are not read.
+typedef PickedNoteFile = ({String name, String type, Uint8List? bytes});
 
-/// What a 備註 takes, by extension, and its type.
+/// Content types by extension, for files the picker gives none; any other
+/// kind goes as bytes.
 const _types = {
   'pdf': 'application/pdf',
   'jpg': 'image/jpeg',
@@ -31,16 +33,30 @@ const _types = {
   'm4a': 'audio/mp4',
   'aac': 'audio/aac',
   'wav': 'audio/wav',
+  'mp4': 'video/mp4',
+  'mov': 'video/quicktime',
+  'doc': 'application/msword',
+  'docx': 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+  'ppt': 'application/vnd.ms-powerpoint',
+  'pptx': 'application/vnd.openxmlformats-officedocument.presentationml.presentation',
+  'xls': 'application/vnd.ms-excel',
+  'xlsx': 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+  'key': 'application/vnd.apple.keynote',
+  'pages': 'application/vnd.apple.pages',
+  'txt': 'text/plain',
 };
 
 /// Picks files for a 備註; none when cancelled. Overridden in tests.
 final notePickerProvider = Provider<Future<List<PickedNoteFile>> Function()>(
   (ref) => () async {
-    final picked = await FilePicker.pickFiles(type: FileType.custom, allowedExtensions: _types.keys.toList());
+    final picked = await FilePicker.pickFiles();
     return [
       for (final f in picked)
-        if (_types[f.extension?.toLowerCase()] case final type?)
-          (name: f.name, type: type, bytes: await f.readAsBytes()),
+        (
+          name: f.name,
+          type: _types[f.extension?.toLowerCase()] ?? 'application/octet-stream',
+          bytes: (await f.length() ?? 0) > Limits.noteFileBytes ? null : await f.readAsBytes(),
+        ),
     ];
   },
 );
@@ -232,7 +248,13 @@ class NoteFiles extends StatelessWidget {
   }
 }
 
-IconData _iconOf(NoteFile f) => f.isAudio ? Symbols.music_note_rounded : Symbols.picture_as_pdf_rounded;
+IconData _iconOf(NoteFile f) => f.isAudio
+    ? Symbols.music_note_rounded
+    : f.isVideo
+    ? Symbols.movie_rounded
+    : f.isPdf
+    ? Symbols.picture_as_pdf_rounded
+    : Symbols.description_rounded;
 
 class _Thumbnail extends StatelessWidget {
   const _Thumbnail({required this.file, this.preview, this.progress, this.onRemove});
@@ -446,15 +468,17 @@ class _NoteSheetState extends ConsumerState<NoteSheet> {
     final room = Limits.noteFiles - _files.length;
     if (picked.length > room) showToast(context, l10n.noteTooManyFiles);
     for (final f in picked.take(room)) {
-      if (f.bytes.length > Limits.noteFileBytes) {
+      final bytes = f.bytes;
+      if (bytes == null || bytes.length > Limits.noteFileBytes) {
         showToast(context, l10n.noteFileTooBig(f.name));
         continue;
       }
-      unawaited(_upload(f));
+      unawaited(_upload(f.name, f.type, bytes));
     }
   }
 
-  Future<void> _upload(PickedNoteFile f) async {
+  Future<void> _upload(String name, String type, Uint8List bytes) async {
+    final f = (name: name, type: type, bytes: bytes);
     final l10n = L10n.of(context);
     final messenger = ScaffoldMessenger.of(context);
     final temp = 'up${_picked++}';

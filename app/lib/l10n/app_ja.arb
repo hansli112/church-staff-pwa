@@ -123,7 +123,7 @@
   "addRosterNote": "メモを追加",
   "rosterHasNote": "メモあり",
   "noteAddFile": "ファイルを追加",
-  "noteFilesFooter": "PDF・画像・音声、5 個まで、各 20 MB。その日の 30 日後に削除されます。",
+  "noteFilesFooter": "ファイルは 5 個まで、各 20 MB 以内\n奉仕の 30 日後に自動で削除されます",
   "noteFileTooBig": "「{name}」は 20 MB を超えています",
   "noteFileFailed": "「{name}」をアップロードできませんでした",
   "noteRemoveFile": "「{name}」を削除",

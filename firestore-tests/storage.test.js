@@ -106,18 +106,18 @@ describe('備註的檔案', () => {
   const path = (id) => `churches/A/rosterNotes/2030-12-22_sunday/${id}`;
   const pdf = (uid) => ({ contentType: 'application/pdf', customMetadata: { uploader: uid } });
 
-  it('管理員、行政、負責人上傳 PDF、圖片、音檔，教會的人讀得到', async () => {
+  it('管理員、行政、負責人上傳什麼檔案都可以，教會的人讀得到', async () => {
     await assertSucceeds(uploadBytes(ref(storageAs('admin-a'), path('a')), png, pdf('admin-a')));
     await assertSucceeds(uploadBytes(ref(storageAs('office-a'), path('b')), png, { contentType: 'image/jpeg', customMetadata: { uploader: 'office-a' } }));
     await assertSucceeds(uploadBytes(ref(storageAs('lead-a'), path('c')), png, { contentType: 'audio/mp4', customMetadata: { uploader: 'lead-a' } }));
+    await assertSucceeds(uploadBytes(ref(storageAs('lead-a'), path('w')), png, { contentType: 'application/vnd.ms-powerpoint', customMetadata: { uploader: 'lead-a' } }));
     await assertSucceeds(getBytes(ref(storageAs('staff-a'), path('a'))));
     await assertFails(getBytes(ref(storageAs('admin-b'), path('a'))));
   });
 
-  it('一般同工、別的教會不能上傳；別的類型、超過 20MB、沒說是誰傳的都不行', async () => {
+  it('一般同工、別的教會不能上傳；超過 20MB、沒說是誰傳的都不行', async () => {
     await assertFails(uploadBytes(ref(storageAs('staff-a'), path('d')), png, pdf('staff-a')));
     await assertFails(uploadBytes(ref(storageAs('admin-b'), path('d')), png, pdf('admin-b')));
-    await assertFails(uploadBytes(ref(storageAs('admin-a'), path('d')), png, { contentType: 'text/html', customMetadata: { uploader: 'admin-a' } }));
     await assertFails(uploadBytes(ref(storageAs('admin-a'), path('d')), png, { contentType: 'application/pdf' }));
     await assertFails(uploadBytes(ref(storageAs('admin-a'), path('d')), png, pdf('lead-a')));
     await assertFails(uploadBytes(ref(storageAs('admin-a'), path('d')), new Uint8Array(20 * 1024 * 1024 + 1), pdf('admin-a')));

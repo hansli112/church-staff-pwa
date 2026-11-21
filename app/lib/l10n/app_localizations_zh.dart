@@ -408,7 +408,7 @@ class L10nZh extends L10n {
   String get noteAddFile => '加入檔案';
 
   @override
-  String get noteFilesFooter => 'PDF、圖片或音檔，最多 5 個，每個 20 MB。那天過後 30 天刪除。';
+  String get noteFilesFooter => '最多 5 個檔案，每個 20 MB 以內\n服事過後 30 天自動刪除';
 
   @override
   String noteFileTooBig(String name) {
@@ -4055,7 +4055,7 @@ class L10nZhHans extends L10nZh {
   String get noteAddFile => '添加文件';
 
   @override
-  String get noteFilesFooter => 'PDF、图片或音频，最多 5 个，每个 20 MB。那天过后 30 天删除。';
+  String get noteFilesFooter => '最多 5 个文件，每个 20 MB 以内\n服事过后 30 天自动删除';
 
   @override
   String noteFileTooBig(String name) {

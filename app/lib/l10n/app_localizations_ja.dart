@@ -408,7 +408,7 @@ class L10nJa extends L10n {
   String get noteAddFile => 'ファイルを追加';
 
   @override
-  String get noteFilesFooter => 'PDF・画像・音声、5 個まで、各 20 MB。その日の 30 日後に削除されます。';
+  String get noteFilesFooter => 'ファイルは 5 個まで、各 20 MB 以内\n奉仕の 30 日後に自動で削除されます';
 
   @override
   String noteFileTooBig(String name) {

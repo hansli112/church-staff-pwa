@@ -67,7 +67,7 @@ describe('備註 (saveRosterNote)', () => {
     assert.equal((await db.doc(`churches/C1/rosterNotes/${ROSTER}`).get()).exists, false);
   });
 
-  test('refuses files not uploaded for this roster, too many, too big or of another kind, and too much text', async () => {
+  test('refuses files not uploaded for this roster, too many, and too much text', async () => {
     const save = (files: unknown[], text = '') => saveRosterNote(d, caller('lead'), { churchId: 'C1', rosterId: ROSTER, text, files });
     const other = await upload('2026-11-29_sunday', 'f9');
     await rejectsWith(save([{ ...other, url: urlOf(`churches/C1/rosterNotes/${ROSTER}/f9`) }]), 'unknown');
@@ -75,9 +75,15 @@ describe('備註 (saveRosterNote)', () => {
     const six = await Promise.all(['a', 'b', 'c', 'd', 'e', 'f'].map((id) => upload(ROSTER, id)));
     await rejectsWith(save(six), 'unknown');
     await rejectsWith(save([six[0], six[0]]), 'unknown');
-    await rejectsWith(save([await upload(ROSTER, 'html', 'text/html')]), 'unknown');
     await rejectsWith(save([], 'x'.repeat(501)), 'unknown');
     await save(six.slice(0, 5), 'x'.repeat(500));
+  });
+
+  test('any kind of file: a Word file is kept as it is', async () => {
+    const docx = 'application/vnd.openxmlformats-officedocument.wordprocessingml.document';
+    const word = await upload(ROSTER, 'w1', docx);
+    await saveRosterNote(d, caller('lead'), { churchId: 'C1', rosterId: ROSTER, text: '', files: [word] });
+    assert.equal((await db.doc(`churches/C1/rosterNotes/${ROSTER}`).get()).get('files')[0].type, docx);
   });
 
   test('a file kept keeps what was read of it; its name may change', async () => {

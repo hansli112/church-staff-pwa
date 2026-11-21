@@ -8,8 +8,8 @@ import { ledDuties, ministriesOf } from './ministries.js';
 import { groupOf } from './powers.js';
 
 /**
- * 備註 of a day's roster: some text and up to LIMITS.noteFiles files (樂譜,
- * 練唱音檔…), at churches/{cid}/rosterNotes/{rosterId}, the files in
+ * 備註 of a day's roster: some text and up to LIMITS.noteFiles files of any
+ * kind (樂譜, 練唱音檔, 投影片…), at churches/{cid}/rosterNotes/{rosterId}, the files in
  * Storage under [notePrefix]. Whoever arranges any of that roster writes
  * it, through [saveRosterNote]; everyone in the church reads it. It goes
  * LIMITS.noteDays after the roster's last day ([forgetOldRosterNotes]).
@@ -30,9 +30,9 @@ const ROSTER_ID = /^(\d{4}-(0[1-9]|1[0-2])-(0[1-9]|[12]\d|3[01]))_([A-Za-z0-9_-]
 const EVENT_ROSTER_ID = /^ev_[A-Za-z0-9_-]{1,1024}$/;
 const FILE_ID = /^[A-Za-z0-9_-]{1,64}$/;
 
-/** What a note's file may be: PDFs, pictures and sound (storage.rules too). */
+/** A content type as Storage keeps one: any kind of file may be on a note. */
 export const noteFileType = (type: unknown): type is string =>
-  typeof type === 'string' && /^(application\/pdf|image\/[\w.+-]+|audio\/[\w.+-]+)$/.test(type);
+  typeof type === 'string' && /^[\w.+-]+\/[\w.+-]+$/.test(type) && type.length <= 200;
 
 /** Where the files of roster [rosterId]'s note are, each at its id. */
 export const notePrefix = (cid: string, rosterId: string) => `churches/${cid}/rosterNotes/${rosterId}/`;

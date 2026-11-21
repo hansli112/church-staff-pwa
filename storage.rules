@@ -45,14 +45,13 @@ service firebase.storage {
         || m.get('leadSmallGroups', []).size() > 0));
     }
 
-    // 備註's files (樂譜, 練唱音檔…): the church reads them; who arranges
-    // uploads PDFs, pictures and sound up to 20 MB, saying it is theirs,
-    // and may take back their own before it is kept.
+    // 備註's files (樂譜, 練唱音檔, 投影片…): the church reads them; who
+    // arranges uploads any kind up to 20 MB, saying it is theirs, and may
+    // take back their own before it is kept.
     match /churches/{cid}/rosterNotes/{rosterId}/{fileId} {
       allow read: if isMember(cid);
       allow create: if arrangesSome(cid)
         && request.resource.size <= 20 * 1024 * 1024
-        && request.resource.contentType.matches('application/pdf|image/.+|audio/.+')
         && request.resource.metadata.get('uploader', '') == request.auth.uid;
       allow delete: if request.auth != null && resource.metadata.get('uploader', '') == request.auth.uid;
     }

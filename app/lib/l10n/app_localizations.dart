@@ -841,7 +841,7 @@ abstract class L10n {
   /// Under the files in the sheet editing a day's note
   ///
   /// In zh, this message translates to:
-  /// **'PDF、圖片或音檔，最多 5 個，每個 20 MB。那天過後 30 天刪除。'**
+  /// **'最多 5 個檔案，每個 20 MB 以內\n服事過後 30 天自動刪除'**
   String get noteFilesFooter;
 
   /// Toast when a picked file is too big to add to a note

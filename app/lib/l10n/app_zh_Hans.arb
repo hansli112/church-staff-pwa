@@ -123,7 +123,7 @@
   "addRosterNote": "添加备注",
   "rosterHasNote": "有备注",
   "noteAddFile": "添加文件",
-  "noteFilesFooter": "PDF、图片或音频，最多 5 个，每个 20 MB。那天过后 30 天删除。",
+  "noteFilesFooter": "最多 5 个文件，每个 20 MB 以内\n服事过后 30 天自动删除",
   "noteFileTooBig": "“{name}”超过 20 MB",
   "noteFileFailed": "“{name}”没有上传成功",
   "noteRemoveFile": "移除“{name}”",

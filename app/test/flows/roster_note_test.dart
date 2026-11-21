@@ -50,7 +50,7 @@ void main() {
     await tapText(tester, '加入檔案');
     expect(find.text('恩典夠我用.pdf'), findsOneWidget);
     expect(find.text('練唱.m4a'), findsOneWidget);
-    expect(find.text('PDF、圖片或音檔，最多 5 個，每個 20 MB。那天過後 30 天刪除。'), findsOneWidget);
+    expect(find.text('最多 5 個檔案，每個 20 MB 以內\n服事過後 30 天自動刪除'), findsOneWidget);
     await tapText(tester, '完成');
 
     final note = b.rosterNotes['grace']![_id]!;
@@ -139,6 +139,9 @@ void main() {
     await tapText(tester, '加入檔案');
     expect(find.text('「big.pdf」超過 20 MB'), findsOneWidget);
     expect(find.text('big.pdf'), findsNothing);
+    next = [(name: 'video.mov', type: 'video/quicktime', bytes: null)];
+    await tapText(tester, '加入檔案');
+    expect(find.text('「video.mov」超過 20 MB'), findsOneWidget, reason: 'too big to read: the picker gives no bytes');
 
     next = [for (var i = 1; i <= 6; i++) pdf('$i.pdf')];
     await tapText(tester, '加入檔案');
@@ -146,6 +149,19 @@ void main() {
     expect(find.text('5.pdf'), findsOneWidget);
     expect(find.text('6.pdf'), findsNothing);
     expect(find.text('加入檔案'), findsNothing);
+  });
+
+  testWidgets('any kind of file goes on it: a Word file shows as a document', (tester) async {
+    final b = seededChurch(as: editor);
+    await pumpApp(tester, b, overrides: [picker]);
+    await go(tester, '/rosters/sunday/2026-10-11');
+    await tapText(tester, '新增備註');
+    const docx = 'application/vnd.openxmlformats-officedocument.wordprocessingml.document';
+    next = [(name: '流程.docx', type: docx, bytes: Uint8List(4))];
+    await tapText(tester, '加入檔案');
+    await tapText(tester, '完成');
+    expect(b.rosterNotes['grace']![_id]!.files.single.type, docx);
+    expect(find.byIcon(Symbols.description_rounded), findsOneWidget);
   });
 
   testWidgets('closed without 完成, files picked are taken back', (tester) async {

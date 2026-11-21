@@ -123,7 +123,7 @@
   "addRosterNote": "메모 추가",
   "rosterHasNote": "메모 있음",
   "noteAddFile": "파일 추가",
-  "noteFilesFooter": "PDF·이미지·오디오, 최대 5개, 각 20MB. 그날로부터 30일 후 삭제돼요.",
+  "noteFilesFooter": "파일은 최대 5개, 각 20MB 이하\n섬긴 날로부터 30일 후 자동 삭제돼요",
   "noteFileTooBig": "‘{name}’이(가) 20MB를 넘어요",
   "noteFileFailed": "‘{name}’을(를) 올리지 못했어요",
   "noteRemoveFile": "‘{name}’ 삭제",

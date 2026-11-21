@@ -238,7 +238,7 @@
   "@rosterHasNote": {"description": "Screen-reader label of the small icon on a roster card whose day has a note"},
   "noteAddFile": "加入檔案",
   "@noteAddFile": {"description": "Button after a note's files, in the sheet editing it"},
-  "noteFilesFooter": "PDF、圖片或音檔，最多 5 個，每個 20 MB。那天過後 30 天刪除。",
+  "noteFilesFooter": "最多 5 個檔案，每個 20 MB 以內\n服事過後 30 天自動刪除",
   "@noteFilesFooter": {"description": "Under the files in the sheet editing a day's note"},
   "noteFileTooBig": "「{name}」超過 20 MB",
   "@noteFileTooBig": {"description": "Toast when a picked file is too big to add to a note", "placeholders": {"name": {"type": "String"}}},

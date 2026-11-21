@@ -759,7 +759,7 @@ class Duty {
   );
 }
 
-/// A file on a roster's 備註: 樂譜, a picture, 練唱音檔.
+/// A file on a roster's 備註, of any kind: 樂譜, a picture, 練唱音檔, 投影片.
 @immutable
 class NoteFile {
   const NoteFile({required this.id, required this.name, required this.type, required this.size, required this.url});
@@ -770,7 +770,7 @@ class NoteFile {
   /// The name it was picked with.
   final String name;
 
-  /// Its content type: a PDF, `image/…` or `audio/…`.
+  /// Its content type.
   final String type;
 
   /// In bytes.
@@ -781,6 +781,8 @@ class NoteFile {
 
   bool get isImage => type.startsWith('image/');
   bool get isAudio => type.startsWith('audio/');
+  bool get isVideo => type.startsWith('video/');
+  bool get isPdf => type == 'application/pdf';
 
   NoteFile copyWith({String? name}) => NoteFile(id: id, name: name ?? this.name, type: type, size: size, url: url);
 
@@ -797,9 +799,14 @@ class NoteFile {
   int get hashCode => Object.hash(id, name, type, size, url);
 }
 
-/// What a file on a 備註 may be: a PDF, a picture or sound
-/// (functions/src/rosterNotes.ts noteFileType, storage.rules).
-bool noteFileType(String type) => RegExp(r'^(application/pdf|image/[\w.+-]+|audio/[\w.+-]+)$').hasMatch(type);
+/// A content type as Storage keeps one: any kind of file may be on a 備註
+/// (functions/src/rosterNotes.ts noteFileType).
+bool noteFileType(String type) => type.length <= 200 && RegExp(r'^[\w.+-]+/[\w.+-]+$').hasMatch(type);
+
+/// Whether a file of [type] on a 備註 opens in the browser as it is; any
+/// other kind is downloaded.
+bool opensInline(String type) =>
+    type == 'application/pdf' || type == 'text/plain' || RegExp('^(image|audio|video)/').hasMatch(type);
 
 /// A day's 備註 on its roster: some text, and files. Whoever arranges any
 /// of the roster writes it; it goes Limits.noteDays after the last day.

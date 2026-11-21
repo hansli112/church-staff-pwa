@@ -418,7 +418,7 @@ class L10nEn extends L10n {
   String get noteAddFile => 'Add File';
 
   @override
-  String get noteFilesFooter => 'PDFs, images or audio, up to 5, 20 MB each. Deleted 30 days after the day.';
+  String get noteFilesFooter => 'Up to 5 files, 20 MB each\nDeleted 30 days after the day';
 
   @override
   String noteFileTooBig(String name) {

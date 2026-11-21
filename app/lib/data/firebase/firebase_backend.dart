@@ -1412,7 +1412,9 @@ class _FirestoreRosterNotes implements RosterNoteData {
       bytes,
       SettableMetadata(
         contentType: type,
-        contentDisposition: "inline; filename*=UTF-8''${Uri.encodeComponent(name)}",
+        // Only kinds a browser shows safely open in it; the rest download.
+        contentDisposition:
+            "${opensInline(type) ? 'inline' : 'attachment'}; filename*=UTF-8''${Uri.encodeComponent(name)}",
         customMetadata: {'uploader': _c._calls._auth.currentUser?.uid ?? ''},
       ),
     );
