@@ -1708,13 +1708,13 @@ abstract class L10n {
   /// **'建立邀請連結'**
   String get inviteCreate;
 
-  /// No description provided for @inviteLinks.
+  /// Header of the list of invite links that still work, on 邀請
   ///
   /// In zh, this message translates to:
   /// **'邀請連結'**
   String get inviteLinks;
 
-  /// No description provided for @inviteChurchOnly.
+  /// An invite link in the list on 邀請 that puts who joins in no 聚會, in place of the 聚會 names
   ///
   /// In zh, this message translates to:
   /// **'只加入教會'**

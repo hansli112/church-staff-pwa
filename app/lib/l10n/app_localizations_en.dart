@@ -944,7 +944,7 @@ class L10nEn extends L10n {
   String get inviteLinks => 'Invite links';
 
   @override
-  String get inviteChurchOnly => 'Church only';
+  String get inviteChurchOnly => 'Joins the church only';
 
   @override
   String get inviteCopy => 'Copy link';

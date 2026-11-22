@@ -922,7 +922,7 @@ class L10nJa extends L10n {
   String get inviteLinks => '招待リンク';
 
   @override
-  String get inviteChurchOnly => '教会のみ';
+  String get inviteChurchOnly => '教会への参加のみ';
 
   @override
   String get inviteCopy => 'リンクをコピー';

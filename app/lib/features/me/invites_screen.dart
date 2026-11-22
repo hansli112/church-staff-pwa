@@ -1,4 +1,3 @@
-import 'package:flutter/foundation.dart' show setEquals;
 import 'package:flutter/material.dart';
 import 'package:material_symbols_icons/symbols.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -32,9 +31,9 @@ final _liveInvitesProvider = Provider.autoDispose<List<Invite>>((ref) {
 });
 
 /// Admins make invite links, good for 30 days, share them, and revoke them.
-/// A link can put the people who join with it in some 牧區 at once; one
-/// for the same 牧區 as a link that still works is that link again, its
-/// 30 days counted from now, so the list has one a set of 牧區. Under
+/// A link can put the people who join with it in some 聚會 at once. 建立
+/// with the 聚會 of a link that still works shares that link again, its 30
+/// days counted from now: the list has one link for each set of 聚會. Under
 /// them, the other way in: 申請加入 from the church URL (#88), and the URL,
 /// named for what it is for there: the link to ask to join.
 class InvitesScreen extends ConsumerStatefulWidget {
@@ -65,9 +64,10 @@ class _InvitesScreenState extends ConsumerState<InvitesScreen> {
     try {
       final services = ref.read(servicesProvider).value?.services ?? const <Service>[];
       final zones = _zonesOf(services);
-      final same = ref.read(_liveInvitesProvider).where((i) => setEquals({...i.zoneTypes}, zones)).firstOrNull;
-      invite = same != null
-          ? await ref.churchData.joining.renewInvite(same.code, validFor: _validFor)
+      final ids = {for (final s in services) s.id};
+      final existing = ref.read(_liveInvitesProvider).where((i) => i.joinsJust(zones, ids)).firstOrNull;
+      invite = existing != null
+          ? await ref.churchData.joining.renewInvite(existing.code, validFor: _validFor)
           : await ref.churchData.joining.createInvite(
               validFor: _validFor,
               zoneTypes: [
@@ -213,7 +213,8 @@ class _InvitesScreenState extends ConsumerState<InvitesScreen> {
             child: PrimaryButton(
               label: l10n.inviteCreate,
               icon: const Icon(Symbols.link_rounded),
-              busy: _busy,
+              // Waits for the links there are, to share one again.
+              busy: _busy || ref.watch(_invitesProvider).isLoading,
               onPressed: _create,
             ),
           ),

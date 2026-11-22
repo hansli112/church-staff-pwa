@@ -912,6 +912,12 @@ class Invite {
   final List<String> zoneTypes;
 
   bool usableAt(DateTime now) => !revoked && now.isBefore(expiresAt);
+
+  /// Whether it joins [zones] and no other of [services], the church's
+  /// services now: one deleted since is not counted, as the list does not
+  /// show it. Such an invite is the one to share again for [zones].
+  bool joinsJust(Set<String> zones, Set<String> services) =>
+      setEquals({...zoneTypes.where(services.contains)}, zones.intersection(services));
 }
 
 /// A month of the calendar as the backend names it: `YYYY-MM`.

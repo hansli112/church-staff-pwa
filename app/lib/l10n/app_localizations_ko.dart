@@ -923,7 +923,7 @@ class L10nKo extends L10n {
   String get inviteLinks => '초대 링크';
 
   @override
-  String get inviteChurchOnly => '교회만';
+  String get inviteChurchOnly => '교회만 가입';
 
   @override
   String get inviteCopy => '링크 복사';
