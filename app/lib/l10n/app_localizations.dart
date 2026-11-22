@@ -2950,29 +2950,11 @@ abstract class L10n {
   /// **'請向管理員要邀請連結'**
   String get churchEntryNotMember;
 
-  /// No description provided for @churchUrl.
-  ///
-  /// In zh, this message translates to:
-  /// **'教會網址'**
-  String get churchUrl;
-
-  /// No description provided for @churchUrlCopied.
-  ///
-  /// In zh, this message translates to:
-  /// **'已複製教會網址'**
-  String get churchUrlCopied;
-
   /// No description provided for @churchUrlCopy.
   ///
   /// In zh, this message translates to:
   /// **'複製教會網址'**
   String get churchUrlCopy;
-
-  /// No description provided for @churchUrlShare.
-  ///
-  /// In zh, this message translates to:
-  /// **'分享教會網址'**
-  String get churchUrlShare;
 
   /// No description provided for @addToHome.
   ///
@@ -5755,8 +5737,20 @@ abstract class L10n {
   /// No description provided for @takesJoinRequestsFooter.
   ///
   /// In zh, this message translates to:
-  /// **'拿到教會網址的人可以申請，管理員允許後加入'**
+  /// **'拿到這個連結的人可以申請，管理員允許後加入'**
   String get takesJoinRequestsFooter;
+
+  /// Row on 邀請, while 開放申請加入 is on: the church URL, from which anyone may ask to join (申請加入); tapped, share or copy it
+  ///
+  /// In zh, this message translates to:
+  /// **'申請加入的連結'**
+  String get joinRequestLink;
+
+  /// Toast once the link to ask to join is copied
+  ///
+  /// In zh, this message translates to:
+  /// **'已複製連結'**
+  String get joinRequestLinkCopied;
 
   /// Notification switch (#88)
   ///

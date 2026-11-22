@@ -130,19 +130,22 @@ void main() {
     }
   });
 
-  testWidgets('邀請 shows the church URL, to copy or share, while requests are taken', (tester) async {
+  testWidgets('邀請 shows the link to ask to join (the church URL), to copy or share, while requests are taken', (
+    tester,
+  ) async {
     final b = seededChurch();
     await pumpApp(tester, b);
     await go(tester, '/me/invites');
     final out = captureOutbox(tester);
-    await tapText(tester, '教會網址');
-    expect(find.text('分享教會網址'), findsOneWidget);
-    await tapText(tester, '複製教會網址');
+    expect(find.text('拿到這個連結的人可以申請，管理員允許後加入'), findsOneWidget);
+    await tapText(tester, '申請加入的連結');
+    expect(find.text('分享'), findsOneWidget);
+    await tapText(tester, '複製連結');
     expect(out.copied.single, 'https://marthasit-dev.web.app/c/grace');
-    expect(find.text('已複製教會網址'), findsOneWidget);
+    expect(find.text('已複製連結'), findsOneWidget);
 
     await tapText(tester, '開放申請加入');
-    expect(find.text('教會網址'), findsNothing, reason: 'nobody can ask from it');
+    expect(find.text('申請加入的連結'), findsNothing, reason: 'nobody can ask from it');
   });
 
   const iconsStay = 'iPhone 上已經加入的圖示不會跟著更新。換了名稱或 logo 之後，請刪掉圖示再加入一次。';

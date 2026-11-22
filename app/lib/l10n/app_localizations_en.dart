@@ -1715,16 +1715,7 @@ class L10nEn extends L10n {
   String get churchEntryNotMember => 'Ask an admin for an invite link';
 
   @override
-  String get churchUrl => 'Church URL';
-
-  @override
-  String get churchUrlCopied => 'Church URL copied';
-
-  @override
   String get churchUrlCopy => 'Copy church URL';
-
-  @override
-  String get churchUrlShare => 'Share church URL';
 
   @override
   String get addToHome => 'Add to Home Screen';
@@ -3418,7 +3409,13 @@ class L10nEn extends L10n {
   String get takesJoinRequests => 'Requests to join';
 
   @override
-  String get takesJoinRequestsFooter => 'Anyone with the church URL can ask, and joins once an admin accepts';
+  String get takesJoinRequestsFooter => 'Anyone with this link can ask, and joins once an admin accepts';
+
+  @override
+  String get joinRequestLink => 'Link to ask to join';
+
+  @override
+  String get joinRequestLinkCopied => 'Link copied';
 
   @override
   String get notifJoinRequest => 'Requests to join';

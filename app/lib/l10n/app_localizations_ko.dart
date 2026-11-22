@@ -1615,16 +1615,7 @@ class L10nKo extends L10n {
   String get churchEntryNotMember => '관리자에게 초대 링크를 받아 주세요';
 
   @override
-  String get churchUrl => '교회 주소';
-
-  @override
-  String get churchUrlCopied => '교회 주소를 복사했어요';
-
-  @override
   String get churchUrlCopy => '교회 주소 복사';
-
-  @override
-  String get churchUrlShare => '교회 주소 공유';
 
   @override
   String get addToHome => '홈 화면에 추가';
@@ -3245,7 +3236,13 @@ class L10nKo extends L10n {
   String get takesJoinRequests => '가입 신청 받기';
 
   @override
-  String get takesJoinRequestsFooter => '교회 주소를 아는 사람이 신청할 수 있고, 관리자가 승인하면 가입돼요';
+  String get takesJoinRequestsFooter => '이 링크를 아는 사람이 신청할 수 있고, 관리자가 승인하면 가입돼요';
+
+  @override
+  String get joinRequestLink => '가입 신청 링크';
+
+  @override
+  String get joinRequestLinkCopied => '링크를 복사했어요';
 
   @override
   String get notifJoinRequest => '가입 신청';

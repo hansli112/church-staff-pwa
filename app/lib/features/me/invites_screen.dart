@@ -33,7 +33,8 @@ final _liveInvitesProvider = Provider.autoDispose<List<Invite>>((ref) {
 /// Admins make invite links (7 or 30 days, 7 unless they choose 30), share
 /// them, and revoke them.
 /// A link can put the people who join with it in some 牧區 at once. Under
-/// them, the other way in: 申請加入 from the church URL (#88), and the URL.
+/// them, the other way in: 申請加入 from the church URL (#88), and the URL,
+/// named for what it is for there: the link to ask to join.
 class InvitesScreen extends ConsumerStatefulWidget {
   const InvitesScreen({super.key});
 
@@ -138,12 +139,12 @@ class _InvitesScreenState extends ConsumerState<InvitesScreen> {
           header: displayUrl(url),
           children: [
             ListRow(
-              title: l10n.churchUrlShare,
+              title: l10n.inviteShare,
               leading: const Icon(Symbols.ios_share_rounded),
               onTap: () => Navigator.pop(context, 'share'),
             ),
             ListRow(
-              title: l10n.churchUrlCopy,
+              title: l10n.inviteCopy,
               leading: const Icon(Symbols.content_copy_rounded),
               onTap: () => Navigator.pop(context, 'copy'),
             ),
@@ -154,9 +155,9 @@ class _InvitesScreenState extends ConsumerState<InvitesScreen> {
     if (!mounted) return;
     switch (choice) {
       case 'share':
-        await shareText(context, url, copied: l10n.churchUrlCopied);
+        await shareText(context, url, copied: l10n.joinRequestLinkCopied);
       case 'copy':
-        await copyText(context, url, copied: l10n.churchUrlCopied);
+        await copyText(context, url, copied: l10n.joinRequestLinkCopied);
     }
   }
 
@@ -258,7 +259,7 @@ class _InvitesScreenState extends ConsumerState<InvitesScreen> {
                 ),
                 if (church.takesJoinRequests)
                   ListRow(
-                    title: l10n.churchUrl,
+                    title: l10n.joinRequestLink,
                     subtitle: displayUrl(churchUrl(church.id)),
                     chevron: false,
                     onTap: () => _churchUrlActions(churchUrl(church.id)),

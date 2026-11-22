@@ -1614,16 +1614,7 @@ class L10nJa extends L10n {
   String get churchEntryNotMember => '管理者に招待リンクをもらってください';
 
   @override
-  String get churchUrl => '教会の URL';
-
-  @override
-  String get churchUrlCopied => '教会の URL をコピーしました';
-
-  @override
   String get churchUrlCopy => '教会の URL をコピー';
-
-  @override
-  String get churchUrlShare => '教会の URL を共有';
 
   @override
   String get addToHome => 'ホーム画面に追加';
@@ -3247,7 +3238,13 @@ class L10nJa extends L10n {
   String get takesJoinRequests => '参加申請を受け付ける';
 
   @override
-  String get takesJoinRequestsFooter => '教会の URL を知っている人が申請でき、管理者が承認すると参加します';
+  String get takesJoinRequestsFooter => 'このリンクを知っている人が申請でき、管理者が承認すると参加します';
+
+  @override
+  String get joinRequestLink => '参加申請のリンク';
+
+  @override
+  String get joinRequestLinkCopied => 'リンクをコピーしました';
 
   @override
   String get notifJoinRequest => '参加申請';

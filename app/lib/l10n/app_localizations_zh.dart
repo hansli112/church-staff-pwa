@@ -1613,16 +1613,7 @@ class L10nZh extends L10n {
   String get churchEntryNotMember => '請向管理員要邀請連結';
 
   @override
-  String get churchUrl => '教會網址';
-
-  @override
-  String get churchUrlCopied => '已複製教會網址';
-
-  @override
   String get churchUrlCopy => '複製教會網址';
-
-  @override
-  String get churchUrlShare => '分享教會網址';
 
   @override
   String get addToHome => '加入主畫面';
@@ -3242,7 +3233,13 @@ class L10nZh extends L10n {
   String get takesJoinRequests => '開放申請加入';
 
   @override
-  String get takesJoinRequestsFooter => '拿到教會網址的人可以申請，管理員允許後加入';
+  String get takesJoinRequestsFooter => '拿到這個連結的人可以申請，管理員允許後加入';
+
+  @override
+  String get joinRequestLink => '申請加入的連結';
+
+  @override
+  String get joinRequestLinkCopied => '已複製連結';
 
   @override
   String get notifJoinRequest => '申請加入';
@@ -5247,16 +5244,7 @@ class L10nZhHans extends L10nZh {
   String get churchEntryNotMember => '请向管理员要邀请链接';
 
   @override
-  String get churchUrl => '教会网址';
-
-  @override
-  String get churchUrlCopied => '已复制教会网址';
-
-  @override
   String get churchUrlCopy => '复制教会网址';
-
-  @override
-  String get churchUrlShare => '分享教会网址';
 
   @override
   String get addToHome => '添加到主屏幕';
@@ -6876,7 +6864,13 @@ class L10nZhHans extends L10nZh {
   String get takesJoinRequests => '开放申请加入';
 
   @override
-  String get takesJoinRequestsFooter => '拿到教会网址的人可以申请，管理员允许后加入';
+  String get takesJoinRequestsFooter => '拿到这个链接的人可以申请，管理员允许后加入';
+
+  @override
+  String get joinRequestLink => '申请加入的链接';
+
+  @override
+  String get joinRequestLinkCopied => '已复制链接';
 
   @override
   String get notifJoinRequest => '申请加入';
