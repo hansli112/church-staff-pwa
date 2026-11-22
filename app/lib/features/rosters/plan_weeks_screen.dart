@@ -35,11 +35,18 @@ import 'roster_image.dart';
 /// person once, for all their days.
 /// Opens at this month, arranged or not, as the 服事表 tab does; later
 /// months join on as it scrolls.
+///
+/// [view]: 表格, the same table only to look at, every duty, for whoever
+/// does not arrange all of it: from the 服事表 tab, arranging none of it,
+/// or 安排服事's ⋯, arranging some. Their own cells are marked; a date
+/// still opens its day.
 class PlanWeeksScreen extends ConsumerStatefulWidget {
-  const PlanWeeksScreen({super.key, required this.serviceType});
+  const PlanWeeksScreen({super.key, required this.serviceType, this.view = false});
 
   /// The service it opens at, the one the 服事表 tab showed.
   final String serviceType;
+
+  final bool view;
 
   @override
   ConsumerState<PlanWeeksScreen> createState() => _PlanWeeksScreenState();
@@ -116,13 +123,21 @@ class _PlanWeeksScreenState extends ConsumerState<PlanWeeksScreen> with SingleTi
 
   /// The cells a held one cannot go to fade together, on one animation;
   /// the last held one's stay on it as they come back.
-  late final _fading = AnimationController(vsync: this, duration: const Duration(milliseconds: 150));
-  late final _faded = Tween<double>(begin: 1, end: 0.4).animate(_fading);
+  late final AnimationController _fading;
+  late final Animation<double> _faded;
   _Lift? _lastLift;
 
   /// Reduce Motion, as the last build had it.
   bool _still = false;
   int? _down;
+
+  @override
+  void initState() {
+    super.initState();
+    // Made now: one never used (表格) is still disposed of.
+    _fading = AnimationController(vsync: this, duration: const Duration(milliseconds: 150));
+    _faded = Tween<double>(begin: 1, end: 0.4).animate(_fading);
+  }
 
   @override
   void dispose() {
@@ -284,6 +299,7 @@ class _PlanWeeksScreenState extends ConsumerState<PlanWeeksScreen> with SingleTi
       tooltip: MaterialLocalizations.of(context).moreButtonTooltip,
       icon: const Icon(Symbols.more_horiz_rounded),
       onSelected: (v) => switch (v) {
+        'table' => context.push('/rosters/table/$type'),
         'ask' => _askUnavailable(type, from),
         'image' => showRosterImage(context, serviceType: type, month: from),
         'photo' => context.push('/rosters/import/$type'),
@@ -305,6 +321,8 @@ class _PlanWeeksScreenState extends ConsumerState<PlanWeeksScreen> with SingleTi
         ),
         PopupMenuItem(value: 'image', child: Text(l10n.rosterShareImage)),
         PopupMenuItem(value: 'photo', child: Text(l10n.photoImportAction)),
+        // Some duties only: the rest of the day, to look at.
+        if (!ref.watch(arrangesProvider(type)).all) PopupMenuItem(value: 'table', child: Text(l10n.planWholeTable)),
         const PopupMenuDivider(),
         PopupMenuItem(value: 'guide', child: Text(l10n.howToUse)),
       ],
@@ -403,23 +421,28 @@ class _PlanWeeksScreenState extends ConsumerState<PlanWeeksScreen> with SingleTi
     final settings = ref.watch(servicesProvider).value;
     final me = ref.watch(meProvider).value;
     final ministries = ref.watch(ministriesProvider).value?.ministries ?? const <Ministry>[];
+    final view = widget.view;
     final mine = [
       for (final s in me?.rosterServices(settings?.services ?? const [], ministries: ministries) ?? const <Service>[])
-        if (me!.arranges(ministries, s.id).any) s,
+        if (view || me!.arranges(ministries, s.id).any) s,
     ];
     final service = settings?.byId(_type);
-    final arranges = ref.watch(arrangesProvider(_type));
-    final ready = ref.watch(rosterEditingProvider(_type));
+    final arranges = view ? const Arranges.all() : ref.watch(arrangesProvider(_type));
+    // Only to look at, it waits for nothing but the days.
+    final ready = view || ref.watch(rosterEditingProvider(_type));
     // The others it switches to, read while it is open: switching shows
     // their table at once, not a blank page first.
-    for (final s in mine) {
-      ref.watch(rosterEditingProvider(s.id));
+    if (!view) {
+      for (final s in mine) {
+        ref.watch(rosterEditingProvider(s.id));
+      }
     }
     final saved = ref.watch(savedRostersProvider).value;
     // Every service the page switches between, watched so 完成 knows.
     _waiting = {
-      for (final type in {_type, for (final s in mine) s.id})
-        if (ref.watch(plannedNewsProvider(type)).value ?? false) type,
+      if (!view)
+        for (final type in {_type, for (final s in mine) s.id})
+          if (ref.watch(plannedNewsProvider(type)).value ?? false) type,
     };
     final news = _waiting.isNotEmpty;
 
@@ -451,17 +474,30 @@ class _PlanWeeksScreenState extends ConsumerState<PlanWeeksScreen> with SingleTi
         appBar: AppBar(
           backgroundColor: c.surface,
           // One duty: named here, in place of a column's name.
-          title: Text(duties.length == 1 ? l10n.planWeeksTitleOne(duties.single) : l10n.planWeeksTitle),
-          actions: savingActions([
-            if (service != null && arranges.any) _menu(l10n, c, thisMonth),
-            MediaQuery.withClampedTextScaling(
-              maxScaleFactor: 1.5,
-              child: TextButton(
-                onPressed: _finish,
-                child: Text(l10n.done),
-              ),
-            ),
-          ]),
+          title: Text(switch (duties) {
+            _ when view => l10n.tabRosters,
+            [final one] => l10n.planWeeksTitleOne(one),
+            _ => l10n.planWeeksTitle,
+          }),
+          actions: view
+              ? [
+                  if (service != null)
+                    IconButton(
+                      tooltip: l10n.rosterShareImage,
+                      icon: const Icon(Symbols.ios_share_rounded),
+                      onPressed: () => showRosterImage(context, serviceType: _type, month: thisMonth, everyDuty: true),
+                    ),
+                ]
+              : savingActions([
+                  if (service != null && arranges.any) _menu(l10n, c, thisMonth),
+                  MediaQuery.withClampedTextScaling(
+                    maxScaleFactor: 1.5,
+                    child: TextButton(
+                      onPressed: _finish,
+                      child: Text(l10n.done),
+                    ),
+                  ),
+                ]),
         ),
         body: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -591,7 +627,10 @@ class _PlanWeeksScreenState extends ConsumerState<PlanWeeksScreen> with SingleTi
     final monthHeight = scale.scale(17) * 1.3 + Space.m + Space.s;
     final line = BorderSide(color: c.separator, width: 0.5);
 
-    final everyone = ref.watch(unavailableDaysProvider).value ?? const <String, UnavailableDays>{};
+    final everyone = widget.view
+        ? const <String, UnavailableDays>{}
+        : ref.watch(unavailableDaysProvider).value ?? const <String, UnavailableDays>{};
+    final me = ref.watch(uidProvider);
     _shown = [for (final m in months) ...m.days];
     // A month's name (its first day) or a day, under the duties' names.
     final rows = <Object>[
@@ -657,6 +696,8 @@ class _PlanWeeksScreenState extends ConsumerState<PlanWeeksScreen> with SingleTi
               onTap: () => context.push('/rosters/${day.type}/${day.day.key}'),
             ),
           );
+        case final Roster day when widget.view:
+          return _ViewCell(roster: day, role: role!, today: today, border: line, me: me);
         case final Roster day:
           return _DutyCell(
             key: _keyOf(day, role!),
@@ -1019,6 +1060,55 @@ class _DutyCell extends StatelessWidget {
   }
 }
 
+/// Who is on [role] that day, only to look at (表格): 待定 for nobody yet,
+/// and marked when [me] is on it.
+class _ViewCell extends StatelessWidget {
+  const _ViewCell({
+    required this.roster,
+    required this.role,
+    required this.today,
+    required this.border,
+    required this.me,
+  });
+
+  final Roster roster;
+  final String role;
+  final Day today;
+  final BorderSide border;
+  final String? me;
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = L10n.of(context);
+    final c = AppColors.of(context);
+    final duty = roster.duties.where((d) => d.role == role).firstOrNull;
+    final people = duty?.people ?? const <String>[];
+    final mine = {
+      for (final n in people)
+        if (me != null && duty!.uids[n] == me) n,
+    };
+    return Semantics(
+      label: '$role, ${dayLabel(l10n, roster.day, today)}',
+      value: duty == null ? '—' : (people.isEmpty ? l10n.nobodyYet : people.join(l10n.listSeparator)),
+      selected: mine.isNotEmpty,
+      excludeSemantics: true,
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: Space.s, vertical: Space.xs),
+        alignment: AlignmentDirectional.centerStart,
+        decoration: BoxDecoration(
+          color: mine.isEmpty ? null : c.accentSoft,
+          border: Border(bottom: border),
+        ),
+        child: switch (duty) {
+          null => Text('—', style: AppText.subheadline.copyWith(color: c.tertiaryLabel)),
+          _ when people.isEmpty => Text(l10n.nobodyYet, style: AppText.subheadline.copyWith(color: c.secondaryLabel)),
+          _ => _People(people, own: mine),
+        },
+      ),
+    );
+  }
+}
+
 /// A duty nobody is on yet: a dashed box with a ＋, as an open place. At
 /// the start of the cell, under the duty's name, as names are: a column
 /// cut at the screen's edge still shows both. [wide]: across the row, the
@@ -1079,9 +1169,13 @@ class _Dashes extends CustomPainter {
 /// A person a line, each cut short rather than wrapped onto the next;
 /// past two, how many more after the second.
 class _People extends StatelessWidget {
-  const _People(this.people, {this.unavailable = const {}});
+  const _People(this.people, {this.unavailable = const {}, this.own = const {}});
 
   final List<String> people;
+
+  /// Those of [people] who are the one looking (表格): in bold, in the
+  /// accent.
+  final Set<String> own;
 
   /// Those of [people] greyed: they marked the day as one they cannot
   /// serve (#91).
@@ -1096,7 +1190,11 @@ class _People extends StatelessWidget {
       maxLines: 1,
       softWrap: false,
       overflow: TextOverflow.ellipsis,
-      style: unavailable.contains(name) ? style.copyWith(color: c.secondaryLabel) : style,
+      style: switch (name) {
+        _ when own.contains(name) => style.copyWith(color: c.accent, fontWeight: FontWeight.w700),
+        _ when unavailable.contains(name) => style.copyWith(color: c.secondaryLabel),
+        _ => style,
+      },
     );
     return Column(
       mainAxisSize: MainAxisSize.min,

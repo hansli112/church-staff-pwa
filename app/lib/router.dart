@@ -209,6 +209,10 @@ final routerProvider = Provider<GoRouter>((ref) {
                     ),
                   ),
                   page(
+                    'table/:type',
+                    (s) => PlanWeeksScreen(serviceType: s.pathParameters['type']!, view: true),
+                  ),
+                  page(
                     'request/:id',
                     (s) => WarmUpOnOpen(WarmUp.swapAnswer, child: SwapRequestScreen(id: s.pathParameters['id']!)),
                   ),

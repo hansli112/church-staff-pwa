@@ -24,12 +24,17 @@ import '../../state/providers.dart';
 import '../common/errors.dart';
 
 /// Opens the picture of [serviceType]'s roster in [month] (its first day),
-/// the months around it a tap away, to share.
-Future<void> showRosterImage(BuildContext context, {required String serviceType, required Day month}) =>
-    showAppSheet<void>(
-      context,
-      builder: (_) => _RosterImageSheet(serviceType: serviceType, month: month),
-    );
+/// the months around it a tap away, to share: the duties I arrange, or
+/// with [everyDuty] (表格) all of them.
+Future<void> showRosterImage(
+  BuildContext context, {
+  required String serviceType,
+  required Day month,
+  bool everyDuty = false,
+}) => showAppSheet<void>(
+  context,
+  builder: (_) => _RosterImageSheet(serviceType: serviceType, month: month, everyDuty: everyDuty),
+);
 
 /// What was saved in [month] (its first day) before today, which
 /// savedRostersProvider leaves out: a month gone by, or this one's first
@@ -42,10 +47,11 @@ final _pastInMonthProvider = FutureProvider.autoDispose.family<List<Roster>, Day
 });
 
 class _RosterImageSheet extends ConsumerStatefulWidget {
-  const _RosterImageSheet({required this.serviceType, required this.month});
+  const _RosterImageSheet({required this.serviceType, required this.month, required this.everyDuty});
 
   final String serviceType;
   final Day month;
+  final bool everyDuty;
 
   @override
   ConsumerState<_RosterImageSheet> createState() => _RosterImageSheetState();
@@ -82,7 +88,7 @@ class _RosterImageSheetState extends ConsumerState<_RosterImageSheet> {
     final past = ref.watch(_pastInMonthProvider(_month));
     // Its past weeks too, once read; without them if they cannot be.
     final saved = upcoming == null || past.isLoading ? null : [...?past.value, ...upcoming];
-    final arranges = ref.watch(arrangesProvider(widget.serviceType));
+    final arranges = widget.everyDuty ? const Arranges.all() : ref.watch(arrangesProvider(widget.serviceType));
     final church = ref.watch(churchProvider).value?.name ?? '';
     final monthName = DateFormat.yMMMM().format(_month.midnight);
     final today = ref.watch(todayProvider);

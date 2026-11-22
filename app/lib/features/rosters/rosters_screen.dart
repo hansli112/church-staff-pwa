@@ -54,13 +54,19 @@ class RostersScreen extends ConsumerWidget {
           // used when starting out, is in its menu and on an empty service.
           // Grows with the text only so far, like the bar's own buttons, so
           // the title beside it keeps its room.
-          if (canImport)
+          if (shown != null)
             MediaQuery.withClampedTextScaling(
               maxScaleFactor: 1.5,
-              child: TextButton(
-                onPressed: () => context.push('/rosters/plan/${shown.id}'),
-                child: Text(l10n.planWeeksAction),
-              ),
+              child: canImport
+                  ? TextButton(
+                      onPressed: () => context.push('/rosters/plan/${shown.id}'),
+                      child: Text(l10n.planWeeksAction),
+                    )
+                  // Arranging none of it: the same table, to look at.
+                  : TextButton(
+                      onPressed: () => context.push('/rosters/table/${shown.id}'),
+                      child: Text(l10n.rosterTable),
+                    ),
             ),
         ],
       ),
