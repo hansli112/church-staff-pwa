@@ -526,17 +526,11 @@ abstract class L10n {
   /// **'建立'**
   String get create;
 
-  /// No description provided for @errDuplicateName.
+  /// A 同工 name someone in the church already has, where the name itself is not at hand
   ///
   /// In zh, this message translates to:
-  /// **'已經有教會叫這個名字。如果是別人搶先註冊的，請回報問題。'**
+  /// **'教會裡已經有人叫這個名字'**
   String get errDuplicateName;
-
-  /// No description provided for @contactUs.
-  ///
-  /// In zh, this message translates to:
-  /// **'回報問題'**
-  String get contactUs;
 
   /// No description provided for @joinTitle.
   ///

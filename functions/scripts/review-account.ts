@@ -17,7 +17,6 @@ import { getFirestore } from 'firebase-admin/firestore';
 
 import { openChurch } from '../src/church.js';
 import { PROD_PROJECT, serverTime } from '../src/common.js';
-import { nameKey } from '../src/text.js';
 
 const args = process.argv.slice(2);
 const flag = (name: string) => {
@@ -73,7 +72,7 @@ await db.doc(`users/${uid}`).set(
   { merge: true },
 );
 
-// The church: reopened when its name is still taken, else made.
+// The church: the one with its name reopened, else made.
 const member = {
   uid,
   name,
@@ -84,10 +83,10 @@ const member = {
   zones: [{ serviceType: 'sunday', duties: THEIR_DUTIES, smallGroups: [] }],
   zoneTypes: ['sunday'],
 };
-const reserved = await db.doc(`churchNames/${nameKey(churchName)}`).get();
+const [found] = (await db.collection('churches').where('name', '==', churchName).limit(1).get()).docs;
 let cid: string;
-if (reserved.exists) {
-  cid = reserved.get('cid') as string;
+if (found) {
+  cid = found.id;
   await db.doc(`churches/${cid}`).update({ status: 'active', deletedAt: null });
   await db.doc(`churches/${cid}/members/${uid}`).set({ ...member, joinedAt: serverTime() });
   await db.doc(`churches/${cid}/settings/services`).set({ ...SERVICES, updatedAt: serverTime() });

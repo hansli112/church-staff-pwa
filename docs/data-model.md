@@ -9,7 +9,7 @@
 |---|---|
 | `users/{uid}` | 全域個資：`name`、`email`、`locale`（自己選的語言，跟隨系統時沒有）、`appLocale`（App 實際顯示的語言：推播照它寫；建教會、搬家沒說語言時，預設內容和「待定」也照它）、`fcm`（`{deviceId: token}`）、`photoAiConsentAt`（同意照片辨識把照片和同工名單送到 Gemini 的時間，只能本人寫）、`notificationsSeenAt`（`{cid: 看過的最新一則通知的時間}`，通知列表的已讀，到毫秒；只能本人寫，最多 100 間）、`createdAt`、`updatedAt` |
 | `users/{uid}/notifications/{id}` | 通知列表（#89），只有本人讀、只有後端寫：每一則推播（`functions/src/push.ts` 的 `notifyMembers`）都替收件的同工存一筆，關掉那種通知的也存，只是不推播。`cid`、`kind`（通知種類）、`title`、`body`（照收件人的 `appLocale`）、`link`（App 路由，和推播點開的一樣）、`at`（送出時間，後端的時間）。同一則推播在每個人的列表用同一個 id，推播的連結帶著它（`/c/{cid}?to=…&notification={id}`），點了 App 就把那則算已讀。30 天後每天清掉（`forgetOldNotifications`）；退出或被移出教會時刪掉那間教會的（`onMemberDeleted`），刪帳號時整個刪掉 |
-| `churches/{cid}` | `attendanceSince`（回報人數開的那天，`YYYY-MM-DD`；關著沒有這個欄位，#85）、`joinRequestsClosed`（`true`：不開放申請加入；開著沒有這個欄位，#88）、`name`、`nameKey`（正規化後的名稱，同名檢查用）、`status`（`active` / `suspended` / `deleted`）、`createdBy`、`createdAt`、`deletedAt`、`logoVersion`（logo 的 Storage generation）、`homeName`（主畫面名稱，選填，最多 8 字）、`timeZone`（教會的時區，IANA 名稱，限 `functions/src/timeZones.ts` 的 16 個；建立時照建立者手機的時區，之後管理員經 `setChurchTimeZone` 改；沒有這個欄位的是 #73 之前建立的，一律當 `Asia/Taipei`） |
+| `churches/{cid}` | `attendanceSince`（回報人數開的那天，`YYYY-MM-DD`；關著沒有這個欄位，#85）、`joinRequestsClosed`（`true`：不開放申請加入；開著沒有這個欄位，#88）、`name`（可以和別的教會同名；2026-11-23 前建立的另有 `nameKey`，以前同名檢查用，已經沒用到）、`status`（`active` / `suspended` / `deleted`）、`createdBy`、`createdAt`、`deletedAt`、`logoVersion`（logo 的 Storage generation）、`homeName`（主畫面名稱，選填，最多 8 字）、`timeZone`（教會的時區，IANA 名稱，限 `functions/src/timeZones.ts` 的 16 個；建立時照建立者手機的時區，之後管理員經 `setChurchTimeZone` 改；沒有這個欄位的是 #73 之前建立的，一律當 `Asia/Taipei`） |
 | `churches/{cid}/members/{uid}` | `uid`（= doc id，collection group 查詢用）、`name`、`email`、`role`、`groups`、`zones`（每個 `{serviceType, duties, smallGroups}`）、`zoneTypes`、`identities`（身分，見〈角色與群組〉）、`leadTypes`、`leadMinistries`、`leadSmallGroups`、`smallGroups`、`notificationPrefs`（`muted`：關掉的通知種類；`reminderTiming`：服事提醒的時間，`weekly`／`dayBefore`／`both`，沒有就是 `weekly`）、`joinedAt` |
 | `churches/{cid}/rosters/{id}` | 服事表，`type` 是聚會別 ID，`dateKey` 是 `YYYY-MM-DD`，id 是 `<dateKey>_<type>`。活動的服事表（掛在行事曆活動上）的 id 是 `ev_<活動 id>`，沒有 `type`，改成 `kind: 'event'`、`eventId`、`title`（活動名稱）、`dateKey` 與 `endDateKey`（活動的第一天、最後一天，教會的時區）。名稱和日期由 `calendarWrite`（在 App 改的）和 `syncEventRosters`（各教會當地每天 6:30、12:30、18:30，在 Google 日曆直接改的；教會改時區時也立刻照新時區重算一次，不發通知）照活動更新。另外記 `group`（活動屬於哪個群組，`service:<id>` 或 `ministry:<id>`，全教會的沒有這個欄位；#84）、`calendarId`（活動在哪本行事曆）、重複活動的 `recurringEventId` 與 `originalStart`，建立時 App 寫，之後只有後端改。活動刪掉時後端加上 `cancelledAt`（取消：不顯示、不提醒，留著給復原；30 天內活動回來就恢復，過了就刪掉），只有後端寫這個欄位 |
 | `churches/{cid}/smallGroups/{id}` | 小組（#85）：`name`、`service`（屬於哪個聚會）、`weekday`（1 是週一…7 是週日）、`every`（1 每週、2 隔週）、`monthWeeks`（每月第幾個 `weekday`，1–4，有這個就不看 `every`）、`startsOn`（從這天起聚會，要是 `weekday` 那天；隔週照它算哪幾週）。後面幾個只有回報人數用到，可以沒有。`order`：在那個聚會的小組裡排第幾（0 起，拖曳排序時後端一次寫那個聚會的全部小組；沒有的排最後，照名字；改小組時後端留著，換到別的聚會就清掉）。只有後端寫（`editSmallGroup`），同工都讀得到 |
@@ -165,7 +165,7 @@ App 與 Functions 各寫一次的教會資料規則也一樣：新教會的預�
 
 ## 交給 Cloud Functions 的（M2）
 
-規則做不到的檢查都放在後端：建立教會（email 已驗證、`nameKey` 不重複）、邀請加入、帳號刪除、平台後台（改名、設為／取消管理員、停用）、服事項目改名（`editService`，連同事工連到的服事項目）、事工負責人排服事表（`editLedDuties`）、負責人加入和移出群組的同工（`setGroupMember`）、改服事項目的名單（`setDuty`）。
+規則做不到的檢查都放在後端：建立教會（email 已驗證）、邀請加入、帳號刪除、平台後台（改名、設為／取消管理員、停用）、服事項目改名（`editService`，連同事工連到的服事項目）、事工負責人排服事表（`editLedDuties`）、負責人加入和移出群組的同工（`setGroupMember`）、改服事項目的名單（`setDuty`）。
 
 行事曆連接完成時（`calendarCallback`），在向 Google 換 token 前後都重新確認這位仍是這間啟用中教會的管理員；中途被降級、移除或教會停用，就撤銷剛拿到的授權、不寫入。連接中的 `calendarStates/{state}` 帶後端專用的 `exchanging`，避免同一個 state 被用兩次。
 

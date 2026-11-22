@@ -248,13 +248,12 @@ describe('self-serve move', () => {
     assert.equal((await db.doc(`churches/${a.churchId}/rosters/2026-10-04_sunday`).get()).exists, true);
   });
 
-  test('the church name must be free', async () => {
+  test('the church may have a name another church has', async () => {
     await upload(moveFile());
-    await moveCommit(d, me, { path: PATH, churchName: '恩典堂' });
+    const a = await moveCommit(d, me, { path: PATH, churchName: '恩典堂' });
     const other = 'moves/newadmin/f2.json';
     await upload(moveFile(), other);
-    const before = (await db.collectionGroup('pendingMembers').get()).size;
-    await rejectsWith(moveCommit(d, me, { path: other, churchName: '恩典 堂' }), 'duplicateName');
-    assert.equal((await db.collectionGroup('pendingMembers').get()).size, before, 'nothing written for a taken name');
+    const b = await moveCommit(d, me, { path: other, churchName: '恩典堂' });
+    assert.notEqual(a.churchId, b.churchId);
   });
 });

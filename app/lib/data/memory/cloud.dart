@@ -20,10 +20,6 @@ class MemoryCloud implements CloudApi {
       throw const CloudException(CloudErrorCode.unverifiedEmail);
     }
     name = _text(name, TextLimits.churchName);
-    final key = nameKey(name);
-    if (_b.churches.values.any((c) => nameKey(c.name) == key)) {
-      throw const CloudException(CloudErrorCode.duplicateName);
-    }
     final cid = _b.addChurch(name, timeZone: timeZone);
     // As the Cloud Function: the language asked for, else the one shown last.
     language ??= AppLanguage.fromTag(_b.users[user.uid]?.appLocale) ?? AppLanguage.zhHant;
@@ -379,12 +375,6 @@ class MemoryCloud implements CloudApi {
   Future<void> adminRenameChurch(String churchId, String name) async {
     _requireOperator();
     name = _text(name, TextLimits.churchName);
-    final key = nameKey(name);
-    if (_b.churches.values.any(
-      (c) => c.id != churchId && nameKey(c.name) == key,
-    )) {
-      throw const CloudException(CloudErrorCode.duplicateName);
-    }
     _b.churches[churchId] = _b.churches[churchId]!.copyWith(name: name);
     _b.notify();
   }

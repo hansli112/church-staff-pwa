@@ -4,7 +4,7 @@ rules_version = '2';
 //
 // Data model (docs/data-model.md has the full field list):
 //   users/{uid}                              - global profile: name, locale, appLocale, fcm
-//   churches/{cid}                           - name, nameKey, status
+//   churches/{cid}                           - name, status
 //   churches/{cid}/members/{uid}             - role, groups, zones in that church
 //   churches/{cid}/rosters/{rosterId}        - service rosters
 //   churches/{cid}/staff_orders/{type}       - per-service staff ranking
@@ -658,10 +658,10 @@ service cloud.firestore {
       allow read: if readsMembers(resource.data.cid);
     }
 
-    // churchNames/{nameKey} (name reservations), linkSources/{cid} (the
-    // church link fetch schedule), webhookSecrets/{cid}, webhookOutbox/{cid}
-    // (roster changes waiting to go out), heldPushes (roster pushes held over
-    // quiet hours), joinedPushes/{cid} (who joined, waiting to be told),
+    // linkSources/{cid} (the church link fetch schedule),
+    // webhookSecrets/{cid}, webhookOutbox/{cid} (roster changes waiting to
+    // go out), heldPushes (roster pushes held over quiet hours),
+    // joinedPushes/{cid} (who joined, waiting to be told),
     // pendingIndex/{email hash} (who has a pending member where) and
     // everything else: no client access.
     match /{document=**} {

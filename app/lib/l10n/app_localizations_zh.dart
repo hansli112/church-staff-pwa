@@ -236,10 +236,7 @@ class L10nZh extends L10n {
   String get create => '建立';
 
   @override
-  String get errDuplicateName => '已經有教會叫這個名字。如果是別人搶先註冊的，請回報問題。';
-
-  @override
-  String get contactUs => '回報問題';
+  String get errDuplicateName => '教會裡已經有人叫這個名字';
 
   @override
   String joinTitle(String church) {
@@ -3856,10 +3853,7 @@ class L10nZhHans extends L10nZh {
   String get create => '创建';
 
   @override
-  String get errDuplicateName => '已经有教会叫这个名字。如果是别人抢先注册的，请反馈问题。';
-
-  @override
-  String get contactUs => '反馈问题';
+  String get errDuplicateName => '教会里已经有人叫这个名字';
 
   @override
   String joinTitle(String church) {

@@ -63,6 +63,3 @@ String errorText(L10n l10n, Object error) {
   }
   return l10n.errUnknown;
 }
-
-/// Where people report a squatted church name or ask for help.
-const supportUrl = 'https://github.com/hansli112/church-staff-pwa/issues/new';

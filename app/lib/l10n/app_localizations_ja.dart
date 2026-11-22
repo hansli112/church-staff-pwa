@@ -236,10 +236,7 @@ class L10nJa extends L10n {
   String get create => '作成';
 
   @override
-  String get errDuplicateName => '同じ名前の教会がすでにあります。ほかの人に先に登録された場合は、お問い合わせください。';
-
-  @override
-  String get contactUs => 'お問い合わせ';
+  String get errDuplicateName => 'この名前の人がもういます';
 
   @override
   String joinTitle(String church) {

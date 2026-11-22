@@ -423,12 +423,13 @@ void contractTests(Future<ContractWorld> Function() open) {
       expect((await w.backend.church(cid).church().first)!.timeZone, ChurchTimeZone.losAngeles);
     });
 
-    test('church names are unique, ignoring spaces, width and case', () async {
+    test('two churches may have the same name', () async {
       await w.signUp('a@example.com');
-      await cloud().createChurch('Grace Church');
+      final a = await cloud().createChurch('恩典堂');
       await w.signUp('b@example.com');
-      await expectLater(cloud().createChurch('ＧＲＡＣＥ　church'), fails(CloudErrorCode.duplicateName));
-      await expectLater(cloud().createChurch('gracechurch'), fails(CloudErrorCode.duplicateName));
+      final b = await cloud().createChurch('恩典堂');
+      expect(b, isNot(a));
+      expect((await w.backend.church(b).church().first)!.name, '恩典堂');
     });
 
     test('a church name is 1 to 60 characters as a person counts them', () async {
@@ -2099,7 +2100,8 @@ void contractTests(Future<ContractWorld> Function() open) {
       expect(found.admins.map((a) => a.uid), [g.pastor]);
       expect((await cloud().adminSearchChurches(g.cid)).single.id, g.cid);
       expect((await cloud().adminChurchMembers(g.cid)).map((m) => m.uid), unorderedEquals([g.pastor, g.editor, g.mei]));
-      await expectLater(cloud().adminRenameChurch(g.cid, 'other church'), fails(CloudErrorCode.duplicateName));
+      await cloud().adminRenameChurch(g.cid, 'Other Church');
+      expect((await cloud().adminSearchChurches(g.cid)).single.name, 'Other Church');
       await cloud().adminRenameChurch(g.cid, '恩典教會');
       expect((await cloud().adminSearchChurches(g.cid)).single.name, '恩典教會');
       await cloud().adminTransferAdmin(g.cid, g.mei);

@@ -3,13 +3,12 @@ import { createHash } from 'node:crypto';
 import { Timestamp } from 'firebase-admin/firestore';
 import type { Storage } from 'firebase-admin/storage';
 
-import { churchNamePath, makersLanguage, newChurchTimeZone, openChurch } from './church.js';
+import { makersLanguage, newChurchTimeZone, openChurch } from './church.js';
 import { fail, requireCaller, text, type Caller, type Deps } from './common.js';
 import { buildImport, type SelfHostSnapshot, type SourceDoc } from './importer.js';
 import { TEXT_LIMITS } from './limits.js';
 import { addPending, forgetPending } from './pendingMembers.js';
 import { claimedSmallGroups, namedSmallGroups, nameKey as smallGroupKey } from './smallGroups.js';
-import { nameKey } from './text.js';
 import { loggable } from './redact.js';
 
 /**
@@ -171,13 +170,9 @@ async function makeChurch(
   if (input.me != null && !me) fail('invalid-argument', 'unknown');
 
   // Everything under the church is written first and the church doc last,
-  // in openChurch's transaction with the name: until then nothing reads
-  // these documents, and a failed move leaves no half-made church (and
-  // keeps the name free for a retry).
+  // in openChurch's transaction: until then nothing reads these documents,
+  // and a failed move leaves no half-made church.
   const { db } = deps;
-  // The name is checked again in openChurch's transaction; this only spares
-  // writing everything for a name that is already taken.
-  if ((await db.doc(churchNamePath(nameKey(churchName))).get()).exists) fail('already-exists', 'duplicateName');
   const root = db.doc(`churches/${cid}`);
   // Which roster days name each person, so claiming rewrites only those.
   const rosterIds = new Map<string, string[]>();

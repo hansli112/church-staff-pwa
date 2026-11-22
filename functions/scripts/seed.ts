@@ -97,13 +97,11 @@ async function main() {
   const writer = db.bulkWriter();
   void writer.set(db.doc(`churches/${cid}`), {
     name: '效能測試教會',
-    nameKey: `效能測試教會${cid}`,
     status: 'active',
     createdBy: adminUid,
     createdAt: Timestamp.now(),
     deletedAt: null,
   });
-  void writer.set(db.doc(`churchNames/效能測試教會${cid}`), { cid });
   void writer.set(db.doc(`churches/${cid}/settings/services`), {
     services,
     ids: services.map((s) => s.id),

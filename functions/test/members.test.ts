@@ -6,7 +6,6 @@ import { Timestamp } from 'firebase-admin/firestore';
 import { getStorage } from 'firebase-admin/storage';
 
 import { deleteAccount } from '../src/account.js';
-import { createChurch, purgeDeletedChurches } from '../src/church.js';
 import { calendarAuthUrl, type CalDeps } from '../src/calendar.js';
 import { previewInvite, redeemInvite } from '../src/invites.js';
 import { memoryGoogle } from '../src/memoryGoogle.js';
@@ -22,7 +21,7 @@ import {
   onMemberUpdated,
   syncProfileName,
 } from '../src/triggers.js';
-import { auth, caller, clearFirestore, db, deps, fakePush, purgeDeps, rejectsWith, seedChurch, setNow } from './support.js';
+import { auth, caller, clearFirestore, db, deps, fakePush, rejectsWith, seedChurch, setNow } from './support.js';
 
 const appUrl = 'https://app.example';
 /** Joining tells the admins: pushed nowhere here. */
@@ -169,23 +168,6 @@ describe('deleteAccount', () => {
     assert.equal((await db.doc('churches/Shared').get()).get('status'), 'active');
     assert.equal((await db.doc(`churches/Alone/members/${user.uid}`).get()).exists, false);
     await assert.rejects(auth.getUser(user.uid));
-  });
-
-  test("a church deleted with its maker's account lets its name go: no one is left to restore it", async () => {
-    const user = await auth.createUser({ email: 'again@example.com' });
-    setNow(new Date('2026-10-21T00:00:00Z'));
-    await seedChurch('Alone', { [user.uid]: 'admin' });
-    await deleteAccount({ ...deps, auth }, caller(user.uid));
-
-    const { churchId } = await createChurch(deps, caller('again2'), { name: 'Alone' });
-    assert.notEqual(churchId, 'Alone');
-    setNow(new Date('2026-12-01T00:00:00Z'));
-    assert.deepEqual(await purgeDeletedChurches(purgeDeps), ['Alone']);
-    assert.equal(
-      (await db.doc('churchNames/alone').get()).get('cid'),
-      churchId,
-      "the old church's clean-up leaves the new one's name",
-    );
   });
 
   test('being the only admin of a deleted church does not block', async () => {

@@ -10,7 +10,6 @@ import { churchPreview, createChurch, deleteChurch, purgeDeletedChurches, restor
 import { memoryGoogle } from '../src/memoryGoogle.js';
 import { addPending, callerKey, waitingFor } from '../src/pendingMembers.js';
 import { seal } from '../src/sealing.js';
-import { nameKey } from '../src/text.js';
 import { webhookSave } from '../src/webhook.js';
 import { caller, clearFirestore, db, deps, purgeDeps, rejectsWith, seedChurch, setNow } from './support.js';
 
@@ -19,14 +18,6 @@ const rules = JSON.parse(readFileSync(new URL('../../testdata/church_rules.json'
 beforeEach(async () => {
   await clearFirestore();
   setNow(new Date('2026-10-01T10:00:00+08:00'));
-});
-
-describe('nameKey', () => {
-  test('treats spacing, width and case differences as the same name', () => {
-    assert.equal(nameKey('台北 靈糧堂'), nameKey('台北靈糧堂'));
-    assert.equal(nameKey('ＴＡＩＰＥＩ'), nameKey('taipei'));
-    assert.notEqual(nameKey('台北靈糧堂'), nameKey('台中靈糧堂'));
-  });
 });
 
 describe('createChurch', () => {
@@ -71,24 +62,13 @@ describe('createChurch', () => {
     await rejectsWith(createChurch(deps, null, { name: '恩典堂' }), 'permissionDenied');
   });
 
-  test('rejects names that only differ by spaces, width or case', async () => {
-    await createChurch(deps, caller('alice'), { name: '台北 靈糧堂' });
-    await rejectsWith(createChurch(deps, caller('bob'), { name: '台北靈糧堂' }), 'duplicateName');
-    await createChurch(deps, caller('alice'), { name: 'Taipei Grace' });
-    await rejectsWith(
-      createChurch(deps, caller('bob'), { name: 'ＴＡＩＰＥＩ　ＧＲＡＣＥ' }),
-      'duplicateName',
-    );
-  });
-
-  test('two people creating the same name at once: only one succeeds', async () => {
-    const results = await Promise.allSettled([
-      createChurch(deps, caller('alice'), { name: '同名教會' }),
-      createChurch(deps, caller('bob'), { name: '同名 教會' }),
-      createChurch(deps, caller('carol'), { name: '同名教會 ' }),
-    ]);
-    assert.equal(results.filter((r) => r.status === 'fulfilled').length, 1);
-    assert.equal((await db.collection('churches').get()).size, 1);
+  test('two churches may have the same name, each its own', async () => {
+    const a = await createChurch(deps, caller('alice'), { name: '恩典堂' });
+    const b = await createChurch(deps, caller('bob'), { name: '恩典堂' });
+    assert.notEqual(a.churchId, b.churchId);
+    assert.equal((await db.doc(`churches/${a.churchId}/members/alice`).get()).get('role'), 'admin');
+    assert.equal((await db.doc(`churches/${b.churchId}/members/bob`).get()).get('role'), 'admin');
+    assert.equal((await db.doc(`churches/${b.churchId}/members/alice`).get()).exists, false);
   });
 
   test('rejects empty and overlong names', async () => {
@@ -96,22 +76,11 @@ describe('createChurch', () => {
     await rejectsWith(createChurch(deps, caller('alice'), { name: 'x'.repeat(61) }), 'unknown');
   });
 
-  test('a name with "/" is a name like any other; the slash that looks the same is the same name', async () => {
-    const { churchId } = await createChurch(deps, caller('alice'), { name: '生命樹平安堂/livingtreepeacechurch' });
-    assert.equal((await db.doc(`churches/${churchId}`).get()).get('name'), '生命樹平安堂/livingtreepeacechurch');
-    assert.equal((await db.doc('churchNames/生命樹平安堂∕livingtreepeacechurch').get()).get('cid'), churchId);
-    await rejectsWith(createChurch(deps, caller('bob'), { name: '生命樹平安堂 / LivingTreePeaceChurch' }), 'duplicateName');
-    await rejectsWith(createChurch(deps, caller('bob'), { name: '生命樹平安堂∕livingtreepeacechurch' }), 'duplicateName');
-    await createChurch(deps, caller('bob'), { name: '/' });
-  });
-
-  test('names Firestore cannot keep as a reservation are refused, not failed on', async () => {
-    for (const name of ['.', '..', '__恩典__', '__ 恩典 __']) {
-      await rejectsWith(createChurch(deps, caller('alice'), { name }), 'unknown');
+  test('a name with "/", or one Firestore would not take as an ID, is a name like any other', async () => {
+    for (const name of ['生命樹平安堂/livingtreepeacechurch', '/', '.', '..', '__恩典__']) {
+      const { churchId } = await createChurch(deps, caller('alice'), { name });
+      assert.equal((await db.doc(`churches/${churchId}`).get()).get('name'), name);
     }
-    assert.equal((await db.collection('churches').get()).size, 0);
-    await createChurch(deps, caller('alice'), { name: '...' });
-    await createChurch(deps, caller('alice'), { name: '__恩典' });
   });
 });
 
@@ -192,7 +161,6 @@ describe('delete and restore', () => {
     assert.equal((await db.doc('churches/Old').get()).exists, false);
     assert.equal((await db.doc('churches/Old/rosters/r1').get()).exists, false);
     assert.equal((await db.doc('churches/Old/members/alice').get()).exists, false);
-    assert.equal((await db.doc('churchNames/old').get()).exists, false);
     assert.equal((await db.doc('invites/ABCDEFGH').get()).exists, false);
     assert.equal((await db.doc('linkSources/Old').get()).exists, false);
     assert.ok((await db.doc('churches/Recent').get()).exists);
@@ -283,7 +251,7 @@ describe('purging forgets everything about the church', () => {
   test('nothing about the purged church is left; another church keeps all of its own', async () => {
     const before = await everything();
     const stores = ['calendarTokens/Gone', 'calendarCache/Gone_', 'calendarStates/state-Gone', 'webhookSecrets/Gone',
-      'webhookOutbox/Gone/', 'linkSources/Gone', 'invites/INVITEGONE', 'pendingIndex/', 'churchNames/gone',
+      'webhookOutbox/Gone/', 'linkSources/Gone', 'invites/INVITEGONE', 'pendingIndex/',
       'churches/Gone/settings/webhook', 'churches/Gone/logo.png'];
     for (const store of stores) {
       assert.ok(before.some((line) => line.startsWith(store) && /gone/i.test(line)), `seeded ${store}`);

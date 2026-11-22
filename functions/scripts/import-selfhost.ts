@@ -20,7 +20,6 @@ import { initializeApp, type App } from 'firebase-admin/app';
 import { getFirestore, Timestamp, type Firestore, type QuerySnapshot } from 'firebase-admin/firestore';
 
 import { buildImport } from '../src/importer.js';
-import { nameKey } from '../src/text.js';
 
 const args = process.argv.slice(2);
 const flag = (name: string) => {
@@ -75,15 +74,10 @@ async function main() {
   if (savedHost) process.env.FIRESTORE_EMULATOR_HOST = savedHost;
   const db: Firestore = getFirestore(initializeApp({ projectId: target }, 'target'));
   const root = db.doc(`churches/${churchId}`);
-  const key = nameKey(churchName!);
-  const reserved = await db.doc(`churchNames/${key}`).get();
-  if (reserved.exists && reserved.get('cid') !== churchId) throw new Error(`Name ${churchName} is taken by ${reserved.get('cid')}`);
 
   const w = db.bulkWriter();
-  void w.set(db.doc(`churchNames/${key}`), { cid: churchId, createdAt: Timestamp.now() });
   void w.set(root, {
     name: churchName,
-    nameKey: key,
     status: 'active',
     createdBy: members.find((m) => m.role === 'admin')?.uid ?? null,
     createdAt: Timestamp.now(),

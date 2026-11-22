@@ -1,13 +1,12 @@
 import { churchClosed, churchId } from './access.js';
-import { churchNamePath } from './church.js';
-import { fail, id, requireOperator, serverTime, text, type Caller, type Deps } from './common.js';
+import { fail, id, requireOperator, text, type Caller, type Deps } from './common.js';
 import { identitiesOf, makesAdmin, parse, withIdentities, type Identity } from './identities.js';
 import { TEXT_LIMITS } from './limits.js';
-import { matchesSearch, nameKey } from './text.js';
+import { matchesSearch } from './text.js';
 
 /**
- * The platform operator's back office: find a church, rename it (to settle
- * a squatted name), hand it to a new admin, suspend or reopen it. Only
+ * The platform operator's back office: find a church, rename it, hand it
+ * to a new admin, suspend or reopen it. Only
  * callers with the `operator` custom claim get in.
  */
 export async function adminSearchChurches(deps: Deps, caller: Caller | null, data: unknown) {
@@ -40,26 +39,17 @@ export async function adminSearchChurches(deps: Deps, caller: Caller | null, dat
   return { churches };
 }
 
-/** Renames a church, still subject to the duplicate-name check. */
+/** Renames a church. */
 export async function adminRenameChurch(deps: Deps, caller: Caller | null, data: unknown) {
   requireOperator(caller);
   const input = data as { churchId?: unknown; name?: unknown };
   const cid = churchId(input?.churchId);
   const name = text(input?.name, TEXT_LIMITS.churchName);
-  const key = nameKey(name);
   const { db } = deps;
   await db.runTransaction(async (tx) => {
     const ref = db.doc(`churches/${cid}`);
-    const church = await tx.get(ref);
-    if (!church.exists) fail('not-found', 'unknown');
-    const oldKey = church.get('nameKey') as string | undefined;
-    if (oldKey !== key) {
-      const reserved = await tx.get(db.doc(churchNamePath(key)));
-      if (reserved.exists && reserved.get('cid') !== cid) fail('already-exists', 'duplicateName');
-      tx.set(db.doc(churchNamePath(key)), { cid, createdAt: serverTime() });
-      if (oldKey) tx.delete(db.doc(churchNamePath(oldKey)));
-    }
-    tx.update(ref, { name, nameKey: key });
+    if (!(await tx.get(ref)).exists) fail('not-found', 'unknown');
+    tx.update(ref, { name });
   });
   return {};
 }

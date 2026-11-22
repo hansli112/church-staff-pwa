@@ -12,7 +12,6 @@ import { requestState, takesJoinRequests } from './joinRequests.js';
 import { languageOf, words } from './languages.js';
 import { personName, TEXT_LIMITS } from './limits.js';
 import { forgetPending } from './pendingMembers.js';
-import { nameKey } from './text.js';
 import { forgetWebhook } from './webhook.js';
 import { DEFAULT_TIME_ZONE, isChurchTimeZone, type ChurchTimeZone } from './timeZones.js';
 
@@ -20,32 +19,8 @@ import { DEFAULT_TIME_ZONE, isChurchTimeZone, type ChurchTimeZone } from './time
 export const RESTORE_DAYS = 30;
 
 /**
- * The reservation of the name with key [key] (nameKey): churchNames/{key},
- * with "/" (a path separator to Firestore) as the division slash "∕" that
- * looks the same, so 「生命樹平安堂/living」 and 「生命樹平安堂∕living」 are
- * one name. A key Firestore cannot take as an ID at all ("." and "..",
- * "__…__") is refused.
- */
-export function churchNamePath(key: string): string {
-  const docId = key.replaceAll('/', '∕');
-  if (docId === '.' || docId === '..' || /^__.*__$/su.test(docId)) fail('invalid-argument', 'unknown');
-  return `churchNames/${docId}`;
-}
-
-/** Church [church]'s name reservation, while it is still that church's. */
-export async function churchNameOf(db: FirebaseFirestore.Firestore, church: FirebaseFirestore.DocumentSnapshot) {
-  const key = church.get('nameKey') as string | undefined;
-  if (!key) return null;
-  const ref = db.doc(churchNamePath(key));
-  return (await ref.get()).get('cid') === church.id ? ref : null;
-}
-
-/**
- * Creates a church with the caller as its admin.
- *
- * Names are unique after normalization. The reservation lives in
- * churchNames/{nameKey}, written in the same transaction as the church, so
- * two people creating the same name at once cannot both succeed.
+ * Creates a church with the caller as its admin. Two churches may have the
+ * same name: nothing finds a church by its name.
  */
 export async function createChurch(deps: Deps, caller: Caller | null, data: unknown) {
   const c = requireCaller(caller);
@@ -122,9 +97,6 @@ export async function openChurch(
   } = {},
 ) {
   if (!c.emailVerified) fail('failed-precondition', 'unverifiedEmail');
-  const key = nameKey(name);
-  if (!key) fail('invalid-argument', 'unknown');
-  const namePath = churchNamePath(key);
 
   const { db } = deps;
   const churchRef = opts.cid ? db.doc(`churches/${opts.cid}`) : db.collection('churches').doc();
@@ -135,12 +107,8 @@ export async function openChurch(
   const services = opts.services ?? { services: defaults, ids: defaults.map((s) => s.id) };
 
   await db.runTransaction(async (tx) => {
-    const reserved = await tx.get(db.doc(namePath));
-    if (reserved.exists) fail('already-exists', 'duplicateName');
-    tx.create(db.doc(namePath), { cid, createdAt: serverTime() });
     tx.create(churchRef, {
       name,
-      nameKey: key,
       status: 'active',
       createdBy: c.uid,
       createdAt: serverTime(),
@@ -239,9 +207,6 @@ export async function purgeDeletedChurches(deps: PurgeDeps) {
       continue;
     }
     await deps.db.recursiveDelete(doc.ref);
-    // Not when its name went to a new church already (deleteAccount).
-    const name = await churchNameOf(deps.db, doc);
-    if (name) await name.delete();
     purged.push(doc.id);
   }
   return purged;

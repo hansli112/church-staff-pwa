@@ -2,7 +2,6 @@ import type { Auth } from 'firebase-admin/auth';
 import { Timestamp } from 'firebase-admin/firestore';
 
 import { isChurchOpen } from './access.js';
-import { churchNameOf } from './church.js';
 import { fail, requireCaller, type Caller, type Deps } from './common.js';
 import { notificationsOf } from './notificationList.js';
 import { forgetJoinRequestsOf } from './joinRequests.js';
@@ -44,11 +43,7 @@ export async function deleteAccount(deps: Deps & { auth: Auth }, caller: Caller 
 
   const writer = db.bulkWriter();
   const deletedAt = Timestamp.fromDate(deps.now());
-  for (const church of alone) {
-    void writer.update(church.ref, { status: 'deleted', deletedAt });
-    const name = await churchNameOf(db, church);
-    if (name) void writer.delete(name);
-  }
+  for (const church of alone) void writer.update(church.ref, { status: 'deleted', deletedAt });
   for (const m of memberships.docs) void writer.delete(m.ref);
   void writer.delete(db.doc(`users/${c.uid}`));
   await writer.close();

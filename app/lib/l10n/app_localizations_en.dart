@@ -238,11 +238,7 @@ class L10nEn extends L10n {
   String get create => 'Create';
 
   @override
-  String get errDuplicateName =>
-      'A church with this name already exists. If someone else took it first, report the problem.';
-
-  @override
-  String get contactUs => 'Report a problem';
+  String get errDuplicateName => 'Someone here already has that name';
 
   @override
   String joinTitle(String church) {

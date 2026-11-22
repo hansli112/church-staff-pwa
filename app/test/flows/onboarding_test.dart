@@ -269,10 +269,10 @@ void main() {
     expect(find.text('請輸入 email'), findsOneWidget, reason: 'the other errors stay until fixed');
   });
 
-  testWidgets('a taken name is refused with a way to contact us', (
+  testWidgets('a name another church has is a name like any other', (
     tester,
   ) async {
-    final b = MemoryBackend(clock: testClock)..addChurch('台北 靈糧堂');
+    final b = MemoryBackend(clock: testClock)..addChurch('台北靈糧堂');
     b.auth.googleAccount = 'bob@gmail.com';
     await pumpApp(tester, b);
     await tapText(tester, '使用 Google 登入');
@@ -280,9 +280,9 @@ void main() {
     await tester.enterText(find.byType(TextField).first, '台北靈糧堂');
     await tester.pump();
     await tapText(tester, '建立');
-    expect(findShownContaining('已經有教會叫這個名字'), findsOneWidget);
-    expect(findShown('回報問題'), findsOneWidget);
-    expect(b.churches.length, 1);
+    expect(b.churches.length, 2);
+    expect(b.churches.values.map((c) => c.name), everyElement('台北靈糧堂'));
+    expect(find.byType(NavigationBar), findsOneWidget, reason: 'in the new one');
   });
 
   testWidgets('an invite link opened signed out joins after sign-in', (

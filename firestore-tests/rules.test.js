@@ -74,9 +74,9 @@ before(async () => {
     const db = context.firestore();
     const put = (path, data) => setDoc(doc(db, path), data);
 
-    await put(`churches/${A}`, { name: '恩典堂', nameKey: '恩典堂', status: 'active' });
-    await put(`churches/${B}`, { name: '活水堂', nameKey: '活水堂', status: 'active' });
-    await put(`churches/${SUSPENDED}`, { name: '停用堂', nameKey: '停用堂', status: 'suspended' });
+    await put(`churches/${A}`, { name: '恩典堂', status: 'active' });
+    await put(`churches/${B}`, { name: '活水堂', status: 'active' });
+    await put(`churches/${SUSPENDED}`, { name: '停用堂', status: 'suspended' });
 
     // 兩間教會都有 sunday —— 同名的聚會別 ID 不能讓權限跨教會生效。
     await put(`churches/${A}/settings/services`, services(['sunday', 'youth']));
@@ -229,7 +229,7 @@ describe('教會本身', () => {
   // 字數上限（8 個字）由 App 把關；規則的 size() 算 UTF-16 code unit，
   // 只擋濫用：上限 × 4 = 32。
   it('主畫面名稱：只有該教會的管理員能設定，最多 32 個 UTF-16 單位，也能拿掉', async () => {
-    await seed(`churches/home-name`, { name: '台北靈糧堂民生分堂', nameKey: 'x', status: 'active' });
+    await seed(`churches/home-name`, { name: '台北靈糧堂民生分堂', status: 'active' });
     await seed(`churches/home-name/members/${ADMIN_A}`, memberDoc(ADMIN_A, 'admin'));
     await seed(`churches/home-name/members/${MEMBER_A}`, memberDoc(MEMBER_A, 'member'));
     const ref = (uid) => doc(as(uid), 'churches/home-name');
@@ -1286,12 +1286,6 @@ describe('平台統計與名稱保留', () => {
       await assertFails(getDoc(doc(db, 'fundingPayments/ecpay_20261007a1b2c3d4e5f6')));
       await assertFails(setDoc(doc(db, 'fundingPayments/ecpay_x'), { amountTwd: 1 }));
     }
-  });
-
-  it('churchNames 不能讀寫（只有建立教會的 function 用）', async () => {
-    await seed('churchNames/恩典堂', { cid: A });
-    await assertFails(getDoc(doc(as(ADMIN_A), 'churchNames/恩典堂')));
-    await assertFails(setDoc(doc(as(STRANGER), 'churchNames/搶註'), { cid: 'x' }));
   });
 });
 

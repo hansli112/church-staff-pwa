@@ -193,12 +193,10 @@ export async function seedChurch(
 ) {
   await db.doc(`churches/${cid}`).set({
     name: cid,
-    nameKey: cid.toLowerCase(),
     status: 'active',
     createdAt: Timestamp.now(),
     ...extra,
   });
-  await db.doc(`churchNames/${cid.toLowerCase()}`).set({ cid });
   for (const [uid, role] of Object.entries(members)) {
     await db.doc(`churches/${cid}/members/${uid}`).set({
       uid,

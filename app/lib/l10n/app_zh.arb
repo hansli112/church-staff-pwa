@@ -113,8 +113,8 @@
   "churchName": "教會名稱",
   "createChurchVerifyFirst": "驗證 email 後才能建立教會",
   "create": "建立",
-  "errDuplicateName": "已經有教會叫這個名字。如果是別人搶先註冊的，請回報問題。",
-  "contactUs": "回報問題",
+  "errDuplicateName": "教會裡已經有人叫這個名字",
+  "@errDuplicateName": {"description": "A 同工 name someone in the church already has, where the name itself is not at hand"},
   "joinTitle": "加入〈{church}〉",
   "@joinTitle": {
     "placeholders": {

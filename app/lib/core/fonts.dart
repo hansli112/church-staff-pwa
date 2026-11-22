@@ -94,7 +94,6 @@ const _startupKeys = {
   'churchName',
   'createChurchVerifyFirst',
   'create',
-  'contactUs',
   'joinTitle',
   'join',
   'joined',

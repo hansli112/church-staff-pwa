@@ -45,18 +45,14 @@ describe('operator back office', () => {
     assert.deepEqual(churches[0].admins.map((a) => a.uid), ['alice']);
   });
 
-  test('rename still goes through the duplicate-name check', async () => {
-    await seedChurch('C1', { alice: 'admin' }, { name: '甲', nameKey: '甲' });
-    await db.doc('churchNames/甲').set({ cid: 'C1' });
-    await seedChurch('C2', { bob: 'admin' }, { name: '乙', nameKey: '乙' });
-    await db.doc('churchNames/乙').set({ cid: 'C2' });
+  test('rename may give a church the name another one has', async () => {
+    await seedChurch('C1', { alice: 'admin' }, { name: '甲' });
+    await seedChurch('C2', { bob: 'admin' }, { name: '乙' });
 
-    await rejectsWith(adminRenameChurch(deps, op, { churchId: 'C2', name: ' 甲 ' }), 'duplicateName');
-    await adminRenameChurch(deps, op, { churchId: 'C2', name: '丙' });
-    const c2 = await db.doc('churches/C2').get();
-    assert.equal(c2.get('name'), '丙');
-    assert.equal((await db.doc('churchNames/乙').get()).exists, false, 'old name released');
-    assert.equal((await db.doc('churchNames/丙').get()).get('cid'), 'C2');
+    await adminRenameChurch(deps, op, { churchId: 'C2', name: ' 甲 ' });
+    assert.equal((await db.doc('churches/C2').get()).get('name'), '甲');
+    assert.equal((await db.doc('churches/C1').get()).get('name'), '甲');
+    await rejectsWith(adminRenameChurch(deps, op, { churchId: 'C9', name: '丙' }), 'unknown');
   });
 
   test('transfer makes 管理員 of someone with a 身分, keeping it', async () => {

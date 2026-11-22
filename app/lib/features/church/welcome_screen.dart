@@ -21,7 +21,6 @@ import 'church_entry_screen.dart';
 import 'church_logo.dart';
 import 'claims.dart';
 import 'your_name.dart';
-import '../../core/links.dart';
 
 /// For someone signed in who belongs to no church yet. Most people arrive
 /// through an invite link and never see this; the rest either have a code
@@ -311,7 +310,6 @@ class _CreateChurchScreenState extends ConsumerState<CreateChurchScreen> {
   String? _typedName;
   bool _busy = false;
   String? _error;
-  bool _duplicate = false;
 
   @override
   void dispose() {
@@ -326,7 +324,6 @@ class _CreateChurchScreenState extends ConsumerState<CreateChurchScreen> {
     setState(() {
       _busy = true;
       _error = null;
-      _duplicate = false;
     });
     try {
       final language = AppLanguage.shownIn(context);
@@ -339,10 +336,7 @@ class _CreateChurchScreenState extends ConsumerState<CreateChurchScreen> {
       if (mounted) goAfterJoining(context, ref, cid);
     } catch (e) {
       if (!mounted) return;
-      setState(() {
-        _error = errorText(L10n.of(context), e);
-        _duplicate = e is CloudException && e.code == CloudErrorCode.duplicateName;
-      });
+      setState(() => _error = errorText(L10n.of(context), e));
     } finally {
       if (mounted) setState(() => _busy = false);
     }
@@ -389,14 +383,6 @@ class _CreateChurchScreenState extends ConsumerState<CreateChurchScreen> {
               textAlign: TextAlign.start,
               style: AppText.subheadline.copyWith(color: c.destructive),
             ),
-            if (_duplicate)
-              Align(
-                alignment: AlignmentDirectional.centerStart,
-                child: SecondaryButton(
-                  label: l10n.contactUs,
-                  onPressed: () => openLink(Uri.parse(supportUrl)),
-                ),
-              ),
           ],
           const SizedBox(height: Space.l),
           PrimaryButton(
