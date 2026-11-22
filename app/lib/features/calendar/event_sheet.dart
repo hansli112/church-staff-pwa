@@ -7,6 +7,7 @@ import '../../core/design/components.dart';
 import '../../core/design/tokens.dart';
 import '../../data/backend.dart' show WarmUp;
 import '../../domain/day.dart';
+import '../../domain/event_times.dart';
 import '../../domain/models.dart';
 import '../../l10n/app_localizations.dart';
 import '../../state/calendar.dart';
@@ -234,7 +235,7 @@ class _EventEditorState extends State<_EventEditor> {
   late final _title = TextEditingController(text: widget.event?.title ?? '');
   late final _location = TextEditingController(text: widget.event?.location ?? '');
   late final _description = TextEditingController(text: widget.event?.description ?? '');
-  late bool _allDay = widget.event?.allDay ?? false;
+  late EventTimes _times = EventTimes.of(widget.event, initialDay: widget.initialDay);
   late String? _group = widget.initialGroup;
 
   /// The picker open under 屬於, 開始 or 結束, at most one, as in the
@@ -250,22 +251,6 @@ class _EventEditorState extends State<_EventEditor> {
   /// a two-day event's end past the start's time does not cut it to one.
   bool _endWithinDay = true;
 
-  // The first and last day, both included, and the times when not all day.
-  // An all-day event keeps the usual times for when it is switched to one
-  // with times.
-  late DateTime _startDay = _dateOf(widget.event?.start ?? widget.initialDay);
-  late DateTime _endDay = switch (widget.event) {
-    null => _startDay,
-    final e when e.allDay => e.lastDay.midnight,
-    final e => _dateOf(e.end),
-  };
-  late TimeOfDay _startTime = widget.event == null || widget.event!.allDay
-      ? const TimeOfDay(hour: 19, minute: 30)
-      : TimeOfDay.fromDateTime(widget.event!.start);
-  late TimeOfDay _endTime = widget.event == null || widget.event!.allDay
-      ? const TimeOfDay(hour: 21, minute: 0)
-      : TimeOfDay.fromDateTime(widget.event!.end);
-
   @override
   void dispose() {
     _title.dispose();
@@ -274,36 +259,9 @@ class _EventEditorState extends State<_EventEditor> {
     super.dispose();
   }
 
-  static DateTime _dateOf(DateTime d) => DateTime.utc(d.year, d.month, d.day);
+  static TimeOfDay _wheel(ClockTime t) => TimeOfDay(hour: t.hour, minute: t.minute);
 
-  static DateTime _at(DateTime day, TimeOfDay t) => DateTime.utc(day.year, day.month, day.day, t.hour, t.minute);
-
-  DateTime get _start => _allDay ? _startDay : _at(_startDay, _startTime);
-
-  /// Exclusive, as the calendar keeps it: the day after the last for an
-  /// all-day event.
-  DateTime get _end => _allDay ? DateTime.utc(_endDay.year, _endDay.month, _endDay.day + 1) : _at(_endDay, _endTime);
-
-  /// Always true from the pickers, which offer no end before the start;
-  /// kept as a guard for saving.
-  bool get _valid => _end.isAfter(_start);
-
-  /// Moves the start; the end moves with it, so the event keeps its length.
-  void _moveStart(DateTime day, TimeOfDay time) {
-    final days = _endDay.difference(_startDay).inDays;
-    final length = _at(_endDay, _endTime).difference(_at(_startDay, _startTime));
-    setState(() {
-      _startDay = _dateOf(day);
-      _startTime = time;
-      if (_allDay) {
-        _endDay = DateTime.utc(day.year, day.month, day.day + (days < 0 ? 0 : days));
-      } else {
-        final end = _at(day, time).add(length > Duration.zero ? length : const Duration(hours: 1));
-        _endDay = _dateOf(end);
-        _endTime = TimeOfDay.fromDateTime(end);
-      }
-    });
-  }
+  static ClockTime _clock(TimeOfDay t) => (hour: t.hour, minute: t.minute);
 
   /// Opens [picker], or closes it when open. The keyboard goes, so the
   /// picker and the rows below it stay in sight.
@@ -311,7 +269,7 @@ class _EventEditorState extends State<_EventEditor> {
     FocusScope.of(context).unfocus();
     setState(() {
       _open = _open == picker ? null : picker;
-      if (_open == _Picker.endTime) _endWithinDay = _end.difference(_start) < const Duration(days: 1);
+      if (_open == _Picker.endTime) _endWithinDay = _times.withinDay;
     });
     // Scrolled up into sight when it opens below the fold.
     WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -331,37 +289,13 @@ class _EventEditorState extends State<_EventEditor> {
     if (_open != null) setState(() => _open = null);
   }
 
-  /// Moves the end to [day]. On the start day an end time not after the
-  /// start becomes an hour after it.
-  void _moveEndDay(DateTime day) => setState(() {
-    _endDay = _dateOf(day);
-    if (!_allDay && !_at(day, _endTime).isAfter(_start)) {
-      final end = _start.add(const Duration(hours: 1));
-      _endDay = _dateOf(end);
-      _endTime = TimeOfDay.fromDateTime(end);
-    }
-  });
-
-  /// Sets the end time. For an event under a day long, the end is the
-  /// first such time after the start: the next day for one not after the
-  /// start time, the start day again for one after it. A longer event keeps
-  /// its end day.
-  void _setEndTime(TimeOfDay t) => setState(() {
-    _endTime = t;
-    if (_endWithinDay) {
-      _endDay = _at(_startDay, t).isAfter(_start)
-          ? _startDay
-          : DateTime.utc(_startDay.year, _startDay.month, _startDay.day + 1);
-    }
-  });
-
   /// The event as edited.
   CalendarEvent get _edited => CalendarEvent(
     id: widget.event?.id,
     title: _title.text.trim(),
-    start: _start,
-    end: _end,
-    allDay: _allDay,
+    start: _times.start,
+    end: _times.end,
+    allDay: _times.allDay,
     location: _location.text.trim().isEmpty ? null : _location.text.trim(),
     description: _description.text.trim(),
     recurringEventId: widget.event?.recurringEventId,
@@ -400,7 +334,7 @@ class _EventEditorState extends State<_EventEditor> {
   }
 
   /// Whether [_edited] can be saved.
-  bool get _savable => _title.text.trim().isNotEmpty && _valid;
+  bool get _savable => _title.text.trim().isNotEmpty && _times.valid;
 
   /// To the roster, saving what was changed here first: a new event's
   /// roster needs its id. Offered only while it can be saved, so no edit
@@ -483,17 +417,17 @@ class _EventEditorState extends State<_EventEditor> {
                   children: [
                     SwitchRow(
                       title: l10n.calAllDay,
-                      value: _allDay,
+                      value: _times.allDay,
                       onChanged: (v) => setState(() {
-                        _allDay = v;
+                        _times = _times.withAllDay(v);
                         if (v && (_open == _Picker.startTime || _open == _Picker.endTime)) _open = null;
                       }),
                     ),
                     _WhenRow(
                       title: l10n.calStart,
                       thisYear: widget.thisYear,
-                      day: _startDay,
-                      time: _allDay ? null : _startTime,
+                      day: _times.startDay,
+                      time: _times.allDay ? null : _wheel(_times.startTime),
                       dayOpen: _open == _Picker.startDay,
                       timeOpen: _open == _Picker.startTime,
                       onDay: () => _toggle(_Picker.startDay),
@@ -503,26 +437,26 @@ class _EventEditorState extends State<_EventEditor> {
                       _DayPicker(
                         opened: _pickerKeys[_Picker.startDay]!,
                         key: const ValueKey(_Picker.startDay),
-                        day: _startDay,
-                        first: DateTime.utc(_startDay.year - 1),
-                        onPicked: (d) {
-                          _moveStart(d, _startTime);
-                          setState(() => _open = null);
-                        },
+                        day: _times.startDay,
+                        first: DateTime.utc(_times.startDay.year - 1),
+                        onPicked: (d) => setState(() {
+                          _times = _times.moveStart(d, _times.startTime);
+                          _open = null;
+                        }),
                       ),
                     if (_open == _Picker.startTime)
                       _TimeWheels(
                         opened: _pickerKeys[_Picker.startTime]!,
                         key: const ValueKey(_Picker.startTime),
-                        time: _startTime,
-                        onChanged: (t) => _moveStart(_startDay, t),
+                        time: _wheel(_times.startTime),
+                        onChanged: (t) => setState(() => _times = _times.moveStart(_times.startDay, _clock(t))),
                       ),
                     _WhenRow(
                       title: l10n.calEnd,
                       thisYear: widget.thisYear,
-                      day: _endDay,
-                      time: _allDay ? null : _endTime,
-                      note: _allDay ? null : _length(l10n, _end.difference(_start)),
+                      day: _times.endDay,
+                      time: _times.allDay ? null : _wheel(_times.endTime),
+                      note: _times.allDay ? null : _length(l10n, _times.end.difference(_times.start)),
                       dayOpen: _open == _Picker.endDay,
                       timeOpen: _open == _Picker.endTime,
                       onDay: () => _toggle(_Picker.endDay),
@@ -532,23 +466,24 @@ class _EventEditorState extends State<_EventEditor> {
                       _DayPicker(
                         opened: _pickerKeys[_Picker.endDay]!,
                         key: const ValueKey(_Picker.endDay),
-                        day: _endDay,
-                        first: _startDay,
-                        onPicked: (d) {
-                          _moveEndDay(d);
-                          setState(() => _open = null);
-                        },
+                        day: _times.endDay,
+                        first: _times.startDay,
+                        onPicked: (d) => setState(() {
+                          _times = _times.moveEndDay(d);
+                          _open = null;
+                        }),
                       ),
                     if (_open == _Picker.endTime)
                       _TimeWheels(
                         opened: _pickerKeys[_Picker.endTime]!,
                         key: const ValueKey(_Picker.endTime),
-                        time: _endTime,
-                        onChanged: _setEndTime,
+                        time: _wheel(_times.endTime),
+                        onChanged: (t) =>
+                            setState(() => _times = _times.setEndTime(_clock(t), withinDay: _endWithinDay)),
                       ),
                   ],
                 ),
-                if (!_allDay) const ChurchClockNotice(),
+                if (!_times.allDay) const ChurchClockNotice(),
                 if (widget.event?.id != null)
                   ListSection(
                     children: [
