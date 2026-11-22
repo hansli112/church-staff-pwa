@@ -7,6 +7,7 @@ import 'package:martha/data/firebase/codec.dart';
 import 'package:martha/data/memory/memory_backend.dart';
 import 'package:martha/domain/day.dart';
 import 'package:martha/domain/models.dart';
+import 'package:martha/domain/service_changes.dart';
 
 /// The rows functions/test/churchRules.test.ts runs too: both sides must agree.
 final _rules = jsonDecode(File('../testdata/church_rules.json').readAsStringSync()) as Map<String, dynamic>;
@@ -316,6 +317,25 @@ void main() {
           ),
           r['due'],
         );
+      });
+    }
+  });
+
+  group('serviceShape', () {
+    for (final r in _rows('serviceShape')) {
+      test(r['why'] as String, () {
+        final service = Service(
+          id: 's',
+          name: '聚會',
+          weekdays: const [DateTime.sunday],
+          duties: (r['duties'] as List).cast<String>(),
+          events: [
+            for (final e in (r['events'] as List).cast<Map<String, dynamic>>())
+              EventTag(name: e['name'] as String, color: e['color'] as int),
+          ],
+          manyDuties: (r['manyDuties'] as List?)?.cast<String>(),
+        );
+        expect(validServiceShape(service), r['ok']);
       });
     }
   });

@@ -35,6 +35,7 @@ mixin _MemoryServiceSettings on _MemoryChurchBase {
     if (before.id != after.id) throw ArgumentError('service id cannot change');
     await _b.write(() {
       _requireAdmin();
+      if (!validServiceShape(after)) throw const CloudException(CloudErrorCode.unknown);
       final settings = _b.services[churchId]!;
       if (settings.byId(before.id) != before) throw const CloudException(CloudErrorCode.conflict);
       if (dutyRename case final rename?) {

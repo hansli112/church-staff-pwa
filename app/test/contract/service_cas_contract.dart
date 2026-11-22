@@ -56,6 +56,18 @@ void serviceCasContractTests(Future<ContractWorld> Function() open) {
     expect((await g.church.member(g.editor).first)!.zones.single.duties, ['司會']);
   });
 
+  test('a service whose 多人服事 names a duty it does not have is refused, changing nothing', () async {
+    final g = await Grace.open(await open());
+    await expectLater(
+      g.church.compareAndSetService(
+        before: sunday,
+        after: sunday.copyWith(duties: ['司會'], manyDuties: ['招待']),
+      ),
+      fails(CloudErrorCode.unknown),
+    );
+    expect((await g.church.services().first).byId('sunday'), sunday);
+  });
+
   test('replacing the list of services another admin changed meanwhile is refused', () async {
     final g = await Grace.open(await open());
     final changed = sunday.copyWith(name: '別人改的聚會');

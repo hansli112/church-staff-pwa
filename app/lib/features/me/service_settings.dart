@@ -9,6 +9,7 @@ import 'package:go_router/go_router.dart';
 import '../../core/design/components.dart';
 import '../../domain/day.dart';
 import '../../domain/models.dart';
+import '../../domain/service_changes.dart';
 import '../../domain/staff_order.dart';
 import '../../l10n/app_localizations.dart';
 import '../../state/church_writes.dart';
@@ -231,52 +232,23 @@ class ServiceEdits {
     final name = await promptText(context, title: _l10n.addDuty, hint: _l10n.dutyName);
     if (name == null) return null;
     if (service.duties.contains(name)) return name;
-    return await save(service.copyWith(duties: [...service.duties, name])) ? name : null;
+    return await save(service.withDuty(name)) ? name : null;
   }
 
   /// Duty [d] taken off the service; arranged days and the lists keep it.
-  Future<bool> removeDuty(String d) => save(
-    service.copyWith(
-      duties: [
-        for (final x in service.duties)
-          if (x != d) x,
-      ],
-      manyDuties: service.manyDuties == null
-          ? null
-          : [
-              for (final x in service.manyDuties!)
-                if (x != d) x,
-            ],
-    ),
-    message: _l10n.deletedName(d),
-  );
+  Future<bool> removeDuty(String d) => save(service.withoutDuty(d), message: _l10n.deletedName(d));
 
   /// 多人服事 for duty [d]: set for every duty of the service at once,
   /// the others as they stood.
-  Future<bool> setMany(String d, bool many) {
-    final now = ref.read(rosterActionsProvider).manyDuties(service);
-    return save(
-      service.copyWith(
-        manyDuties: [
-          for (final x in service.duties)
-            if (x == d ? many : now.contains(x)) x,
-        ],
-      ),
-    );
-  }
+  Future<bool> setMany(String d, bool many) =>
+      save(service.withMany(d, many, now: ref.read(rosterActionsProvider).manyDuties(service)));
 
   /// 改名 for duty [from]: its new name once saved, and then 同步未來服事表
   /// offered; null if not.
   Future<String?> renameDuty(String from) async {
     final to = await promptText(context, title: _l10n.rename, hint: _l10n.dutyName, initial: from);
     if (to == null || to == from || service.duties.contains(to)) return null;
-    final saved = await save(
-      service.copyWith(
-        duties: [for (final d in service.duties) d == from ? to : d],
-        manyDuties: service.manyDuties == null ? null : [for (final d in service.manyDuties!) d == from ? to : d],
-      ),
-      dutyRename: (from: from, to: to),
-    );
+    final saved = await save(service.withDutyRenamed(from, to), dutyRename: (from: from, to: to));
     if (!saved || !context.mounted) return null;
     await synchronize(to, from: from);
     return to;
@@ -326,28 +298,11 @@ class ServiceEdits {
   /// 新增特別活動: named, in the next color.
   Future<void> addEvent() async {
     final name = await promptText(context, title: _l10n.customEvent, hint: _l10n.eventName);
-    if (name != null && !service.events.any((e) => e.name == name)) {
-      await save(
-        service.copyWith(
-          events: [
-            ...service.events,
-            EventTag(name: name, color: service.events.length % 6),
-          ],
-        ),
-      );
-    }
+    if (name != null && !service.events.any((e) => e.name == name)) await save(service.withEvent(name));
   }
 
   /// 常用特別活動 [e] taken off; arranged days keep it.
-  Future<void> removeEvent(EventTag e) => save(
-    service.copyWith(
-      events: [
-        for (final x in service.events)
-          if (x.name != e.name) x,
-      ],
-    ),
-    message: _l10n.deletedName(e.name),
-  );
+  Future<void> removeEvent(EventTag e) => save(service.withoutEvent(e.name), message: _l10n.deletedName(e.name));
 
   /// Tapping a 常用特別活動: rename it, its color, bring the rosters after
   /// today in line ([stale]: the names still on them), or remove it.
@@ -401,10 +356,7 @@ class ServiceEdits {
   Future<void> _renameEvent(EventTag from) async {
     final to = await promptText(context, title: _l10n.rename, hint: _l10n.eventName, initial: from.name);
     if (to == null || to == from.name || service.events.any((e) => e.name == to)) return;
-    final renamed = EventTag(name: to, color: from.color);
-    final saved = await save(
-      service.copyWith(events: [for (final e in service.events) e.name == from.name ? renamed : e]),
-    );
+    final saved = await save(service.withEventRenamed(from.name, to));
     if (!saved || !context.mounted) return;
     await synchronize(to, from: from.name, event: true);
   }
@@ -438,11 +390,7 @@ class ServiceEdits {
       ),
     );
     if (color == null || color == event.color || !context.mounted) return;
-    await save(
-      service.copyWith(
-        events: [for (final e in service.events) e.name == event.name ? EventTag(name: e.name, color: color) : e],
-      ),
-    );
+    await save(service.withEventColor(event.name, color));
   }
 }
 

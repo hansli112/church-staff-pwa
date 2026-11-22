@@ -13,7 +13,7 @@ import { ledChangeAllowed } from '../src/ledDuties.js';
 import { LANGUAGES, words } from '../src/languages.js';
 import { attendanceGroupOf, groupOf, powersOf, type ChurchGroup } from '../src/powers.js';
 import { dutiesByUid } from '../src/rosters.js';
-import { validDutyRename } from '../src/serviceSettings.js';
+import { validDutyRename, validServiceShape } from '../src/serviceSettings.js';
 import { askedToFill } from '../src/unavailable.js';
 import { caller, db, deps, seedChurch } from './support.js';
 
@@ -27,6 +27,12 @@ test("a new church starts with the default services, in its maker's language", (
   assert.deepEqual(Object.keys(rules.defaultServices), LANGUAGES);
   for (const language of LANGUAGES) {
     assert.deepEqual(words(language).newChurchServices, rules.defaultServices[language], language);
+  }
+});
+
+describe('serviceShape', () => {
+  for (const r of rows('serviceShape')) {
+    test(r.why, () => assert.equal(validServiceShape(r.duties, r.events, r.manyDuties), r.ok));
   }
 });
 

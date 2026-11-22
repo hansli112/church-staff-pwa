@@ -10,6 +10,7 @@ import '../../domain/day.dart';
 import '../../domain/event_roster.dart';
 import '../../domain/limits.dart';
 import '../../domain/models.dart';
+import '../../domain/service_changes.dart';
 import '../../domain/roster_news.dart';
 import '../../domain/staff_order.dart';
 import '../../domain/swap.dart';
