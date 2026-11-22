@@ -13,6 +13,7 @@ import 'providers.dart';
 class RosterDay {
   const RosterDay({required this.roster, required this.past, required this.arranges, required this.addable});
 
+  /// The roster shown: saved, or the one it starts from.
   final Roster roster;
 
   /// A day gone by: only looked at, by everyone, so nobody is told of
@@ -25,6 +26,7 @@ class RosterDay {
   /// The service's duties I may add to it.
   final List<String> addable;
 
+  /// Whether I change anything on it: a day ahead I arrange some of.
   bool get canEdit => !past && arranges.any;
 
   /// Whether I change the whole day: its 特別活動, and any duty typed in.
@@ -40,6 +42,8 @@ final rosterDayProvider = Provider.autoDispose.family<AsyncValue<RosterDay>?, (S
   final service = ref.watch(servicesProvider.select((s) => s.value?.byId(serviceType)));
   if (service == null) return null;
   final past = day.isBefore(ref.watch(todayProvider));
+
+  /// The roster shown: saved, or the one it starts from.
   final Roster roster;
   if (past) {
     final listed = ref.watch(

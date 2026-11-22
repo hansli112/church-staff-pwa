@@ -46,14 +46,15 @@ class MeetingTimes {
         final gathering = _ref.read(gatheringsProvider).value?.where((g) => g.id == id).firstOrNull;
         final next = time ?? const MeetingTime();
         if (gathering == null || gathering.time == next) return;
-        await _ref.read(churchDataProvider)!.attendance.saveGathering(gathering.copyWith(time: next));
+        await _ref.churchData.attendance.saveGathering(gathering.copyWith(time: next));
       case ServiceGroup():
         if (_ref.read(attendanceProvider(group.key)).value?.time == time) return;
-        await _ref.read(churchDataProvider)!.attendance.saveTime(group.key, time);
+        await _ref.churchData.attendance.saveTime(group.key, time);
       case MinistryGroup():
         throw ArgumentError.value(group, 'group', 'a 事工 has no 聚會時間');
     }
   }
 }
 
+/// [MeetingTimes] of the current church.
 final meetingTimesProvider = Provider<MeetingTimes>(MeetingTimes.new);

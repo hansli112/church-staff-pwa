@@ -598,7 +598,7 @@ class _Memberships implements MembershipRepository {
 /// Firestore and Storage for the church's data, Cloud Functions for what
 /// the backend does for it. Every error leaves as a [CloudException]
 /// ([_guard], [_Translated.translated]).
-class FirestoreChurchData implements ChurchData, UnavailableData, SwapData, ClaimData, JoiningData {
+class FirestoreChurchData implements ChurchData {
   FirestoreChurchData._(this._db, this._storage, this._calls, this._clock, this.churchId);
 
   final FirebaseFirestore _db;
@@ -627,19 +627,17 @@ class FirestoreChurchData implements ChurchData, UnavailableData, SwapData, Clai
   @override
   late final ReadOnceData readOnce = _FirestoreReadOnce(this);
 
-  // As FirestoreChurchData's own, below.
+  @override
+  late final UnavailableData unavailable = _FirestoreUnavailable(this);
 
   @override
-  UnavailableData get unavailable => this;
+  late final SwapData swaps = _FirestoreSwaps(this);
 
   @override
-  SwapData get swaps => this;
+  late final ClaimData claims = _FirestoreClaims(this);
 
   @override
-  ClaimData get claims => this;
-
-  @override
-  JoiningData get joining => this;
+  late final JoiningData joining = _FirestoreJoining(this);
 
   @override
   final String churchId;
@@ -830,15 +828,6 @@ class FirestoreChurchData implements ChurchData, UnavailableData, SwapData, Clai
   }
 
   @override
-  Stream<List<JoinRequest>> requests() => _col(
-    'joinRequests',
-  ).live().map((snap) => [for (final d in snap.docs) joinRequestFromJson(d.id, d.data())]).translated();
-
-  @override
-  Future<void> setTakesRequests(bool on) =>
-      _write(_church, (tx) => tx.update(_church, {'joinRequestsClosed': on ? FieldValue.delete() : true}));
-
-  @override
   Stream<ServiceSettings> services() => _setting('services').map(serviceSettingsFromJson).translated();
 
   @override
@@ -1001,50 +990,6 @@ class FirestoreChurchData implements ChurchData, UnavailableData, SwapData, Clai
       .translated();
 
   @override
-  Stream<UnavailableDays> of(String uid) =>
-      _col('unavailable').doc(uid).live().map((s) => unavailableDaysFromJson(s.data())).translated();
-
-  @override
-  Stream<Map<String, UnavailableDays>> everyones() => _col(
-    'unavailable',
-  ).live().map((snap) => {for (final d in snap.docs) d.id: unavailableDaysFromJson(d.data())}).translated();
-
-  @override
-  Future<void> saveMine(UnavailableDays days) => _call('saveUnavailableDays', unavailableDaysToJson(days));
-
-  @override
-  Stream<List<SwapRequest>> mineOpen() => _col('swapRequests')
-      .where('from', isEqualTo: _calls._auth.currentUser?.uid)
-      .where('status', isEqualTo: 'open')
-      .live()
-      .map((snap) => [for (final d in snap.docs) ?swapRequestFromJson(d.id, d.data())])
-      .translated();
-
-  @override
-  Stream<List<SwapRequest>> toMe() {
-    final uid = _calls._auth.currentUser?.uid;
-    List<SwapRequest> decode(QuerySnapshot<Json> snap) => [
-      for (final d in snap.docs) ?swapRequestFromJson(d.id, d.data()),
-    ];
-    final open = _col('swapRequests').where('status', isEqualTo: 'open');
-    return _latestOfBoth(
-      open.where('asked', arrayContains: uid).live().map(decode),
-      open.where('to', isEqualTo: uid).live().map(decode),
-      (cover, swap) => [...cover, ...swap]..sort((a, b) => a.day.compareTo(b.day)),
-    ).translated();
-  }
-
-  @override
-  Stream<SwapRequest?> request(String id) => _col(
-    'swapRequests',
-  ).doc(id).live().map((s) => s.exists ? swapRequestFromJson(id, s.data()!) : null).translated();
-
-  @override
-  Stream<DateTime?> lastAsk(String serviceType) => _col(
-    'unavailableAsks',
-  ).doc(serviceType).live().map((s) => (s.data()?['at'] as Timestamp?)?.toDate()).translated();
-
-  @override
   Future<void> compareAndSetServiceList({required List<Service> before, required List<Service> after}) {
     _changesSettings(const ['services']);
     final ref = _col('settings').doc('services');
@@ -1109,46 +1054,6 @@ class FirestoreChurchData implements ChurchData, UnavailableData, SwapData, Clai
   }
 
   @override
-  Stream<List<Invite>> invites() => _db
-      .collection('invites')
-      .where('cid', isEqualTo: churchId)
-      .orderBy('expiresAt', descending: true)
-      .live()
-      .map(
-        (snap) => [for (final d in snap.docs) inviteFromJson(d.id, d.data())],
-      )
-      .translated();
-
-  @override
-  Future<Invite> createInvite({required Duration validFor, List<String> zoneTypes = const []}) async {
-    // Generate identity/time once, outside the retryable transaction callback.
-    final code = randomInviteCode();
-    final expiresAt = _clock().add(validFor);
-    final uid = _calls._auth.currentUser?.uid;
-    final churchName = await _transaction((tx) async {
-      final church = await tx.get(_church);
-      final name = church.data()?['name'] as String? ?? '';
-      tx.set(_db.collection('invites').doc(code), {
-        'cid': churchId,
-        'churchName': name,
-        'expiresAt': Timestamp.fromDate(expiresAt),
-        'revoked': false,
-        'createdBy': uid,
-        'createdAt': FieldValue.serverTimestamp(),
-        if (zoneTypes.isNotEmpty) 'zoneTypes': zoneTypes,
-      });
-      return name;
-    });
-    return Invite(code: code, churchId: churchId, churchName: churchName, expiresAt: expiresAt, zoneTypes: zoneTypes);
-  }
-
-  @override
-  Future<void> revokeInvite(String code) {
-    final ref = _db.collection('invites').doc(code);
-    return _write(ref, (tx) => tx.update(ref, {'revoked': true}));
-  }
-
-  @override
   Future<void> setHomeName(String? name) =>
       _write(_church, (tx) => tx.update(_church, {'homeName': name ?? FieldValue.delete()}));
 
@@ -1168,19 +1073,95 @@ class FirestoreChurchData implements ChurchData, UnavailableData, SwapData, Clai
       write: true,
     );
   }
+}
+
+/// [UnavailableData] of a [FirestoreChurchData].
+class _FirestoreUnavailable implements UnavailableData {
+  _FirestoreUnavailable(this._c);
+
+  final FirestoreChurchData _c;
 
   @override
-  Stream<List<ClaimAsk>> asks() => _col(
-    'claimAsks',
-  ).live().map((snap) => [for (final d in snap.docs) claimAskFromJson(d.id, d.data())]).translated();
+  Stream<UnavailableDays> of(String uid) =>
+      _c._col('unavailable').doc(uid).live().map((s) => unavailableDaysFromJson(s.data())).translated();
+
+  @override
+  Stream<Map<String, UnavailableDays>> everyones() => _c
+      ._col('unavailable')
+      .live()
+      .map((snap) => {for (final d in snap.docs) d.id: unavailableDaysFromJson(d.data())})
+      .translated();
+
+  @override
+  Future<void> saveMine(UnavailableDays days) => _c._call('saveUnavailableDays', unavailableDaysToJson(days));
+
+  @override
+  Stream<DateTime?> lastAsk(String serviceType) => _c
+      ._col('unavailableAsks')
+      .doc(serviceType)
+      .live()
+      .map((s) => (s.data()?['at'] as Timestamp?)?.toDate())
+      .translated();
+}
+
+/// [SwapData] of a [FirestoreChurchData].
+class _FirestoreSwaps implements SwapData {
+  _FirestoreSwaps(this._c);
+
+  final FirestoreChurchData _c;
+
+  @override
+  Stream<List<SwapRequest>> mineOpen() => _c
+      ._col('swapRequests')
+      .where('from', isEqualTo: _c._calls._auth.currentUser?.uid)
+      .where('status', isEqualTo: 'open')
+      .live()
+      .map((snap) => [for (final d in snap.docs) ?swapRequestFromJson(d.id, d.data())])
+      .translated();
+
+  @override
+  Stream<List<SwapRequest>> toMe() {
+    final uid = _c._calls._auth.currentUser?.uid;
+    List<SwapRequest> decode(QuerySnapshot<Json> snap) => [
+      for (final d in snap.docs) ?swapRequestFromJson(d.id, d.data()),
+    ];
+    final open = _c._col('swapRequests').where('status', isEqualTo: 'open');
+    return _latestOfBoth(
+      open.where('asked', arrayContains: uid).live().map(decode),
+      open.where('to', isEqualTo: uid).live().map(decode),
+      (cover, swap) => [...cover, ...swap]..sort((a, b) => a.day.compareTo(b.day)),
+    ).translated();
+  }
+
+  @override
+  Stream<SwapRequest?> request(String id) => _c
+      ._col('swapRequests')
+      .doc(id)
+      .live()
+      .map((s) => s.exists ? swapRequestFromJson(id, s.data()!) : null)
+      .translated();
+}
+
+/// [ClaimData] of a [FirestoreChurchData].
+class _FirestoreClaims implements ClaimData {
+  _FirestoreClaims(this._c);
+
+  final FirestoreChurchData _c;
+
+  @override
+  Stream<List<ClaimAsk>> asks() => _c
+      ._col('claimAsks')
+      .live()
+      .map((snap) => [for (final d in snap.docs) claimAskFromJson(d.id, d.data())])
+      .translated();
 
   @override
   Stream<ClaimAsk?> askOf(String uid) =>
-      _col('claimAsks').doc(uid).live().map((s) => s.exists ? claimAskFromJson(uid, s.data()!) : null).translated();
+      _c._col('claimAsks').doc(uid).live().map((s) => s.exists ? claimAskFromJson(uid, s.data()!) : null).translated();
 
   @override
   Future<List<ClaimCandidate>> candidates() async {
-    final d = _asMap(await _call('claimCandidates'));
+    final d = _asMap(await _c._call('claimCandidates'));
     return [
       for (final c in d['candidates'] as List<dynamic>? ?? const [])
         if (c is Map)
@@ -1191,6 +1172,70 @@ class FirestoreChurchData implements ChurchData, UnavailableData, SwapData, Clai
             serves: claimServesFromJson(c['serves']),
           ),
     ];
+  }
+}
+
+/// [JoiningData] of a [FirestoreChurchData].
+class _FirestoreJoining implements JoiningData {
+  _FirestoreJoining(this._c);
+
+  final FirestoreChurchData _c;
+
+  @override
+  Stream<List<JoinRequest>> requests() => _c
+      ._col('joinRequests')
+      .live()
+      .map((snap) => [for (final d in snap.docs) joinRequestFromJson(d.id, d.data())])
+      .translated();
+
+  @override
+  Future<void> setTakesRequests(bool on) =>
+      _c._write(_c._church, (tx) => tx.update(_c._church, {'joinRequestsClosed': on ? FieldValue.delete() : true}));
+
+  @override
+  Stream<List<Invite>> invites() => _c._db
+      .collection('invites')
+      .where('cid', isEqualTo: _c.churchId)
+      .orderBy('expiresAt', descending: true)
+      .live()
+      .map(
+        (snap) => [for (final d in snap.docs) inviteFromJson(d.id, d.data())],
+      )
+      .translated();
+
+  @override
+  Future<Invite> createInvite({required Duration validFor, List<String> zoneTypes = const []}) async {
+    // Generate identity/time once, outside the retryable transaction callback.
+    final code = randomInviteCode();
+    final expiresAt = _c._clock().add(validFor);
+    final uid = _c._calls._auth.currentUser?.uid;
+    final churchName = await _c._transaction((tx) async {
+      final church = await tx.get(_c._church);
+      final name = church.data()?['name'] as String? ?? '';
+      tx.set(_c._db.collection('invites').doc(code), {
+        'cid': _c.churchId,
+        'churchName': name,
+        'expiresAt': Timestamp.fromDate(expiresAt),
+        'revoked': false,
+        'createdBy': uid,
+        'createdAt': FieldValue.serverTimestamp(),
+        if (zoneTypes.isNotEmpty) 'zoneTypes': zoneTypes,
+      });
+      return name;
+    });
+    return Invite(
+      code: code,
+      churchId: _c.churchId,
+      churchName: churchName,
+      expiresAt: expiresAt,
+      zoneTypes: zoneTypes,
+    );
+  }
+
+  @override
+  Future<void> revokeInvite(String code) {
+    final ref = _c._db.collection('invites').doc(code);
+    return _c._write(ref, (tx) => tx.update(ref, {'revoked': true}));
   }
 }
 

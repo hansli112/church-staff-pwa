@@ -15,7 +15,6 @@ import '../../domain/staff.dart';
 import '../../domain/text.dart';
 import '../../l10n/app_localizations.dart';
 import '../../state/attendance.dart';
-import '../../state/meeting_times.dart';
 import '../../state/church_writes.dart';
 import '../../state/providers.dart';
 import '../../state/staff_actions.dart';
@@ -607,7 +606,7 @@ class GroupScreen extends ConsumerWidget {
                   if (attendanceOn)
                     ListRow(
                       title: l10n.smallGroupMeets,
-                      value: meetingTimeLabel(l10n, ref.watch(meetingTimeProvider(small.group)).time),
+                      value: smallGroupMeetsLabel(l10n, small),
                       // Not 行政, who sees it from 人數總覽 (#93).
                       chevron: me.schedules(small.group),
                       onTap: me.schedules(small.group) ? () => changeMeetingTime(context, ref, small.group) : null,
