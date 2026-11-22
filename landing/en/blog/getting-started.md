@@ -54,7 +54,7 @@ Tap **Create invite link** to open the share menu, so you can send it straight t
 
 Invite links work for 30 days and are listed below. There’s one for each set of services: tapping **Create invite link** again shares that same link and starts its 30 days over. Tap an invite in the list to **Share** it again, **Copy link**, or **Revoke** it so the link no longer works. To invite more people later, go to **Settings** → **Invites**.
 
-**Requests to join** below starts out on: anyone with the **Church URL** can also ask to join, and they’re in once you accept. If you’d rather not, turn it off.
+**Requests to join** below starts out on: anyone with the **Link to ask to join** can also ask to join, and they’re in once you accept. If you’d rather not, turn it off.
 
 ## 7. Your team joins
 
