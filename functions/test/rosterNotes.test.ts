@@ -156,7 +156,8 @@ describe('備註的檔案', () => {
     assert.equal(await exists('2026-10-19_sunday', 'old'), false);
     // Uploaded just now: a day later, as nobody kept it, it goes.
     assert.deepEqual([await exists(ROSTER, 'keep'), await exists(ROSTER, 'dropped')], [true, true]);
-    setNow(new Date('2026-11-23T10:00:00+08:00'));
+    // A day after the upload, which the emulator times by the real clock.
+    setNow(new Date(Date.now() + 25 * 60 * 60 * 1000));
     await forgetOldRosterNotes(d);
     assert.deepEqual([await exists(ROSTER, 'keep'), await exists(ROSTER, 'dropped')], [true, false]);
   });
