@@ -32,15 +32,12 @@ void main() {
     expect(launches.opened.single, endsWith('/blog/?lang=zh-Hant&from=app'));
   });
 
-  testWidgets('安排服事 has 使用說明 in its menu, its own guide', (tester) async {
-    final launches = captureLaunches();
+  testWidgets('安排服事 has no 使用說明: nothing on it needs one', (tester) async {
     await pumpApp(tester, seededChurch());
     await go(tester, '/rosters/plan/sunday');
     await tester.tap(find.byIcon(Symbols.more_horiz_rounded));
     await settle(tester);
-    await tester.tap(find.text('使用說明'));
-    await settle(tester);
-    expect(launches.opened.single, contains('/blog/plan-weeks/?'));
+    expect(find.text('使用說明'), findsNothing);
   });
 
   testWidgets("a 小組's page has 使用說明, a service's not", (tester) async {

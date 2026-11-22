@@ -2407,7 +2407,7 @@ abstract class L10n {
   /// Item in 安排服事's menu (⋯) that opens photo import: says what it makes, a roster from a photo
   ///
   /// In zh, this message translates to:
-  /// **'從照片匯入服事表'**
+  /// **'從照片匯入'**
   String get photoImportAction;
 
   /// Top of 照片匯入: what it does, who reads the photo
@@ -5497,7 +5497,7 @@ abstract class L10n {
   /// 安排服事's ⋯ menu, for one who arranges only some duties: every duty's days as a table, read-only
   ///
   /// In zh, this message translates to:
-  /// **'整張表格'**
+  /// **'看整張服事表'**
   String get planWholeTable;
 
   /// Toast after 提醒
@@ -6109,7 +6109,7 @@ abstract class L10n {
   /// Menu on 安排服事 (#91): pushes the people on the lists to mark the days they can't serve
   ///
   /// In zh, this message translates to:
-  /// **'通知同工填不能服事的日子'**
+  /// **'請同工填不能服事日'**
   String get planAskUnavailable;
 
   /// No description provided for @planAskedLast.
@@ -6117,12 +6117,6 @@ abstract class L10n {
   /// In zh, this message translates to:
   /// **'上次 {date} 通知過'**
   String planAskedLast(String date);
-
-  /// Second line under the greyed 通知同工填不能服事的日子 on 安排服事's menu: nobody on this service's lists for it to tell
-  ///
-  /// In zh, this message translates to:
-  /// **'還沒有同工可以通知'**
-  String get planAskNobody;
 
   /// Menu on 安排服事: a month of the service's roster as a picture to send to a group chat
   ///

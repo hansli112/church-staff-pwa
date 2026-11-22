@@ -1376,7 +1376,7 @@ class L10nEn extends L10n {
   String get photoImport => 'Import from photo';
 
   @override
-  String get photoImportAction => 'Import schedule from photo';
+  String get photoImportAction => 'Import from photo';
 
   @override
   String get photoIntro => 'Take or upload a photo of your schedule and AI reads it';
@@ -3259,7 +3259,7 @@ class L10nEn extends L10n {
   String get rosterTable => 'Table';
 
   @override
-  String get planWholeTable => 'Whole table';
+  String get planWholeTable => 'See whole schedule';
 
   @override
   String get attendanceRemindSent => 'Reminded';
@@ -3676,9 +3676,6 @@ class L10nEn extends L10n {
   String planAskedLast(String date) {
     return 'Last asked $date';
   }
-
-  @override
-  String get planAskNobody => 'No one to ask yet';
 
   @override
   String get rosterShareImage => 'Share as image';

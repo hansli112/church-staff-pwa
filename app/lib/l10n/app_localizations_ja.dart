@@ -1312,7 +1312,7 @@ class L10nJa extends L10n {
   String get photoImport => '写真から読み込み';
 
   @override
-  String get photoImportAction => '写真から奉仕表を読み込む';
+  String get photoImportAction => '写真から読み込む';
 
   @override
   String get photoIntro => '奉仕表を撮るかアップロードすると AI が読み取ります';
@@ -3094,7 +3094,7 @@ class L10nJa extends L10n {
   String get rosterTable => '表';
 
   @override
-  String get planWholeTable => '全体の表';
+  String get planWholeTable => '奉仕表全体を見る';
 
   @override
   String get attendanceRemindSent => '知らせました';
@@ -3474,9 +3474,6 @@ class L10nJa extends L10n {
   String planAskedLast(String date) {
     return '前回の依頼 $date';
   }
-
-  @override
-  String get planAskNobody => '依頼できるメンバーがまだいません';
 
   @override
   String get rosterShareImage => '画像で共有';

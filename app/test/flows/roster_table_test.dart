@@ -80,7 +80,7 @@ void main() {
     expect(path(tester), '/rosters/sunday/2026-10-04');
   });
 
-  testWidgets("a 事工's 負責人 opens 整張表格 from 安排服事's ⋯", (tester) async {
+  testWidgets("a 事工's 負責人 opens 看整張服事表 from 安排服事's ⋯, last, after what arranging does", (tester) async {
     final b = seededChurch(
       extra: [
         staffMei.withIdentities(const [MinistryLead('worship')]),
@@ -95,7 +95,10 @@ void main() {
     expect(find.text('司會'), findsNothing, reason: 'only 司琴 to arrange');
     await tester.tap(find.byIcon(Symbols.more_horiz_rounded));
     await settle(tester);
-    await tapText(tester, '整張表格');
+    double at(String text) => tester.getTopLeft(find.text(text)).dy;
+    final ys = [at('請同工填不能服事日'), at('從照片匯入'), at('分享成圖片'), at('看整張服事表')];
+    expect(ys, orderedEquals([...ys]..sort()), reason: 'before arranging, while, after; then to look at');
+    await tapText(tester, '看整張服事表');
     expect(path(tester), '/rosters/table/sunday');
     expect(find.text('司會'), findsOneWidget);
     expect(props(tester, cell('司琴', 4)).selected, isTrue, reason: 'hers');
@@ -108,6 +111,6 @@ void main() {
     await tapText(tester, '安排服事');
     await tester.tap(find.byIcon(Symbols.more_horiz_rounded));
     await settle(tester);
-    expect(find.text('整張表格'), findsNothing, reason: 'the table it is in has it all');
+    expect(find.text('看整張服事表'), findsNothing, reason: 'the table it is in has it all');
   });
 }

@@ -21,7 +21,6 @@ void openSitePage(BuildContext context, WidgetRef ref, String page) => openLink(
 /// The website's guides (`landing/blog/<slug>.md`) a page opens, for whoever
 /// has forgotten how it works.
 enum Guide {
-  planWeeks('plan-weeks'),
   smallGroups('small-groups'),
   notifications('notifications'),
   homeLink('home-link'),

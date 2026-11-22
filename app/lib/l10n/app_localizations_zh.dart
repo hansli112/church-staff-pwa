@@ -1312,7 +1312,7 @@ class L10nZh extends L10n {
   String get photoImport => '照片匯入';
 
   @override
-  String get photoImportAction => '從照片匯入服事表';
+  String get photoImportAction => '從照片匯入';
 
   @override
   String get photoIntro => '拍下或上傳服事表，AI 自動辨識';
@@ -3089,7 +3089,7 @@ class L10nZh extends L10n {
   String get rosterTable => '表格';
 
   @override
-  String get planWholeTable => '整張表格';
+  String get planWholeTable => '看整張服事表';
 
   @override
   String get attendanceRemindSent => '已提醒';
@@ -3463,15 +3463,12 @@ class L10nZh extends L10n {
   }
 
   @override
-  String get planAskUnavailable => '通知同工填不能服事的日子';
+  String get planAskUnavailable => '請同工填不能服事日';
 
   @override
   String planAskedLast(String date) {
     return '上次 $date 通知過';
   }
-
-  @override
-  String get planAskNobody => '還沒有同工可以通知';
 
   @override
   String get rosterShareImage => '分享成圖片';
@@ -4949,7 +4946,7 @@ class L10nZhHans extends L10nZh {
   String get photoImport => '照片导入';
 
   @override
-  String get photoImportAction => '从照片导入事奉表';
+  String get photoImportAction => '从照片导入';
 
   @override
   String get photoIntro => '拍下或上传事奉表，AI 自动识别';
@@ -6726,7 +6723,7 @@ class L10nZhHans extends L10nZh {
   String get rosterTable => '表格';
 
   @override
-  String get planWholeTable => '整张表格';
+  String get planWholeTable => '看整张事奉表';
 
   @override
   String get attendanceRemindSent => '已提醒';
@@ -7100,15 +7097,12 @@ class L10nZhHans extends L10nZh {
   }
 
   @override
-  String get planAskUnavailable => '通知同工填不能事奉的日子';
+  String get planAskUnavailable => '请同工填不能事奉日';
 
   @override
   String planAskedLast(String date) {
     return '上次 $date 通知过';
   }
-
-  @override
-  String get planAskNobody => '还没有同工可以通知';
 
   @override
   String get rosterShareImage => '分享为图片';

@@ -20,7 +20,6 @@ import '../../l10n/app_localizations.dart';
 import '../../state/providers.dart';
 import '../../state/roster_actions.dart';
 import '../common/errors.dart';
-import '../common/site_pages.dart';
 import '../common/saving_indicator.dart';
 import 'duty_picking.dart';
 import 'format.dart';
@@ -281,51 +280,35 @@ class _PlanWeeksScreenState extends ConsumerState<PlanWeeksScreen> with SingleTi
     });
   }
 
-  /// The menu: 通知同工填 (#91) from [from], the first month being
-  /// arranged, and photo import, for a roster already on paper; below a
-  /// divider, the guide. Under 通知同工填, when it last asked for this
-  /// service, or, when greyed, that there is nobody on a list to ask.
-  Widget _menu(L10n l10n, AppColors c, Day from) {
+  /// The menu, in the order arranging goes: 通知同工填 (#91) from [from],
+  /// the first month being arranged, greyed with nobody on a list to ask;
+  /// photo import, for a roster already on paper; 分享成圖片, once
+  /// arranged. Below a divider, for who arranges some duties only, the
+  /// whole roster to look at (表格). Each says only what it does.
+  Widget _menu(L10n l10n, Day from) {
     final type = _type;
-    // Some duties only: the rest of the day, to look at.
     final some = !ref.watch(arrangesProvider(type)).all;
+    final canAsk = _askedToFill(type).isNotEmpty;
+    // Read ahead, for the months' sheet to say.
     final asked = ref.watch(lastUnavailableAskProvider(type)).value;
-    final people = _askedToFill(type);
-    final canAsk = people.isNotEmpty;
-    final note = switch ((canAsk, asked)) {
-      (false, _) => l10n.planAskNobody,
-      (_, final at?) => l10n.planAskedLast(DateFormat.MMMd().format(at)),
-      _ => null,
-    };
     return PopupMenuButton<String>(
       tooltip: MaterialLocalizations.of(context).moreButtonTooltip,
       icon: const Icon(Symbols.more_horiz_rounded),
       onSelected: (v) => switch (v) {
-        'table' => context.push('/rosters/table/$type'),
-        'ask' => _askUnavailable(type, from),
-        'image' => showRosterImage(context, serviceType: type, month: from),
+        'ask' => _askUnavailable(type, from, asked: asked),
         'photo' => context.push('/rosters/import/$type'),
-        'guide' => openGuide(context, ref, Guide.planWeeks),
+        'image' => showRosterImage(context, serviceType: type, month: from),
+        'table' => context.push('/rosters/table/$type'),
         _ => null,
       },
       itemBuilder: (_) => [
-        PopupMenuItem(
-          value: 'ask',
-          enabled: canAsk,
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Text(l10n.planAskUnavailable),
-              if (note != null) Text(note, style: AppText.footnote.copyWith(color: c.secondaryLabel)),
-            ],
-          ),
-        ),
-        PopupMenuItem(value: 'image', child: Text(l10n.rosterShareImage)),
+        PopupMenuItem(value: 'ask', enabled: canAsk, child: Text(l10n.planAskUnavailable)),
         PopupMenuItem(value: 'photo', child: Text(l10n.photoImportAction)),
-        if (some) PopupMenuItem(value: 'table', child: Text(l10n.planWholeTable)),
-        const PopupMenuDivider(),
-        PopupMenuItem(value: 'guide', child: Text(l10n.howToUse)),
+        PopupMenuItem(value: 'image', child: Text(l10n.rosterShareImage)),
+        if (some) ...[
+          const PopupMenuDivider(),
+          PopupMenuItem(value: 'table', child: Text(l10n.planWholeTable)),
+        ],
       ],
     );
   }
@@ -337,9 +320,10 @@ class _PlanWeeksScreenState extends ConsumerState<PlanWeeksScreen> with SingleTi
     return askedToFill(ref.watch(membersProvider).value ?? const [], type, ref.watch(arrangesProvider(type)), me.uid);
   }
 
-  /// 通知同工填 (#91): through which month, from [from]; then, asked first as
+  /// 通知同工填 (#91): through which month, from [from], saying when it
+  /// [asked] last; then, asked first as
   /// it cannot be taken back, one push each.
-  Future<void> _askUnavailable(String type, Day from) async {
+  Future<void> _askUnavailable(String type, Day from, {DateTime? asked}) async {
     final l10n = L10n.of(context);
     final to = await showAppSheet<Day>(
       context,
@@ -347,6 +331,8 @@ class _PlanWeeksScreenState extends ConsumerState<PlanWeeksScreen> with SingleTi
         child: SingleChildScrollView(
           child: ListSection(
             header: l10n.planAskUntil,
+            // When it last asked, so it is not asked twice by mistake.
+            footer: asked == null ? null : l10n.planAskedLast(DateFormat.MMMd().format(asked)),
             children: [
               for (var i = 0; i < _askMonths; i++)
                 if (Day(from.year, from.month + i, 1) case final month)
@@ -490,7 +476,7 @@ class _PlanWeeksScreenState extends ConsumerState<PlanWeeksScreen> with SingleTi
                     ),
                 ]
               : savingActions([
-                  if (service != null && arranges.any) _menu(l10n, c, thisMonth),
+                  if (service != null && arranges.any) _menu(l10n, thisMonth),
                   MediaQuery.withClampedTextScaling(
                     maxScaleFactor: 1.5,
                     child: TextButton(

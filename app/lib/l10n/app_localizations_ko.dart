@@ -1313,7 +1313,7 @@ class L10nKo extends L10n {
   String get photoImport => '사진으로 가져오기';
 
   @override
-  String get photoImportAction => '사진으로 봉사표 가져오기';
+  String get photoImportAction => '사진으로 가져오기';
 
   @override
   String get photoIntro => '봉사표를 찍거나 올리면 AI가 읽어 들여요';
@@ -3092,7 +3092,7 @@ class L10nKo extends L10n {
   String get rosterTable => '표';
 
   @override
-  String get planWholeTable => '전체 표';
+  String get planWholeTable => '봉사표 전체 보기';
 
   @override
   String get attendanceRemindSent => '알렸어요';
@@ -3472,9 +3472,6 @@ class L10nKo extends L10n {
   String planAskedLast(String date) {
     return '마지막 요청 $date';
   }
-
-  @override
-  String get planAskNobody => '아직 요청할 멤버가 없어요';
 
   @override
   String get rosterShareImage => '이미지로 공유';
