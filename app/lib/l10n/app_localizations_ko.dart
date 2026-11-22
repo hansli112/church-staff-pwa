@@ -222,19 +222,10 @@ class L10nKo extends L10n {
   String get welcomeBody => '교회 관리자에게 초대 링크를 요청해 주세요';
 
   @override
-  String get enterInviteCode => '초대 코드 입력';
-
-  @override
   String get createChurch => '새 교회 만들기';
 
   @override
   String get signOut => '로그아웃';
-
-  @override
-  String get inviteCode => '초대 코드';
-
-  @override
-  String get next => '다음';
 
   @override
   String get churchName => '교회 이름';
@@ -270,7 +261,7 @@ class L10nKo extends L10n {
   }
 
   @override
-  String get errInviteInvalid => '초대를 찾을 수 없어요. 초대 코드를 확인하거나 관리자에게 새 초대를 요청해 주세요.';
+  String get errInviteInvalid => '초대를 찾을 수 없어요. 관리자에게 새 초대를 요청해 주세요.';
 
   @override
   String get errInviteExpired => '만료된 초대예요. 관리자에게 새 초대를 요청해 주세요.';
@@ -300,7 +291,7 @@ class L10nKo extends L10n {
   String get churchDeletedExpired => '30일이 지나서 더 이상 복원할 수 없어요';
 
   @override
-  String get closedJoinOther => '다른 교회에 참여하려면 관리자가 보낸 초대 링크를 열거나 초대 코드를 입력하세요';
+  String get closedJoinOther => '다른 교회에 참여하려면 관리자가 보낸 초대 링크를 여세요';
 
   @override
   String get churchUnavailable => '이 교회를 열 수 없어요';

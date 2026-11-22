@@ -85,7 +85,8 @@ void main() {
     expect(find.text('加入你的教會'), findsOneWidget);
     expect(find.text('登出'), findsNothing);
     expect(find.text('刪除帳號'), findsNothing);
-    expect(find.widgetWithText(FilledButton, '輸入邀請碼'), findsOneWidget, reason: 'the one main action');
+    expect(findShown('請教會的管理員給你邀請連結'), findsOneWidget);
+    expect(find.text('輸入邀請碼'), findsNothing, reason: 'an invite is a link to tap, not a code to type');
 
     await tester.tap(find.byTooltip('帳號'));
     await settle(tester);
@@ -130,7 +131,7 @@ void main() {
     expect(findShown('到信箱點驗證連結'), findsOneWidget);
     expect(findShown('驗證信已寄到 ming@example.com。點信裡的連結後，回到這裡就會自動繼續。'), findsOneWidget);
     expect(findShown('沒收到？看看垃圾郵件，或重寄一次。'), findsOneWidget);
-    for (final later in ['建立新教會', '輸入邀請碼', '加入你的教會']) {
+    for (final later in ['建立新教會', '加入你的教會']) {
       expect(find.text(later), findsNothing, reason: '$later waits for the email');
     }
     expect(find.byType(FilledButton), findsNothing, reason: 'nothing to tap: it goes on by itself');
@@ -412,41 +413,12 @@ void main() {
     expect(find.text('恩典堂'), findsOneWidget);
   });
 
-  testWidgets('a member of one church joins another with a code from 切換教會', (tester) async {
-    final b = seededChurch(as: staffMei);
-    b.addChurch('希望堂', id: 'hope');
-    b.invites['HOPE2026'] = Invite(
-      code: 'HOPE2026',
-      churchId: 'hope',
-      churchName: '希望堂',
-      expiresAt: testNow.add(const Duration(days: 7)),
-    );
-    await pumpApp(tester, b);
-    await openChurchSwitcher(tester);
-    await tapText(tester, '輸入邀請碼');
-    await tester.enterText(find.byType(TextField), 'hope2026');
-    await tester.pump();
-    await tapText(tester, '下一步');
-    await tapText(tester, '加入');
-
-    expect(b.members['hope']!.containsKey('mei'), isTrue);
-    expect(find.byType(NavigationBar), findsOneWidget);
-    expect(find.text('希望堂'), findsOneWidget);
-
-    await openChurchSwitcher(tester);
-    await tapText(tester, '恩典堂');
-    expect(find.text('恩典堂'), findsOneWidget, reason: 'still in the first church');
-  });
-
-  testWidgets('the code field asks for a Latin keyboard: a Zhuyin one turns EQE4 into ㄍㄆㄍ', (tester) async {
+  testWidgets('切換教會 has no code to type: another church is joined from its invite link', (tester) async {
     await pumpApp(tester, seededChurch(as: staffMei));
     await openChurchSwitcher(tester);
-    await tapText(tester, '輸入邀請碼');
-    final field = tester.widget<TextField>(find.byType(TextField));
-    expect(field.keyboardType, TextInputType.visiblePassword);
-    expect(field.enableSuggestions, isFalse);
+    expect(find.text('建立新教會'), findsOneWidget);
+    expect(find.text('輸入邀請碼'), findsNothing);
   });
-
   testWidgets('back from starting a church returns to the church I am in', (tester) async {
     await pumpApp(tester, seededChurch(as: staffMei));
     await openChurchSwitcher(tester);
@@ -457,18 +429,6 @@ void main() {
     expect(find.byType(NavigationBar), findsOneWidget);
     expect(find.text('加入你的教會'), findsNothing);
     expect(find.text('教會資訊'), findsWidgets, reason: 'back in 設定');
-  });
-
-  testWidgets('a member who mistypes a code goes back to fix it', (tester) async {
-    await pumpApp(tester, seededChurch(as: staffMei));
-    await openChurchSwitcher(tester);
-    await tapText(tester, '輸入邀請碼');
-    await tester.enterText(find.byType(TextField), 'TYPO1234');
-    await tester.pump();
-    await tapText(tester, '下一步');
-    expect(findShown('找不到這個邀請，請確認邀請碼，或向管理員要新的邀請'), findsOneWidget);
-    await tapText(tester, '輸入邀請碼');
-    expect(find.text('TYPO1234'), findsOneWidget, reason: 'the code to fix');
   });
 
   testWidgets('in LINE’s built-in browser, sign-in says to open the page in Safari or Chrome', (tester) async {
@@ -532,34 +492,14 @@ void main() {
     expect(find.text('加入〈希望堂〉'), findsOneWidget);
   });
 
-  testWidgets('a pasted invite link works as a code', (tester) async {
+  testWidgets('a link with a code that is no invite asks for a new one', (tester) async {
     final b = MemoryBackend(clock: testClock);
     final cid = b.addChurch('恩典堂');
-    b.invites['PASTED26'] = Invite(
-      code: 'PASTED26',
-      churchId: cid,
-      churchName: '恩典堂',
-      expiresAt: testNow.add(const Duration(days: 7)),
-    );
     b.auth.signInAs('x@gmail.com');
     await pumpApp(tester, b);
-    await tapText(tester, '輸入邀請碼');
-    await tester.enterText(find.byType(TextField), 'https://marthasit.web.app/c/$cid/join/PASTED26');
-    await tester.pump();
-    await tapText(tester, '下一步');
-    await tapText(tester, '加入');
-    expect(b.members[cid]!.containsKey(b.auth.currentUser!.uid), isTrue);
-  });
-
-  testWidgets('a mistyped code asks to check it', (tester) async {
-    final b = MemoryBackend(clock: testClock)..addChurch('恩典堂');
-    b.auth.signInAs('x@gmail.com');
-    await pumpApp(tester, b);
-    await tapText(tester, '輸入邀請碼');
-    await tester.enterText(find.byType(TextField), 'TYPO1234');
-    await tester.pump();
-    await tapText(tester, '下一步');
-    expect(findShown('找不到這個邀請，請確認邀請碼，或向管理員要新的邀請'), findsOneWidget);
+    GoRouter.of(tester.element(find.byType(Scaffold).first)).go('/c/$cid/join/TYPO1234');
+    await settle(tester);
+    expect(findShown('找不到這個邀請，請向管理員要新的邀請'), findsOneWidget);
   });
 
   testWidgets('the invite shows the church logo above its name', (tester) async {
@@ -580,7 +520,7 @@ void main() {
     expect(find.descendant(of: find.byType(ChurchLogo), matching: find.byType(Image)), findsOneWidget);
   });
 
-  testWidgets('an expired invite says so and offers to enter another code', (
+  testWidgets('an expired invite says so, and goes back to the welcome page', (
     tester,
   ) async {
     final b = MemoryBackend(clock: testClock);
@@ -598,7 +538,9 @@ void main() {
     ).go('/c/$cid/join/OLDCODE1');
     await settle(tester);
     expect(find.text('這個邀請過期了，請向管理員要新的邀請'), findsOneWidget);
-    expect(find.text('輸入邀請碼'), findsOneWidget);
+    expect(find.text('輸入邀請碼'), findsNothing);
+    await tapText(tester, '回首頁');
+    expect(findShown('加入你的教會'), findsOneWidget);
   });
 
   testWidgets('a suspended church shows only the closed page', (tester) async {
@@ -624,7 +566,9 @@ void main() {
     expect(find.byType(NavigationBar), findsOneWidget);
   });
 
-  testWidgets('someone whose only church is deleted is told how to join another, and joins by code', (tester) async {
+  testWidgets('someone whose only church is deleted is told how to join another, and joins from the link', (
+    tester,
+  ) async {
     final b = MemoryBackend(clock: testClock);
     final cid = b.addChurch('刪除堂');
     b.addChurch('希望堂', id: 'hope');
@@ -639,11 +583,10 @@ void main() {
     b.churches[cid] = b.churches[cid]!.copyWith(status: ChurchStatus.deleted);
     await pumpApp(tester, b);
     expect(find.text('〈刪除堂〉已刪除'), findsOneWidget);
-    expect(findShown('要加入其他教會，點管理員給的邀請連結，或輸入邀請碼'), findsOneWidget);
-    await tapText(tester, '輸入邀請碼');
-    await tester.enterText(find.byType(TextField), 'hope2026');
-    await tester.pump();
-    await tapText(tester, '下一步');
+    expect(findShown('要加入其他教會，點管理員給的邀請連結'), findsOneWidget);
+    expect(find.text('輸入邀請碼'), findsNothing);
+    GoRouter.of(tester.element(find.byType(Scaffold).first)).go('/c/hope/join/HOPE2026');
+    await settle(tester);
     await tapText(tester, '加入');
     expect(b.members['hope']!.containsKey(user.uid), isTrue);
     expect(find.byType(NavigationBar), findsOneWidget);

@@ -101,7 +101,7 @@ void main() {
   testWidgets('joining or starting a church warms it up as its page opens', (tester) async {
     final b = seededChurch();
     await pumpApp(tester, b);
-    await go(tester, '/welcome/join');
+    await go(tester, '/welcome/join/ABC');
     expect(b.warmedUp, contains(WarmUp.joinChurch));
     await go(tester, '/welcome/create');
     expect(b.warmedUp, contains(WarmUp.createChurch));

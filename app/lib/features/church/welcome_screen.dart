@@ -20,7 +20,6 @@ import 'add_to_home.dart';
 import 'church_entry_screen.dart';
 import 'church_logo.dart';
 import 'claims.dart';
-import 'links.dart';
 import 'your_name.dart';
 import '../../core/links.dart';
 
@@ -46,7 +45,7 @@ class WelcomeScreen extends ConsumerWidget {
     }
     final l10n = L10n.of(context);
     final c = AppColors.of(context);
-    // 加入 on moved data is the way in then; a code, the other one.
+    // 加入 on moved data is the way in then; an invite link, the other one.
     final claiming = (ref.watch(pendingClaimsProvider).value ?? const []).isNotEmpty;
     return Scaffold(
       // Centered on the whole screen, not the part under the bar.
@@ -76,12 +75,8 @@ class WelcomeScreen extends ConsumerWidget {
                   ),
                   const SizedBox(height: Space.s),
                   BalancedText(l10n.welcomeBody, style: AppText.body.copyWith(color: c.secondaryLabel)),
+                  // An invite is a link to tap: nothing to type here.
                   const SizedBox(height: Space.xl),
-                  PrimaryButton(
-                    label: l10n.enterInviteCode,
-                    onPressed: () => context.push('/welcome/join'),
-                  ),
-                  const SizedBox(height: Space.s),
                   SecondaryButton(
                     label: l10n.createChurch,
                     expand: true,
@@ -301,66 +296,6 @@ mixin _Verifying<T extends ConsumerStatefulWidget> on ConsumerState<T> {
     } catch (e) {
       if (mounted) showToast(context, errorText(l10n, e));
     }
-  }
-}
-
-/// Typing an invite code by hand; it opens the same join page as a link.
-class EnterCodeScreen extends StatefulWidget {
-  const EnterCodeScreen({super.key});
-
-  @override
-  State<EnterCodeScreen> createState() => _EnterCodeScreenState();
-}
-
-class _EnterCodeScreenState extends State<EnterCodeScreen> {
-  final _code = TextEditingController();
-
-  @override
-  void dispose() {
-    _code.dispose();
-    super.dispose();
-  }
-
-  void _next() {
-    final text = _code.text.trim();
-    if (text.isEmpty) return;
-    // Accept a whole pasted link too.
-    final fromLink = inviteCodeIn(Uri.tryParse(text)?.path ?? '');
-    context.push('/welcome/join/${fromLink ?? text.toUpperCase()}');
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final l10n = L10n.of(context);
-    return Scaffold(
-      appBar: AppBar(title: Text(l10n.enterInviteCode)),
-      body: ListView(
-        padding: const EdgeInsets.all(Space.m),
-        children: [
-          TextField(
-            controller: _code,
-            autofocus: true,
-            autocorrect: false,
-            // The code is letters and digits: a Zhuyin or Pinyin keyboard
-            // would turn them into ㄍㄆㄍ or 中文. Asking for a password's
-            // keyboard opens a Latin one; _next uppercases what is typed.
-            keyboardType: TextInputType.visiblePassword,
-            enableSuggestions: false,
-            textCapitalization: TextCapitalization.characters,
-            textInputAction: TextInputAction.go,
-            style: AppText.title3.copyWith(letterSpacing: 2),
-            decoration: InputDecoration(labelText: l10n.inviteCode),
-            onChanged: (_) => setState(() {}),
-            onSubmitted: (_) => _next(),
-          ),
-          const SizedBox(height: Space.l),
-          PrimaryButton(
-            label: l10n.next,
-            onPressed: _code.text.trim().isEmpty ? null : _next,
-          ),
-        ],
-      ),
-    );
   }
 }
 

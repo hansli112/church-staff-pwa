@@ -80,15 +80,16 @@ void main() {
     expect(findShown('恩典堂'), findsOneWidget);
   });
 
-  testWidgets('without any church, the next step is an invite code', (tester) async {
+  testWidgets('without any church, asking is all there is: no code to type, no home to go to', (tester) async {
     final b = MemoryBackend(clock: testClock);
     b.addChurch('希望堂', id: 'hope');
     b.auth.signInAs('new@example.com', uid: 'new', name: '新朋友');
     await pumpApp(tester, b);
     await go(tester, '/c/hope');
     expect(find.text('希望堂'), findsOneWidget);
-    await tapText(tester, '輸入邀請碼');
-    expect(find.byType(TextField), findsOneWidget);
+    expect(findShown('申請加入'), findsOneWidget);
+    expect(find.text('輸入邀請碼'), findsNothing);
+    expect(find.text('回首頁'), findsNothing);
   });
 
   testWidgets(

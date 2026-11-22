@@ -221,19 +221,10 @@ class L10nZh extends L10n {
   String get welcomeBody => '請教會的管理員給你邀請連結';
 
   @override
-  String get enterInviteCode => '輸入邀請碼';
-
-  @override
   String get createChurch => '建立新教會';
 
   @override
   String get signOut => '登出';
-
-  @override
-  String get inviteCode => '邀請碼';
-
-  @override
-  String get next => '下一步';
 
   @override
   String get churchName => '教會名稱';
@@ -269,7 +260,7 @@ class L10nZh extends L10n {
   }
 
   @override
-  String get errInviteInvalid => '找不到這個邀請，請確認邀請碼，或向管理員要新的邀請';
+  String get errInviteInvalid => '找不到這個邀請，請向管理員要新的邀請';
 
   @override
   String get errInviteExpired => '這個邀請過期了，請向管理員要新的邀請';
@@ -299,7 +290,7 @@ class L10nZh extends L10n {
   String get churchDeletedExpired => '已經超過 30 天，不能再還原了';
 
   @override
-  String get closedJoinOther => '要加入其他教會，點管理員給的邀請連結，或輸入邀請碼';
+  String get closedJoinOther => '要加入其他教會，點管理員給的邀請連結';
 
   @override
   String get churchUnavailable => '無法開啟這間教會';
@@ -3852,19 +3843,10 @@ class L10nZhHans extends L10nZh {
   String get welcomeBody => '请向教会的管理员要邀请链接';
 
   @override
-  String get enterInviteCode => '输入邀请码';
-
-  @override
   String get createChurch => '创建新教会';
 
   @override
   String get signOut => '退出登录';
-
-  @override
-  String get inviteCode => '邀请码';
-
-  @override
-  String get next => '下一步';
 
   @override
   String get churchName => '教会名称';
@@ -3900,7 +3882,7 @@ class L10nZhHans extends L10nZh {
   }
 
   @override
-  String get errInviteInvalid => '找不到这个邀请，请确认邀请码，或向管理员要新的邀请';
+  String get errInviteInvalid => '找不到这个邀请，请向管理员要新的邀请';
 
   @override
   String get errInviteExpired => '这个邀请已过期，请向管理员要新的邀请';
@@ -3930,7 +3912,7 @@ class L10nZhHans extends L10nZh {
   String get churchDeletedExpired => '已经超过 30 天，不能再恢复了';
 
   @override
-  String get closedJoinOther => '要加入其他教会，点管理员给的邀请链接，或输入邀请码';
+  String get closedJoinOther => '要加入其他教会，点管理员给的邀请链接';
 
   @override
   String get churchUnavailable => '无法打开这间教会';

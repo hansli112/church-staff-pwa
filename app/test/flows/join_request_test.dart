@@ -56,7 +56,7 @@ void main() {
     await pumpApp(tester, b, overrides: [telemetryProvider.overrideWithValue(telemetry)]);
     await go(tester, '/c/hope');
     expect(findShown('申請後，管理員允許就會加入'), findsOneWidget);
-    expect(findShown('輸入邀請碼'), findsOneWidget);
+    expect(find.text('輸入邀請碼'), findsNothing);
     expect(b.warmedUp, contains(WarmUp.askToJoin));
 
     // The admin knows them by the name they put, the account's to begin with.
@@ -265,14 +265,16 @@ void main() {
     expect(b.joinRequests['grace']!['new']!.rejectedAt, testNow);
   });
 
-  testWidgets('waiting on a church that stopped taking requests: an invite instead, or take it back', (tester) async {
+  testWidgets('waiting on a church that stopped taking requests: an invite link instead, or take it back', (
+    tester,
+  ) async {
     final b = newcomer();
     b.joinRequests['hope'] = {'new': request()};
     b.churches['hope'] = b.churches['hope']!.copyWith(takesJoinRequests: false);
     await pumpApp(tester, b);
     await go(tester, '/c/hope');
     expect(findShown('請向管理員要邀請連結'), findsOneWidget);
-    expect(findShown('輸入邀請碼'), findsOneWidget);
+    expect(find.text('輸入邀請碼'), findsNothing);
     await tapText(tester, '取消申請');
     expect(b.joinRequests['hope']!.containsKey('new'), isFalse);
   });
@@ -283,7 +285,6 @@ void main() {
     await pumpApp(tester, b);
     await go(tester, '/c/hope');
     expect(findShown('已送出申請，管理員允許後就會加入'), findsOneWidget);
-    expect(findShown('輸入邀請碼'), findsOneWidget, reason: 'an invite still works while waiting');
 
     b.joinRequests['hope']!['new'] = request(rejectedAt: testNow);
     tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.inactive);
@@ -331,8 +332,8 @@ void main() {
     await go(tester, '/c/hope');
     expect(findShown('這次申請沒有通過，請直接聯絡教會'), findsOneWidget);
     expect(findShown('再申請一次'), findsNothing);
-    await tapText(tester, '輸入邀請碼');
-    expect(find.byType(TextField), findsOneWidget);
+    await tapText(tester, '回首頁');
+    expect(findShown('加入你的教會'), findsOneWidget);
   });
 
   testWidgets('the admins, and only they, can mute being told of requests', (tester) async {

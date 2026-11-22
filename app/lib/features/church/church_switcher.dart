@@ -66,11 +66,6 @@ class _ChurchSwitcherSheet extends ConsumerWidget {
             ListSection(
               children: [
                 ListRow(
-                  title: l10n.enterInviteCode,
-                  leading: const Icon(Symbols.group_add_rounded),
-                  onTap: () => open('/welcome/join'),
-                ),
-                ListRow(
                   title: l10n.createChurch,
                   leading: const Icon(Symbols.add_rounded),
                   onTap: () => open('/welcome/create'),

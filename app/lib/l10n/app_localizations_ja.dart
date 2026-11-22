@@ -221,19 +221,10 @@ class L10nJa extends L10n {
   String get welcomeBody => '教会の管理者に招待リンクをもらってください';
 
   @override
-  String get enterInviteCode => '招待コードを入力';
-
-  @override
   String get createChurch => '新しい教会を作成';
 
   @override
   String get signOut => 'ログアウト';
-
-  @override
-  String get inviteCode => '招待コード';
-
-  @override
-  String get next => '次へ';
 
   @override
   String get churchName => '教会名';
@@ -269,7 +260,7 @@ class L10nJa extends L10n {
   }
 
   @override
-  String get errInviteInvalid => 'この招待が見つかりません。招待コードを確認するか、管理者に新しい招待をもらってください。';
+  String get errInviteInvalid => 'この招待が見つかりません。管理者に新しい招待をもらってください。';
 
   @override
   String get errInviteExpired => 'この招待は期限切れです。管理者に新しい招待をもらってください。';
@@ -299,7 +290,7 @@ class L10nJa extends L10n {
   String get churchDeletedExpired => '30日を過ぎたため、復元できません';
 
   @override
-  String get closedJoinOther => '別の教会に参加するには、管理者からの招待リンクを開くか、招待コードを入力してください';
+  String get closedJoinOther => '別の教会に参加するには、管理者からの招待リンクを開いてください';
 
   @override
   String get churchUnavailable => 'この教会を開けません';

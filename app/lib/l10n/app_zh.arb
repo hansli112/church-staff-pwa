@@ -108,11 +108,8 @@
   "verifyResent": "已重寄",
   "welcomeTitle": "加入你的教會",
   "welcomeBody": "請教會的管理員給你邀請連結",
-  "enterInviteCode": "輸入邀請碼",
   "createChurch": "建立新教會",
   "signOut": "登出",
-  "inviteCode": "邀請碼",
-  "next": "下一步",
   "churchName": "教會名稱",
   "createChurchVerifyFirst": "驗證 email 後才能建立教會",
   "create": "建立",
@@ -144,7 +141,7 @@
       }
     }
   },
-  "errInviteInvalid": "找不到這個邀請，請確認邀請碼，或向管理員要新的邀請",
+  "errInviteInvalid": "找不到這個邀請，請向管理員要新的邀請",
   "errInviteExpired": "這個邀請過期了，請向管理員要新的邀請",
   "errChurchClosed": "這間教會已停用",
   "@errChurchClosed": {
@@ -176,8 +173,8 @@
     }
   },
   "churchDeletedExpired": "已經超過 30 天，不能再還原了",
-  "closedJoinOther": "要加入其他教會，點管理員給的邀請連結，或輸入邀請碼",
-  "@closedJoinOther": {"description": "On a deleted or suspended church's page: how to join another church instead, above 輸入邀請碼"},
+  "closedJoinOther": "要加入其他教會，點管理員給的邀請連結",
+  "@closedJoinOther": {"description": "On a deleted or suspended church's page: how to join another church instead"},
   "churchUnavailable": "無法開啟這間教會",
   "restoreChurch": "還原教會",
   "churchRestored": "教會已還原",

@@ -126,12 +126,10 @@ final routerProvider = Provider<GoRouter>((ref) {
         (_) => const WelcomeScreen(),
         fade: true,
         routes: [
+          // An invite link from before they were under /c/.
           page(
-            'join',
-            (_) => const WarmUpOnOpen(WarmUp.joinChurch, child: EnterCodeScreen()),
-            routes: [
-              page(':code', (s) => WarmUpOnOpen(WarmUp.joinChurch, child: JoinScreen(code: s.pathParameters['code']!))),
-            ],
+            'join/:code',
+            (s) => WarmUpOnOpen(WarmUp.joinChurch, child: JoinScreen(code: s.pathParameters['code']!)),
           ),
           page('create', (_) => const WarmUpOnOpen(WarmUp.createChurch, child: CreateChurchScreen())),
           page('move', (_) => const DeferredPage.move()),

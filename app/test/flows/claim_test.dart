@@ -99,7 +99,7 @@ void main() {
     expect(findShown('加入你的教會'), findsNothing);
     await tapText(tester, '不加入');
     expect(findShown('加入〈恩典堂〉？'), findsNothing);
-    expect(find.widgetWithText(FilledButton, '輸入邀請碼'), findsOneWidget);
+    expect(findShown('請教會的管理員給你邀請連結'), findsOneWidget);
     expect(findShown('建立新教會'), findsOneWidget);
   });
 
@@ -153,7 +153,7 @@ void main() {
     // With 加入 to say yes to, the question is the page: the other ways in
     // once it is answered.
     expect(find.widgetWithText(FilledButton, '加入'), findsOneWidget);
-    expect(findShown('輸入邀請碼'), findsNothing);
+    expect(findShown('建立新教會'), findsNothing);
     await tapText(tester, '加入');
 
     expect(find.byType(NavigationBar), findsOneWidget, reason: 'in the church already');

@@ -223,19 +223,10 @@ class L10nEn extends L10n {
   String get welcomeBody => 'Ask your church’s admin for an invite link';
 
   @override
-  String get enterInviteCode => 'Enter invite code';
-
-  @override
   String get createChurch => 'Create a church';
 
   @override
   String get signOut => 'Sign out';
-
-  @override
-  String get inviteCode => 'Invite code';
-
-  @override
-  String get next => 'Next';
 
   @override
   String get churchName => 'Church name';
@@ -272,7 +263,7 @@ class L10nEn extends L10n {
   }
 
   @override
-  String get errInviteInvalid => 'Couldn’t find this invite. Check the code, or ask an admin for a new invite.';
+  String get errInviteInvalid => 'Couldn’t find this invite. Ask an admin for a new one.';
 
   @override
   String get errInviteExpired => 'This invite has expired. Ask an admin for a new one.';
@@ -302,8 +293,7 @@ class L10nEn extends L10n {
   String get churchDeletedExpired => 'It’s been more than 30 days, so it can’t be restored';
 
   @override
-  String get closedJoinOther =>
-      'To join another church, open the invite link its admin gave you, or enter an invite code';
+  String get closedJoinOther => 'To join another church, open the invite link its admin gave you';
 
   @override
   String get churchUnavailable => 'Can’t open this church';

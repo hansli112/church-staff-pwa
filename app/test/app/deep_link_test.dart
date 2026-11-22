@@ -145,7 +145,7 @@ void main() {
     (closed, '/rosters', to('/closed')),
     (closed, '/closed', stay),
     (closed, '/account', stay),
-    (closed, '/welcome/join', stay),
+    (closed, '/welcome/create', stay),
     (closed, invite, stay),
   ]);
 
@@ -159,7 +159,6 @@ void main() {
   ]);
 
   table('ready: joining or starting another church stays', [
-    (ready, '/welcome/join', stay),
     (ready, '/welcome/join/ABC', stay),
     (ready, '/welcome/create', stay),
     (ready, '/welcome/move', stay),

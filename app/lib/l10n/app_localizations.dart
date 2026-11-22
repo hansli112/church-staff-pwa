@@ -496,12 +496,6 @@ abstract class L10n {
   /// **'請教會的管理員給你邀請連結'**
   String get welcomeBody;
 
-  /// No description provided for @enterInviteCode.
-  ///
-  /// In zh, this message translates to:
-  /// **'輸入邀請碼'**
-  String get enterInviteCode;
-
   /// No description provided for @createChurch.
   ///
   /// In zh, this message translates to:
@@ -513,18 +507,6 @@ abstract class L10n {
   /// In zh, this message translates to:
   /// **'登出'**
   String get signOut;
-
-  /// No description provided for @inviteCode.
-  ///
-  /// In zh, this message translates to:
-  /// **'邀請碼'**
-  String get inviteCode;
-
-  /// No description provided for @next.
-  ///
-  /// In zh, this message translates to:
-  /// **'下一步'**
-  String get next;
 
   /// No description provided for @churchName.
   ///
@@ -583,7 +565,7 @@ abstract class L10n {
   /// No description provided for @errInviteInvalid.
   ///
   /// In zh, this message translates to:
-  /// **'找不到這個邀請，請確認邀請碼，或向管理員要新的邀請'**
+  /// **'找不到這個邀請，請向管理員要新的邀請'**
   String get errInviteInvalid;
 
   /// No description provided for @errInviteExpired.
@@ -628,10 +610,10 @@ abstract class L10n {
   /// **'已經超過 30 天，不能再還原了'**
   String get churchDeletedExpired;
 
-  /// On a deleted or suspended church's page: how to join another church instead, above 輸入邀請碼
+  /// On a deleted or suspended church's page: how to join another church instead
   ///
   /// In zh, this message translates to:
-  /// **'要加入其他教會，點管理員給的邀請連結，或輸入邀請碼'**
+  /// **'要加入其他教會，點管理員給的邀請連結'**
   String get closedJoinOther;
 
   /// No description provided for @churchUnavailable.

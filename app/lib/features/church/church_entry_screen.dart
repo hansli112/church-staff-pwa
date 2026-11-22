@@ -161,13 +161,12 @@ class _NotMemberState extends ConsumerState<_NotMember> {
       if (name != null) showToast(context, l10n.joined(name));
       goAfterJoining(context, ref, churchId);
     });
-    // Somewhere to go next: home for members of another church, the invite
-    // code page for everyone else.
-    Widget next({required bool primary}) => widget.hasChurch
+    // Somewhere to go next: home for members of another church. Someone in
+    // no church stays to ask, or with nothing to ask, goes to the welcome
+    // page (home sends them there).
+    Widget next({required bool alone}) => widget.hasChurch || alone
         ? SecondaryButton(label: l10n.goHome, expand: true, onPressed: () => context.go('/home'))
-        : primary
-        ? PrimaryButton(label: l10n.enterInviteCode, onPressed: () => context.go('/welcome/join'))
-        : SecondaryButton(label: l10n.enterInviteCode, expand: true, onPressed: () => context.go('/welcome/join'));
+        : const SizedBox.shrink();
     return Scaffold(
       appBar: AppBar(),
       body: SafeArea(
@@ -237,16 +236,16 @@ class _NotMemberState extends ConsumerState<_NotMember> {
                         onPressed: name.isEmpty || !verified ? null : () => _ask(church, name),
                       ),
                       const SizedBox(height: Space.s),
-                      next(primary: false),
+                      next(alone: false),
                     ] else if (church.joinRequest == JoinRequestState.pending) ...[
                       SecondaryButton(
                         label: l10n.withdrawJoinRequest,
                         expand: true,
                         onPressed: _busy ? null : _withdraw,
                       ),
-                      next(primary: false),
+                      next(alone: false),
                     ] else
-                      next(primary: true),
+                      next(alone: true),
                   ],
                 ),
               ),

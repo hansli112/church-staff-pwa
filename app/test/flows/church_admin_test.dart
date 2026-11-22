@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:material_symbols_icons/symbols.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
+import 'package:martha/core/design/components.dart';
 import 'package:martha/data/backend.dart';
 import 'package:martha/data/memory/memory_backend.dart';
 import 'package:martha/domain/day.dart';
@@ -313,11 +314,11 @@ void main() {
       final code = b.invites.keys.single;
       await go(tester, '/me');
       await go(tester, '/me/invites');
-      await tapText(tester, code);
+      await tapText(tester, '10月8日 到期');
       await tapText(tester, '停用');
       expect(b.invites[code]!.revoked, isTrue);
       expect(find.text('已停用，這個連結不能再用來加入'), findsOneWidget);
-      expect(find.text(code), findsNothing);
+      expect(find.text('10月8日 到期'), findsNothing);
     });
 
     testWidgets('the invite button says what it does; how long it lasts is a choice beside it', (tester) async {
@@ -350,7 +351,27 @@ void main() {
       await tapText(tester, '建立邀請連結');
       final invite = b.invites.values.single;
       expect(invite.zoneTypes, ['youth']);
-      expect(find.text('青年崇拜'), findsNWidgets(2), reason: 'the picker, and under the code');
+      expect(find.text('青年崇拜'), findsNWidgets(2), reason: 'the picker, and the invite');
+    });
+
+    testWidgets('an invite in the list is what it joins and when it ends, not its code', (tester) async {
+      final b = seededChurch();
+      await pumpApp(tester, b);
+      captureOutbox(tester);
+      await go(tester, '/me/invites');
+      await tapText(tester, '青年崇拜');
+      await tapText(tester, '建立邀請連結');
+      await tester.tap(find.text('青年崇拜').first);
+      await settle(tester);
+      await tapText(tester, '30 天內有效');
+      await tapText(tester, '建立邀請連結');
+      expect(b.invites, hasLength(2));
+      for (final code in b.invites.keys) {
+        expect(find.text(code), findsNothing);
+      }
+      final youth = find.ancestor(of: find.text('青年崇拜').last, matching: find.byType(ListRow));
+      expect(find.descendant(of: youth, matching: find.text('10月8日 到期')), findsOneWidget);
+      expect(find.text('10月31日 到期'), findsOneWidget, reason: 'joining no service: only when it ends');
     });
 
     testWidgets('ticking no service is allowed; the screen says they see no rosters until put in one', (tester) async {
@@ -397,18 +418,18 @@ void main() {
       await go(tester, '/me/invites');
       await tapText(tester, '建立邀請連結');
       final code = b.invites.keys.single;
-      expect(find.text(code), findsOneWidget);
+      expect(find.text('10月8日 到期'), findsOneWidget);
 
       now = testNow.add(const Duration(days: 6, hours: 23));
       await tester.pump(const Duration(days: 6, hours: 23));
       await settle(tester);
-      expect(find.text(code), findsOneWidget, reason: 'an hour left');
+      expect(find.text('10月8日 到期'), findsOneWidget, reason: 'an hour left');
       expect((await b.cloud.previewInvite(code)).code, code);
 
       now = testNow.add(const Duration(days: 7));
       await tester.pump(const Duration(hours: 1));
       await settle(tester);
-      expect(find.text(code), findsNothing);
+      expect(find.text('10月8日 到期'), findsNothing);
       await expectLater(
         b.cloud.previewInvite(code),
         throwsA(isA<CloudException>().having((e) => e.code, 'code', CloudErrorCode.inviteExpired)),
@@ -427,7 +448,7 @@ void main() {
         out.sharedTexts.single,
         '邀請你加入〈$church〉\nhttps://marthasit-dev.web.app/c/grace/join/$code?openExternalBrowser=1',
       );
-      await tapText(tester, code);
+      await tapText(tester, '10月8日 到期');
       await tapText(tester, '複製連結');
       expect(out.copied.single, 'https://marthasit-dev.web.app/c/grace/join/$code?openExternalBrowser=1');
     });

@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:go_router/go_router.dart';
 
 import '../../core/design/components.dart';
 import '../../core/design/tokens.dart';
@@ -102,11 +101,6 @@ class _ClosedScreenState extends ConsumerState<ClosedScreen> {
                     expand: true,
                     onPressed: () => showChurchSwitcher(context, ref),
                   ),
-                SecondaryButton(
-                  label: l10n.enterInviteCode,
-                  expand: true,
-                  onPressed: () => context.push('/welcome/join'),
-                ),
               ],
             ),
           ),
