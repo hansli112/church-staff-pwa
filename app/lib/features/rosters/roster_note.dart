@@ -10,10 +10,10 @@ import 'package:url_launcher/url_launcher.dart';
 
 import '../../core/design/components.dart';
 import '../../core/design/tokens.dart';
-import '../../data/backend.dart';
 import '../../domain/limits.dart';
 import '../../domain/models.dart';
 import '../../l10n/app_localizations.dart';
+import '../../state/note_draft.dart';
 import '../../state/providers.dart';
 
 /// A file picked for a 備註, before it is uploaded; no [bytes] when it is
@@ -443,43 +443,34 @@ class NoteSheet extends ConsumerStatefulWidget {
 
 class _NoteSheetState extends ConsumerState<NoteSheet> {
   late final _text = TextEditingController(text: widget.note.text);
-  late final List<NoteFile> _files = [...widget.note.files];
-
-  /// Uploading, by a temporary id, and how far.
-  final _progress = <String, double>{};
-  final _previews = <String, Uint8List>{};
-
-  /// Uploaded here and not kept yet: taken back unless 完成 keeps them.
-  final _fresh = <NoteFile>[];
-  var _saving = false;
-  var _picked = 0;
 
   /// Read once: an upload may end, and the sheet close, after this is gone.
-  late final RosterNoteData _notes = ref.churchData.rosterNotes;
+  late final _draft = NoteDraft(ref.churchData.rosterNotes, widget.rosterId, widget.note)..addListener(_redraw);
+  var _saving = false;
+
+  void _redraw() => setState(() {});
 
   @override
   void initState() {
     super.initState();
-    _notes;
+    _draft;
   }
 
   @override
   void dispose() {
     // Closed without 完成: what went up for it goes.
-    for (final f in _fresh) {
-      unawaited(_notes.discard(widget.rosterId, f).catchError((_) {}));
-    }
+    _draft
+      ..removeListener(_redraw)
+      ..close();
     _text.dispose();
     super.dispose();
   }
-
-  bool get _changed => _text.text != widget.note.text || !listEquals(_files, widget.note.files);
 
   Future<void> _add() async {
     final l10n = L10n.of(context);
     final picked = await ref.read(notePickerProvider)();
     if (!mounted) return;
-    final room = Limits.noteFiles - _files.length;
+    final room = _draft.room;
     if (picked.length > room) showToast(context, l10n.noteTooManyFiles);
     for (final f in picked.take(room)) {
       final bytes = f.bytes;
@@ -492,56 +483,12 @@ class _NoteSheetState extends ConsumerState<NoteSheet> {
   }
 
   Future<void> _upload(String name, String type, Uint8List bytes) async {
-    final f = (name: name, type: type, bytes: bytes);
     final l10n = L10n.of(context);
     final messenger = ScaffoldMessenger.of(context);
-    final temp = 'up${_picked++}';
-    final placeholder = NoteFile(id: temp, name: f.name, type: f.type, size: f.bytes.length, url: '');
-    setState(() {
-      _files.add(placeholder);
-      _progress[temp] = 0;
-      if (placeholder.isImage) _previews[temp] = f.bytes;
-    });
     try {
-      final file = await _notes.upload(
-        widget.rosterId,
-        name: f.name,
-        type: f.type,
-        bytes: f.bytes,
-        onProgress: (p) {
-          if (mounted && _progress.containsKey(temp)) setState(() => _progress[temp] = p);
-        },
-      );
-      if (!mounted || !_files.contains(placeholder)) {
-        // Taken off, or the sheet closed, while it went up.
-        unawaited(_notes.discard(widget.rosterId, file).catchError((_) {}));
-        return;
-      }
-      _fresh.add(file);
-      setState(() {
-        _files[_files.indexOf(placeholder)] = file;
-        _progress.remove(temp);
-        if (_previews.remove(temp) case final bytes?) _previews[file.id] = bytes;
-      });
+      await _draft.upload(name, type, bytes);
     } on Object {
-      if (!mounted) return;
-      setState(() {
-        _files.remove(placeholder);
-        _progress.remove(temp);
-        _previews.remove(temp);
-      });
-      messenger.showSnackBar(SnackBar(content: Text(l10n.noteFileFailed(f.name))));
-    }
-  }
-
-  void _remove(NoteFile file) {
-    setState(() {
-      _files.remove(file);
-      _progress.remove(file.id);
-      _previews.remove(file.id);
-    });
-    if (_fresh.remove(file)) {
-      unawaited(_notes.discard(widget.rosterId, file).catchError((_) {}));
+      if (mounted) messenger.showSnackBar(SnackBar(content: Text(l10n.noteFileFailed(name))));
     }
   }
 
@@ -549,8 +496,7 @@ class _NoteSheetState extends ConsumerState<NoteSheet> {
     final l10n = L10n.of(context);
     setState(() => _saving = true);
     try {
-      await _notes.save(widget.rosterId, RosterNote(text: _text.text.trim(), files: _files));
-      _fresh.clear();
+      await _draft.save(_text.text);
       if (mounted) Navigator.pop(context, true);
     } on Object {
       if (!mounted) return;
@@ -563,9 +509,9 @@ class _NoteSheetState extends ConsumerState<NoteSheet> {
   Widget build(BuildContext context) {
     final l10n = L10n.of(context);
     final c = AppColors.of(context);
-    final uploading = _progress.isNotEmpty;
+    final uploading = _draft.uploading;
     return UnsavedChanges(
-      changed: () => _changed,
+      changed: () => _draft.changed(_text.text),
       child: Padding(
         padding: EdgeInsets.only(bottom: MediaQuery.viewInsetsOf(context).bottom),
         child: SafeArea(
@@ -594,11 +540,11 @@ class _NoteSheetState extends ConsumerState<NoteSheet> {
                     ),
                     const SizedBox(height: Space.s),
                     NoteFiles(
-                      files: _files,
-                      progress: _progress,
-                      previews: _previews,
-                      onRemove: _remove,
-                      trailing: _files.length >= Limits.noteFiles
+                      files: _draft.files,
+                      progress: _draft.progress,
+                      previews: _draft.previews,
+                      onRemove: _draft.remove,
+                      trailing: _draft.room <= 0
                           ? null
                           : Material(
                               color: c.accentSoft,
