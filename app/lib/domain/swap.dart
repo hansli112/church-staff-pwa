@@ -154,12 +154,15 @@ List<String> coverAsked(
       m.uid,
 ];
 
+/// One to ask to swap with: [name] ([uid]) on [day].
+typedef SwapPartner = ({Roster day, String name, String uid});
+
 /// 和別週交換: whom [me], on [duty] of [roster], may ask to swap with: who
 /// is on it on the service's days after [today], soonest first, but on a
 /// day [me] is on it already, one on [roster] already, or one without an
 /// account ([noAccount]), who could never answer. Each could take it
 /// ([swapStillHolds]).
-List<({Roster day, String name, String uid})> swapPartners(
+List<SwapPartner> swapPartners(
   Iterable<Roster> rosters,
   Roster roster,
   String duty, {

@@ -461,7 +461,8 @@ class _NoteSheetState extends ConsumerState<NoteSheet> {
     // Closed without 完成: what went up for it goes.
     _draft
       ..removeListener(_redraw)
-      ..close();
+      ..close()
+      ..dispose();
     _text.dispose();
     super.dispose();
   }

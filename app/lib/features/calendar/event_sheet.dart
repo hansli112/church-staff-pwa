@@ -479,7 +479,7 @@ class _EventEditorState extends State<_EventEditor> {
                         key: const ValueKey(_Picker.endTime),
                         time: _wheel(_times.endTime),
                         onChanged: (t) =>
-                            setState(() => _times = _times.setEndTime(_clock(t), withinDay: _endWithinDay)),
+                            setState(() => _times = _times.setEndTime(_clock(t), wasWithinDay: _endWithinDay)),
                       ),
                   ],
                 ),

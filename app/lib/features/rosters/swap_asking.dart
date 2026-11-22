@@ -150,7 +150,7 @@ Future<void> _askSwap(BuildContext context, WidgetRef ref, Roster roster, String
     today: today,
     noAccount: ref.read(noAccountProvider),
   );
-  final picked = await showAppSheet<({Roster day, String name, String uid})>(
+  final picked = await showAppSheet<SwapPartner>(
     context,
     expand: people.length > 6,
     builder: (context) => SafeArea(

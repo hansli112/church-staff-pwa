@@ -57,13 +57,13 @@ void main() {
     final evening = EventTimes.of(null, initialDay: _day);
 
     test('within a day: the first such time after the start', () {
-      expect(evening.setEndTime((hour: 1, minute: 0), withinDay: true).end, DateTime.utc(2026, 11, 7, 1));
-      expect(evening.setEndTime((hour: 22, minute: 0), withinDay: true).end, DateTime.utc(2026, 11, 6, 22));
+      expect(evening.setEndTime((hour: 1, minute: 0), wasWithinDay: true).end, DateTime.utc(2026, 11, 7, 1));
+      expect(evening.setEndTime((hour: 22, minute: 0), wasWithinDay: true).end, DateTime.utc(2026, 11, 6, 22));
     });
 
     test('a longer one keeps its end day', () {
       final twoDays = evening.moveEndDay(DateTime.utc(2026, 11, 8));
-      expect(twoDays.setEndTime((hour: 9, minute: 0), withinDay: false).end, DateTime.utc(2026, 11, 8, 9));
+      expect(twoDays.setEndTime((hour: 9, minute: 0), wasWithinDay: false).end, DateTime.utc(2026, 11, 8, 9));
     });
 
     test('whether it is within a day', () {

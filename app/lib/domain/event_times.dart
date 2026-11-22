@@ -97,12 +97,12 @@ class EventTimes {
     return _with(endDay: _dateOf(end), endTime: _timeOf(end));
   }
 
-  /// The end time set to [time]. [withinDay], as the event was when its
-  /// end's wheels opened: the end is the first such time after the start,
+  /// The end time set to [time]. [wasWithinDay], as the event was when its
+  /// end's wheels opened ([withinDay]): the end is the first such time after the start,
   /// the next day for one not after the start time. Else it keeps its end
   /// day.
-  EventTimes setEndTime(ClockTime time, {required bool withinDay}) {
-    if (!withinDay) return _with(endTime: time);
+  EventTimes setEndTime(ClockTime time, {required bool wasWithinDay}) {
+    if (!wasWithinDay) return _with(endTime: time);
     final sameDay = _at(startDay, time).isAfter(start);
     return _with(
       endTime: time,
