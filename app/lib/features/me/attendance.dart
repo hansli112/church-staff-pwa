@@ -467,24 +467,28 @@ class _FillSheetState extends State<_FillSheet> {
 }
 
 /// 回報人數 on 首頁, for admins and 行政: how many meetings of the week it
-/// opens on are still 未填, opening it, named as the page it opens.
+/// opens on are still 未填, or that today's is still to fill in, opening
+/// it, named as the page it opens.
 class AttendanceMissingRow extends ConsumerWidget {
   const AttendanceMissingRow({super.key});
 
   /// Whether it has anything to show.
-  static bool shown(WidgetRef ref) => (ref.watch(attendanceMissingCountProvider) ?? 0) > 0;
+  static bool shown(WidgetRef ref) => switch (ref.watch(attendanceHomeWeekProvider)) {
+    final week? => week.missing > 0 || week.waiting,
+    null => false,
+  };
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final l10n = L10n.of(context);
-    final missing = ref.watch(attendanceMissingCountProvider) ?? 0;
-    if (missing == 0) return const SizedBox.shrink();
+    final week = ref.watch(attendanceHomeWeekProvider);
+    if (week == null || (week.missing == 0 && !week.waiting)) return const SizedBox.shrink();
     return ListSection(
       children: [
         ListRow(
           leading: const Icon(Symbols.groups_rounded),
           title: l10n.attendance,
-          value: l10n.attendanceOverviewMissing(missing),
+          value: week.missing > 0 ? l10n.attendanceOverviewMissing(week.missing) : l10n.attendanceTodayWaiting,
           onTap: () => context.push('/me/attendance'),
         ),
       ],

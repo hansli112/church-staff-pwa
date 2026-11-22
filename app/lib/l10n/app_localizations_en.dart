@@ -3235,6 +3235,9 @@ class L10nEn extends L10n {
   String get attendanceOverviewDone => 'All filled in';
 
   @override
+  String get attendanceTodayWaiting => 'Today’s not filled in yet';
+
+  @override
   String get attendanceRemind => 'Remind';
 
   @override

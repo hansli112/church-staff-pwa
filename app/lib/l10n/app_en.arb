@@ -910,6 +910,7 @@
   "attendanceOff": "Off",
   "attendanceOverviewMissing": "{count} not filled in yet",
   "attendanceOverviewDone": "All filled in",
+  "attendanceTodayWaiting": "Today’s not filled in yet",
   "attendanceRemind": "Remind",
   "attendanceRemindSent": "Reminded",
   "attendanceRemindNobody": "No one to remind; contact them directly",

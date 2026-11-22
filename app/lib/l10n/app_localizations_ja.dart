@@ -3070,6 +3070,9 @@ class L10nJa extends L10n {
   String get attendanceOverviewDone => 'すべて記録済み';
 
   @override
+  String get attendanceTodayWaiting => '今日の分はまだです';
+
+  @override
   String get attendanceRemind => '知らせる';
 
   @override

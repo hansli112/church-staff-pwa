@@ -910,6 +910,7 @@
   "attendanceOff": "オフ",
   "attendanceOverviewMissing": "未記入が{count}件あります",
   "attendanceOverviewDone": "すべて記録済み",
+  "attendanceTodayWaiting": "今日の分はまだです",
   "attendanceRemind": "知らせる",
   "attendanceRemindSent": "知らせました",
   "attendanceRemindNobody": "知らせる人がいません。直接連絡してください",

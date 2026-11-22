@@ -3065,6 +3065,9 @@ class L10nZh extends L10n {
   String get attendanceOverviewDone => '都填好了';
 
   @override
+  String get attendanceTodayWaiting => '今天的還沒填';
+
+  @override
   String get attendanceRemind => '提醒';
 
   @override
@@ -6676,6 +6679,9 @@ class L10nZhHans extends L10nZh {
 
   @override
   String get attendanceOverviewDone => '都填好了';
+
+  @override
+  String get attendanceTodayWaiting => '今天的还没填';
 
   @override
   String get attendanceRemind => '提醒';

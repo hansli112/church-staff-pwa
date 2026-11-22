@@ -910,6 +910,7 @@
   "attendanceOff": "未开启",
   "attendanceOverviewMissing": "还有 {count} 个未填",
   "attendanceOverviewDone": "都填好了",
+  "attendanceTodayWaiting": "今天的还没填",
   "attendanceRemind": "提醒",
   "attendanceRemindSent": "已提醒",
   "attendanceRemindNobody": "没有可以提醒的人，请直接联络",

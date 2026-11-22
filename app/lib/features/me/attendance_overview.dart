@@ -99,7 +99,7 @@ class _AttendanceOverviewScreenState extends ConsumerState<AttendanceOverviewScr
                           ? (label: l10n.edit, onPressed: () => context.push('/me/attendance/gatherings'))
                           : null,
                       children: [
-                        for (final r in section.rows) _row(context, r, today, nameOf),
+                        for (final r in section.rows) _row(context, r, week.sunday, today, nameOf),
                         if (section.service == null && oversees) _addGatheringRow(context, ref),
                       ],
                     ),
@@ -155,8 +155,8 @@ class _AttendanceOverviewScreenState extends ConsumerState<AttendanceOverviewScr
     onTap: () => _addGathering(context, ref),
   );
 
-  /// A meeting of [week]: its 人數, 未填, or the day it next meets.
-  Widget _row(BuildContext context, AttendanceRow r, Day today, String Function(String key) nameOf) {
+  /// A meeting of [week]: its 人數, 未填 (not today's), or the day it next meets.
+  Widget _row(BuildContext context, AttendanceRow r, Day sunday, Day today, String Function(String key) nameOf) {
     final l10n = L10n.of(context);
     return ListRow(
       title: r.group.name,
@@ -170,9 +170,14 @@ class _AttendanceOverviewScreenState extends ConsumerState<AttendanceOverviewScr
           null => attendanceNotYet(l10n, ref.watch(meetingTimeProvider(r.group.group))),
         },
       },
-      value: r.day == null ? null : attendanceValue(l10n, r.value, nameOf),
+      // Today's, still to fill in, is not 未填 yet: its day says 今天.
+      value: r.day == null || (r.day == today && r.value == null) ? null : attendanceValue(l10n, r.value, nameOf),
       onTap: switch (r.day) {
-        final day? => () => fillAttendance(context, ref, r.group, day, r.value),
+        final day? => () {
+          // Filled in, the week stays, though the page would open on another now.
+          setState(() => _sunday = sunday);
+          fillAttendance(context, ref, r.group, day, r.value);
+        },
         null => () => context.push(attendancePage(r.group.group)),
       },
     );

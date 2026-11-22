@@ -5446,6 +5446,12 @@ abstract class L10n {
   /// **'都填好了'**
   String get attendanceOverviewDone;
 
+  /// Value of the 回報人數 row on 首頁 for admins and 行政 when nothing is 未填 but a meeting today still is to fill in
+  ///
+  /// In zh, this message translates to:
+  /// **'今天的還沒填'**
+  String get attendanceTodayWaiting;
+
   /// Button beside 還有 N 個未填 on 人數總覽: pushes whoever fills in each 未填
   ///
   /// In zh, this message translates to:

@@ -190,16 +190,18 @@ final attendanceDueProvider = Provider.autoDispose<List<AttendanceDue>>((ref) {
   ];
 });
 
-/// For admins and 行政 on 首頁: how many meetings are still 未填 in the
-/// week 回報人數 opens on, so the page says the same; null until read.
-final attendanceMissingCountProvider = Provider.autoDispose<int?>((ref) {
+/// For admins and 行政 on 首頁: the week 回報人數 opens on, so the page
+/// says the same: how many are still 未填 in it, or that today's is still
+/// to fill in. Null for whoever does not oversee it, with it off, or until
+/// read.
+final attendanceHomeWeekProvider = Provider.autoDispose<AttendanceWeek?>((ref) {
   final me = ref.watch(meProvider).value;
-  if (me == null || !me.overseesAttendance) return 0;
+  if (me == null || !me.overseesAttendance) return null;
   final since = ref.watch(churchProvider.select((c) => c.value?.attendanceSince));
-  if (since == null) return 0;
+  if (since == null) return null;
   final range = ref.watch(attendanceOverviewWeeksProvider);
   if (range == null) return null;
-  return ref.watch(attendanceOverviewProvider(range.opens))?.missing;
+  return ref.watch(attendanceOverviewProvider(range.opens));
 });
 
 /// The Sunday of [day]'s week: 人數總覽 shows a week, Sunday to Saturday,
@@ -222,7 +224,7 @@ class AttendanceWeek {
   final Day sunday;
   final List<AttendanceRow> rows;
 
-  /// Its meetings today are not yet 未填, as on 首頁 (attendanceMissingCountProvider).
+  /// Its meetings today are not yet 未填, as on 首頁 (attendanceHomeWeekProvider).
   final Day today;
 
   /// Its rows by the service they are of, the service's own first, then
@@ -290,7 +292,8 @@ final _overviewRecordsProvider = Provider.autoDispose<List<AttendanceOf>?>((ref)
 /// The weeks 人數總覽 turns through (#95): from the one 回報人數 came on in,
 /// at most [attendanceWeeks] back, whose rosters are read, to this one; it
 /// opens on the latest with anything filled in or 未填, so not on a
-/// Sunday's week of nothing yet. Null until read.
+/// Monday's week of nothing yet; or on this one with a meeting today still
+/// to fill in, unless the week before still has some 未填. Null until read.
 final attendanceOverviewWeeksProvider = Provider.autoDispose<({Day first, Day last, Day opens})?>((ref) {
   final since = ref.watch(churchProvider.select((c) => c.value?.attendanceSince));
   final records = ref.watch(_overviewRecordsProvider);
@@ -300,7 +303,11 @@ final attendanceOverviewWeeksProvider = Provider.autoDispose<({Day first, Day la
   final back = weekOf(today.addDays(-7 * (attendanceWeeks - 1)));
   final first = weekOf(since).isBefore(back) ? back : weekOf(since);
   for (var w = last; !w.isBefore(first); w = w.addDays(-7)) {
-    if (attendanceWeek(records, sunday: w, since: since, today: today).reported) {
+    final week = attendanceWeek(records, sunday: w, since: since, today: today);
+    if (week.reported) return (first: first, last: last, opens: w);
+    if (w == last &&
+        week.waiting &&
+        attendanceWeek(records, sunday: w.addDays(-7), since: since, today: today).missing == 0) {
       return (first: first, last: last, opens: w);
     }
   }

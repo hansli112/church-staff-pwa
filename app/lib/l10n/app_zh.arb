@@ -2190,6 +2190,8 @@
   "@attendanceOverviewMissing": {"description": "Header of 人數總覽: how many groups have not filled in their latest meeting", "placeholders": {"count": {"type": "int", "example": "2"}}},
   "attendanceOverviewDone": "都填好了",
   "@attendanceOverviewDone": {"description": "Header of 人數總覽 when every group has filled in"},
+  "attendanceTodayWaiting": "今天的還沒填",
+  "@attendanceTodayWaiting": {"description": "Value of the 回報人數 row on 首頁 for admins and 行政 when nothing is 未填 but a meeting today still is to fill in"},
   "attendanceRemind": "提醒",
   "@attendanceRemind": {"description": "Button beside 還有 N 個未填 on 人數總覽: pushes whoever fills in each 未填"},
   "attendanceRemindSent": "已提醒",

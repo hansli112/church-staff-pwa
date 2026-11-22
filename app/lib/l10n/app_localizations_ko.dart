@@ -3068,6 +3068,9 @@ class L10nKo extends L10n {
   String get attendanceOverviewDone => '모두 기록했어요';
 
   @override
+  String get attendanceTodayWaiting => '오늘 것은 아직이에요';
+
+  @override
   String get attendanceRemind => '알리기';
 
   @override
