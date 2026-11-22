@@ -30,6 +30,12 @@ void main() {
     expect(thursday.nextOnOrAfter(DateTime.thursday), thursday);
   });
 
+  test('counts the months from one through next December, so all of next year can be arranged', () {
+    expect(monthsThroughNextYear(Day(2026, 11, 1), today: Day(2026, 11, 23)), 14, reason: '11月 to next 12月');
+    expect(monthsThroughNextYear(Day(2026, 1, 1), today: Day(2026, 1, 5)), 24);
+    expect(monthsThroughNextYear(Day(2026, 12, 1), today: Day(2026, 11, 23)), 13, reason: 'from a month ahead');
+  });
+
   test('orders chronologically', () {
     final days = [Day(2026, 3, 1), Day(2025, 12, 31), Day(2026, 1, 1)]..sort();
     expect(days.map((d) => d.key), ['2025-12-31', '2026-01-01', '2026-03-01']);

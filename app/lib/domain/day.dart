@@ -82,3 +82,8 @@ class Day implements Comparable<Day> {
   @override
   String toString() => key;
 }
+
+/// How many months from [month] (its first day) through December of the
+/// year after [today]'s: how far ahead 安排服事, 不能服事的日子 and asking
+/// for them go, so that late in the year all of next year is there.
+int monthsThroughNextYear(Day month, {required Day today}) => (today.year + 1 - month.year) * 12 + 12 - month.month + 1;

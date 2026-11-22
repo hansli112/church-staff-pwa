@@ -628,7 +628,9 @@ void main() {
     expect(GoRouterState.of(tester.element(find.byType(Scaffold).last)).uri.path, '/rosters/sunday/2026-10-11');
   });
 
-  testWidgets('more months join on as the table nears its end, through the same month next year', (tester) async {
+  testWidgets('more months join on as the table nears its end, through next December: all of next year', (
+    tester,
+  ) async {
     await pumpApp(tester, seededChurch());
     await go(tester, '/rosters/plan/sunday');
     expect(find.text('顯示更多'), findsNothing);
@@ -642,7 +644,7 @@ void main() {
       if (titles.isNotEmpty && titles.last == last) break;
       if (titles.isNotEmpty) last = titles.last;
     }
-    expect(last, '2027年10月');
+    expect(last, '2027年12月');
   });
 
   testWidgets('another service, from this month', (tester) async {

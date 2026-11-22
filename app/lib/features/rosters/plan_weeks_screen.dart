@@ -54,9 +54,6 @@ class PlanWeeksScreen extends ConsumerStatefulWidget {
 /// How many months the page shows at first, and adds as its end nears.
 const _monthsAtATime = 3;
 
-/// How far the months go on: through the same month next year.
-const _monthsAhead = 13;
-
 /// How fast the table scrolls while a lifted cell is held at its edge, per
 /// point past it (as ReorderableList).
 const _autoScrollSpeed = 50.0;
@@ -334,7 +331,7 @@ class _PlanWeeksScreenState extends ConsumerState<PlanWeeksScreen> with SingleTi
             // When it last asked, so it is not asked twice by mistake.
             footer: asked == null ? null : l10n.planAskedLast(DateFormat.MMMd().format(asked)),
             children: [
-              for (var i = 0; i < _askMonths; i++)
+              for (var i = 0; i < monthsThroughNextYear(from, today: ref.read(todayProvider)); i++)
                 if (Day(from.year, from.month + i, 1) case final month)
                   ListRow(
                     title: DateFormat.yMMMM().format(month.midnight),
@@ -364,9 +361,6 @@ class _PlanWeeksScreenState extends ConsumerState<PlanWeeksScreen> with SingleTi
       if (toasts.mounted) showToast(toasts, errorText(l10n, e));
     }
   }
-
-  /// How many months 通知同工填 offers to ask through.
-  static const _askMonths = 12;
 
   /// 完成: goes back at once, telling whoever was put on or taken off
   /// here behind it; a failure says so where it went, with 重試.
@@ -439,7 +433,8 @@ class _PlanWeeksScreenState extends ConsumerState<PlanWeeksScreen> with SingleTi
       body = const SizedBox.shrink();
     } else {
       final months = planMonths(service: service, saved: saved, today: today, month: thisMonth, months: _months);
-      _room = math.max(0, _monthsAhead - _months);
+      // Through next December, so all of next year can be arranged.
+      _room = math.max(0, monthsThroughNextYear(thisMonth, today: today) - _months);
       _joined = false;
       duties = planDuties(service, months.expand((m) => m.days), arranges);
       // Every day saved ahead, not only the months joined on so far: the

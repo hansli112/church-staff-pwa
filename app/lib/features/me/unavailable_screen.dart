@@ -21,11 +21,8 @@ import '../rosters/rosters_screen.dart' show selectedServiceProvider;
 import '../rosters/swap_asking.dart';
 import '../../state/session.dart';
 
-/// How many months from this one the page lays out.
-const _months = 12;
-
 /// 不能服事的日子 (#91): the days I cannot serve, whole days in every
-/// service, a month at a time over the next [_months]. A tap marks a day or
+/// service, a month at a time through next December (monthsThroughNextYear). A tap marks a day or
 /// clears it; a drag marks the days it crosses, or clears them when it
 /// starts on a marked one. Each change shows at once and is kept in turn. Only those who arrange rosters see them,
 /// with what I wrote about each stretch.
@@ -137,6 +134,7 @@ class _UnavailableScreenState extends ConsumerState<UnavailableScreen> {
   Widget build(BuildContext context) {
     final l10n = L10n.of(context);
     final today = ref.watch(todayProvider);
+    final months = monthsThroughNextYear(today.firstOfMonth, today: today);
     final saved = ref.watch(myUnavailableDaysProvider);
     final days = (_shown ?? saved.value ?? const UnavailableDays()).since(today);
     final serving = [
@@ -164,9 +162,9 @@ class _UnavailableScreenState extends ConsumerState<UnavailableScreen> {
                   days: days,
                   onTap: _toggle,
                   onDrag: _drag,
-                  onShift: (by) => setState(() => _page = (_page + by).clamp(0, _months - 1).toInt()),
+                  onShift: (by) => setState(() => _page = (_page + by).clamp(0, months - 1).toInt()),
                   first: _page == 0,
-                  last: _page == _months - 1,
+                  last: _page == months - 1,
                 ),
                 Padding(
                   padding: const EdgeInsets.fromLTRB(Space.l, Space.s, Space.l, Space.m),

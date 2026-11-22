@@ -90,6 +90,18 @@ void main() {
     expect(telemetry.named('unavailable_set'), [null, null], reason: 'each change kept');
   });
 
+  testWidgets('the months go on through next December, so all of next year can be marked', (tester) async {
+    await pumpApp(tester, seededChurch(as: staffMei));
+    await go(tester, '/me/unavailable');
+    for (var i = 0; i < 20; i++) {
+      final next = find.ancestor(of: find.byTooltip('下個月'), matching: find.byType(IconButton));
+      if (tester.widget<IconButton>(next).onPressed == null) break;
+      await tester.tap(next);
+      await settle(tester);
+    }
+    expect(find.text('2027年12月'), findsOneWidget);
+  });
+
   testWidgets('dragged across days, a stretch; it takes a reason, and is removed with 復原', (tester) async {
     final b = seededChurch(as: staffMei);
     await pumpApp(tester, b);
@@ -192,6 +204,8 @@ void main() {
     await settle(tester);
     await tester.tap(find.text('請同工填不能服事日'));
     await settle(tester);
+    expect(find.text('2027年12月'), findsOneWidget, reason: 'all of next year');
+    expect(find.text('2028年1月'), findsNothing);
     await tester.tap(find.text('2026年12月').last);
     await settle(tester);
     expect(find.text('要通知 2 位同工填 10月到12月不能服事的日子嗎？'), findsOneWidget);
