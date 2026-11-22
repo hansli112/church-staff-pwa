@@ -154,6 +154,32 @@ List<String> coverAsked(
       m.uid,
 ];
 
+/// 和別週交換: whom [me], on [duty] of [roster], may ask to swap with: who
+/// is on it on the service's days after [today], soonest first, but on a
+/// day [me] is on it already, one on [roster] already, or one without an
+/// account ([noAccount]), who could never answer. Each could take it
+/// ([swapStillHolds]).
+List<({Roster day, String name, String uid})> swapPartners(
+  Iterable<Roster> rosters,
+  Roster roster,
+  String duty, {
+  required String me,
+  required Day today,
+  Set<String> noAccount = const {},
+}) {
+  final days = [
+    for (final r in rosters)
+      if (!r.isEvent && r.type == roster.type && r.day.isAfter(today) && r.id != roster.id && !isOnDuty(r, duty, me)) r,
+  ]..sort((a, b) => a.day.compareTo(b.day));
+  return [
+    for (final r in days)
+      if (r.duties.where((d) => d.role == duty).firstOrNull case final d?)
+        for (final name in d.people)
+          if (d.uids[name] case final uid? when uid != me && !noAccount.contains(uid) && !isOnDuty(roster, duty, uid))
+            (day: r, name: name, uid: uid),
+  ];
+}
+
 /// Whether [request] can still be taken: [from] is still on the duty of
 /// [roster] (the request's day), and for 交換 its one person is still on it
 /// on [other] (their day), with neither on the other's day already.

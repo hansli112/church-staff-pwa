@@ -88,4 +88,49 @@ void main() {
       const Duty(role: '招待', people: ['李美玉', '陳志豪'], uids: {'陳志豪': 'hao', '李美玉': 'mei'}),
     );
   });
+
+  group('swapPartners', () {
+    Roster sunday(int day, Map<String, String> pianists) => Roster(
+      type: 'sunday',
+      day: Day(2026, 11, day),
+      duties: [Duty(role: '司琴', people: pianists.keys.toList(), uids: pianists)],
+    );
+    final mine = sunday(15, {'王小明': 'wang'});
+    final rosters = [
+      sunday(29, {'李美玉': 'mei'}),
+      sunday(22, {'陳志豪': 'hao', '林同工': 'lin'}),
+      sunday(8, {'張行政': 'office'}),
+      sunday(6, {'王小明': 'wang', '吳美玉': 'wu'}),
+      mine,
+      Roster(
+        type: 'youth',
+        day: Day(2026, 11, 21),
+        duties: const [
+          Duty(role: '司琴', people: ['趙青'], uids: {'趙青': 'zhao'}),
+        ],
+      ),
+    ];
+
+    test("those on the duty on the service's later days, soonest first, but one without an account", () {
+      final partners = swapPartners(rosters, mine, '司琴', me: 'wang', today: Day(2026, 11, 7), noAccount: const {'lin'});
+      expect([for (final p in partners) (p.day.day.day, p.uid)], [(8, 'office'), (22, 'hao'), (29, 'mei')]);
+    });
+
+    test('each one offered could take it', () {
+      for (final p in swapPartners(rosters, mine, '司琴', me: 'wang', today: Day(2026, 11, 1))) {
+        final request = SwapRequest(
+          id: 'r',
+          kind: SwapKind.swap,
+          serviceId: 'sunday',
+          day: mine.day,
+          duty: '司琴',
+          from: 'wang',
+          fromName: '王小明',
+          to: p.uid,
+          toDay: p.day.day,
+        );
+        expect(swapStillHolds(request, mine, p.day), isTrue, reason: p.name);
+      }
+    });
+  });
 }
