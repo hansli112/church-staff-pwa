@@ -8,12 +8,11 @@ import '../../core/design/components.dart';
 import '../../core/design/tokens.dart';
 import '../../domain/day.dart';
 import '../../domain/models.dart';
-import '../../domain/roster_edit.dart';
-import '../../domain/schedule.dart';
 import '../../domain/swap.dart';
 import '../../l10n/app_localizations.dart';
 import '../../state/providers.dart';
 import '../../state/roster_actions.dart';
+import '../../state/roster_day.dart';
 import 'editable_roster.dart';
 import 'event_sheet.dart';
 import 'format.dart';
@@ -42,28 +41,15 @@ class RosterDayScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final l10n = L10n.of(context);
     final day = Day.tryParse(dayKey);
-    final service = ref.watch(
-      servicesProvider.select((s) => s.value?.byId(serviceType)),
-    );
-    final rosters = ref.watch(serviceRostersProvider(serviceType));
-    final today = ref.watch(todayProvider);
-    if (day == null || service == null) {
+    final service = ref.watch(servicesProvider.select((s) => s.value?.byId(serviceType)));
+    final page = day == null ? null : ref.watch(rosterDayProvider((serviceType, day)));
+    if (day == null || service == null || page == null) {
       return Scaffold(appBar: AppBar(), body: const SizedBox.shrink());
     }
-    // A past day is only looked at, by everyone, so nobody is told of
-    // changes to a day gone; it is read from what was saved.
-    final past = day.isBefore(today);
-    // From the list it is there already; from a link it is read.
-    final listed = past
-        ? ref.watch(
-            earlierRostersProvider(serviceType).select((e) => e.rosters.where((r) => r.day == day).firstOrNull),
-          )
-        : null;
-    final saved = past && listed == null ? ref.watch(pastRosterProvider((serviceType, day))) : null;
-    if (saved != null && !saved.hasValue) {
+    if (!page.hasValue) {
       return Scaffold(
         appBar: AppBar(title: Text(service.name)),
-        body: saved.hasError
+        body: page.hasError
             ? ErrorRetry(
                 message: l10n.loadFailed,
                 onRetry: () => ref.invalidate(pastRosterProvider((serviceType, day))),
@@ -71,18 +57,11 @@ class RosterDayScreen extends ConsumerWidget {
             : const SizedBox.shrink(),
       );
     }
-    // A past day nobody was arranged on has no duties, not today's template.
-    final roster = past
-        ? listed ?? saved!.value ?? Roster(type: serviceType, day: day)
-        : rosters.value?.where((r) => r.day == day).firstOrNull ?? draftRoster(service, day);
-    // A 事工's 負責人 arranges only the duties it leads (#82).
-    final led = ref.watch(arrangesProvider(serviceType));
-    final whole = led.all;
-    final canEdit = !past && led.any;
+    final RosterDay(:roster, :past, arranges: led, :addable, :canEdit, :wholeDay) = page.requireValue;
+    final today = ref.watch(todayProvider);
     final title = dayLabel(l10n, day, today);
-    final addable = addableDuties(roster, service.duties, led);
     // From the day's tags, or 「＋ 特別活動」, for who changes the whole day.
-    final editEvents = whole ? () => _editEvents(context, ref, roster, service) : null;
+    final editEvents = wholeDay ? () => _editEvents(context, ref, roster, service) : null;
 
     return Scaffold(
       appBar: AppBar(
@@ -113,7 +92,9 @@ class RosterDayScreen extends ConsumerWidget {
               title: title,
               arranges: led,
               onEditEvents: editEvents,
-              onAddDuty: whole || addable.isNotEmpty ? () => _addDuty(context, ref, roster, addable, any: whole) : null,
+              onAddDuty: wholeDay || addable.isNotEmpty
+                  ? () => _addDuty(context, ref, roster, addable, any: wholeDay)
+                  : null,
             ),
           RosterNoteSection(rosterId: roster.id, canEdit: canEdit),
         ],
