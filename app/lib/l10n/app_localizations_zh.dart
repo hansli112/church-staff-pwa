@@ -3071,6 +3071,27 @@ class L10nZh extends L10n {
   String get attendanceRemind => '提醒';
 
   @override
+  String get attendanceExport => '匯出';
+
+  @override
+  String get attendanceCsvFile => '聚會人數.csv';
+
+  @override
+  String get attendanceCsvGroup => '聚會';
+
+  @override
+  String get attendanceCsvCount => '人數';
+
+  @override
+  String get attendanceCsvNote => '備註';
+
+  @override
+  String get rosterTable => '表格';
+
+  @override
+  String get planWholeTable => '整張表格';
+
+  @override
   String get attendanceRemindSent => '已提醒';
 
   @override
@@ -6685,6 +6706,27 @@ class L10nZhHans extends L10nZh {
 
   @override
   String get attendanceRemind => '提醒';
+
+  @override
+  String get attendanceExport => '导出';
+
+  @override
+  String get attendanceCsvFile => '聚会人数.csv';
+
+  @override
+  String get attendanceCsvGroup => '聚会';
+
+  @override
+  String get attendanceCsvCount => '人数';
+
+  @override
+  String get attendanceCsvNote => '备注';
+
+  @override
+  String get rosterTable => '表格';
+
+  @override
+  String get planWholeTable => '整张表格';
 
   @override
   String get attendanceRemindSent => '已提醒';

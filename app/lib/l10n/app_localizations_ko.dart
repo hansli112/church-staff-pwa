@@ -3074,6 +3074,27 @@ class L10nKo extends L10n {
   String get attendanceRemind => '알리기';
 
   @override
+  String get attendanceExport => '내보내기';
+
+  @override
+  String get attendanceCsvFile => '모임 인원.csv';
+
+  @override
+  String get attendanceCsvGroup => '모임';
+
+  @override
+  String get attendanceCsvCount => '인원';
+
+  @override
+  String get attendanceCsvNote => '메모';
+
+  @override
+  String get rosterTable => '표';
+
+  @override
+  String get planWholeTable => '전체 표';
+
+  @override
   String get attendanceRemindSent => '알렸어요';
 
   @override

@@ -8,6 +8,7 @@ import 'dart:typed_data';
 
 import 'package:archive/archive.dart';
 
+import 'day.dart';
 import 'models.dart';
 import 'staff_order.dart';
 
@@ -23,6 +24,7 @@ class ChurchSnapshot {
     this.calendar,
     this.link,
     this.webhook,
+    this.attendance,
   });
 
   final Church church;
@@ -40,6 +42,9 @@ class ChurchSnapshot {
   final CalendarSettings? calendar;
   final ChurchLink? link;
   final WebhookSettings? webhook;
+
+  /// 聚會人數.csv's meetings; null with 回報人數 off.
+  final List<AttendanceLine>? attendance;
 }
 
 const exportFormat = 'martha-church-export';
@@ -190,27 +195,85 @@ Map<String, Object?> exportJson(ChurchSnapshot s, DateTime exportedAt) => {
 
 String _csvField(String v) => v.contains(RegExp('[",\r\n]')) ? '"${v.replaceAll('"', '""')}"' : v;
 
+/// [rows] as a CSV Excel opens: UTF-8 with a BOM, so it reads the
+/// Chinese, and CRLF.
+String _csv(List<List<String>> rows) => '\uFEFF${rows.map((row) => row.map(_csvField).join(',')).join('\r\n')}\r\n';
+
 /// A roster's 服事 column: the service's name, or the event's title.
 String _name(ChurchSnapshot s, Roster r) => r.forEvent?.title ?? s.services.byId(r.type)?.name ?? r.type;
 
 /// One row per duty on each saved day: the day, the service (or event),
-/// the duty and its people, under [w]'s column names. UTF-8 with a BOM so
-/// Excel reads the Chinese.
-String exportCsv(ChurchSnapshot s, CsvWords w) {
-  final rows = <List<String>>[
-    [w.date, w.service, w.role, w.people],
-    for (final r in _ordered(s))
-      for (final d in r.duties) [r.day.key, _name(s, r), d.role, d.people.join(w.separator)],
-  ];
-  return '\uFEFF${rows.map((row) => row.map(_csvField).join(',')).join('\r\n')}\r\n';
+/// the duty and its people, under [w]'s column names.
+String exportCsv(ChurchSnapshot s, CsvWords w) => _csv([
+  [w.date, w.service, w.role, w.people],
+  for (final r in _ordered(s))
+    for (final d in r.duties) [r.day.key, _name(s, r), d.role, d.people.join(w.separator)],
+]);
+
+/// A meeting in 聚會人數.csv: its [day], its group's name, and what it has
+/// (null: 未填); met with another 小組 (聯合小組), that one's name, [withName].
+typedef AttendanceLine = ({Day day, String group, AttendanceDay? value, String? withName});
+
+/// 聚會人數.csv in the language of whoever exports it: its file name, its
+/// column names, and what a meeting with no number says.
+class AttendanceCsvWords {
+  const AttendanceCsvWords({
+    required this.fileName,
+    required this.date,
+    required this.group,
+    required this.count,
+    required this.note,
+    required this.none,
+    required this.missing,
+    required this.withGroup,
+  });
+
+  final String fileName;
+  final String date;
+  final String group;
+  final String count;
+  final String note;
+
+  /// 沒聚會.
+  final String none;
+
+  /// 未填.
+  final String missing;
+
+  /// 和○○一起.
+  final String Function(String name) withGroup;
 }
 
-/// The zip an admin downloads: [exportJsonName] and the CSV, in [csv]'s words.
-Uint8List exportZip(ChurchSnapshot s, DateTime exportedAt, CsvWords csv) {
+/// 聚會人數.csv: a row a meeting of [lines], as listed: the day, the
+/// group, how many came, as a number alone, so Excel adds them up; or
+/// what it says in its place (沒聚會, 未填, 和○○一起); and the note as
+/// written.
+String attendanceCsv(List<AttendanceLine> lines, AttendanceCsvWords w) => _csv([
+  [w.date, w.group, w.count, w.note],
+  for (final l in lines)
+    [
+      l.day.key,
+      l.group,
+      switch (l.value) {
+        AttendanceDay(withGroup: _?) => w.withGroup(l.withName ?? ''),
+        AttendanceDay(none: true) => w.none,
+        AttendanceDay(:final count?) => '$count',
+        _ => w.missing,
+      },
+      l.value?.note ?? '',
+    ],
+]);
+
+/// The zip an admin downloads: [exportJsonName] and the CSV, in [csv]'s
+/// words; with 回報人數 on, 聚會人數.csv too, in [attendance]'s.
+Uint8List exportZip(ChurchSnapshot s, DateTime exportedAt, CsvWords csv, {required AttendanceCsvWords attendance}) {
   final json = utf8.encode(const JsonEncoder.withIndent('  ').convert(exportJson(s, exportedAt)));
   final archive = Archive()
     ..add(ArchiveFile.bytes(exportJsonName, json))
     ..add(ArchiveFile.bytes(csv.fileName, utf8.encode(exportCsv(s, csv))));
+  if (s.attendance case final lines?) {
+    archive.add(ArchiveFile.bytes(attendance.fileName, utf8.encode(attendanceCsv(lines, attendance))));
+  }
   return ZipEncoder().encodeBytes(archive);
 }
 

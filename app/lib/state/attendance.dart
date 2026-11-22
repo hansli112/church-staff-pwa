@@ -2,6 +2,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../domain/day.dart';
+import '../domain/export.dart';
 import '../domain/models.dart';
 import 'providers.dart';
 
@@ -42,11 +43,23 @@ typedef AttendanceGroup = ({ChurchGroup group, String name, Meets Function(Day d
 /// meet, and 其他聚會), in that order, as [AttendanceGroup]s; a service meets on its weekdays
 /// when that day has a roster, unless its 聚會時間 says otherwise
 /// (AttendanceRecord.time).
-final attendanceGroupsProvider = Provider.autoDispose<List<AttendanceGroup>>((ref) {
-  final services = ref.watch(servicesProvider).value?.services ?? const <Service>[];
-  final smallGroups = ref.watch(smallGroupsProvider).value ?? const <SmallGroupDetails>[];
-  final gatherings = ref.watch(gatheringsProvider).value ?? const <Gathering>[];
-  final rosters = ref.watch(_recentRostersProvider).value ?? const <Roster>[];
+final attendanceGroupsProvider = Provider.autoDispose<List<AttendanceGroup>>(
+  (ref) => attendanceGroupsOf(
+    services: ref.watch(servicesProvider).value?.services ?? const <Service>[],
+    smallGroups: ref.watch(smallGroupsProvider).value ?? const <SmallGroupDetails>[],
+    gatherings: ref.watch(gatheringsProvider).value ?? const <Gathering>[],
+    rosters: ref.watch(_recentRostersProvider).value ?? const <Roster>[],
+  ),
+);
+
+/// [services], [smallGroups] and [gatherings] as [AttendanceGroup]s, in
+/// that order, a service meeting on the days of [rosters] it has.
+List<AttendanceGroup> attendanceGroupsOf({
+  required List<Service> services,
+  required List<SmallGroupDetails> smallGroups,
+  required List<Gathering> gatherings,
+  required Iterable<Roster> rosters,
+}) {
   final held = {
     for (final r in rosters)
       if (!r.isEvent) (r.type, r.day),
@@ -64,7 +77,7 @@ final attendanceGroupsProvider = Provider.autoDispose<List<AttendanceGroup>>((re
     for (final g in gatherings)
       (group: GatheringGroup(g.id), name: g.name, meetsOn: (Day _, {MeetingTime? time}) => g.time.meets()),
   ];
-});
+}
 
 /// The meetings of [group] from [attendanceWeeks] back to today that ask
 /// for their 人數, newest first: none with 回報人數 off. Days [record] has
@@ -352,4 +365,77 @@ AttendanceWeek attendanceWeek(
     }
   }
   return AttendanceWeek(sunday, rows, today: today);
+}
+
+/// 聚會人數.csv's meetings (匯出): those of [records] from the day
+/// 回報人數 came on ([since]), or the first filled in, to [today], oldest
+/// first, a day's in the order of [records]: each filled in, and each that
+/// asked for its 人數, 未填 till filled in, today's too. [nameOf] names
+/// the 小組 one met with.
+List<AttendanceLine> attendanceLines(
+  List<AttendanceOf> records, {
+  required Day since,
+  required Day today,
+  required String Function(String key) nameOf,
+}) {
+  var from = since;
+  for (final (group: _, :record) in records) {
+    for (final d in record.days.keys) {
+      if (d.isBefore(from)) from = d;
+    }
+  }
+  return [
+    for (var d = from; !d.isAfter(today); d = d.addDays(1))
+      for (final (group: g, :record) in records)
+        if (record.days[d] != null || _due(g, since: since, record: record, day: d))
+          (
+            day: d,
+            group: g.name,
+            value: record.days[d],
+            withName: switch (record.days[d]?.withGroup) {
+              final key? => nameOf(key),
+              null => null,
+            },
+          ),
+  ];
+}
+
+/// Reads, once, the 人數 of every group 人數總覽 lists for me and makes
+/// [attendanceLines] of them, the days each service met by all its
+/// rosters since; null with 回報人數 off.
+Future<List<AttendanceLine>?> loadAttendanceLines(WidgetRef ref) async {
+  final since = ref.read(churchProvider).value?.attendanceSince;
+  final me = ref.read(meProvider).value;
+  if (since == null || me == null) return null;
+  final today = ref.read(todayProvider);
+  final data = ref.churchData;
+  final (services, smallGroups, gatherings) = (
+    ref.read(servicesProvider.future),
+    ref.read(smallGroupsProvider.future),
+    ref.read(gatheringsProvider.future),
+  );
+  final (settings, small, others, rosters) = await (
+    services,
+    smallGroups,
+    gatherings,
+    data.pastRosters(from: since, before: today.addDays(1)),
+  ).wait;
+  final groups = attendanceGroupsOf(
+    services: settings.services,
+    smallGroups: small,
+    gatherings: others,
+    rosters: rosters,
+  );
+  final mine = [
+    for (final g in groups)
+      if (me.writesAttendance(g.group)) g,
+  ];
+  final records = await Future.wait([for (final g in mine) data.attendance.watch(g.group.key).first]);
+  final names = {for (final g in groups) g.group.key: g.name};
+  return attendanceLines(
+    [for (final (i, g) in mine.indexed) (group: g, record: records[i])],
+    since: since,
+    today: today,
+    nameOf: (key) => names[key] ?? key.split(':').last,
+  );
 }

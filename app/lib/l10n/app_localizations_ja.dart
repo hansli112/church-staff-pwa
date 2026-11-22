@@ -3076,6 +3076,27 @@ class L10nJa extends L10n {
   String get attendanceRemind => '知らせる';
 
   @override
+  String get attendanceExport => 'エクスポート';
+
+  @override
+  String get attendanceCsvFile => '集会人数.csv';
+
+  @override
+  String get attendanceCsvGroup => '集会';
+
+  @override
+  String get attendanceCsvCount => '人数';
+
+  @override
+  String get attendanceCsvNote => 'メモ';
+
+  @override
+  String get rosterTable => '表';
+
+  @override
+  String get planWholeTable => '全体の表';
+
+  @override
   String get attendanceRemindSent => '知らせました';
 
   @override

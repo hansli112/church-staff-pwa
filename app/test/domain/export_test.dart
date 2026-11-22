@@ -21,7 +21,18 @@ void main() {
     separator: ', ',
   );
 
-  ChurchSnapshot snapshot({List<Roster>? rosters}) => ChurchSnapshot(
+  final zhAttendance = AttendanceCsvWords(
+    fileName: '聚會人數.csv',
+    date: '日期',
+    group: '聚會',
+    count: '人數',
+    note: '備註',
+    none: '沒聚會',
+    missing: '未填',
+    withGroup: (name) => '和$name一起',
+  );
+
+  ChurchSnapshot snapshot({List<Roster>? rosters, List<AttendanceLine>? attendance}) => ChurchSnapshot(
     church: const Church(id: 'grace', name: '恩典堂', homeName: '恩典', logoUrl: 'https://x/logo.png'),
     services: const ServiceSettings(services: [sunday, youth], ids: ['sunday', 'youth', 'old']),
     members: [
@@ -76,6 +87,7 @@ void main() {
     calendar: const CalendarSettings(connected: true, calendarName: '教會行事曆'),
     link: const ChurchLink(title: '奉獻', url: 'https://grace.example/give', source: 'https://feed.example/a.json'),
     webhook: const WebhookSettings(url: 'https://n8n.example/hook', calendar: true),
+    attendance: attendance,
   );
 
   group('CSV', () {
@@ -259,12 +271,42 @@ void main() {
     });
   });
 
+  group('聚會人數.csv', () {
+    final lines = <AttendanceLine>[
+      (day: Day(2026, 11, 1), group: '主日崇拜', value: const AttendanceDay.count(118), withName: null),
+      (day: Day(2026, 11, 8), group: '主日崇拜', value: const AttendanceDay.count(124, note: '有新朋友, 3 位'), withName: null),
+      (day: Day(2026, 11, 13), group: '以馬內利小組', value: const AttendanceDay.joined('small:joy'), withName: '喜樂小組'),
+      (day: Day(2026, 11, 14), group: '青年崇拜', value: const AttendanceDay.none(), withName: null),
+      (day: Day(2026, 11, 15), group: '主日崇拜', value: null, withName: null),
+    ];
+
+    test('a row a meeting: its number alone, or 沒聚會, 未填, 和○○一起; the note as written', () {
+      expect(
+        attendanceCsv(lines, zhAttendance),
+        '\uFEFF日期,聚會,人數,備註\r\n'
+        '2026-11-01,主日崇拜,118,\r\n'
+        '2026-11-08,主日崇拜,124,"有新朋友, 3 位"\r\n'
+        '2026-11-13,以馬內利小組,和喜樂小組一起,\r\n'
+        '2026-11-14,青年崇拜,沒聚會,\r\n'
+        '2026-11-15,主日崇拜,未填,\r\n',
+      );
+    });
+
+    test('in the zip with 回報人數 on, and not with it off', () {
+      final on = ZipDecoder().decodeBytes(exportZip(snapshot(attendance: lines), at, zh, attendance: zhAttendance));
+      expect(on.files.map((f) => f.name), ['martha-export.json', '服事表.csv', '聚會人數.csv']);
+      expect(utf8.decode(on.findFile('聚會人數.csv')!.content), contains('2026-11-01,主日崇拜,118,'));
+      final off = ZipDecoder().decodeBytes(exportZip(snapshot(), at, zh, attendance: zhAttendance));
+      expect(off.files.map((f) => f.name), ['martha-export.json', '服事表.csv']);
+    });
+  });
+
   test('the zip holds the JSON and the CSV', () {
-    expect(ZipDecoder().decodeBytes(exportZip(snapshot(), at, en)).files.map((f) => f.name), [
+    expect(ZipDecoder().decodeBytes(exportZip(snapshot(), at, en, attendance: zhAttendance)).files.map((f) => f.name), [
       'martha-export.json',
       'Schedules.csv',
     ]);
-    final zip = ZipDecoder().decodeBytes(exportZip(snapshot(), at, zh));
+    final zip = ZipDecoder().decodeBytes(exportZip(snapshot(), at, zh, attendance: zhAttendance));
     expect(zip.files.map((f) => f.name), ['martha-export.json', '服事表.csv']);
     final json = jsonDecode(utf8.decode(zip.findFile('martha-export.json')!.content)) as Map;
     expect(json['format'], 'martha-church-export');

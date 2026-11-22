@@ -1,4 +1,6 @@
 import 'dart:async';
+import 'dart:convert';
+import 'dart:typed_data';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -9,6 +11,7 @@ import 'package:martha/data/backend.dart';
 import 'package:martha/data/memory/memory_backend.dart';
 import 'package:martha/domain/day.dart';
 import 'package:martha/domain/models.dart';
+import 'package:martha/state/export.dart';
 import 'package:martha/state/session.dart';
 
 import '../support/harness.dart';
@@ -53,6 +56,16 @@ Future<void> scrollToShow(WidgetTester tester, Finder finder) async {
   await tester.scrollUntilVisible(finder, 200, scrollable: find.byType(Scrollable).last);
   await tester.drag(find.byType(Scrollable).last, const Offset(0, -200));
   await settle(tester);
+}
+
+class _Saver implements FileSaver {
+  final files = <(String, Uint8List, String)>[];
+
+  @override
+  Future<bool> save(String name, Uint8List bytes, String mimeType) async {
+    files.add((name, bytes, mimeType));
+    return true;
+  }
 }
 
 Future<void> go(WidgetTester tester, String path) async {
@@ -527,6 +540,52 @@ void main() {
       await tester.pump(const Duration(seconds: 5));
       await tapText(tester, '提醒');
       expect(find.text('今天已經提醒過了'), findsOneWidget);
+    });
+
+    testWidgets('匯出 shares 聚會人數.csv: every meeting listed, from 回報人數 came on, past the weeks it turns', (
+      tester,
+    ) async {
+      final b = church();
+      b.attendance['grace']!['small:joy'] = AttendanceRecord(
+        days: {
+          // Filled in before it came on again, and as 聯合小組.
+          Day(2026, 9, 25): const AttendanceDay.count(8, note: '有新朋友, 2 位'),
+          Day(2026, 10, 9): const AttendanceDay.joined('small:peace'),
+        },
+      );
+      final saver = _Saver();
+      await pumpApp(tester, b, overrides: [fileSaverProvider.overrideWithValue(saver)]);
+      await go(tester, '/me/attendance');
+      await tapText(tester, '匯出');
+      final (name, bytes, mime) = saver.files.single;
+      expect(name, '聚會人數.csv');
+      expect(mime, 'text/csv');
+      expect(bytes.take(3), [0xEF, 0xBB, 0xBF], reason: 'a BOM, so Excel reads Chinese');
+      expect(
+        utf8.decode(bytes),
+        '日期,聚會,人數,備註\r\n'
+        '2026-09-25,喜樂小組,8,"有新朋友, 2 位"\r\n'
+        '2026-10-02,喜樂小組,未填,\r\n'
+        '2026-10-04,主日崇拜,120,\r\n'
+        '2026-10-09,喜樂小組,和平安小組一起,\r\n'
+        '2026-10-11,主日崇拜,未填,\r\n',
+      );
+    });
+
+    testWidgets("a service's 負責人 exports its own and its 小組' only", (tester) async {
+      final b = church(as: editor);
+      b.attendance['grace']!['service:youth'] = AttendanceRecord(
+        time: const MeetingTime(),
+        days: {Day(2026, 10, 3): const AttendanceDay.count(30)},
+      );
+      final saver = _Saver();
+      await pumpApp(tester, b, overrides: [fileSaverProvider.overrideWithValue(saver)]);
+      await go(tester, '/me/attendance');
+      await tapText(tester, '匯出');
+      final csv = utf8.decode(saver.files.single.$2);
+      expect(csv, contains('主日崇拜'));
+      expect(csv, contains('喜樂小組'));
+      expect(csv, isNot(contains('青年崇拜')));
     });
 
     testWidgets("a row opens that meeting's 填寫人數, with no row to the group's 人數 page", (tester) async {

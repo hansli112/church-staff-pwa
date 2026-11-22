@@ -3241,6 +3241,27 @@ class L10nEn extends L10n {
   String get attendanceRemind => 'Remind';
 
   @override
+  String get attendanceExport => 'Export';
+
+  @override
+  String get attendanceCsvFile => 'Attendance.csv';
+
+  @override
+  String get attendanceCsvGroup => 'Meeting';
+
+  @override
+  String get attendanceCsvCount => 'Attendance';
+
+  @override
+  String get attendanceCsvNote => 'Note';
+
+  @override
+  String get rosterTable => 'Table';
+
+  @override
+  String get planWholeTable => 'Whole table';
+
+  @override
   String get attendanceRemindSent => 'Reminded';
 
   @override

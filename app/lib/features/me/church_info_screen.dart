@@ -16,6 +16,7 @@ import '../church/add_to_home.dart';
 import '../church/church_switcher.dart';
 import '../common/errors.dart';
 import '../common/time_zones.dart';
+import 'attendance.dart' show attendanceCsvWords;
 
 /// 教會資訊: the church's name and logo, its time zone, the admin tools,
 /// and at the very bottom, in red, leaving the church. How people join
@@ -46,7 +47,7 @@ class _ChurchInfoScreenState extends ConsumerState<ChurchInfoScreen> {
         people: l10n.exportCsvPeople,
         separator: l10n.listSeparator,
       );
-      final zip = exportZip(await loadChurchSnapshot(ref), now, csv);
+      final zip = exportZip(await loadChurchSnapshot(ref), now, csv, attendance: attendanceCsvWords(l10n));
       final saved = await ref.read(fileSaverProvider).save(exportFileName(church, now), zip, 'application/zip');
       if (!saved) return;
       // That it happened, never what was in it.

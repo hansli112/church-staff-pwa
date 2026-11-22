@@ -5458,6 +5458,48 @@ abstract class L10n {
   /// **'提醒'**
   String get attendanceRemind;
 
+  /// Text button at the top right of 回報人數: shares every meeting it lists as a CSV Excel opens
+  ///
+  /// In zh, this message translates to:
+  /// **'匯出'**
+  String get attendanceExport;
+
+  /// The exported attendance's file name; Excel opens it
+  ///
+  /// In zh, this message translates to:
+  /// **'聚會人數.csv'**
+  String get attendanceCsvFile;
+
+  /// Column of the exported attendance: the service, 小組 or 其他聚會
+  ///
+  /// In zh, this message translates to:
+  /// **'聚會'**
+  String get attendanceCsvGroup;
+
+  /// Column of the exported attendance: how many came, or 沒聚會, 未填, 和○○一起
+  ///
+  /// In zh, this message translates to:
+  /// **'人數'**
+  String get attendanceCsvCount;
+
+  /// Column of the exported attendance: the note filled in with it
+  ///
+  /// In zh, this message translates to:
+  /// **'備註'**
+  String get attendanceCsvNote;
+
+  /// Text button at the top right of the 服事表 tab, for whoever does not arrange the service shown: its days as a table, read-only
+  ///
+  /// In zh, this message translates to:
+  /// **'表格'**
+  String get rosterTable;
+
+  /// 安排服事's ⋯ menu, for one who arranges only some duties: every duty's days as a table, read-only
+  ///
+  /// In zh, this message translates to:
+  /// **'整張表格'**
+  String get planWholeTable;
+
   /// Toast after 提醒
   ///
   /// In zh, this message translates to:

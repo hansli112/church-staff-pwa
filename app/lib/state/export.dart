@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:share_plus/share_plus.dart';
 
 import '../domain/export.dart';
+import 'attendance.dart';
 import 'providers.dart';
 
 /// Hands a file to the person: a download on the web, the share sheet on
@@ -30,9 +31,11 @@ class PlatformFileSaver implements FileSaver {
 
 final fileSaverProvider = Provider<FileSaver>((ref) => const PlatformFileSaver());
 
-/// Reads everything an admin can see of the current church, once.
+/// Reads everything an admin can see of the current church, once; the
+/// 人數 of its meetings too, with 回報人數 on.
 Future<ChurchSnapshot> loadChurchSnapshot(WidgetRef ref) async {
   final data = ref.churchData;
+  final attendance = loadAttendanceLines(ref);
   final church = await data.church().first;
   final (services, members, pending, staffOrders, rosters, calendar, link, webhook) = await (
     data.services().first,
@@ -54,5 +57,6 @@ Future<ChurchSnapshot> loadChurchSnapshot(WidgetRef ref) async {
     calendar: calendar,
     link: link,
     webhook: webhook,
+    attendance: await attendance,
   );
 }

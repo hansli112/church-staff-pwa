@@ -11,6 +11,7 @@ import '../../core/design/components.dart';
 import '../../core/design/tokens.dart';
 import '../../data/backend.dart' show WarmUp;
 import '../../domain/day.dart';
+import '../../domain/export.dart';
 import '../../domain/limits.dart';
 import '../../domain/models.dart';
 import '../../l10n/app_localizations.dart';
@@ -268,6 +269,18 @@ String attendanceValue(L10n l10n, AttendanceDay? d, String Function(String key) 
   AttendanceDay(:final count?) => l10n.attendanceCount(count),
   _ => l10n.attendanceMissing,
 };
+
+/// 聚會人數.csv in [l10n]'s words, its 人數 as the rows say them.
+AttendanceCsvWords attendanceCsvWords(L10n l10n) => AttendanceCsvWords(
+  fileName: l10n.attendanceCsvFile,
+  date: l10n.exportCsvDate,
+  group: l10n.attendanceCsvGroup,
+  count: l10n.attendanceCsvCount,
+  note: l10n.attendanceCsvNote,
+  none: l10n.attendanceNone,
+  missing: l10n.attendanceMissing,
+  withGroup: l10n.attendanceWith,
+);
 
 /// Under it: the 小組 it met with, and its note.
 String? attendanceDetail(L10n l10n, AttendanceDay? d, String Function(String key) nameOf) {

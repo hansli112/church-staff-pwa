@@ -5,6 +5,8 @@ import 'package:archive/archive.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
+import 'package:martha/domain/day.dart';
+import 'package:martha/domain/models.dart';
 import 'package:martha/state/export.dart';
 import 'package:martha/state/session.dart';
 
@@ -60,6 +62,22 @@ void main() {
     expect(utf8.decode(zip.findFile('服事表.csv')!.content), contains('2026-10-04,主日崇拜,招待,陳志豪、李美玉'));
     expect(telemetry.named('church_export'), [null]);
     expect(find.text('已匯出'), findsOneWidget);
+  });
+
+  testWidgets('with 回報人數 on, the zip holds 聚會人數.csv too, every group from the day it came on', (tester) async {
+    final saver = _Saver();
+    final b = seededChurch();
+    b.churches['grace'] = b.churches['grace']!.copyWith(attendanceSince: () => Day(2026, 9, 20));
+    b.attendance['grace'] = {
+      'service:sunday': AttendanceRecord(days: {Day(2026, 9, 27): const AttendanceDay.count(120, note: '聖餐')}),
+    };
+    await pumpApp(tester, b, overrides: [fileSaverProvider.overrideWithValue(saver)]);
+    await go(tester, '/me/church');
+    await tester.scrollUntilVisible(find.text('匯出資料'), 200);
+    await tapText(tester, '匯出資料');
+
+    final zip = ZipDecoder().decodeBytes(saver.files.single.$2);
+    expect(utf8.decode(zip.findFile('聚會人數.csv')!.content), '日期,聚會,人數,備註\r\n2026-09-27,主日崇拜,120,聖餐\r\n');
   });
 
   testWidgets("the schedule is in the admin's language", (tester) async {

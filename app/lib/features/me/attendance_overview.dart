@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:convert';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -9,10 +10,12 @@ import 'package:material_symbols_icons/symbols.dart';
 import '../../core/design/components.dart';
 import '../../core/design/tokens.dart';
 import '../../domain/day.dart';
+import '../../domain/export.dart';
 import '../../domain/limits.dart';
 import '../../domain/models.dart';
 import '../../l10n/app_localizations.dart';
 import '../../state/attendance.dart';
+import '../../state/export.dart';
 import '../../state/meeting_times.dart';
 import '../../state/providers.dart';
 import '../common/errors.dart';
@@ -39,6 +42,26 @@ class _AttendanceOverviewScreenState extends ConsumerState<AttendanceOverviewScr
   /// The Sunday of the week turned to; null for the one it opens on.
   Day? _sunday;
 
+  bool _exporting = false;
+
+  /// 匯出: every meeting it lists, from 回報人數 came on, as 聚會人數.csv,
+  /// to keep or send on (the share sheet, or a download on the web).
+  Future<void> _export() async {
+    final l10n = L10n.of(context);
+    final saver = ref.read(fileSaverProvider);
+    setState(() => _exporting = true);
+    try {
+      final lines = await loadAttendanceLines(ref);
+      if (lines == null || !mounted) return;
+      final words = attendanceCsvWords(l10n);
+      await saver.save(words.fileName, utf8.encode(attendanceCsv(lines, words)), 'text/csv');
+    } catch (e) {
+      if (mounted) showToast(context, errorText(l10n, e));
+    } finally {
+      if (mounted) setState(() => _exporting = false);
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final l10n = L10n.of(context);
@@ -54,7 +77,19 @@ class _AttendanceOverviewScreenState extends ConsumerState<AttendanceOverviewScr
     final oversees = ref.watch(meProvider).value?.overseesAttendance ?? false;
     final summary = week == null ? null : _summary(l10n, week);
     return Scaffold(
-      appBar: AppBar(title: Text(l10n.attendance)),
+      appBar: AppBar(
+        title: Text(l10n.attendance),
+        actions: [
+          if (on && range != null)
+            MediaQuery.withClampedTextScaling(
+              maxScaleFactor: 1.5,
+              child: TextButton(
+                onPressed: _exporting ? null : _export,
+                child: Text(l10n.attendanceExport),
+              ),
+            ),
+        ],
+      ),
       body: church == null
           ? const SizedBox.shrink()
           : ListView(
