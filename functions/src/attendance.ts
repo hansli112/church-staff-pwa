@@ -175,18 +175,21 @@ const weekdaysOf = (s: Service): number[] =>
   Array.isArray(s.weekdays) && s.weekdays.length > 0 ? s.weekdays : typeof s.weekday === 'number' ? [s.weekday] : [];
 
 /**
- * When service [s] meets on [day]: on its weekdays when that day has a
- * roster ([roster]), unless its 聚會時間 says otherwise ([state],
- * attendance/service:<id>): every other week, those weeks of each month,
- * or every week (`everyWeek`, 每週都填人數, #93).
+ * When a service meeting on [weekdays] meets on a day, [roster] whether
+ * that day has one: by its rosters; or, with a 聚會時間 of its own
+ * ([time], attendance/service:<id>: every other week, those weeks of each
+ * month, or every week, `everyWeek`, 每週都填人數, #93), by it from its
+ * `startsOn`, by its rosters before. Its [weekdays] either way. The app's
+ * domain/attendance.dart serviceMeets is the same (testdata/church_rules.json,
+ * serviceMeets).
  */
-function serviceMeets(s: Service, roster: boolean, state: DocumentSnapshot | undefined): Meets {
-  const time = meetsOf(state);
-  if (time.monthWeeks || time.every === 2 || state?.get('everyWeek') === true) {
+export function serviceMeets(weekdays: number[], roster: boolean, time: Record<string, unknown> | undefined): Meets {
+  const own = meetsFrom(time);
+  if (own.monthWeeks || own.every === 2 || time?.everyWeek === true) {
     // Before it began, by its rosters as before.
-    return { ...time, weekdays: weekdaysOf(s), ...(time.startsOn ? { roster } : {}) };
+    return { ...own, weekdays, ...(own.startsOn ? { roster } : {}) };
   }
-  return { weekdays: weekdaysOf(s), roster };
+  return { weekdays, roster };
 }
 
 /** The services, 小組 and 其他聚會 of church [cid] meeting on [day], before pauses and what was filled in. */
@@ -210,7 +213,7 @@ async function dueOn(deps: { db: PushDeps['db'] }, cid: string, day: string): Pr
       key: `service:${s.id}`,
       name: s.name ?? '',
       leads: { field: 'leadTypes' as const, id: s.id },
-      meets: serviceMeets(s, rosters[i].exists, states[i]),
+      meets: serviceMeets(weekdaysOf(s), rosters[i].exists, states[i]?.data()),
     })),
     // A deleted service's 小組 went with it.
     ...smallGroups.docs.filter((g) => kept.some((s) => s.id === g.get('service'))).map((g) => ({
@@ -229,11 +232,14 @@ async function dueOn(deps: { db: PushDeps['db'] }, cid: string, day: string): Pr
 }
 
 /** When a 小組 or 其他聚會 [g] meets, as its doc has it; a service's 聚會時間 too, but its weekday. */
-export function meetsOf(g: DocumentSnapshot | undefined): Meets {
-  const weekday = g?.get('weekday');
-  const every = g?.get('every');
-  const startsOn = g?.get('startsOn');
-  const monthWeeks = g?.get('monthWeeks');
+export const meetsOf = (g: DocumentSnapshot | undefined): Meets => meetsFrom(g?.data());
+
+/** [meetsOf] a doc's [data]. */
+function meetsFrom(data: Record<string, unknown> | undefined): Meets {
+  const weekday = data?.weekday;
+  const every = data?.every;
+  const startsOn = data?.startsOn;
+  const monthWeeks = data?.monthWeeks;
   return {
     ...(typeof weekday === 'number' ? { weekday } : {}),
     ...(every === 2 ? { every: 2 } : {}),

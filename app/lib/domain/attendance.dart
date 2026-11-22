@@ -72,6 +72,22 @@ class MeetingTime {
   int get hashCode => Object.hash(weekday, every, startsOn, Object.hashAll(monthWeeks));
 }
 
+/// When a service meeting on [weekdays] meets on a day, [roster] whether
+/// that day has one: by its rosters; or, with a 聚會時間 of its own
+/// ([time], AttendanceRecord.time), by it from its [MeetingTime.startsOn],
+/// by its rosters before. Its [weekdays] either way.
+/// functions/src/attendance.ts serviceMeets is the same
+/// (testdata/church_rules.json, serviceMeets).
+Meets serviceMeets(List<int> weekdays, {required bool roster, MeetingTime? time}) => time == null
+    ? Meets(weekdays: weekdays, roster: roster)
+    : Meets(
+        weekdays: weekdays,
+        every: time.every,
+        startsOn: time.startsOn,
+        monthWeeks: time.monthWeeks,
+        roster: time.startsOn == null ? null : roster,
+      );
+
 /// A 其他聚會 (churches/{cid}/gatherings/{id}): a group whose 人數 are
 /// asked for and nothing else, like 禱告會 or 長者共餐, by [time]; those
 /// asked to fill them in are its [AttendanceRecord.fillers].

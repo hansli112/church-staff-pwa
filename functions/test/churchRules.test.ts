@@ -3,7 +3,7 @@ import { readFileSync } from 'node:fs';
 import { describe, test } from 'node:test';
 
 import { churchAccess } from '../src/access.js';
-import { attendanceDue } from '../src/attendance.js';
+import { attendanceDue, serviceMeets } from '../src/attendance.js';
 
 import { identitiesOf, withIdentities, type Identity } from '../src/identities.js';
 import { mapMember } from '../src/importer.js';
@@ -146,6 +146,12 @@ describe('attendanceReminded', () => {
 describe('attendanceDue', () => {
   for (const r of rows('attendanceDue')) {
     test(r.why, () => assert.equal(attendanceDue(r.meets, { since: r.since, pauses: r.pauses ?? [] }, r.day), r.due));
+  }
+});
+
+describe('serviceMeets', () => {
+  for (const r of rows('serviceMeets')) {
+    test(r.why, () => assert.equal(attendanceDue(serviceMeets(r.weekdays, r.roster, r.time), { since: r.since, pauses: [] }, r.day), r.due));
   }
 });
 

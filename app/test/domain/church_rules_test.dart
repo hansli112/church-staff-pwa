@@ -320,6 +320,22 @@ void main() {
     }
   });
 
+  group('serviceMeets', () {
+    for (final r in _rows('serviceMeets')) {
+      test(r['why'] as String, () {
+        final meets = serviceMeets(
+          (r['weekdays'] as List).cast<int>(),
+          roster: r['roster'] as bool,
+          time: serviceTimeFromJson(r['time'] as Map<String, dynamic>?),
+        );
+        expect(
+          attendanceDue(meets, since: Day.parse(r['since'] as String), day: Day.parse(r['day'] as String)),
+          r['due'],
+        );
+      });
+    }
+  });
+
   group('joinRequestState', () {
     for (final r in _rows('joinRequestState')) {
       test(r['why'] as String, () {

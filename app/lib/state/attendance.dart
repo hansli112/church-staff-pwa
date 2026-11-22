@@ -34,7 +34,9 @@ final _recentRostersProvider = StreamProvider.autoDispose<List<Roster>>((ref) {
 
 /// A group 回報人數 is about: a service, a 小組 (with its service) or a
 /// 其他聚會, its name, and when it meets.
-typedef AttendanceGroup = ({ChurchGroup group, String name, Meets Function(Day day) meetsOn});
+/// A service's [Meets] depend on whether the day has a roster and on its
+/// 聚會時間 of its own ([AttendanceRecord.time], [serviceMeets]).
+typedef AttendanceGroup = ({ChurchGroup group, String name, Meets Function(Day day, {MeetingTime? time}) meetsOn});
 
 /// The groups of the church that meet (its services, 小組 by when they
 /// meet, and 其他聚會), in that order, as [AttendanceGroup]s; a service meets on its weekdays
@@ -54,11 +56,13 @@ final attendanceGroupsProvider = Provider.autoDispose<List<AttendanceGroup>>((re
       (
         group: ServiceGroup(s.id),
         name: s.name,
-        meetsOn: (Day day) => Meets(weekdays: s.weekdays, roster: held.contains((s.id, day))),
+        meetsOn: (Day day, {MeetingTime? time}) =>
+            serviceMeets(s.weekdays, roster: held.contains((s.id, day)), time: time),
       ),
     for (final g in smallGroups.inMeetingOrder([for (final s in services) s.id]))
-      (group: g.group, name: g.name, meetsOn: (Day _) => g.meets),
-    for (final g in gatherings) (group: GatheringGroup(g.id), name: g.name, meetsOn: (Day _) => g.time.meets()),
+      (group: g.group, name: g.name, meetsOn: (Day _, {MeetingTime? time}) => g.meets),
+    for (final g in gatherings)
+      (group: GatheringGroup(g.id), name: g.name, meetsOn: (Day _, {MeetingTime? time}) => g.time.meets()),
   ];
 });
 
@@ -84,18 +88,7 @@ List<Day> attendanceDays(
 /// Whether [group] meets on [day] and asks for its 人數 then.
 bool _due(AttendanceGroup group, {required Day since, required AttendanceRecord record, required Day day}) =>
     attendanceDue(
-      switch ((group.meetsOn(day), record.time)) {
-        // Before its own began, by its rosters as before.
-        (Meets(:final weekday, :final weekdays, :final roster?), final time?) => Meets(
-          weekday: weekday,
-          weekdays: weekdays,
-          every: time.every,
-          startsOn: time.startsOn,
-          monthWeeks: time.monthWeeks,
-          roster: time.startsOn == null ? null : roster,
-        ),
-        (final meets, _) => meets,
-      },
+      group.meetsOn(day, time: record.time),
       since: since,
       pauses: record.pauses,
       day: day,
