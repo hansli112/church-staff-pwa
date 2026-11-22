@@ -6025,7 +6025,7 @@ abstract class L10n {
   /// Header over the stretches a member has marked
   ///
   /// In zh, this message translates to:
-  /// **'已填的日子'**
+  /// **'不行的日子'**
   String get unavailableMarked;
 
   /// No description provided for @unavailableNote.

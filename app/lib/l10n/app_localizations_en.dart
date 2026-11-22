@@ -3614,7 +3614,7 @@ class L10nEn extends L10n {
       'Tap a day to mark it, or drag across several. Only those who arrange serving see them.';
 
   @override
-  String get unavailableMarked => 'Marked';
+  String get unavailableMarked => 'Days I can\'t';
 
   @override
   String get unavailableNote => 'Reason';

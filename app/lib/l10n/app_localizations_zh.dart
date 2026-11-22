@@ -3415,7 +3415,7 @@ class L10nZh extends L10n {
   String get unavailableHint => '點一天標記，拖過去可以一次標好幾天。\n只有排服事的人看得到。';
 
   @override
-  String get unavailableMarked => '已填的日子';
+  String get unavailableMarked => '不行的日子';
 
   @override
   String get unavailableNote => '原因';
@@ -7032,7 +7032,7 @@ class L10nZhHans extends L10nZh {
   String get unavailableHint => '点一天标记，拖过去可以一次标好几天。\n只有排事奉的人看得到。';
 
   @override
-  String get unavailableMarked => '已填的日子';
+  String get unavailableMarked => '不行的日子';
 
   @override
   String get unavailableNote => '原因';

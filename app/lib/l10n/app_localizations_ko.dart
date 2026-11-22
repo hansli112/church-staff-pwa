@@ -3418,7 +3418,7 @@ class L10nKo extends L10n {
   String get unavailableHint => '날짜를 눌러 표시하고, 끌면 여러 날을 한 번에 표시해요. 봉사를 배정하는 사람만 볼 수 있어요.';
 
   @override
-  String get unavailableMarked => '표시한 날';
+  String get unavailableMarked => '못 가는 날';
 
   @override
   String get unavailableNote => '이유';

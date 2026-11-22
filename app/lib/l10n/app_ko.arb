@@ -1011,7 +1011,7 @@
   "addAnotherLead": "리더 한 명 더 지정",
   "unavailableTitle": "봉사할 수 없는 날",
   "unavailableHint": "날짜를 눌러 표시하고, 끌면 여러 날을 한 번에 표시해요. 봉사를 배정하는 사람만 볼 수 있어요.",
-  "unavailableMarked": "표시한 날",
+  "unavailableMarked": "못 가는 날",
   "unavailableNote": "이유",
   "unavailableNoteHint": "선택 사항, 예: 여행",
   "unavailableNoteFooter": "눌러서 이유를 적을 수 있어요. 봉사를 배정하는 사람이 사람을 고를 때 보여요",

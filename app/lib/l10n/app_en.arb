@@ -1011,7 +1011,7 @@
   "addAnotherLead": "Add another lead",
   "unavailableTitle": "Days I can't serve",
   "unavailableHint": "Tap a day to mark it, or drag across several. Only those who arrange serving see them.",
-  "unavailableMarked": "Marked",
+  "unavailableMarked": "Days I can't",
   "unavailableNote": "Reason",
   "unavailableNoteHint": "Optional, e.g. traveling",
   "unavailableNoteFooter": "Tap one to add a reason; those who arrange serving see it when picking people",

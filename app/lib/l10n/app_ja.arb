@@ -1011,7 +1011,7 @@
   "addAnotherLead": "リーダーをもう一人指名",
   "unavailableTitle": "奉仕できない日",
   "unavailableHint": "日をタップして印をつけます。なぞると数日まとめて。奉仕を割り当てる人だけが見られます。",
-  "unavailableMarked": "入力した日",
+  "unavailableMarked": "行けない日",
   "unavailableNote": "理由",
   "unavailableNoteHint": "任意（例：旅行）",
   "unavailableNoteFooter": "タップすると理由を書けます。奉仕を割り当てる人が選ぶときに見えます",

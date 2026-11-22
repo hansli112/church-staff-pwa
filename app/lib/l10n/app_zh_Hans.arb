@@ -1011,7 +1011,7 @@
   "addAnotherLead": "再加一位负责人",
   "unavailableTitle": "不能事奉的日子",
   "unavailableHint": "点一天标记，拖过去可以一次标好几天。\n只有排事奉的人看得到。",
-  "unavailableMarked": "已填的日子",
+  "unavailableMarked": "不行的日子",
   "unavailableNote": "原因",
   "unavailableNoteHint": "选填，例如出国",
   "unavailableNoteFooter": "点一段写原因；排事奉的人选人时看得到",

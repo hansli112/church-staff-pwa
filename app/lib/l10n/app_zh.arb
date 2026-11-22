@@ -2366,7 +2366,7 @@
   "@unavailableTitle": {"description": "Settings row and page (#91): the days a member marks as unable to serve"},
   "unavailableHint": "點一天標記，拖過去可以一次標好幾天。\n只有排服事的人看得到。",
   "@unavailableHint": {"description": "Under the month on the page of days a member can't serve"},
-  "unavailableMarked": "已填的日子",
+  "unavailableMarked": "不行的日子",
   "@unavailableMarked": {"description": "Header over the stretches a member has marked"},
   "unavailableNote": "原因",
   "unavailableNoteHint": "選填，例如出國",

@@ -3420,7 +3420,7 @@ class L10nJa extends L10n {
   String get unavailableHint => '日をタップして印をつけます。なぞると数日まとめて。奉仕を割り当てる人だけが見られます。';
 
   @override
-  String get unavailableMarked => '入力した日';
+  String get unavailableMarked => '行けない日';
 
   @override
   String get unavailableNote => '理由';
