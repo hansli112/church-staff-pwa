@@ -16,7 +16,7 @@ import '../../domain/models.dart';
 import '../../l10n/app_localizations.dart';
 import '../../domain/text.dart' show matchesSearch;
 import '../../state/attendance.dart';
-import '../../state/church_writes.dart';
+import '../../state/meeting_times.dart';
 import '../../state/providers.dart';
 import '../common/errors.dart';
 import '../common/labels.dart';
@@ -54,7 +54,7 @@ class GroupAttendanceRow extends ConsumerWidget {
             final day? => dayLabel(l10n, day, today),
             // A 小組's page says its 聚會時間 a row above.
             null when group.group is SmallGroup => null,
-            null => attendanceNotYet(l10n, attendanceTimeOf(ref, group.group)),
+            null => attendanceNotYet(l10n, ref.watch(meetingTimeProvider(group.group))),
           },
           onTap: () => context.push(attendancePage(group.group)),
         ),
@@ -90,25 +90,17 @@ class GroupAttendanceScreen extends ConsumerWidget {
     }
     final writes = me.fillsAttendance(group.group, record.fillers);
     final manages = me.writesAttendance(group.group);
-    final small = switch (group.group) {
-      SmallGroup(:final id) => ref.watch(smallGroupsProvider).value?.byId(id),
-      _ => null,
-    };
     final gathering = switch (group.group) {
       GatheringGroup(:final id) => ref.watch(gatheringsProvider).value?.where((g) => g.id == id).firstOrNull,
       _ => null,
     };
-    final service = switch (group.group) {
-      ServiceGroup(:final id) => ref.watch(servicesProvider).value?.byId(id),
-      _ => null,
-    };
     // A 小組's 聚會時間 is set as its page sets it, its 小組長 too.
-    final schedules = small != null ? me.schedulesSmallGroup(small.group) : manages;
+    final schedules = me.schedules(group.group);
     final today = ref.watch(todayProvider);
     final days = attendanceDays(group, since: since, record: record, today: today);
     final on = record.pauseOn(today) == null;
     final nameOf = attendanceGroupName(ref);
-    final time = attendanceTimeOf(ref, group.group).time;
+    final time = ref.watch(meetingTimeProvider(group.group));
     final fillers = [...attendanceLeads(ref, group.group), ...attendanceFillerMembers(ref, record.fillers)];
     return Scaffold(
       appBar: AppBar(title: Text(l10n.attendanceOf(group.name))),
@@ -139,19 +131,9 @@ class GroupAttendanceScreen extends ConsumerWidget {
                 ),
               ListRow(
                 title: l10n.smallGroupMeets,
-                value: meetingTimeLabel(l10n, time, serviceWeekdays: service?.weekdays),
+                value: meetingTimeLabel(l10n, time.time, serviceWeekdays: time.serviceWeekdays),
                 chevron: schedules,
-                onTap: schedules
-                    ? () => _setTime(
-                        context,
-                        ref,
-                        group.group,
-                        time,
-                        small: small,
-                        gathering: gathering,
-                        service: service,
-                      )
-                    : null,
+                onTap: schedules ? () => changeMeetingTime(context, ref, group.group) : null,
               ),
               ListRow(
                 title: l10n.attendanceFillers,
@@ -195,37 +177,6 @@ class GroupAttendanceScreen extends ConsumerWidget {
         ],
       ),
     );
-  }
-
-  /// Sets its 聚會時間: a 小組's on it, a 其他聚會's on it, a service's on
-  /// its 人數.
-  Future<void> _setTime(
-    BuildContext context,
-    WidgetRef ref,
-    ChurchGroup group,
-    MeetingTime? time, {
-    SmallGroupDetails? small,
-    Gathering? gathering,
-    Service? service,
-  }) async {
-    final picked = await pickMeetingTime(
-      context,
-      time: time,
-      serviceWeekdays: service?.weekdays,
-      today: ref.read(todayProvider),
-    );
-    if (picked == null || picked.time == time || !context.mounted) return;
-    final writes = ref.read(churchWritesProvider);
-    final attendance = ref.churchData.attendance;
-    await _save(context, () async {
-      if (small != null) {
-        await writes.smallGroup(small, small.withTime(picked.time ?? const MeetingTime())).done;
-      } else if (gathering != null) {
-        await attendance.saveGathering(gathering.copyWith(time: picked.time ?? const MeetingTime()));
-      } else {
-        await attendance.saveTime(group.key, picked.time);
-      }
-    });
   }
 
   Future<void> _pickFillers(BuildContext context, WidgetRef ref, AttendanceGroup group, List<String> was) async {
@@ -297,27 +248,11 @@ class GroupAttendanceScreen extends ConsumerWidget {
   }
 }
 
-/// For a group with no meeting to fill in yet: its 聚會時間 ([attendanceTimeOf]), or that it is
+/// For a group with no meeting to fill in yet: its 聚會時間 ([meetingTimeProvider]), or that it is
 /// not set.
-String attendanceNotYet(L10n l10n, ({MeetingTime? time, List<int>? serviceWeekdays}) of) =>
-    of.serviceWeekdays == null && of.time?.weekday == null
+String attendanceNotYet(L10n l10n, GroupMeetingTime of) => of.serviceWeekdays == null && of.time?.weekday == null
     ? l10n.attendanceNoMeets
     : meetingTimeLabel(l10n, of.time, serviceWeekdays: of.serviceWeekdays);
-
-/// [group]'s 聚會時間 as the church has it: a 小組's or a 其他聚會's own, a
-/// service's on its 人數 (null: by its rosters), with the service's weekdays.
-({MeetingTime? time, List<int>? serviceWeekdays}) attendanceTimeOf(WidgetRef ref, ChurchGroup group) => switch (group) {
-  SmallGroup(:final id) => (time: ref.watch(smallGroupsProvider).value?.byId(id)?.time, serviceWeekdays: null),
-  GatheringGroup(:final id) => (
-    time: ref.watch(gatheringsProvider).value?.where((g) => g.id == id).firstOrNull?.time,
-    serviceWeekdays: null,
-  ),
-  ServiceGroup(:final id) => (
-    time: ref.watch(attendanceProvider(group.key)).value?.time,
-    serviceWeekdays: ref.watch(servicesProvider).value?.byId(id)?.weekdays,
-  ),
-  MinistryGroup() => (time: null, serviceWeekdays: null),
-};
 
 /// The name of the group a key names, for 和○○一起.
 String Function(String key) attendanceGroupName(WidgetRef ref) {
@@ -740,10 +675,23 @@ String meetingTimeLabel(L10n l10n, MeetingTime? time, {List<int>? serviceWeekday
 /// When a 小組 meets, as its page says it: 每週五, 隔週五, or 未設定.
 String smallGroupMeetsLabel(L10n l10n, SmallGroupDetails g) => meetingTimeLabel(l10n, g.time);
 
-/// Picks when a 小組 meets. Returns [g] so changed.
-Future<SmallGroupDetails?> pickSmallGroupMeets(BuildContext context, SmallGroupDetails g, Day today) async {
-  final picked = await pickMeetingTime(context, time: g.time, today: today);
-  return picked == null ? null : g.withTime(picked.time ?? const MeetingTime());
+/// Picks [group]'s 聚會時間 and sets it (Member.schedules); a refusal is
+/// said.
+Future<void> changeMeetingTime(BuildContext context, WidgetRef ref, ChurchGroup group) async {
+  final now = ref.read(meetingTimeProvider(group));
+  final picked = await pickMeetingTime(
+    context,
+    time: now.time,
+    serviceWeekdays: now.serviceWeekdays,
+    today: ref.read(todayProvider),
+  );
+  if (picked == null || !context.mounted) return;
+  final l10n = L10n.of(context);
+  try {
+    await ref.read(meetingTimesProvider).set(group, picked.time);
+  } catch (e) {
+    if (context.mounted) showToast(context, saveErrorText(l10n, e));
+  }
 }
 
 /// Picks a 聚會時間: every week or every other, or those weeks of each

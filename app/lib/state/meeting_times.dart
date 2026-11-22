@@ -1,0 +1,59 @@
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+
+import '../domain/models.dart';
+import 'attendance.dart';
+import 'church_writes.dart';
+import 'providers.dart';
+
+/// A group's 聚會時間 as the church keeps it: a 小組's and a 其他聚會's on
+/// it; a service's with its 人數 (null: by its rosters), on the service's
+/// weekdays ([serviceWeekdays]). A 事工 has none.
+typedef GroupMeetingTime = ({MeetingTime? time, List<int>? serviceWeekdays});
+
+/// [GroupMeetingTime] of a group.
+final meetingTimeProvider = Provider.autoDispose.family<GroupMeetingTime, ChurchGroup>(
+  (ref, group) => switch (group) {
+    SmallGroup(:final id) => (time: ref.watch(smallGroupsProvider).value?.byId(id)?.time, serviceWeekdays: null),
+    GatheringGroup(:final id) => (
+      time: ref.watch(gatheringsProvider).value?.where((g) => g.id == id).firstOrNull?.time,
+      serviceWeekdays: null,
+    ),
+    ServiceGroup(:final id) => (
+      time: ref.watch(attendanceProvider(group.key)).value?.time,
+      serviceWeekdays: ref.watch(servicesProvider).value?.byId(id)?.weekdays,
+    ),
+    MinistryGroup() => (time: null, serviceWeekdays: null),
+  },
+);
+
+/// Setting a group's 聚會時間, wherever the church keeps it; who may is
+/// Member.schedules.
+class MeetingTimes {
+  MeetingTimes(this._ref);
+
+  final Ref _ref;
+
+  /// Sets [group]'s 聚會時間 to [time]: null, a service's by its rosters, a
+  /// 小組's or a 其他聚會's not set. Nothing is written when it is so already.
+  Future<void> set(ChurchGroup group, MeetingTime? time) async {
+    switch (group) {
+      case SmallGroup(:final id):
+        final small = _ref.read(smallGroupsProvider).value?.byId(id);
+        final next = time ?? const MeetingTime();
+        if (small == null || small.time == next) return;
+        await _ref.read(churchWritesProvider).smallGroup(small, small.withTime(next)).done;
+      case GatheringGroup(:final id):
+        final gathering = _ref.read(gatheringsProvider).value?.where((g) => g.id == id).firstOrNull;
+        final next = time ?? const MeetingTime();
+        if (gathering == null || gathering.time == next) return;
+        await _ref.read(churchDataProvider)!.attendance.saveGathering(gathering.copyWith(time: next));
+      case ServiceGroup():
+        if (_ref.read(attendanceProvider(group.key)).value?.time == time) return;
+        await _ref.read(churchDataProvider)!.attendance.saveTime(group.key, time);
+      case MinistryGroup():
+        throw ArgumentError.value(group, 'group', 'a 事工 has no 聚會時間');
+    }
+  }
+}
+
+final meetingTimesProvider = Provider<MeetingTimes>(MeetingTimes.new);

@@ -15,6 +15,7 @@ import '../../domain/staff.dart';
 import '../../domain/text.dart';
 import '../../l10n/app_localizations.dart';
 import '../../state/attendance.dart';
+import '../../state/meeting_times.dart';
 import '../../state/church_writes.dart';
 import '../../state/providers.dart';
 import '../../state/staff_actions.dart';
@@ -606,10 +607,10 @@ class GroupScreen extends ConsumerWidget {
                   if (attendanceOn)
                     ListRow(
                       title: l10n.smallGroupMeets,
-                      value: smallGroupMeetsLabel(l10n, small),
+                      value: meetingTimeLabel(l10n, ref.watch(meetingTimeProvider(small.group)).time),
                       // Not 行政, who sees it from 人數總覽 (#93).
-                      chevron: me.schedulesSmallGroup(small.group),
-                      onTap: me.schedulesSmallGroup(small.group) ? () => _meets(context, ref, small) : null,
+                      chevron: me.schedules(small.group),
+                      onTap: me.schedules(small.group) ? () => changeMeetingTime(context, ref, small.group) : null,
                     ),
                 ],
               ),
@@ -791,12 +792,6 @@ class GroupScreen extends ConsumerWidget {
     );
     if (name == null || name == small.name || !context.mounted) return;
     await _saveSmall(context, ref, small, small.copyWith(name: name));
-  }
-
-  Future<void> _meets(BuildContext context, WidgetRef ref, SmallGroupDetails small) async {
-    final next = await pickSmallGroupMeets(context, small, ref.read(todayProvider));
-    if (next == null || next == small || !context.mounted) return;
-    await _saveSmall(context, ref, small, next);
   }
 
   /// 指派小組長: the one, anyone in the church, picked from a list.

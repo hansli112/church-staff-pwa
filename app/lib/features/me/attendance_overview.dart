@@ -13,6 +13,7 @@ import '../../domain/limits.dart';
 import '../../domain/models.dart';
 import '../../l10n/app_localizations.dart';
 import '../../state/attendance.dart';
+import '../../state/meeting_times.dart';
 import '../../state/providers.dart';
 import '../common/errors.dart';
 import '../rosters/format.dart';
@@ -166,7 +167,7 @@ class _AttendanceOverviewScreenState extends ConsumerState<AttendanceOverviewScr
         // where it is set.
         null => switch (r.next) {
           final next? => dayLabel(l10n, next, today),
-          null => attendanceNotYet(l10n, attendanceTimeOf(ref, r.group.group)),
+          null => attendanceNotYet(l10n, ref.watch(meetingTimeProvider(r.group.group))),
         },
       },
       value: r.day == null ? null : attendanceValue(l10n, r.value, nameOf),

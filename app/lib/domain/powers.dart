@@ -71,6 +71,14 @@ extension MemberPowers on Member {
   bool schedulesSmallGroup(SmallGroup group) =>
       leadsGroup(group) || (group.service != null && mayEditSmallGroup(group.service, group.service));
 
+  /// Whether this member sets when [group] meets (聚會時間): a 小組's as
+  /// [schedulesSmallGroup], not 行政; any other's who sets its 人數
+  /// ([writesAttendance]).
+  bool schedules(ChurchGroup group) => switch (group) {
+    SmallGroup() => schedulesSmallGroup(group),
+    _ => writesAttendance(group),
+  };
+
   /// Whether this member sees every group's 人數 and puts them together
   /// (人數總覽, #93): admins and 行政.
   bool get overseesAttendance => inGroup(Group.rosterEditors);
