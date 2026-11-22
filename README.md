@@ -66,7 +66,7 @@ flowchart TB
   login["登入或註冊<br/>Google／email 與密碼"] --> entry{"進入情境"}
   entry -->|已有同工身分| select["選擇／切換教會"]
   entry -->|建立教會| create["驗證 email、確認教會名稱<br/>建立教會並成為管理員"]
-  entry -->|邀請碼或連結| invite["檢查邀請期限與教會狀態<br/>加入成為新同工"]
+  entry -->|邀請連結| invite["檢查邀請期限與教會狀態<br/>加入成為新同工"]
   entry -->|匯入資料待認領| claim["驗證 email 並確認認領<br/>接回同工資料與服事安排"]
   create --> select
   invite --> select

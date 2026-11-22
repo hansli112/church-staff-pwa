@@ -89,13 +89,13 @@ class _InvitesScreenState extends ConsumerState<InvitesScreen> {
     await shareText(context, text, copied: l10n.inviteCopied);
   }
 
-  Future<void> _actions(Invite invite, String title) async {
+  Future<void> _actions(Invite invite, {required String header}) async {
     final l10n = L10n.of(context);
     final choice = await showAppSheet<String>(
       context,
       builder: (context) => SafeArea(
         child: ListSection(
-          header: title,
+          header: header,
           children: [
             ListRow(
               title: l10n.inviteShare,
@@ -234,18 +234,14 @@ class _InvitesScreenState extends ConsumerState<InvitesScreen> {
             ListSection(
               children: [
                 // What it joins and when it ends; the code is the link's.
-                for (final i in live)
-                  if (zonesOf(i) case final zones?)
-                    ListRow(
-                      title: zones,
-                      value: l10n.inviteExpiresOn(clock.day(i.expiresAt)),
-                      onTap: () => _actions(i, zones),
-                    )
-                  else
-                    ListRow(
-                      title: l10n.inviteExpiresOn(clock.day(i.expiresAt)),
-                      onTap: () => _actions(i, l10n.inviteExpiresOn(clock.day(i.expiresAt))),
-                    ),
+                for (final (invite, zones, ends) in [
+                  for (final i in live) (i, zonesOf(i), l10n.inviteExpiresOn(clock.day(i.expiresAt))),
+                ])
+                  ListRow(
+                    title: zones ?? ends,
+                    value: zones == null ? null : ends,
+                    onTap: () => _actions(invite, header: zones ?? ends),
+                  ),
               ],
             ),
           if (church != null)

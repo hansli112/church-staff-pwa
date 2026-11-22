@@ -53,7 +53,7 @@ Tap **Create invite link** to open the share menu, so you can send it straight t
 
 ![Tap Create invite link, and the link is copied](shot:start-invite)
 
-Invites you’ve created are listed below. Tap an invite code to **Share** it again, **Copy link**, or **Revoke** it so the link no longer works. To invite more people later, go to **Settings** → **Invites**.
+Invites you’ve created are listed below. Tap an invite in the list to **Share** it again, **Copy link**, or **Revoke** it so the link no longer works. To invite more people later, go to **Settings** → **Invites**.
 
 **Requests to join** below starts out on: anyone with the **Church URL** can also ask to join, and they’re in once you accept. If you’d rather not, turn it off.
 
@@ -63,7 +63,7 @@ Team members open the invite link, sign in, check **Your name** (the name everyo
 
 If you typed their name in when arranging serving, they’re asked when they join whether they’re Isaac Wang on the schedules. Tapping **That’s me** brings over the serving already arranged for them.
 
-If the link won’t open, they can sign in, choose **Enter invite code** on the **Join your church** screen, and type the invite code or paste the whole link.
+Team members without the app can install it and tap the same link again to open it in the app. On a computer, they join on the web version, and when they later sign in to the app with the same account, your church is already there.
 
 On a phone, the invite link first offers the app: once it’s installed, they tap the link again. Those who choose **Use the web version** will then see how to **Add to Home Screen**. On iPhone, they need to open it from the Home Screen icon to get notifications. See [Not getting notifications?](/en/blog/notifications/)
 

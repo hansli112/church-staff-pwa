@@ -45,7 +45,7 @@ final askedToJoinProvider = NotifierProvider<AskedToJoin, Set<String>>(AskedToJo
 
 /// Where a church URL (/c/ID) lands for someone who is not a member of
 /// that church: which church it is and how to join, by asking to (申請加入,
-/// #88) or with an invite code. Members never see it; the router opens
+/// #88). Members never see it; the router opens
 /// their church straight away (router.dart).
 ///
 /// A home-screen shortcut opens the church URL every launch, so the
@@ -161,10 +161,9 @@ class _NotMemberState extends ConsumerState<_NotMember> {
       if (name != null) showToast(context, l10n.joined(name));
       goAfterJoining(context, ref, churchId);
     });
-    // Somewhere to go next: home for members of another church. Someone in
-    // no church stays to ask, or with nothing to ask, goes to the welcome
-    // page (home sends them there).
-    Widget next({required bool alone}) => widget.hasChurch || alone
+    // 回首頁 for members of another church. Someone in no church has it
+    // only with nothing left to ask; home is the welcome page for them.
+    Widget goHome({required bool nothingToAsk}) => widget.hasChurch || nothingToAsk
         ? SecondaryButton(label: l10n.goHome, expand: true, onPressed: () => context.go('/home'))
         : const SizedBox.shrink();
     return Scaffold(
@@ -236,16 +235,16 @@ class _NotMemberState extends ConsumerState<_NotMember> {
                         onPressed: name.isEmpty || !verified ? null : () => _ask(church, name),
                       ),
                       const SizedBox(height: Space.s),
-                      next(alone: false),
+                      goHome(nothingToAsk: false),
                     ] else if (church.joinRequest == JoinRequestState.pending) ...[
                       SecondaryButton(
                         label: l10n.withdrawJoinRequest,
                         expand: true,
                         onPressed: _busy ? null : _withdraw,
                       ),
-                      next(alone: false),
+                      goHome(nothingToAsk: false),
                     ] else
-                      next(alone: true),
+                      goHome(nothingToAsk: true),
                   ],
                 ),
               ),

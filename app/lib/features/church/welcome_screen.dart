@@ -75,7 +75,6 @@ class WelcomeScreen extends ConsumerWidget {
                   ),
                   const SizedBox(height: Space.s),
                   BalancedText(l10n.welcomeBody, style: AppText.body.copyWith(color: c.secondaryLabel)),
-                  // An invite is a link to tap: nothing to type here.
                   const SizedBox(height: Space.xl),
                   SecondaryButton(
                     label: l10n.createChurch,

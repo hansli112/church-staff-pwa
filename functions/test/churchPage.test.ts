@@ -116,7 +116,7 @@ describe('church page', () => {
     assert.match(await shown('/c/Grace/join/EXPIRED1'), /這個邀請過期了，請向管理員要新的邀請/);
     for (const path of ['/c/Grace/join/REVOKED1', '/c/Grace/join/NOSUCH01', '/c/Closed/join/CLOSED01']) {
       const s = await shown(path);
-      assert.match(s, /找不到這個邀請，請確認邀請碼，或向管理員要新的邀請/, path);
+      assert.match(s, /找不到這個邀請，請向管理員要新的邀請/, path);
       assert.doesNotMatch(s, /class="spin"/, path);
       assert.doesNotMatch(s, /關閉堂/, 'a closed church stays unnamed');
     }

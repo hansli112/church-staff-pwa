@@ -251,7 +251,7 @@ const zhHant: Words = {
     '馬大！馬大！你為許多的事思慮煩擾，但是不可少的只有一件；馬利亞已經選擇那上好的福分，是不能奪去的。（路加福音 10:41–42）',
   loading: '載入中…',
   // The app's errInviteInvalid and errInviteExpired (app/lib/l10n/app_zh.arb), word for word.
-  inviteInvalid: '找不到這個邀請，請確認邀請碼，或向管理員要新的邀請',
+  inviteInvalid: '找不到這個邀請，請向管理員要新的邀請',
   inviteExpired: '這個邀請過期了，請向管理員要新的邀請',
   invited: (church) => `邀請你加入〈${church}〉`,
   placeholder: '待定',
@@ -312,7 +312,7 @@ const zhHans: Words = {
     '马大！马大！你为许多的事思虑烦扰，但是不可少的只有一件；马利亚已经选择那上好的福分，是不能夺去的。（路加福音 10:41–42）',
   loading: '加载中…',
   // app/lib/l10n/app_zh_Hans.arb's.
-  inviteInvalid: '找不到这个邀请，请确认邀请码，或向管理员要新的邀请',
+  inviteInvalid: '找不到这个邀请，请向管理员要新的邀请',
   inviteExpired: '这个邀请已过期，请向管理员要新的邀请',
   invited: (church) => `邀请你加入“${church}”`,
   placeholder: '待定',
@@ -376,7 +376,7 @@ const en: Words = {
     '“Martha, Martha,” the Lord answered, “you are worried and upset about many things, but few things are needed—or indeed only one. Mary has chosen what is better, and it will not be taken away from her.” (Luke 10:41–42)',
   loading: 'Loading…',
   // app/lib/l10n/app_en.arb's.
-  inviteInvalid: 'Couldn’t find this invite. Check the code, or ask an admin for a new invite.',
+  inviteInvalid: 'Couldn’t find this invite. Ask an admin for a new one.',
   inviteExpired: 'This invite has expired. Ask an admin for a new one.',
   invited: (church) => `You’re invited to join ${church}`,
   placeholder: 'TBD',
@@ -437,7 +437,7 @@ const ja: Words = {
   description: '「マルタ、マルタ、あなたは多くのことに思い悩み、心を乱している。しかし、必要なことはただ一つだけである。マリアは良い方を選んだ。それを取り上げてはならない。」（ルカによる福音書 10:41–42）',
   loading: '読み込み中…',
   // app/lib/l10n/app_ja.arb's.
-  inviteInvalid: 'この招待が見つかりません。招待コードを確認するか、管理者に新しい招待をもらってください。',
+  inviteInvalid: 'この招待が見つかりません。管理者に新しい招待をもらってください。',
   inviteExpired: 'この招待は期限切れです。管理者に新しい招待をもらってください。',
   invited: (church) => `「${church}」へのご招待です`,
   placeholder: '未定',
@@ -499,7 +499,7 @@ const ko: Words = {
   description: '마르다야 마르다야 네가 많은 일로 염려하고 근심하나 몇 가지만 하든지 혹은 한 가지만이라도 족하니라 마리아는 이 좋은 편을 택하였으니 빼앗기지 아니하리라 (누가복음 10:41–42)',
   loading: '불러오는 중…',
   // app/lib/l10n/app_ko.arb's.
-  inviteInvalid: '초대를 찾을 수 없어요. 초대 코드를 확인하거나 관리자에게 새 초대를 요청해 주세요.',
+  inviteInvalid: '초대를 찾을 수 없어요. 관리자에게 새 초대를 요청해 주세요.',
   inviteExpired: '만료된 초대예요. 관리자에게 새 초대를 요청해 주세요.',
   invited: (church) => `${church}에 초대합니다`,
   placeholder: '미정',
