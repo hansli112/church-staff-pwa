@@ -920,12 +920,10 @@ class L10nKo extends L10n {
   String get inviteCreate => '초대 링크 만들기';
 
   @override
-  String get inviteValidFor => '유효 기간';
+  String get inviteLinks => '초대 링크';
 
   @override
-  String inviteDays(int days) {
-    return '$days일 동안 유효';
-  }
+  String get inviteChurchOnly => '교회만';
 
   @override
   String get inviteCopy => '링크 복사';

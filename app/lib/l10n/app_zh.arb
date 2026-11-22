@@ -582,15 +582,8 @@
   "noMembersFound": "找不到這位同工",
   "you": "你",
   "inviteCreate": "建立邀請連結",
-  "inviteValidFor": "有效期限",
-  "inviteDays": "{days} 天內有效",
-  "@inviteDays": {
-    "placeholders": {
-      "days": {
-        "type": "int"
-      }
-    }
-  },
+  "inviteLinks": "邀請連結",
+  "inviteChurchOnly": "只加入教會",
   "inviteCopy": "複製連結",
   "inviteCopied": "已複製邀請連結",
   "copyByHand": "沒辦法自動複製，請選取下面的文字自己複製",

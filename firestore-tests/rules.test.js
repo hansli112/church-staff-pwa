@@ -1172,13 +1172,25 @@ describe('邀請 (invites)', () => {
     await assertSucceeds(updateDoc(doc(db, 'invites/AAAA1111'), { revoked: true }));
   });
 
-  it('撤回後不能恢復，也不能改成別的教會或延長期限', async () => {
+  it('撤回後不能恢復，也不能改成別的教會', async () => {
     await seed('invites/AAAA2222', { ...invite(A, ADMIN_A), expiresAt: inFuture(7) });
     const db = as(ADMIN_A);
     await assertFails(updateDoc(doc(db, 'invites/AAAA2222'), { cid: B }));
-    await assertFails(updateDoc(doc(db, 'invites/AAAA2222'), { expiresAt: inFuture(20) }));
     await assertSucceeds(updateDoc(doc(db, 'invites/AAAA2222'), { revoked: true }));
     await assertFails(updateDoc(doc(db, 'invites/AAAA2222'), { revoked: false }));
+    await assertFails(updateDoc(doc(db, 'invites/AAAA2222'), { expiresAt: inFuture(20) }), 'a revoked one stays ended');
+  });
+
+  it('還有效的邀請可以重新算期限，最多 31 天；過期的不行', async () => {
+    await seed('invites/AAAA5555', { ...invite(A, ADMIN_A), expiresAt: inFuture(3) });
+    await seed('invites/AAAA6666', { ...invite(A, ADMIN_A), expiresAt: inFuture(-1) });
+    const db = as(ADMIN_A);
+    await assertSucceeds(updateDoc(doc(db, 'invites/AAAA5555'), { expiresAt: inFuture(30) }));
+    await assertFails(updateDoc(doc(db, 'invites/AAAA5555'), { expiresAt: inFuture(40) }));
+    await assertFails(updateDoc(doc(db, 'invites/AAAA5555'), { expiresAt: inFuture(30), zoneTypes: ['sunday'] }));
+    await assertFails(updateDoc(doc(db, 'invites/AAAA6666'), { expiresAt: inFuture(30) }));
+    await assertFails(updateDoc(doc(as(ADMIN_B), 'invites/AAAA5555'), { expiresAt: inFuture(30) }));
+    await assertFails(updateDoc(doc(as(MEMBER_A), 'invites/AAAA5555'), { expiresAt: inFuture(30) }));
   });
 
   it('跨教會：B 的管理員不能建立、讀取、撤回 A 的邀請', async () => {

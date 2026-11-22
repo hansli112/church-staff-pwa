@@ -414,6 +414,10 @@ abstract interface class JoiningData {
 
   /// A new invite. Members who join with it belong to [zoneTypes].
   Future<Invite> createInvite({required Duration validFor, List<String> zoneTypes = const []});
+
+  /// [code], still working, good for [validFor] from now instead: the
+  /// same link again. Neither a revoked nor an expired one comes back.
+  Future<Invite> renewInvite(String code, {required Duration validFor});
   Future<void> revokeInvite(String code);
 }
 

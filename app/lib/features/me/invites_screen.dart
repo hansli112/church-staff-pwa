@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart' show setEquals;
 import 'package:flutter/material.dart';
 import 'package:material_symbols_icons/symbols.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -30,9 +31,10 @@ final _liveInvitesProvider = Provider.autoDispose<List<Invite>>((ref) {
   return live;
 });
 
-/// Admins make invite links (7 or 30 days, 7 unless they choose 30), share
-/// them, and revoke them.
-/// A link can put the people who join with it in some 牧區 at once. Under
+/// Admins make invite links, good for 30 days, share them, and revoke them.
+/// A link can put the people who join with it in some 牧區 at once; one
+/// for the same 牧區 as a link that still works is that link again, its
+/// 30 days counted from now, so the list has one a set of 牧區. Under
 /// them, the other way in: 申請加入 from the church URL (#88), and the URL,
 /// named for what it is for there: the link to ask to join.
 class InvitesScreen extends ConsumerStatefulWidget {
@@ -41,6 +43,9 @@ class InvitesScreen extends ConsumerStatefulWidget {
   @override
   ConsumerState<InvitesScreen> createState() => _InvitesScreenState();
 }
+
+/// How long an invite works, from when it is made or made again.
+const _validFor = Duration(days: 30);
 
 class _InvitesScreenState extends ConsumerState<InvitesScreen> {
   bool _busy = false;
@@ -53,23 +58,23 @@ class _InvitesScreenState extends ConsumerState<InvitesScreen> {
   /// picked, a church's only service, which nearly every invite wants.
   Set<String> _zonesOf(List<Service> services) => _picked ?? {if (services.length == 1) services.single.id};
 
-  /// How long the next invite works.
-  int _days = 7;
-
-  Future<void> _create(int days) async {
+  Future<void> _create() async {
     final l10n = L10n.of(context);
     setState(() => _busy = true);
     final Invite invite;
     try {
       final services = ref.read(servicesProvider).value?.services ?? const <Service>[];
       final zones = _zonesOf(services);
-      invite = await ref.churchData.joining.createInvite(
-        validFor: Duration(days: days),
-        zoneTypes: [
-          for (final s in services)
-            if (zones.contains(s.id)) s.id,
-        ],
-      );
+      final same = ref.read(_liveInvitesProvider).where((i) => setEquals({...i.zoneTypes}, zones)).firstOrNull;
+      invite = same != null
+          ? await ref.churchData.joining.renewInvite(same.code, validFor: _validFor)
+          : await ref.churchData.joining.createInvite(
+              validFor: _validFor,
+              zoneTypes: [
+                for (final s in services)
+                  if (zones.contains(s.id)) s.id,
+              ],
+            );
     } catch (_) {
       if (mounted) showToast(context, l10n.saveFailed);
       return;
@@ -203,44 +208,25 @@ class _InvitesScreenState extends ConsumerState<InvitesScreen> {
                   ),
               ],
             ),
-          // How long it works is a choice; the button says what happens.
           Padding(
             padding: const EdgeInsets.fromLTRB(Space.m, Space.s, Space.m, Space.m),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                SegmentedButton<int>(
-                  showSelectedIcon: false,
-                  segments: [
-                    for (final days in [7, 30]) ButtonSegment(value: days, label: Text(l10n.inviteDays(days))),
-                  ],
-                  selected: {_days},
-                  onSelectionChanged: (v) {
-                    Haptics.selection();
-                    setState(() => _days = v.first);
-                  },
-                ),
-                const SizedBox(height: Space.m),
-                PrimaryButton(
-                  label: l10n.inviteCreate,
-                  icon: const Icon(Symbols.link_rounded),
-                  busy: _busy,
-                  onPressed: () => _create(_days),
-                ),
-              ],
+            child: PrimaryButton(
+              label: l10n.inviteCreate,
+              icon: const Icon(Symbols.link_rounded),
+              busy: _busy,
+              onPressed: _create,
             ),
           ),
           if (live.isNotEmpty)
             ListSection(
+              header: l10n.inviteLinks,
               children: [
                 // What it joins and when it ends; the code is the link's.
-                for (final (invite, zones, ends) in [
-                  for (final i in live) (i, zonesOf(i), l10n.inviteExpiresOn(clock.day(i.expiresAt))),
-                ])
+                for (final (invite, joins) in [for (final i in live) (i, zonesOf(i) ?? l10n.inviteChurchOnly)])
                   ListRow(
-                    title: zones ?? ends,
-                    value: zones == null ? null : ends,
-                    onTap: () => _actions(invite, header: zones ?? ends),
+                    title: joins,
+                    value: l10n.inviteExpiresOn(clock.day(invite.expiresAt)),
+                    onTap: () => _actions(invite, header: joins),
                   ),
               ],
             ),

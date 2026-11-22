@@ -1447,6 +1447,27 @@ void contractTests(Future<ContractWorld> Function() open) {
       await expectLater(g.church.joining.invites().first, denied());
     });
 
+    test('a live invite can have its days counted again from now; an ended one cannot', () async {
+      final g = await Grace.open(w);
+      final invite = await g.church.joining.createInvite(validFor: const Duration(days: 1), zoneTypes: ['youth']);
+      final renewed = await g.church.joining.renewInvite(invite.code, validFor: const Duration(days: 30));
+      expect(renewed.code, invite.code);
+      expect(renewed.zoneTypes, ['youth']);
+      expect(renewed.expiresAt.isAfter(invite.expiresAt.add(const Duration(days: 28))), isTrue);
+      final listed = (await g.church.joining.invites().first).singleWhere((i) => i.code == invite.code);
+      expect(listed.expiresAt.difference(renewed.expiresAt).inSeconds.abs(), lessThan(5));
+      await expectLater(g.church.joining.renewInvite(invite.code, validFor: const Duration(days: 32)), denied());
+
+      final expired = await g.church.joining.createInvite(validFor: const Duration(minutes: -1));
+      await expectLater(g.church.joining.renewInvite(expired.code, validFor: const Duration(days: 30)), denied());
+      await g.church.joining.revokeInvite(invite.code);
+      await expectLater(g.church.joining.renewInvite(invite.code, validFor: const Duration(days: 30)), denied());
+
+      final other = await g.church.joining.createInvite(validFor: const Duration(days: 1));
+      await w.signIn(Grace.meiEmail);
+      await expectLater(g.church.joining.renewInvite(other.code, validFor: const Duration(days: 30)), denied());
+    });
+
     test('an invite joins its church as staff, once, until it expires or is revoked', () async {
       final g = await Grace.open(w);
       final invite = await g.church.joining.createInvite(validFor: const Duration(days: 7));

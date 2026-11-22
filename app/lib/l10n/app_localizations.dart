@@ -1708,17 +1708,17 @@ abstract class L10n {
   /// **'建立邀請連結'**
   String get inviteCreate;
 
-  /// No description provided for @inviteValidFor.
+  /// No description provided for @inviteLinks.
   ///
   /// In zh, this message translates to:
-  /// **'有效期限'**
-  String get inviteValidFor;
+  /// **'邀請連結'**
+  String get inviteLinks;
 
-  /// No description provided for @inviteDays.
+  /// No description provided for @inviteChurchOnly.
   ///
   /// In zh, this message translates to:
-  /// **'{days} 天內有效'**
-  String inviteDays(int days);
+  /// **'只加入教會'**
+  String get inviteChurchOnly;
 
   /// No description provided for @inviteCopy.
   ///

@@ -919,12 +919,10 @@ class L10nZh extends L10n {
   String get inviteCreate => '建立邀請連結';
 
   @override
-  String get inviteValidFor => '有效期限';
+  String get inviteLinks => '邀請連結';
 
   @override
-  String inviteDays(int days) {
-    return '$days 天內有效';
-  }
+  String get inviteChurchOnly => '只加入教會';
 
   @override
   String get inviteCopy => '複製連結';
@@ -4541,12 +4539,10 @@ class L10nZhHans extends L10nZh {
   String get inviteCreate => '创建邀请链接';
 
   @override
-  String get inviteValidFor => '有效期限';
+  String get inviteLinks => '邀请链接';
 
   @override
-  String inviteDays(int days) {
-    return '$days 天内有效';
-  }
+  String get inviteChurchOnly => '只加入教会';
 
   @override
   String get inviteCopy => '复制链接';

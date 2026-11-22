@@ -301,7 +301,7 @@ void main() {
   });
 
   group('invites and settings', () {
-    testWidgets('create a 7-day invite and revoke it', (tester) async {
+    testWidgets('create an invite and revoke it', (tester) async {
       final b = seededChurch();
       final telemetry = RecordingTelemetry();
       await pumpApp(tester, b, overrides: [telemetryProvider.overrideWithValue(telemetry)]);
@@ -314,24 +314,60 @@ void main() {
       final code = b.invites.keys.single;
       await go(tester, '/me');
       await go(tester, '/me/invites');
-      await tapText(tester, '10月8日 到期');
+      await tapText(tester, '10月31日 到期');
       await tapText(tester, '停用');
       expect(b.invites[code]!.revoked, isTrue);
       expect(find.text('已停用，這個連結不能再用來加入'), findsOneWidget);
-      expect(find.text('10月8日 到期'), findsNothing);
+      expect(find.text('10月31日 到期'), findsNothing);
     });
 
-    testWidgets('the invite button says what it does; how long it lasts is a choice beside it', (tester) async {
+    testWidgets('an invite works for 30 days, with no length to choose', (tester) async {
       final b = seededChurch();
       await pumpApp(tester, b);
       captureOutbox(tester);
       await go(tester, '/me/invites');
-      expect(find.widgetWithText(FilledButton, '建立邀請連結'), findsOneWidget);
-      await tapText(tester, '30 天內有效');
-      expect(b.invites, isEmpty, reason: 'choosing does not create');
+      expect(find.byType(SegmentedButton<int>), findsNothing);
       await tapText(tester, '建立邀請連結');
       final invite = b.invites.values.single;
       expect(invite.expiresAt.difference(testNow).inDays, 30);
+    });
+
+    testWidgets('the same 聚會 again shares the link there is, its 30 days counted again', (tester) async {
+      var now = testNow;
+      final b = seededChurch(clock: () => now);
+      await pumpApp(tester, b);
+      final out = captureOutbox(tester);
+      await go(tester, '/me/invites');
+      await tapText(tester, '青年崇拜');
+      await tapText(tester, '建立邀請連結');
+      final code = b.invites.keys.single;
+
+      now = testNow.add(const Duration(days: 5));
+      await tester.pump(const Duration(days: 5));
+      await settle(tester);
+      await tester.tap(find.text('青年崇拜').first);
+      await settle(tester);
+      await tapText(tester, '建立邀請連結');
+      expect(b.invites.keys, [code]);
+      expect(b.invites[code]!.expiresAt, now.add(const Duration(days: 30)));
+      expect(out.sharedTexts, hasLength(2));
+      expect(out.sharedTexts.last, out.sharedTexts.first, reason: 'the same link');
+      expect(find.text('11月5日 到期'), findsOneWidget);
+
+      // Another set of 聚會 is another link.
+      for (final service in ['主日崇拜', '青年崇拜']) {
+        await tester.tap(find.text(service).first);
+        await settle(tester);
+      }
+      await tapText(tester, '建立邀請連結');
+      expect(b.invites, hasLength(2));
+      expect(
+        b.invites.values.map((i) => {...i.zoneTypes}),
+        containsAll([
+          {'youth'},
+          {'sunday', 'youth'},
+        ]),
+      );
     });
 
     testWidgets('the 牧區 an invite joins look like boxes to tick', (tester) async {
@@ -361,17 +397,20 @@ void main() {
       await go(tester, '/me/invites');
       await tapText(tester, '青年崇拜');
       await tapText(tester, '建立邀請連結');
-      await tester.tap(find.text('青年崇拜').first);
-      await settle(tester);
-      await tapText(tester, '30 天內有效');
       await tapText(tester, '建立邀請連結');
-      expect(b.invites, hasLength(2));
+      expect(b.invites, hasLength(2), reason: 'each invite picks its own: none, this time');
       for (final code in b.invites.keys) {
         expect(find.text(code), findsNothing);
       }
-      final youth = find.ancestor(of: find.text('青年崇拜').last, matching: find.byType(ListRow));
-      expect(find.descendant(of: youth, matching: find.text('10月8日 到期')), findsOneWidget);
-      expect(find.text('10月31日 到期'), findsOneWidget, reason: 'joining no service: only when it ends');
+      expect(findShown('邀請連結'), findsOneWidget);
+      for (final joins in ['青年崇拜', '只加入教會']) {
+        final row = find.ancestor(of: find.text(joins).last, matching: find.byType(ListRow));
+        expect(
+          find.descendant(of: row, matching: find.text('10月31日 到期')),
+          findsOneWidget,
+          reason: joins,
+        );
+      }
     });
 
     testWidgets('ticking no service is allowed; the screen says they see no rosters until put in one', (tester) async {
@@ -418,18 +457,18 @@ void main() {
       await go(tester, '/me/invites');
       await tapText(tester, '建立邀請連結');
       final code = b.invites.keys.single;
-      expect(find.text('10月8日 到期'), findsOneWidget);
+      expect(find.text('10月31日 到期'), findsOneWidget);
 
-      now = testNow.add(const Duration(days: 6, hours: 23));
-      await tester.pump(const Duration(days: 6, hours: 23));
+      now = testNow.add(const Duration(days: 29, hours: 23));
+      await tester.pump(const Duration(days: 29, hours: 23));
       await settle(tester);
-      expect(find.text('10月8日 到期'), findsOneWidget, reason: 'an hour left');
+      expect(find.text('10月31日 到期'), findsOneWidget, reason: 'an hour left');
       expect((await b.cloud.previewInvite(code)).code, code);
 
-      now = testNow.add(const Duration(days: 7));
+      now = testNow.add(const Duration(days: 30));
       await tester.pump(const Duration(hours: 1));
       await settle(tester);
-      expect(find.text('10月8日 到期'), findsNothing);
+      expect(find.text('10月31日 到期'), findsNothing);
       await expectLater(
         b.cloud.previewInvite(code),
         throwsA(isA<CloudException>().having((e) => e.code, 'code', CloudErrorCode.inviteExpired)),
@@ -448,7 +487,7 @@ void main() {
         out.sharedTexts.single,
         '邀請你加入〈$church〉\nhttps://marthasit-dev.web.app/c/grace/join/$code?openExternalBrowser=1',
       );
-      await tapText(tester, '10月8日 到期');
+      await tapText(tester, '10月31日 到期');
       await tapText(tester, '複製連結');
       expect(out.copied.single, 'https://marthasit-dev.web.app/c/grace/join/$code?openExternalBrowser=1');
     });

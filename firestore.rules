@@ -618,10 +618,15 @@ service cloud.firestore {
         && request.resource.data.createdBy == request.auth.uid
         && request.resource.data.expiresAt is timestamp
         && request.resource.data.expiresAt < request.time + duration.value(31, 'd');
-      // Revoking is the only change, and it is final.
+      // Revoking, which is final; or, while it still works, its days
+      // counted again from now (建立 with the same 聚會 shares it again).
       allow update: if isAdmin(resource.data.cid)
-        && onlyTouches(['revoked'])
-        && request.resource.data.revoked == true;
+        && ((onlyTouches(['revoked']) && request.resource.data.revoked == true)
+          || (onlyTouches(['expiresAt'])
+            && resource.data.revoked == false
+            && resource.data.expiresAt > request.time
+            && request.resource.data.expiresAt is timestamp
+            && request.resource.data.expiresAt < request.time + duration.value(31, 'd')));
     }
 
     // Daily platform snapshots, written by a scheduled function. Only the

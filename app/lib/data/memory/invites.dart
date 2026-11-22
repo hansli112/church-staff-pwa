@@ -80,6 +80,28 @@ mixin _MemoryInvites on _MemoryChurchBase implements JoiningData {
   }
 
   @override
+  Future<Invite> renewInvite(String code, {required Duration validFor}) async {
+    _requireAdmin();
+    final invite = _b.invites[code];
+    if (invite == null ||
+        invite.churchId != churchId ||
+        !invite.usableAt(_b.clock()) ||
+        validFor >= const Duration(days: Limits.inviteDays)) {
+      throw const CloudException(CloudErrorCode.permissionDenied);
+    }
+    final renewed = Invite(
+      code: code,
+      churchId: churchId,
+      churchName: invite.churchName,
+      expiresAt: _b.clock().add(validFor),
+      createdAt: invite.createdAt,
+      zoneTypes: invite.zoneTypes,
+    );
+    await _b.write(() => _b.invites[code] = renewed);
+    return renewed;
+  }
+
+  @override
   Future<void> revokeInvite(String code) async {
     _requireAdmin();
     final invite = _b.invites[code]!;

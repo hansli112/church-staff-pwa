@@ -919,12 +919,10 @@ class L10nJa extends L10n {
   String get inviteCreate => '招待リンクを作成';
 
   @override
-  String get inviteValidFor => '有効期間';
+  String get inviteLinks => '招待リンク';
 
   @override
-  String inviteDays(int days) {
-    return '$days日間有効';
-  }
+  String get inviteChurchOnly => '教会のみ';
 
   @override
   String get inviteCopy => 'リンクをコピー';

@@ -25,7 +25,7 @@
 | `churches/{cid}/joinRequests/{uid}` | 申請加入（#88）：`uid`、`name`、`email`（申請時帳號的）、`note`（選填，最多 100 字）、`createdAt`、`rejectedAt`（管理員拒絕的時間）。只有後端寫（`requestToJoin`、`withdrawJoinRequest`、`answerJoinRequest`），只有 admin 讀得到；申請的人從 `churchPreview` 知道自己的申請怎麼了。`createdAt` 滿 30 天就算沒有，每天清掉 |
 | `churches/{cid}/joinRequestPushes/{uid}` | 只有後端讀寫：`uid`、`at`（上次為這個人的申請推播給管理員的時間）。同一個人一天內只推播一次，取消再申請也不會一直響；超過一天的每天清掉 |
 | `pendingIndex/{email 的 SHA-256}` | 只有後端讀寫：`churches`（教會 id → 待認領同工 id） |
-| `invites/{邀請碼}` | `cid`、`churchName`、`expiresAt`（31 天內）、`revoked`、`createdBy`、`createdAt`、`zoneTypes`（選填，加入後屬於的牧區，最多 20 個；加入時只留教會還有的聚會別，不帶服事項目）。管理員建立、撤回，加入經 `redeemInvite` |
+| `invites/{邀請碼}` | `cid`、`churchName`、`expiresAt`（31 天內）、`revoked`、`createdBy`、`createdAt`、`zoneTypes`（選填，加入後屬於的牧區，最多 20 個；加入時只留教會還有的聚會別，不帶服事項目）。管理員建立、撤回；還有效的可以把 `expiresAt` 重新算（同樣的牧區再建立時，31 天內），撤回或過期的不行。加入經 `redeemInvite` |
 | `churches/{cid}/staff_orders/{type}` | 各聚會別的同工排序 |
 | `churches/{cid}/settings/{doc}` | `services`（聚會別，`ids` 只增不減；刪除聚會就是從 `services` 拿掉，可以刪到一個都不剩，`ids` 留著，它的服事表、小組照舊存著但不顯示、不提醒；舊資料 `enabled: false`（以前的停用）當作已刪除，App 下次存時拿掉，新寫的一律 `enabled: true` 給舊版 App 和 `editService` 讀；每個聚會的 `weekday` 是星期幾（1 是週一…7 是週日），一週聚會好幾天的另有 `weekdays`（兩天以上、照順序，第一天就是 `weekday`，舊版 App 只讀 `weekday`），每一天各一張服事表；每個聚會的 `manyDuties` 是多人服事的服事項目，管理員第一次設之前沒有這個欄位，App 照前 8 週猜；`editService` 檢查都在 `duties` 裡，服事項目改名時跟著改）、`ministries`（事工：`ministries` 每個 `{id, name, duties: [{service, duty}]}`，最多 50 個；`ids` 只增不減）、`roster_templates` 等 |
 | `churches/{cid}/settings/link` | 首頁連結：`title`（1–30 字）、`body`（最多 120 字）、`url`（限 `https`）；`source`（每日內容來源，`https`）與 `fetchMinute`（每天抓取時間，教會時區午夜後的分鐘數，15 分鐘為單位）只能經 `setLinkSource` 設定 |

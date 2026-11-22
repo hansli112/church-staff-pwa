@@ -1244,6 +1244,17 @@ class _FirestoreJoining implements JoiningData {
   }
 
   @override
+  Future<Invite> renewInvite(String code, {required Duration validFor}) async {
+    final ref = _c._db.collection('invites').doc(code);
+    final expiresAt = Timestamp.fromDate(_c._clock().add(validFor));
+    return _c._transaction((tx) async {
+      final doc = await tx.get(ref);
+      tx.update(ref, {'expiresAt': expiresAt});
+      return inviteFromJson(code, {...?doc.data(), 'expiresAt': expiresAt});
+    });
+  }
+
+  @override
   Future<void> revokeInvite(String code) {
     final ref = _c._db.collection('invites').doc(code);
     return _c._write(ref, (tx) => tx.update(ref, {'revoked': true}));

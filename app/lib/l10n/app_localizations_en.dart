@@ -941,18 +941,10 @@ class L10nEn extends L10n {
   String get inviteCreate => 'Create invite link';
 
   @override
-  String get inviteValidFor => 'Valid for';
+  String get inviteLinks => 'Invite links';
 
   @override
-  String inviteDays(int days) {
-    String _temp0 = intl.Intl.pluralLogic(
-      days,
-      locale: localeName,
-      other: 'Valid for $days days',
-      one: 'Valid for 1 day',
-    );
-    return '$_temp0';
-  }
+  String get inviteChurchOnly => 'Church only';
 
   @override
   String get inviteCopy => 'Copy link';
