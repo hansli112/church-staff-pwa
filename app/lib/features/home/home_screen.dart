@@ -26,6 +26,7 @@ import 'church_link_card.dart';
 import 'getting_started.dart';
 import 'notification_list_screen.dart';
 import '../rosters/format.dart';
+import '../../domain/upcoming_events.dart';
 import '../rosters/day_block.dart';
 import '../rosters/event_roster_screen.dart';
 import '../rosters/rosters_screen.dart';
@@ -70,11 +71,10 @@ class HomeScreen extends ConsumerWidget {
       for (final month in activityMonths) month: ref.watch(calendarReadStatusProvider(month)),
     };
     final now = ref.watch(churchTimeZoneProvider).clock(ref.watch(clockProvider)());
-    final activities = {
+    final activities = upcomingEvents([
       for (final state in activityStates)
-        if (!state.hasError)
-          for (final event in state.value ?? const <CalendarEvent>[]) event.id ?? event: event,
-    }.values.where((event) => event.end.isAfter(now)).toList()..sort((a, b) => a.start.compareTo(b.start));
+        if (!state.hasError) state.value ?? const <CalendarEvent>[],
+    ], now: now);
     final activityError = activityStates.any((state) => state.hasError);
     final activityLoading = activityStates.any((state) => state.isLoading);
     return Scaffold(
@@ -121,78 +121,60 @@ class HomeScreen extends ConsumerWidget {
             ref.watch(uidProvider),
             today,
           ).where((r) => services == null || services.byId(r.serviceId) != null).toList();
-          if (list.isEmpty &&
-              !welcome &&
-              asks.isEmpty &&
-              !attendance &&
-              !missing &&
-              link == null &&
-              !sourceMissing &&
-              claims.isEmpty &&
-              gettingStarted.isEmpty &&
-              waiting == 0 &&
-              !addToHome &&
-              !notifications &&
-              activities.isEmpty &&
-              !activityError &&
-              !activityLoading) {
-            return EmptyState(
-              icon: Symbols.event_available_rounded,
-              message: l10n.noUpcomingServices,
-              actionLabel: l10n.viewRosters,
-              onAction: () => context.go('/rosters'),
-            );
+          // Each a section of its own above my days, and the calendar's below.
+          final above = <Widget>[
+            // 首頁連結 (每日靈糧): the top of the page, above what is mine to do.
+            if (link != null) ChurchLinkCard(title: link.title, body: link.body, url: link.url),
+            if (sourceMissing) ChurchLinkSourceStatus(key: ValueKey(ref.watch(churchDataProvider)?.churchId)),
+          ];
+          final mineToDo = <Widget>[
+            if (welcome) WelcomeWaitCard(churchName: church?.name ?? ''),
+            if (addToHome) const AddToHomeCard(),
+            if (notifications) const TurnOnNotificationsCard(),
+            // 填寫人數 (#85): what a lead is asked, first among their own things.
+            if (asks.isNotEmpty)
+              ListSection(
+                header: l10n.swapWaitingForYou,
+                children: [
+                  for (final r in asks)
+                    ListRow(
+                      leading: dayBlock(r.day, today),
+                      title: r.kind == SwapKind.cover ? l10n.swapCoverAsks(r.fromName) : l10n.swapSwapAsks(r.fromName),
+                      subtitle: [
+                        dayBesideBlock(l10n, r.day, today),
+                        '${services?.byId(r.serviceId)?.name ?? ''} ${r.duty}'.trim(),
+                      ].where((t) => t.isNotEmpty).join(' · '),
+                      onTap: () => context.push('/rosters/request/${r.id}'),
+                    ),
+                ],
+              ),
+            if (attendance) const AttendanceDueCard(),
+            if (missing) const AttendanceMissingRow(),
+            for (final start in gettingStarted) GettingStartedSection(start),
+            if (waiting > 0)
+              ListSection(
+                children: [
+                  ListRow(
+                    title: l10n.waitingForZone(waiting),
+                    leading: const Icon(Symbols.manage_accounts_rounded),
+                    onTap: () => context.push('/me/members'),
+                  ),
+                ],
+              ),
+          ];
+          final upcoming = activities.isNotEmpty || activityError || activityLoading;
+          if (list.isEmpty && above.isEmpty && claims.isEmpty && mineToDo.isEmpty && !upcoming) {
+            return const _NoUpcoming();
           }
           return ListView(
             children: [
-              // 首頁連結 (每日靈糧): the top of the page, above what is mine to do.
-              if (link != null) ChurchLinkCard(title: link.title, body: link.body, url: link.url),
-              if (sourceMissing) ChurchLinkSourceStatus(key: ValueKey(ref.watch(churchDataProvider)?.churchId)),
+              ...above,
               const PendingClaimsCard(),
-              if (welcome) WelcomeWaitCard(churchName: church?.name ?? ''),
-              if (addToHome) const AddToHomeCard(),
-              if (notifications) const TurnOnNotificationsCard(),
-              // 填寫人數 (#85): what a lead is asked, first among their own things.
-              if (asks.isNotEmpty)
-                ListSection(
-                  header: l10n.swapWaitingForYou,
-                  children: [
-                    for (final r in asks)
-                      ListRow(
-                        leading: dayBlock(r.day, today),
-                        title: r.kind == SwapKind.cover
-                            ? l10n.swapCoverAsks(r.fromName)
-                            : l10n.swapSwapAsks(r.fromName),
-                        subtitle: [
-                          dayBesideBlock(l10n, r.day, today),
-                          '${services?.byId(r.serviceId)?.name ?? ''} ${r.duty}'.trim(),
-                        ].where((t) => t.isNotEmpty).join(' · '),
-                        onTap: () => context.push('/rosters/request/${r.id}'),
-                      ),
-                  ],
-                ),
-              if (attendance) const AttendanceDueCard(),
-              if (missing) const AttendanceMissingRow(),
-              for (final start in gettingStarted) GettingStartedSection(start),
-              if (waiting > 0)
-                ListSection(
-                  children: [
-                    ListRow(
-                      title: l10n.waitingForZone(waiting),
-                      leading: const Icon(Symbols.manage_accounts_rounded),
-                      onTap: () => context.push('/me/members'),
-                    ),
-                  ],
-                ),
+              ...mineToDo,
               if (list.isEmpty && welcome)
                 const SizedBox.shrink()
               else if (list.isEmpty)
-                EmptyState(
-                  icon: Symbols.event_available_rounded,
-                  message: l10n.noUpcomingServices,
-                  actionLabel: l10n.viewRosters,
-                  onAction: () => context.go('/rosters'),
-                )
+                const _NoUpcoming()
               else
                 ListSection(
                   header: l10n.myServicesTitle,
@@ -221,7 +203,7 @@ class HomeScreen extends ConsumerWidget {
                       ),
                   ],
                 ),
-              if (activities.isNotEmpty || activityError || activityLoading)
+              if (upcoming)
                 ListSection(
                   header: l10n.homeUpcomingEvents,
                   children: [
@@ -265,6 +247,19 @@ class HomeScreen extends ConsumerWidget {
       ),
     );
   }
+}
+
+/// No days of mine ahead: to 服事表.
+class _NoUpcoming extends StatelessWidget {
+  const _NoUpcoming();
+
+  @override
+  Widget build(BuildContext context) => EmptyState(
+    icon: Symbols.event_available_rounded,
+    message: L10n.of(context).noUpcomingServices,
+    actionLabel: L10n.of(context).viewRosters,
+    onAction: () => context.go('/rosters'),
+  );
 }
 
 /// 「歡迎加入〈恩典堂〉」 for someone in no service yet: an admin puts them
