@@ -229,6 +229,14 @@ abstract interface class ChurchData {
 
   ReadOnceData get readOnce;
 
+  UnavailableData get unavailable;
+
+  SwapData get swaps;
+
+  ClaimData get claims;
+
+  JoiningData get joining;
+
   /// Makes [call] (one of the callables, [ChurchCall]), answering what it
   /// answers. [ChurchCalls] names each.
   Future<R> run<R>(ChurchCall<R> call);
@@ -247,23 +255,6 @@ abstract interface class ChurchData {
 
   /// Drops a pending member (admins). Their names stay on the rosters.
   Future<void> deletePendingMember(String id);
-
-  /// 認領申請 waiting for an answer (admins): who says they are which of
-  /// the pending members.
-  Stream<List<ClaimAsk>> claimAsks();
-
-  /// What member [uid] (only themself, or an admin) asked, if anything.
-  Stream<ClaimAsk?> claimAskOf(String uid);
-
-  /// The pending members with a name, for a member to find themself among.
-  Future<List<ClaimCandidate>> claimCandidates();
-
-  /// Requests to join (申請加入, #88), answered or not; ones
-  /// [JoinRequest.days] old may linger a day. Admins only.
-  Stream<List<JoinRequest>> joinRequests();
-
-  /// Whether someone with the church URL may ask to join (admins).
-  Future<void> setTakesJoinRequests(bool on);
 
   Stream<ServiceSettings> services();
 
@@ -325,34 +316,6 @@ abstract interface class ChurchData {
   /// them yet. For those who read the member list.
   Stream<bool> plannedNews(String serviceType);
 
-  /// [uid]'s 不能服事的日子 (#91): their own, or anyone's for whoever
-  /// arranges rosters (Member.arrangesRosters).
-  Stream<UnavailableDays> unavailableDays(String uid);
-
-  /// Everyone's 不能服事的日子 who has any, by uid: for whoever arranges
-  /// rosters.
-  Stream<Map<String, UnavailableDays>> everyonesUnavailableDays();
-
-  /// Keeps [days] as the caller's own: no one else writes them. At most
-  /// [Limits.unavailableSpans] stretches, each note at most
-  /// [TextLimits.unavailableNote] characters.
-  Future<void> saveMyUnavailableDays(UnavailableDays days);
-
-  /// 找人代／交換 (#92) I asked for that are still open.
-  Stream<List<SwapRequest>> myOpenSwapRequests();
-
-  /// 找人代／交換 (#92) still open that ask me: a cover I am among those
-  /// asked, a swap to me. By day.
-  Stream<List<SwapRequest>> swapRequestsToMe();
-
-  /// Request [id], for who asked and whoever it asks; null when there is
-  /// none.
-  Stream<SwapRequest?> swapRequest(String id);
-
-  /// When 通知同工填 last asked for [serviceType], if ever: for whoever
-  /// arranges rosters.
-  Stream<DateTime?> lastUnavailableAsk(String serviceType);
-
   /// Replaces the whole list of services (adding one, reordering), only
   /// if it is still [before]; otherwise [CloudErrorCode.conflict]. Never
   /// none; IDs once used stay valid.
@@ -382,18 +345,76 @@ abstract interface class ChurchData {
   /// When member [uid] (only themself) is reminded of their duties here.
   Future<void> setReminderTiming(String uid, ReminderTiming timing);
 
-  Stream<List<Invite>> invites();
-
-  /// A new invite. Members who join with it belong to [zoneTypes].
-  Future<Invite> createInvite({required Duration validFor, List<String> zoneTypes = const []});
-  Future<void> revokeInvite(String code);
-
   /// Sets the home-screen name (admins only); null goes back to the church
   /// name.
   Future<void> setHomeName(String? name);
 
   /// Uploads [bytes] (already a 512px PNG) as the church logo.
   Future<void> uploadLogo(List<int> bytes);
+}
+
+/// 不能服事的日子 (#91).
+abstract interface class UnavailableData {
+  /// [uid]'s 不能服事的日子 (#91): their own, or anyone's for whoever
+  /// arranges rosters (Member.arrangesRosters).
+  Stream<UnavailableDays> of(String uid);
+
+  /// Everyone's 不能服事的日子 who has any, by uid: for whoever arranges
+  /// rosters.
+  Stream<Map<String, UnavailableDays>> everyones();
+
+  /// Keeps [days] as the caller's own: no one else writes them. At most
+  /// [Limits.unavailableSpans] stretches, each note at most
+  /// [TextLimits.unavailableNote] characters.
+  Future<void> saveMine(UnavailableDays days);
+
+  /// When 通知同工填 last asked for [serviceType], if ever: for whoever
+  /// arranges rosters.
+  Stream<DateTime?> lastAsk(String serviceType);
+}
+
+/// 找人代／交換 (#92). Asking and answering are [ChurchCall]s.
+abstract interface class SwapData {
+  /// 找人代／交換 (#92) I asked for that are still open.
+  Stream<List<SwapRequest>> mineOpen();
+
+  /// 找人代／交換 (#92) still open that ask me: a cover I am among those
+  /// asked, a swap to me. By day.
+  Stream<List<SwapRequest>> toMe();
+
+  /// Request [id], for who asked and whoever it asks; null when there is
+  /// none.
+  Stream<SwapRequest?> request(String id);
+}
+
+/// 認領 (claiming to be one of the pending members). Asking and answering
+/// are [ChurchCall]s.
+abstract interface class ClaimData {
+  /// 認領申請 waiting for an answer (admins): who says they are which of
+  /// the pending members.
+  Stream<List<ClaimAsk>> asks();
+
+  /// What member [uid] (only themself, or an admin) asked, if anything.
+  Stream<ClaimAsk?> askOf(String uid);
+
+  /// The pending members with a name, for a member to find themself among.
+  Future<List<ClaimCandidate>> candidates();
+}
+
+/// How people join: invites, and requests to join (申請加入, #88).
+abstract interface class JoiningData {
+  /// Requests to join (申請加入, #88), answered or not; ones
+  /// [JoinRequest.days] old may linger a day. Admins only.
+  Stream<List<JoinRequest>> requests();
+
+  /// Whether someone with the church URL may ask to join (admins).
+  Future<void> setTakesRequests(bool on);
+
+  Stream<List<Invite>> invites();
+
+  /// A new invite. Members who join with it belong to [zoneTypes].
+  Future<Invite> createInvite({required Duration validFor, List<String> zoneTypes = const []});
+  Future<void> revokeInvite(String code);
 }
 
 /// The church's Google Calendar (行事曆), proxied by the backend: admins

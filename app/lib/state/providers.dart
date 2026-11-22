@@ -254,7 +254,7 @@ final joinRequestsProvider = StreamProvider<List<JoinRequest>>((ref) {
   final isAdmin = ref.watch(meProvider.select((m) => m.value?.isAdmin ?? false));
   if (!isAdmin) return Stream.value(const []);
   final now = ref.watch(clockProvider);
-  return openChurch(ref).joinRequests().map(
+  return openChurch(ref).joining.requests().map(
     (list) => [
       for (final r in list)
         if (r.stateAt(now()) == JoinRequestState.pending) r,
@@ -267,20 +267,20 @@ final joinRequestsProvider = StreamProvider<List<JoinRequest>>((ref) {
 final claimAsksProvider = StreamProvider<List<ClaimAsk>>((ref) {
   final isAdmin = ref.watch(meProvider.select((m) => m.value?.isAdmin ?? false));
   if (!isAdmin) return Stream.value(const []);
-  return openChurch(ref).claimAsks();
+  return openChurch(ref).claims.asks();
 });
 
 /// What I asked: which of the 同工 without an account I say I am.
 final myClaimAskProvider = StreamProvider<ClaimAsk?>((ref) {
   final uid = ref.watch(uidProvider);
   if (uid == null) return Stream.value(null);
-  return openChurch(ref).claimAskOf(uid);
+  return openChurch(ref).claims.askOf(uid);
 });
 
 /// The 同工 without an account, for me to find myself among; asked of the
 /// backend once wanted.
 final claimCandidatesProvider = FutureProvider.autoDispose<List<ClaimCandidate>>(
-  (ref) => openChurch(ref).claimCandidates(),
+  (ref) => openChurch(ref).claims.candidates(),
 );
 
 final staffOrderProvider = StreamProvider.family<StaffOrder, String>(
@@ -304,37 +304,37 @@ final _arrangesRostersProvider = Provider<bool>(
 final myUnavailableDaysProvider = StreamProvider<UnavailableDays>((ref) {
   final uid = ref.watch(uidProvider);
   if (uid == null) return Stream.value(const UnavailableDays());
-  return openChurch(ref).unavailableDays(uid);
+  return openChurch(ref).unavailable.of(uid);
 });
 
 /// Everyone's 不能服事的日子 (#91), by uid. Only for those who arrange
 /// rosters (Member.arrangesRosters); nobody's for others.
 final unavailableDaysProvider = StreamProvider<Map<String, UnavailableDays>>((ref) {
   if (!ref.watch(_arrangesRostersProvider)) return Stream.value(const {});
-  return openChurch(ref).everyonesUnavailableDays();
+  return openChurch(ref).unavailable.everyones();
 });
 
 /// When 通知同工填 last asked for [serviceType] (#91).
 final lastUnavailableAskProvider = StreamProvider.autoDispose.family<DateTime?, String>((ref, serviceType) {
   if (!ref.watch(_arrangesRostersProvider)) return Stream.value(null);
-  return openChurch(ref).lastUnavailableAsk(serviceType);
+  return openChurch(ref).unavailable.lastAsk(serviceType);
 });
 
 /// 找人代／交換 (#92) I asked for that are still open.
 final myOpenSwapRequestsProvider = StreamProvider<List<SwapRequest>>((ref) {
   if (ref.watch(uidProvider) == null) return Stream.value(const []);
-  return openChurch(ref).myOpenSwapRequests();
+  return openChurch(ref).swaps.mineOpen();
 });
 
 /// 找人代／交換 (#92) still open that ask me, by day.
 final swapRequestsToMeProvider = StreamProvider<List<SwapRequest>>((ref) {
   if (ref.watch(uidProvider) == null) return Stream.value(const []);
-  return openChurch(ref).swapRequestsToMe();
+  return openChurch(ref).swaps.toMe();
 });
 
 /// Request [id] (#92), for who asked and whoever it asks.
 final swapRequestProvider = StreamProvider.autoDispose.family<SwapRequest?, String>(
-  (ref, id) => openChurch(ref).swapRequest(id),
+  (ref, id) => openChurch(ref).swaps.request(id),
 );
 
 /// The initial rolling draft horizon; saved future days are never hidden.

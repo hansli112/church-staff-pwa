@@ -66,7 +66,7 @@ final _servicesSeenProvider = NotifierProvider<_ServicesSeen, bool>(_ServicesSee
 /// dropped while home is hidden would come back during a build.
 final _invitesProvider = StreamProvider<List<Invite>>(
   (ref) => ref.watch(meProvider.select((m) => m.value?.isAdmin ?? false))
-      ? openChurch(ref).invites()
+      ? openChurch(ref).joining.invites()
       : Stream.value(const []),
 );
 

@@ -68,6 +68,20 @@ class MemoryChurchData extends _MemoryChurchBase
 
   @override
   late final ReadOnceData readOnce = _MemoryReadOnce(this);
+
+  // As MemoryChurchData's own, in their parts.
+
+  @override
+  UnavailableData get unavailable => this;
+
+  @override
+  SwapData get swaps => this;
+
+  @override
+  ClaimData get claims => this;
+
+  @override
+  JoiningData get joining => this;
 }
 
 /// What every part of [MemoryChurchData] reads: the backend, who is asking,

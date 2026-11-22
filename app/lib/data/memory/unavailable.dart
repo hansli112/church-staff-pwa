@@ -2,9 +2,9 @@ part of 'memory_backend.dart';
 
 /// [MemoryChurchData]'s 不能服事的日子 (#91): kept as firestore.rules let
 /// them be, and asked for as functions/src/unavailable.ts does.
-mixin _MemoryUnavailable on _MemoryChurchBase {
+mixin _MemoryUnavailable on _MemoryChurchBase implements UnavailableData {
   @override
-  Stream<UnavailableDays> unavailableDays(String uid) => _b
+  Stream<UnavailableDays> of(String uid) => _b
       .watch(() {
         if (uid != _uid) _requireArrangesRosters();
         _requireMember();
@@ -16,13 +16,13 @@ mixin _MemoryUnavailable on _MemoryChurchBase {
       });
 
   @override
-  Stream<Map<String, UnavailableDays>> everyonesUnavailableDays() => _b.watch(() {
+  Stream<Map<String, UnavailableDays>> everyones() => _b.watch(() {
     _requireArrangesRosters();
     return {...?_b.unavailable[churchId]};
   }, equals: mapEquals);
 
   @override
-  Future<void> saveMyUnavailableDays(UnavailableDays days) async {
+  Future<void> saveMine(UnavailableDays days) async {
     await _b.write(() {
       final me = _b.requireMember(churchId);
       if (days.spans.length > Limits.unavailableSpans ||
@@ -34,7 +34,7 @@ mixin _MemoryUnavailable on _MemoryChurchBase {
   }
 
   @override
-  Stream<DateTime?> lastUnavailableAsk(String serviceType) => _b.watch(() {
+  Stream<DateTime?> lastAsk(String serviceType) => _b.watch(() {
     _requireArrangesRosters();
     return _b.unavailableAsks[churchId]?[serviceType]?.at;
   });

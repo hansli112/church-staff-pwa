@@ -1,7 +1,7 @@
 part of 'memory_backend.dart';
 
 /// [MemoryChurchData] as functions/src/swaps.ts does it.
-mixin _MemorySwaps on _MemoryChurchBase {
+mixin _MemorySwaps on _MemoryChurchBase implements SwapData {
   /// [r] as the backend keeps it: an open one the rosters no longer bear,
   /// or whose day went by, is void (functions/src/swaps.ts voidStaleSwaps).
   SwapRequest _current(SwapRequest r) {
@@ -15,7 +15,7 @@ mixin _MemorySwaps on _MemoryChurchBase {
   }
 
   @override
-  Stream<List<SwapRequest>> myOpenSwapRequests() => _b.watch(() {
+  Stream<List<SwapRequest>> mineOpen() => _b.watch(() {
     _requireMember();
     return [
       for (final r in _b.swapRequests[churchId]?.values ?? const <SwapRequest>[])
@@ -24,7 +24,7 @@ mixin _MemorySwaps on _MemoryChurchBase {
   }, equals: listEquals);
 
   @override
-  Stream<List<SwapRequest>> swapRequestsToMe() => _b.watch(() {
+  Stream<List<SwapRequest>> toMe() => _b.watch(() {
     _requireMember();
     return [
       for (final r in _b.swapRequests[churchId]?.values ?? const <SwapRequest>[])
@@ -33,7 +33,7 @@ mixin _MemorySwaps on _MemoryChurchBase {
   }, equals: listEquals);
 
   @override
-  Stream<SwapRequest?> swapRequest(String id) => _b.watch(() {
+  Stream<SwapRequest?> request(String id) => _b.watch(() {
     _requireMember();
     final r = _b.swapRequests[churchId]?[id];
     if (r != null && r.from != _uid && !r.canAnswer(_uid ?? '')) {

@@ -64,7 +64,7 @@ class _UnavailableScreenState extends ConsumerState<UnavailableScreen> {
     try {
       await before;
       if (!identical(_shown, kept)) return true;
-      await data.saveMyUnavailableDays(kept);
+      await data.unavailable.saveMine(kept);
       telemetry.logEvent('unavailable_set');
       return true;
     } catch (e) {

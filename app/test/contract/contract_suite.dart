@@ -63,7 +63,7 @@ class Grace {
     g.pastor = await w.signUp(pastorEmail, name: '王牧師');
     g.cid = await g.cloud.createChurch('恩典堂');
     await g.church.putServices(const [sunday, youth]);
-    final invite = await g.church.createInvite(validFor: const Duration(days: 7));
+    final invite = await g.church.joining.createInvite(validFor: const Duration(days: 7));
     g.editor = await w.signUp(editorEmail, name: '林同工');
     await g.cloud.redeemInvite(invite.code);
     g.mei = await w.signUp(meiEmail, name: '李美玉');
@@ -334,7 +334,7 @@ void contractTests(Future<ContractWorld> Function() open) {
     test("leaving a church takes its notifications out of the list; the other church's stay", () async {
       final g = await Grace.open(w);
       final other = await g.cloud.createChurch('活水堂');
-      final invite = await w.backend.church(other).createInvite(validFor: const Duration(days: 1));
+      final invite = await w.backend.church(other).joining.createInvite(validFor: const Duration(days: 1));
       await w.signIn(Grace.meiEmail);
       await g.cloud.redeemInvite(invite.code);
       await w.addNotification(g.mei, sent('here', g.cid, DateTime.utc(2026, 10, 25)));
@@ -369,7 +369,7 @@ void contractTests(Future<ContractWorld> Function() open) {
         reason: 'an update',
       );
       await expectLater(
-        g.church.createInvite(validFor: const Duration(days: 7)),
+        g.church.joining.createInvite(validFor: const Duration(days: 7)),
         denied(),
         reason: 'outside the church',
       );
@@ -543,7 +543,7 @@ void contractTests(Future<ContractWorld> Function() open) {
       await g.church.churchLink.save(const ChurchLink(title: '官網', url: 'https://grace.example'));
       await w.addPending(g.cid, const PendingMember(id: 'old-1', name: '舊同工'));
       await g.suspend();
-      await expectLater(g.church.createInvite(validFor: const Duration(days: 7)), denied());
+      await expectLater(g.church.joining.createInvite(validFor: const Duration(days: 7)), denied());
       await expectLater(g.church.putRoster(sundayOn(4)), denied());
       final closed = fails(CloudErrorCode.churchClosed);
       await expectLater(g.church.deleteChurch(), closed);
@@ -576,7 +576,7 @@ void contractTests(Future<ContractWorld> Function() open) {
 
     test('its invites stop working', () async {
       final g = await Grace.open(w);
-      final invite = await g.church.createInvite(validFor: const Duration(days: 7));
+      final invite = await g.church.joining.createInvite(validFor: const Duration(days: 7));
       await g.suspend();
       await w.signUp('new@example.com');
       await expectLater(cloud().previewInvite(invite.code), fails(CloudErrorCode.inviteInvalid));
@@ -1199,30 +1199,30 @@ void contractTests(Future<ContractWorld> Function() open) {
       final trip = const UnavailableDays().add(Day(2030, 12, 20), Day(2030, 12, 27), note: '出國');
       const wait = Duration(seconds: 30);
       await w.signIn(Grace.meiEmail);
-      await g.church.saveMyUnavailableDays(trip);
-      expect(await g.church.unavailableDays(g.mei).firstWhere((d) => !d.isEmpty).timeout(wait), trip);
+      await g.church.unavailable.saveMine(trip);
+      expect(await g.church.unavailable.of(g.mei).firstWhere((d) => !d.isEmpty).timeout(wait), trip);
       await expectLater(
-        g.church.saveMyUnavailableDays(const UnavailableDays().add(Day(2030, 12, 1), Day(2030, 12, 1), note: '一' * 31)),
+        g.church.unavailable.saveMine(const UnavailableDays().add(Day(2030, 12, 1), Day(2030, 12, 1), note: '一' * 31)),
         throwsA(isA<CloudException>()),
         reason: 'a reason of at most 30 characters',
       );
-      await expectLater(g.church.everyonesUnavailableDays().first, denied(), reason: 'she arranges nothing');
-      await expectLater(g.church.unavailableDays(g.editor).first, denied());
+      await expectLater(g.church.unavailable.everyones().first, denied(), reason: 'she arranges nothing');
+      await expectLater(g.church.unavailable.of(g.editor).first, denied());
       await expectLater(g.church.askUnavailable('sunday', from: Day(2030, 12, 1), to: Day(2031, 1, 1)), denied());
 
       await w.signIn(Grace.editorEmail);
-      expect((await g.church.everyonesUnavailableDays().firstWhere((m) => m.isNotEmpty).timeout(wait))[g.mei], trip);
-      expect(await g.church.unavailableDays(g.mei).first, trip);
-      await g.church.saveMyUnavailableDays(const UnavailableDays());
-      expect(await g.church.unavailableDays(g.mei).first, trip, reason: 'his own, not hers');
-      expect(await g.church.lastUnavailableAsk('sunday').first, isNull);
+      expect((await g.church.unavailable.everyones().firstWhere((m) => m.isNotEmpty).timeout(wait))[g.mei], trip);
+      expect(await g.church.unavailable.of(g.mei).first, trip);
+      await g.church.unavailable.saveMine(const UnavailableDays());
+      expect(await g.church.unavailable.of(g.mei).first, trip, reason: 'his own, not hers');
+      expect(await g.church.unavailable.lastAsk('sunday').first, isNull);
       await expectLater(
         g.church.askUnavailable('youth', from: Day(2030, 12, 1), to: Day(2031, 1, 1)),
         denied(),
         reason: 'not a service he arranges',
       );
       expect(await g.church.askUnavailable('sunday', from: Day(2030, 12, 1), to: Day(2031, 1, 1)), 1);
-      expect(await g.church.lastUnavailableAsk('sunday').firstWhere((at) => at != null).timeout(wait), isNotNull);
+      expect(await g.church.unavailable.lastAsk('sunday').firstWhere((at) => at != null).timeout(wait), isNotNull);
     });
   });
 
@@ -1321,17 +1321,17 @@ void contractTests(Future<ContractWorld> Function() open) {
       await w.signIn(Grace.meiEmail);
       expect(await g.church.askCover(mine, '司琴'), 1);
       await expectLater(g.church.askCover(mine, '司琴'), throwsA(isA<CloudException>()), reason: 'one at a time');
-      final id = (await g.church.myOpenSwapRequests().firstWhere((l) => l.isNotEmpty).timeout(wait)).single.id;
+      final id = (await g.church.swaps.mineOpen().firstWhere((l) => l.isNotEmpty).timeout(wait)).single.id;
 
       await w.signIn(Grace.pastorEmail);
-      await expectLater(g.church.swapRequest(id).first, denied(), reason: 'not asked');
+      await expectLater(g.church.swaps.request(id).first, denied(), reason: 'not asked');
 
       await w.signIn(Grace.editorEmail);
-      expect((await g.church.swapRequest(id).first)!.kind, SwapKind.cover);
+      expect((await g.church.swaps.request(id).first)!.kind, SwapKind.cover);
       await g.church.answerSwap(id, yes: true);
       expect(await playing(g, mine, 1).timeout(wait), ['林同工']);
       await g.church.undoSwap(id);
-      expect((await g.church.swapRequest(id).firstWhere((r) => r!.isOpen).timeout(wait))!.taker, isNull);
+      expect((await g.church.swaps.request(id).firstWhere((r) => r!.isOpen).timeout(wait))!.taker, isNull);
       expect(
         (await g.church.rosters(from: mine.day).first).firstWhere((x) => x.id == mine.id).duties.single.people,
         ['李美玉'],
@@ -1350,7 +1350,7 @@ void contractTests(Future<ContractWorld> Function() open) {
       final (g, mine, his) = await pianists();
       await w.signIn(Grace.meiEmail);
       await g.church.askSwap(mine, '司琴', his, g.editor);
-      final id = (await g.church.myOpenSwapRequests().firstWhere((l) => l.isNotEmpty).timeout(wait)).single.id;
+      final id = (await g.church.swaps.mineOpen().firstWhere((l) => l.isNotEmpty).timeout(wait)).single.id;
       await w.signIn(Grace.editorEmail);
       await g.church.answerSwap(id, yes: true);
       final days = await g.church
@@ -1370,17 +1370,17 @@ void contractTests(Future<ContractWorld> Function() open) {
       expect((await cloud().churchPreview(g.cid)).takesJoinRequests, isTrue);
       await cloud().requestToJoin(g.cid, note: '我是小明');
       expect((await cloud().churchPreview(g.cid)).joinRequest, JoinRequestState.pending);
-      await expectLater(g.church.joinRequests().first, denied());
+      await expectLater(g.church.joining.requests().first, denied());
 
       await w.signIn(Grace.meiEmail);
-      await expectLater(g.church.joinRequests().first, denied());
+      await expectLater(g.church.joining.requests().first, denied());
       await expectLater(g.church.answerJoinRequest(uid, allow: true), denied());
 
       await w.signIn(Grace.pastorEmail);
-      final r = (await g.church.joinRequests().first).single;
+      final r = (await g.church.joining.requests().first).single;
       expect((r.uid, r.name, r.email, r.note, r.rejectedAt), (uid, '新朋友', 'new@example.com', '我是小明', null));
       await g.church.answerJoinRequest(uid, allow: true);
-      expect(await g.church.joinRequests().first, isEmpty);
+      expect(await g.church.joining.requests().first, isEmpty);
       final me = (await g.church.member(uid).first)!;
       expect((me.name, me.role, me.zones.isEmpty), ('新朋友', Role.staff, true));
     });
@@ -1392,12 +1392,12 @@ void contractTests(Future<ContractWorld> Function() open) {
       await cloud().requestToJoin(g.cid);
       await w.signIn(Grace.pastorEmail);
       await g.church.answerJoinRequest(uid, allow: false);
-      expect((await g.church.joinRequests().first).single.rejectedAt, isNotNull);
+      expect((await g.church.joining.requests().first).single.rejectedAt, isNotNull);
       await expectLater(
         g.church.answerJoinRequest(uid, allow: true),
         fails(CloudErrorCode.unknown, reason: CloudReason.requestGone),
       );
-      await g.church.setTakesJoinRequests(false);
+      await g.church.joining.setTakesRequests(false);
       expect((await g.church.church().first)!.takesJoinRequests, isFalse);
 
       await w.signIn('new@example.com');
@@ -1409,9 +1409,9 @@ void contractTests(Future<ContractWorld> Function() open) {
       );
 
       await w.signIn(Grace.meiEmail);
-      await expectLater(g.church.setTakesJoinRequests(true), denied());
+      await expectLater(g.church.joining.setTakesRequests(true), denied());
       await w.signIn(Grace.pastorEmail);
-      await g.church.setTakesJoinRequests(true);
+      await g.church.joining.setTakesRequests(true);
       expect((await g.church.church().first)!.takesJoinRequests, isTrue);
 
       await w.signIn('new@example.com');
@@ -1432,23 +1432,23 @@ void contractTests(Future<ContractWorld> Function() open) {
   group('invites', () {
     test('admins make, list and revoke invites, good for under 31 days', () async {
       final g = await Grace.open(w);
-      await expectLater(g.church.createInvite(validFor: const Duration(days: 32)), denied());
-      final invite = await g.church.createInvite(validFor: const Duration(days: 30));
+      await expectLater(g.church.joining.createInvite(validFor: const Duration(days: 32)), denied());
+      final invite = await g.church.joining.createInvite(validFor: const Duration(days: 30));
       expect((invite.churchId, invite.churchName), (g.cid, '恩典堂'));
-      expect((await g.church.invites().first).map((i) => (i.code, i.revoked)), contains((invite.code, false)));
-      await g.church.revokeInvite(invite.code);
-      expect((await g.church.invites().first).map((i) => (i.code, i.revoked)), contains((invite.code, true)));
+      expect((await g.church.joining.invites().first).map((i) => (i.code, i.revoked)), contains((invite.code, false)));
+      await g.church.joining.revokeInvite(invite.code);
+      expect((await g.church.joining.invites().first).map((i) => (i.code, i.revoked)), contains((invite.code, true)));
       await w.signIn(Grace.meiEmail);
-      await expectLater(g.church.createInvite(validFor: const Duration(days: 7)), denied());
-      await expectLater(g.church.invites().first, denied());
+      await expectLater(g.church.joining.createInvite(validFor: const Duration(days: 7)), denied());
+      await expectLater(g.church.joining.invites().first, denied());
     });
 
     test('an invite joins its church as staff, once, until it expires or is revoked', () async {
       final g = await Grace.open(w);
-      final invite = await g.church.createInvite(validFor: const Duration(days: 7));
-      final expired = await g.church.createInvite(validFor: const Duration(minutes: -1));
-      final revoked = await g.church.createInvite(validFor: const Duration(days: 7));
-      await g.church.revokeInvite(revoked.code);
+      final invite = await g.church.joining.createInvite(validFor: const Duration(days: 7));
+      final expired = await g.church.joining.createInvite(validFor: const Duration(minutes: -1));
+      final revoked = await g.church.joining.createInvite(validFor: const Duration(days: 7));
+      await g.church.joining.revokeInvite(revoked.code);
       await w.signOut();
       expect(await cloud().invitedChurchName(invite.code), '恩典堂');
 
@@ -1466,8 +1466,14 @@ void contractTests(Future<ContractWorld> Function() open) {
 
     test("joining with an invite's 牧區 belongs to those the church has", () async {
       final g = await Grace.open(w);
-      final invite = await g.church.createInvite(validFor: const Duration(days: 7), zoneTypes: ['youth', 'gone']);
-      expect((await g.church.invites().first).firstWhere((i) => i.code == invite.code).zoneTypes, ['youth', 'gone']);
+      final invite = await g.church.joining.createInvite(
+        validFor: const Duration(days: 7),
+        zoneTypes: ['youth', 'gone'],
+      );
+      expect((await g.church.joining.invites().first).firstWhere((i) => i.code == invite.code).zoneTypes, [
+        'youth',
+        'gone',
+      ]);
       await w.signOut();
       final uid = await w.signUp('new@example.com', name: '新朋友');
       await cloud().redeemInvite(invite.code);
@@ -1689,7 +1695,7 @@ void contractTests(Future<ContractWorld> Function() open) {
       );
       await g.church.putRoster(his);
       await w.addPending(g.cid, huang, rosterIds: [his.id]);
-      final invite = await g.church.createInvite(validFor: const Duration(days: 7));
+      final invite = await g.church.joining.createInvite(validFor: const Duration(days: 7));
       final uid = await w.signUp('huang@example.com', name: '黃鎮台');
       expect(await cloud().pendingClaims(), isEmpty, reason: 'not in the church yet');
       await g.cloud.redeemInvite(invite.code);
@@ -1746,7 +1752,7 @@ void contractTests(Future<ContractWorld> Function() open) {
         await g.church.putRoster(his);
 
         await w.signIn(Grace.pastorEmail);
-        final invite = await g.church.createInvite(validFor: const Duration(days: 7));
+        final invite = await g.church.joining.createInvite(validFor: const Duration(days: 7));
         final uid = await w.signUp('huang@example.com', name: '黃鎮台');
         await g.cloud.redeemInvite(invite.code);
         expect(await cloud().claimPending(g.cid, 'old-huang'), g.cid);
@@ -1773,7 +1779,7 @@ void contractTests(Future<ContractWorld> Function() open) {
       await expectLater(g.church.addByName('陳小華', 'sunday'), denied());
 
       await w.signIn(Grace.pastorEmail);
-      final invite = await g.church.createInvite(validFor: const Duration(days: 7));
+      final invite = await g.church.joining.createInvite(validFor: const Duration(days: 7));
       await w.signUp('ming@example.com', name: '王小明');
       await g.cloud.redeemInvite(invite.code);
       expect((await cloud().pendingClaims()).map((c) => (c.pendingId, c.byName)), [(id, true)]);
@@ -1822,35 +1828,35 @@ void contractTests(Future<ContractWorld> Function() open) {
 
     test('one who joined says which of them they are; an admin says yes', () async {
       final g = await moved();
-      final invite = await g.church.createInvite(validFor: const Duration(days: 7));
+      final invite = await g.church.joining.createInvite(validFor: const Duration(days: 7));
       final uid = await w.signUp('ming@example.com', name: '小明');
       await g.cloud.redeemInvite(invite.code);
-      expect((await g.church.claimCandidates()).map((c) => (c.pendingId, c.name)), [(pid, '美玉')]);
+      expect((await g.church.claims.candidates()).map((c) => (c.pendingId, c.name)), [(pid, '美玉')]);
       await expectLater(g.church.answerClaim(uid, allow: true), denied());
       await g.church.askClaim(pid);
-      expect((await g.church.claimAskOf(uid).firstWhere((a) => a != null))!.pendingName, '美玉');
+      expect((await g.church.claims.askOf(uid).firstWhere((a) => a != null))!.pendingName, '美玉');
       await g.church.askClaim(null);
-      expect(await g.church.claimAskOf(uid).firstWhere((a) => a == null), isNull);
+      expect(await g.church.claims.askOf(uid).firstWhere((a) => a == null), isNull);
       await g.church.askClaim(pid);
 
       await w.signIn(Grace.pastorEmail);
-      expect((await g.church.claimAsks().firstWhere((l) => l.isNotEmpty)).single.uid, uid);
+      expect((await g.church.claims.asks().firstWhere((l) => l.isNotEmpty)).single.uid, uid);
       await g.church.answerClaim(uid, allow: true);
       expect(await g.church.pendingMembers().first, isEmpty);
       expect((await g.church.member(uid).first)!.serves('sunday', '司琴'), isTrue);
-      expect(await g.church.claimAsks().firstWhere((l) => l.isEmpty), isEmpty);
+      expect(await g.church.claims.asks().firstWhere((l) => l.isEmpty), isEmpty);
     });
 
     test('an admin says no: the ask goes, they stay apart', () async {
       final g = await moved();
-      final invite = await g.church.createInvite(validFor: const Duration(days: 7));
+      final invite = await g.church.joining.createInvite(validFor: const Duration(days: 7));
       final uid = await w.signUp('ming@example.com', name: '小明');
       await g.cloud.redeemInvite(invite.code);
       await g.church.askClaim(pid);
       await w.signIn(Grace.pastorEmail);
-      await g.church.claimAsks().firstWhere((l) => l.isNotEmpty);
+      await g.church.claims.asks().firstWhere((l) => l.isNotEmpty);
       await g.church.answerClaim(uid, allow: false);
-      expect(await g.church.claimAsks().firstWhere((l) => l.isEmpty), isEmpty);
+      expect(await g.church.claims.asks().firstWhere((l) => l.isEmpty), isEmpty);
       expect((await g.church.pendingMembers().first).single.id, pid);
       await expectLater(g.church.answerClaim(uid, allow: false), fails(CloudErrorCode.notFound));
     });

@@ -199,7 +199,7 @@ void main() {
     await tapText(tester, '邀請同工');
     expect(find.text('建立邀請連結'), findsOneWidget);
     expect(findShown('下一步：加入主日崇拜的同工'), findsNothing, reason: 'nobody invited yet');
-    await b.church('living').createInvite(validFor: const Duration(days: 7));
+    await b.church('living').joining.createInvite(validFor: const Duration(days: 7));
     b.notify();
     await settle(tester);
     expect(find.text('下一步：加入主日崇拜的同工'), findsOneWidget, reason: 'waiting on them');

@@ -598,7 +598,7 @@ class _Memberships implements MembershipRepository {
 /// Firestore and Storage for the church's data, Cloud Functions for what
 /// the backend does for it. Every error leaves as a [CloudException]
 /// ([_guard], [_Translated.translated]).
-class FirestoreChurchData implements ChurchData {
+class FirestoreChurchData implements ChurchData, UnavailableData, SwapData, ClaimData, JoiningData {
   FirestoreChurchData._(this._db, this._storage, this._calls, this._clock, this.churchId);
 
   final FirebaseFirestore _db;
@@ -626,6 +626,20 @@ class FirestoreChurchData implements ChurchData {
 
   @override
   late final ReadOnceData readOnce = _FirestoreReadOnce(this);
+
+  // As FirestoreChurchData's own, below.
+
+  @override
+  UnavailableData get unavailable => this;
+
+  @override
+  SwapData get swaps => this;
+
+  @override
+  ClaimData get claims => this;
+
+  @override
+  JoiningData get joining => this;
 
   @override
   final String churchId;
@@ -816,12 +830,12 @@ class FirestoreChurchData implements ChurchData {
   }
 
   @override
-  Stream<List<JoinRequest>> joinRequests() => _col(
+  Stream<List<JoinRequest>> requests() => _col(
     'joinRequests',
   ).live().map((snap) => [for (final d in snap.docs) joinRequestFromJson(d.id, d.data())]).translated();
 
   @override
-  Future<void> setTakesJoinRequests(bool on) =>
+  Future<void> setTakesRequests(bool on) =>
       _write(_church, (tx) => tx.update(_church, {'joinRequestsClosed': on ? FieldValue.delete() : true}));
 
   @override
@@ -987,19 +1001,19 @@ class FirestoreChurchData implements ChurchData {
       .translated();
 
   @override
-  Stream<UnavailableDays> unavailableDays(String uid) =>
+  Stream<UnavailableDays> of(String uid) =>
       _col('unavailable').doc(uid).live().map((s) => unavailableDaysFromJson(s.data())).translated();
 
   @override
-  Stream<Map<String, UnavailableDays>> everyonesUnavailableDays() => _col(
+  Stream<Map<String, UnavailableDays>> everyones() => _col(
     'unavailable',
   ).live().map((snap) => {for (final d in snap.docs) d.id: unavailableDaysFromJson(d.data())}).translated();
 
   @override
-  Future<void> saveMyUnavailableDays(UnavailableDays days) => _call('saveUnavailableDays', unavailableDaysToJson(days));
+  Future<void> saveMine(UnavailableDays days) => _call('saveUnavailableDays', unavailableDaysToJson(days));
 
   @override
-  Stream<List<SwapRequest>> myOpenSwapRequests() => _col('swapRequests')
+  Stream<List<SwapRequest>> mineOpen() => _col('swapRequests')
       .where('from', isEqualTo: _calls._auth.currentUser?.uid)
       .where('status', isEqualTo: 'open')
       .live()
@@ -1007,7 +1021,7 @@ class FirestoreChurchData implements ChurchData {
       .translated();
 
   @override
-  Stream<List<SwapRequest>> swapRequestsToMe() {
+  Stream<List<SwapRequest>> toMe() {
     final uid = _calls._auth.currentUser?.uid;
     List<SwapRequest> decode(QuerySnapshot<Json> snap) => [
       for (final d in snap.docs) ?swapRequestFromJson(d.id, d.data()),
@@ -1021,12 +1035,12 @@ class FirestoreChurchData implements ChurchData {
   }
 
   @override
-  Stream<SwapRequest?> swapRequest(String id) => _col(
+  Stream<SwapRequest?> request(String id) => _col(
     'swapRequests',
   ).doc(id).live().map((s) => s.exists ? swapRequestFromJson(id, s.data()!) : null).translated();
 
   @override
-  Stream<DateTime?> lastUnavailableAsk(String serviceType) => _col(
+  Stream<DateTime?> lastAsk(String serviceType) => _col(
     'unavailableAsks',
   ).doc(serviceType).live().map((s) => (s.data()?['at'] as Timestamp?)?.toDate()).translated();
 
@@ -1156,16 +1170,16 @@ class FirestoreChurchData implements ChurchData {
   }
 
   @override
-  Stream<List<ClaimAsk>> claimAsks() => _col(
+  Stream<List<ClaimAsk>> asks() => _col(
     'claimAsks',
   ).live().map((snap) => [for (final d in snap.docs) claimAskFromJson(d.id, d.data())]).translated();
 
   @override
-  Stream<ClaimAsk?> claimAskOf(String uid) =>
+  Stream<ClaimAsk?> askOf(String uid) =>
       _col('claimAsks').doc(uid).live().map((s) => s.exists ? claimAskFromJson(uid, s.data()!) : null).translated();
 
   @override
-  Future<List<ClaimCandidate>> claimCandidates() async {
+  Future<List<ClaimCandidate>> candidates() async {
     final d = _asMap(await _call('claimCandidates'));
     return [
       for (final c in d['candidates'] as List<dynamic>? ?? const [])

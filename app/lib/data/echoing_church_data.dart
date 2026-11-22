@@ -5,7 +5,6 @@ import 'package:flutter/foundation.dart';
 import '../domain/day.dart';
 import '../domain/models.dart';
 import '../domain/staff_order.dart';
-import '../domain/swap.dart';
 import 'backend.dart';
 
 /// [ChurchData] that shows a change to rosters, members, services, staff
@@ -183,6 +182,18 @@ class EchoingChurchData implements ChurchData {
   @override
   ReadOnceData get readOnce => _inner.readOnce;
 
+  @override
+  UnavailableData get unavailable => _inner.unavailable;
+
+  @override
+  SwapData get swaps => _inner.swaps;
+
+  @override
+  ClaimData get claims => _inner.claims;
+
+  @override
+  JoiningData get joining => _inner.joining;
+
   /// The calls that change what is listed show it at once: who is in a
   /// group, on a duty's list, added by name; the rest as the backend has
   /// them.
@@ -324,27 +335,6 @@ class EchoingChurchData implements ChurchData {
   Stream<bool> plannedNews(String serviceType) => _inner.plannedNews(serviceType);
 
   @override
-  Stream<UnavailableDays> unavailableDays(String uid) => _inner.unavailableDays(uid);
-
-  @override
-  Stream<Map<String, UnavailableDays>> everyonesUnavailableDays() => _inner.everyonesUnavailableDays();
-
-  @override
-  Future<void> saveMyUnavailableDays(UnavailableDays days) => _inner.saveMyUnavailableDays(days);
-
-  @override
-  Stream<List<SwapRequest>> myOpenSwapRequests() => _inner.myOpenSwapRequests();
-
-  @override
-  Stream<List<SwapRequest>> swapRequestsToMe() => _inner.swapRequestsToMe();
-
-  @override
-  Stream<SwapRequest?> swapRequest(String id) => _inner.swapRequest(id);
-
-  @override
-  Stream<DateTime?> lastUnavailableAsk(String serviceType) => _inner.lastUnavailableAsk(serviceType);
-
-  @override
   Future<void> compareAndSetMinistries({required List<Ministry> before, required List<Ministry> after}) => _send(
     _Echo(ministries: after),
     () => _inner.compareAndSetMinistries(before: before, after: after),
@@ -416,21 +406,6 @@ class EchoingChurchData implements ChurchData {
   Future<void> deletePendingMember(String id) => _inner.deletePendingMember(id);
 
   @override
-  Stream<List<ClaimAsk>> claimAsks() => _inner.claimAsks();
-
-  @override
-  Stream<ClaimAsk?> claimAskOf(String uid) => _inner.claimAskOf(uid);
-
-  @override
-  Future<List<ClaimCandidate>> claimCandidates() => _inner.claimCandidates();
-
-  @override
-  Stream<List<JoinRequest>> joinRequests() => _inner.joinRequests();
-
-  @override
-  Future<void> setTakesJoinRequests(bool on) => _inner.setTakesJoinRequests(on);
-
-  @override
   Future<List<Roster>> pastRosters({required Day from, required Day before}) =>
       _inner.pastRosters(from: from, before: before);
 
@@ -440,16 +415,6 @@ class EchoingChurchData implements ChurchData {
 
   @override
   Future<List<Roster>> eventRosters() => _inner.eventRosters();
-
-  @override
-  Stream<List<Invite>> invites() => _inner.invites();
-
-  @override
-  Future<Invite> createInvite({required Duration validFor, List<String> zoneTypes = const []}) =>
-      _inner.createInvite(validFor: validFor, zoneTypes: zoneTypes);
-
-  @override
-  Future<void> revokeInvite(String code) => _inner.revokeInvite(code);
 
   @override
   Future<void> setHomeName(String? name) => _inner.setHomeName(name);

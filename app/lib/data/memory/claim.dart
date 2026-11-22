@@ -1,7 +1,7 @@
 part of 'memory_backend.dart';
 
 /// [MemoryChurchData] as functions/src/claim.ts and claimAsks.ts do it.
-mixin _MemoryClaim on _MemoryChurchBase {
+mixin _MemoryClaim on _MemoryChurchBase implements ClaimData {
   Future<void> renamePending(String id, String name) async {
     // As functions/src/claim.ts renamePending.
     _functionAdmin();
@@ -43,13 +43,13 @@ mixin _MemoryClaim on _MemoryChurchBase {
   }
 
   @override
-  Stream<List<ClaimAsk>> claimAsks() => _b.watch(() {
+  Stream<List<ClaimAsk>> asks() => _b.watch(() {
     _requireAdmin();
     return (_b.claimAsks[churchId] ?? const <String, ClaimAsk>{}).values.toList();
   }, equals: _sameList);
 
   @override
-  Stream<ClaimAsk?> claimAskOf(String uid) => _b.watch(() {
+  Stream<ClaimAsk?> askOf(String uid) => _b.watch(() {
     // As firestore.rules: their own, or an admin.
     final me = _b.requireMember(churchId);
     if (me.uid != uid && !me.isAdmin) throw const CloudException(CloudErrorCode.permissionDenied);
@@ -57,7 +57,7 @@ mixin _MemoryClaim on _MemoryChurchBase {
   });
 
   @override
-  Future<List<ClaimCandidate>> claimCandidates() async {
+  Future<List<ClaimCandidate>> candidates() async {
     // As functions/src/claimAsks.ts claimCandidates.
     _b.functionAccess(churchId, allowed: (_) => true);
     final groups = {for (final g in _b.smallGroups[churchId]?.values ?? const <SmallGroupDetails>[]) g.id: g.name};

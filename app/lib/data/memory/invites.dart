@@ -2,9 +2,9 @@ part of 'memory_backend.dart';
 
 /// [MemoryChurchData] as functions/src/invites.ts and joinRequests.ts do
 /// it.
-mixin _MemoryInvites on _MemoryChurchBase {
+mixin _MemoryInvites on _MemoryChurchBase implements JoiningData {
   @override
-  Stream<List<JoinRequest>> joinRequests() => _b.watch(() {
+  Stream<List<JoinRequest>> requests() => _b.watch(() {
     _requireAdmin();
     return (_b.joinRequests[churchId] ?? const <String, JoinRequest>{}).values.toList();
   }, equals: _sameList);
@@ -48,7 +48,7 @@ mixin _MemoryInvites on _MemoryChurchBase {
   }
 
   @override
-  Future<void> setTakesJoinRequests(bool on) async {
+  Future<void> setTakesRequests(bool on) async {
     _requireAdmin();
     await _b.write(() => _b.churches[churchId] = _b.churches[churchId]!.copyWith(takesJoinRequests: on));
   }

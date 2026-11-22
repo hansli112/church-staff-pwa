@@ -13,7 +13,7 @@ import '../common/time_zones.dart';
 import '../../state/session.dart';
 
 final _invitesProvider = StreamProvider.autoDispose<List<Invite>>(
-  (ref) => openChurch(ref).invites(),
+  (ref) => openChurch(ref).joining.invites(),
 );
 
 /// The invites that still work. One leaves the list when it expires.
@@ -62,7 +62,7 @@ class _InvitesScreenState extends ConsumerState<InvitesScreen> {
     try {
       final services = ref.read(servicesProvider).value?.services ?? const <Service>[];
       final zones = _zonesOf(services);
-      invite = await ref.churchData.createInvite(
+      invite = await ref.churchData.joining.createInvite(
         validFor: Duration(days: days),
         zoneTypes: [
           for (final s in services)
@@ -124,7 +124,7 @@ class _InvitesScreenState extends ConsumerState<InvitesScreen> {
         ref.read(telemetryProvider).logEvent('share', {'content_type': 'invite', 'method': 'copy'});
         await copyText(context, inviteLink(invite.churchId, invite.code), copied: l10n.inviteCopied);
       case 'revoke':
-        await ref.churchData.revokeInvite(invite.code);
+        await ref.churchData.joining.revokeInvite(invite.code);
         if (mounted) showToast(context, l10n.inviteRevoked);
     }
   }
@@ -250,7 +250,7 @@ class _InvitesScreenState extends ConsumerState<InvitesScreen> {
                   value: church.takesJoinRequests,
                   onChanged: (on) async {
                     try {
-                      await ref.churchData.setTakesJoinRequests(on);
+                      await ref.churchData.joining.setTakesRequests(on);
                     } catch (e) {
                       if (context.mounted) showToast(context, saveErrorText(l10n, e));
                     }
