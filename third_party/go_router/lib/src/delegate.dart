@@ -135,7 +135,15 @@ class GoRouterDelegate extends RouterDelegate<RouteMatchList> with ChangeNotifie
     return states.reversed;
   }
 
+  /// 馬大別忙: the routes popped already. Some Android phones' back pops a
+  /// page twice; upstream pops its route again, which throws
+  /// `Bad state: Future already completed` (flutter/flutter#187326).
+  final Expando<bool> _popped = Expando<bool>('popped');
+
   bool _handlePopPageWithRouteMatch(Route<Object?> route, Object? result, RouteMatchBase match) {
+    if (_popped[route] ?? false) {
+      return false;
+    }
     if (route.willHandlePopInternally) {
       final bool popped = route.didPop(result);
       assert(!popped);
@@ -150,6 +158,7 @@ class GoRouterDelegate extends RouterDelegate<RouteMatchList> with ChangeNotifie
     final RouteBase routeBase = leafMatch.route;
     if (routeBase is! GoRoute || routeBase.onExit == null) {
       route.didPop(result);
+      _popped[route] = true;
       _completeRouteMatch(result, match);
       return true;
     }

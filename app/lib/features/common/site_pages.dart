@@ -1,18 +1,18 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:material_symbols_icons/symbols.dart';
-import 'package:url_launcher/url_launcher.dart';
 
 import '../../core/languages.dart';
 import '../../env.dart';
 import '../../l10n/app_localizations.dart';
 import '../../state/providers.dart';
+import '../../core/links.dart';
 
 /// A page of the website: the privacy policy and the terms, which the stores
 /// require the app to link to, the guides, and on the web the support page.
 /// The stores forbid the iOS and Android apps to lead to paying elsewhere,
 /// so they open it with `fromApp` (AppLanguage.sitePage).
-void openSitePage(BuildContext context, WidgetRef ref, String page) => launchUrl(
+void openSitePage(BuildContext context, WidgetRef ref, String page) => openLink(
   Uri.parse(
     '${Env.current.webOrigin}${AppLanguage.shownIn(context).sitePage(page, fromApp: !ref.read(isWebProvider))}',
   ),

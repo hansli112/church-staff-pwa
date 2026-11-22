@@ -695,7 +695,9 @@ class GroupScreen extends ConsumerWidget {
                     destructive: true,
                     chevron: false,
                     onTap: () async {
-                      if (await ServiceEdits(context, ref, service).delete() && context.mounted) context.pop();
+                      if (!await ServiceEdits(context, ref, service).delete() || !context.mounted) return;
+                      // Opened from a link, the page has nothing under it.
+                      context.canPop() ? context.pop() : context.go('/me/groups');
                     },
                   ),
                 ],
@@ -1091,8 +1093,10 @@ class _MinistryDuties extends ConsumerWidget {
 
   Future<void> _pick(BuildContext context, WidgetRef ref) async {
     final picked = await pickMinistryDuties(context, ministry.duties);
+    // Gone while picking, its ref is too.
+    if (picked == null || !context.mounted) return;
     final before = ref.read(ministriesProvider).value?.ministries;
-    if (picked == null || before == null || !context.mounted) return;
+    if (before == null) return;
     await runWithUndo(
       context,
       L10n.of(context).saved,

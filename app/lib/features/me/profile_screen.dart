@@ -167,17 +167,22 @@ class LanguageScreen extends ConsumerWidget {
     Future<void> pick(String? locale) async {
       if (profile == null) return;
       Haptics.selection();
-      await ref
-          .read(backendProvider)
-          .profiles
-          .save(
-            UserProfile(
-              uid: profile.uid,
-              name: profile.name,
-              email: profile.email,
-              locale: locale,
-            ),
-          );
+      try {
+        await ref
+            .read(backendProvider)
+            .profiles
+            .save(
+              UserProfile(
+                uid: profile.uid,
+                name: profile.name,
+                email: profile.email,
+                locale: locale,
+              ),
+            );
+      } catch (_) {
+        // No connection, most often: the language stays as it was.
+        if (context.mounted) showToast(context, l10n.saveFailed);
+      }
     }
 
     return Scaffold(

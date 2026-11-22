@@ -9,6 +9,7 @@ import '../../l10n/app_localizations.dart';
 import '../../state/providers.dart';
 import '../common/errors.dart';
 import '../common/link_errors.dart';
+import '../../core/links.dart';
 
 /// 教會連結 on the home page: title, a line or two, and the link opens in
 /// the browser.
@@ -31,7 +32,7 @@ class ChurchLinkCard extends StatelessWidget {
             title: title,
             subtitle: body.isEmpty ? null : body,
             trailing: const ExcludeSemantics(child: Icon(Symbols.open_in_new_rounded, size: 20)),
-            onTap: () => launchUrl(Uri.parse(url), mode: LaunchMode.externalApplication),
+            onTap: () => openLink(Uri.parse(url), mode: LaunchMode.externalApplication),
           ),
         ),
       ],

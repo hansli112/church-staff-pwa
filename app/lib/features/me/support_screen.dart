@@ -10,6 +10,7 @@ import 'package:url_launcher/url_launcher.dart';
 import '../../core/design/components.dart';
 import '../../core/languages.dart';
 import '../../core/design/tokens.dart';
+import '../../core/links.dart';
 import '../../data/backend.dart';
 import '../../l10n/app_localizations.dart';
 import '../../state/app_build.dart';
@@ -177,8 +178,7 @@ class _SupportScreenState extends ConsumerState<SupportScreen> {
                         if (plan != null)
                           ListRow(
                             title: l10n.manageSubscription,
-                            onTap: () =>
-                                launchUrl(store.manageSubscription(plan), mode: LaunchMode.externalApplication),
+                            onTap: () => openLink(store.manageSubscription(plan), mode: LaunchMode.externalApplication),
                           ),
                       ],
                     ),
@@ -206,7 +206,7 @@ class _SupportScreenState extends ConsumerState<SupportScreen> {
                 ListRow(
                   title: l10n.supportRate,
                   value: appStore.label,
-                  onTap: () => launchUrl(appStore.review, mode: LaunchMode.externalApplication),
+                  onTap: () => openLink(appStore.review, mode: LaunchMode.externalApplication),
                 ),
               ],
             ),
@@ -543,7 +543,7 @@ class _FundingSection extends StatelessWidget {
                 link: true,
                 child: InkWell(
                   onTap: () =>
-                      launchUrl(Uri.parse('https://www.exchangerate-api.com'), mode: LaunchMode.externalApplication),
+                      openLink(Uri.parse('https://www.exchangerate-api.com'), mode: LaunchMode.externalApplication),
                   child: ConstrainedBox(
                     constraints: BoxConstraints(minHeight: Space.minTap(Theme.of(context).platform)),
                     child: Align(

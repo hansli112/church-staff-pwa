@@ -122,8 +122,13 @@ const signOutPushWait = Duration(seconds: 3);
 /// the token is then deleted at the next sign-in or launch
 /// (FirebasePushService).
 Future<void> signOut(WidgetRef ref) async {
+  // Read before waiting: the page that asked can be gone by then, and its
+  // ref with it.
   final uid = ref.read(uidProvider);
-  if (uid != null) await ref.read(pushServiceProvider).unregister(uid).timeout(signOutPushWait, onTimeout: () {});
-  await ref.read(selectedChurchProvider.notifier).forget();
-  await ref.read(backendProvider).auth.signOut();
+  final push = ref.read(pushServiceProvider);
+  final church = ref.read(selectedChurchProvider.notifier);
+  final auth = ref.read(backendProvider).auth;
+  if (uid != null) await push.unregister(uid).timeout(signOutPushWait, onTimeout: () {});
+  await church.forget();
+  await auth.signOut();
 }

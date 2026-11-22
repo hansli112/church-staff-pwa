@@ -12,6 +12,7 @@ import '../../state/providers.dart';
 import 'add_to_home.dart';
 import 'church_logo.dart';
 import 'links.dart';
+import '../../core/links.dart';
 
 /// 用網頁版 was chosen in this browser: its links go on here from now on.
 final webChosenProvider = NotifierProvider<DeviceFlag, bool>(() => DeviceFlag('web_chosen'));
@@ -87,7 +88,7 @@ class GetTheAppFirst extends ConsumerWidget {
                 const SizedBox(height: Space.xl),
                 PrimaryButton(
                   label: l10n.getAppFrom(store.label),
-                  onPressed: () => launchUrl(store.page, mode: LaunchMode.externalApplication),
+                  onPressed: () => openLink(store.page, mode: LaunchMode.externalApplication),
                 ),
                 const SizedBox(height: Space.s),
                 BalancedText(

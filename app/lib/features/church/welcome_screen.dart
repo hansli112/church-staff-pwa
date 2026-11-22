@@ -3,7 +3,6 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import 'package:url_launcher/url_launcher.dart';
 
 import '../../core/design/components.dart';
 import '../../core/design/tokens.dart';
@@ -23,6 +22,7 @@ import 'church_logo.dart';
 import 'claims.dart';
 import 'links.dart';
 import 'your_name.dart';
+import '../../core/links.dart';
 
 /// For someone signed in who belongs to no church yet. Most people arrive
 /// through an invite link and never see this; the rest either have a code
@@ -460,7 +460,7 @@ class _CreateChurchScreenState extends ConsumerState<CreateChurchScreen> {
                 alignment: AlignmentDirectional.centerStart,
                 child: SecondaryButton(
                   label: l10n.contactUs,
-                  onPressed: () => launchUrl(Uri.parse(supportUrl)),
+                  onPressed: () => openLink(Uri.parse(supportUrl)),
                 ),
               ),
           ],

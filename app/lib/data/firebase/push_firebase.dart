@@ -83,10 +83,28 @@ class FirebasePushService implements PushService {
   }
 
   Future<void>? _registering;
+  String? _registeringFor;
 
   /// One at a time: coming back from the permission prompt resumes the app,
-  /// which registers too, and two would leave a token listener behind.
-  Future<void> _register(String uid) => _registering ??= _registerNow(uid).whenComplete(() => _registering = null);
+  /// which registers too, and two would leave a token listener behind. One
+  /// for another account waits for the one under way, which then stops
+  /// ([_registerNow]).
+  Future<void> _register(String uid) {
+    if (_registering case final under? when _registeringFor == uid) return under;
+    final before = _registering;
+    _registeringFor = uid;
+    final next = _registerAfter(before, uid);
+    _registering = next;
+    next.whenComplete(() {
+      if (identical(_registering, next)) _registering = _registeringFor = null;
+    }).ignore();
+    return next;
+  }
+
+  Future<void> _registerAfter(Future<void>? before, String uid) async {
+    await before?.catchError((Object _) {});
+    await _registerNow(uid);
+  }
 
   /// Whose account this device's token was last saved on, until signing
   /// out takes it off.
@@ -98,17 +116,24 @@ class FirebasePushService implements PushService {
 
   Future<void> _registerNow(String uid) async {
     _signIns++;
+    // No listener of another account's left to save the new token to it:
+    // a token deleted below comes back through onTokenRefresh.
+    await _refresh?.cancel();
+    _refresh = null;
     // Signed out with no connection, the token stayed on that account. A
     // new one makes the old one stop working, and the backend drops it.
     final owner = prefs.getString(_ownerKey);
     if (owner != null && owner != uid) await _deleteToken();
     final token = await _messaging.getToken(vapidKey: kIsWeb ? _vapidKey : null);
+    // Signed out, or into another account, while the token came: it is not
+    // this account's to save any more (its rules refuse it).
+    if (_uid != uid) return;
     if (token != null) {
       await prefs.setString(_ownerKey, uid);
       await _save(uid, token);
     }
-    await _refresh?.cancel();
-    _refresh = _messaging.onTokenRefresh.listen((t) => _save(uid, t));
+    if (_uid != uid) return;
+    _refresh = _messaging.onTokenRefresh.listen((t) => _save(uid, t).ignore());
   }
 
   Future<void> _deleteToken() async {

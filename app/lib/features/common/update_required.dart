@@ -7,6 +7,7 @@ import '../../core/design/components.dart';
 import '../../core/design/tokens.dart';
 import '../../l10n/app_localizations.dart';
 import '../../state/app_build.dart';
+import '../../core/links.dart';
 
 /// Over the whole app while this store app is older than the backend
 /// allows ([updateRequiredProvider]). The app stays underneath, hidden, so
@@ -92,7 +93,7 @@ class _UpdateRequiredScreen extends StatelessWidget {
                 const SizedBox(height: Space.xl),
                 PrimaryButton(
                   label: l10n.updateRequiredOpen(store.label),
-                  onPressed: () => launchUrl(store.page, mode: LaunchMode.externalApplication),
+                  onPressed: () => openLink(store.page, mode: LaunchMode.externalApplication),
                 ),
               ],
             ),

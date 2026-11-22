@@ -15,6 +15,7 @@ import '../../domain/models.dart';
 import '../../l10n/app_localizations.dart';
 import '../../state/note_draft.dart';
 import '../../state/providers.dart';
+import '../../core/links.dart';
 
 /// A file picked for a 備註, before it is uploaded; no [bytes] when it is
 /// over Limits.noteFileBytes, which are not read.
@@ -65,7 +66,7 @@ final notePickerProvider = Provider<Future<List<PickedNoteFile>> Function()>(
 /// Opens a note's file, out of the app.
 void openNoteFile(NoteFile file) {
   if (!file.url.startsWith('http')) return;
-  unawaited(launchUrl(Uri.parse(file.url), mode: LaunchMode.externalApplication));
+  unawaited(openLink(Uri.parse(file.url), mode: LaunchMode.externalApplication));
 }
 
 /// The 備註 at the bottom of a day's roster: its text, links tappable, then
@@ -167,7 +168,7 @@ class _LinkedTextState extends State<LinkedText> {
       if (m.start > at) spans.add(TextSpan(text: widget.text.substring(at, m.start)));
       final url = m.group(0)!;
       final tap = TapGestureRecognizer()
-        ..onTap = () => unawaited(launchUrl(Uri.parse(url), mode: LaunchMode.externalApplication));
+        ..onTap = () => unawaited(openLink(Uri.parse(url), mode: LaunchMode.externalApplication));
       _taps.add(tap);
       spans.add(
         TextSpan(

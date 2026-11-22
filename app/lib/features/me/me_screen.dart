@@ -17,6 +17,7 @@ import '../../state/session.dart';
 import '../common/labels.dart';
 import '../common/site_pages.dart';
 import 'groups_screen.dart';
+import '../../core/links.dart';
 
 /// The LINE OpenChat (馬大別忙 Martha, sit): help, and churches meeting each other.
 final lineCommunity = Uri.parse('https://line.me/ti/g2/irPvG8tKHa9Iwf2hK7D9lcjdW5O-DUx4Coafcg');
@@ -186,12 +187,12 @@ class SettingsScreen extends ConsumerWidget {
               ListRow(
                 leading: const IconTile(Symbols.forum_rounded, color: TileColors.line),
                 title: l10n.lineCommunity,
-                onTap: () => launchUrl(lineCommunity, mode: LaunchMode.externalApplication),
+                onTap: () => openLink(lineCommunity, mode: LaunchMode.externalApplication),
               ),
               ListRow(
                 leading: const IconTile(Symbols.forum_rounded, color: TileColors.whatsApp),
                 title: l10n.whatsAppGroup,
-                onTap: () => launchUrl(whatsAppGroup, mode: LaunchMode.externalApplication),
+                onTap: () => openLink(whatsAppGroup, mode: LaunchMode.externalApplication),
               ),
               ListRow(
                 leading: const IconTile(Symbols.info_rounded, color: TileColors.neutral),
