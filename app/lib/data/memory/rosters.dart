@@ -53,17 +53,16 @@ mixin _MemoryRosters on _MemoryChurchBase {
       if (_uid != uid) throw const CloudException(CloudErrorCode.permissionDenied);
       _requireMember();
       final saved = _b.rosters[churchId]!;
-      for (final id in change.before.keys) {
-        if (!change.expects(id, saved[id])) {
-          throw const CloudException(CloudErrorCode.conflict);
-        }
+      final savedOrder = switch (staffOrder) {
+        final o? => _b.staffOrders[churchId]![o.serviceType] ?? StaffOrder(),
+        null => null,
+      };
+      if (!change.before.keys.every((id) => change.expects(id, saved[id])) || savedOrder != staffOrder?.before) {
+        // Saved already: this change sent before, its answer lost.
+        if (change.before.keys.every((id) => change.landed(id, saved[id])) && savedOrder == staffOrder?.after) return;
+        throw const CloudException(CloudErrorCode.conflict);
       }
-      if (staffOrder case final order?) {
-        _requireRosterEditor(order.serviceType);
-        if ((_b.staffOrders[churchId]![order.serviceType] ?? StaffOrder()) != order.before) {
-          throw const CloudException(CloudErrorCode.conflict);
-        }
-      }
+      if (staffOrder case final order?) _requireRosterEditor(order.serviceType);
       // Check every permission before changing anything (including deletes).
       for (final entry in change.after.entries) {
         final roster = entry.value ?? saved[entry.key];

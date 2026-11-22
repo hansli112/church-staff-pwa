@@ -629,6 +629,8 @@ void contractTests(Future<ContractWorld> Function() open) {
       await w.signIn(Grace.pastorEmail);
       final leader = shown.copyWith(role: Role.leader);
       await g.church.compareAndSetMember(before: shown, after: leader);
+      // Sent again, its answer lost: it is saved already.
+      await g.church.compareAndSetMember(before: shown, after: leader);
       await expectLater(
         g.church.compareAndSetMember(
           before: shown,
@@ -737,6 +739,8 @@ void contractTests(Future<ContractWorld> Function() open) {
 
     test('admins keep the 事工; everyone reads them; an ID once used stays', () async {
       final g = await withWorship();
+      // Sent again, its answer lost: it is saved already.
+      await g.church.compareAndSetMinistries(before: const [], after: const [worship]);
       await expectLater(
         g.church.compareAndSetMinistries(before: const [], after: const []),
         fails(CloudErrorCode.conflict),

@@ -840,7 +840,10 @@ class FirestoreChurchData implements ChurchData {
     // Merge ids inside the transaction: the rules reject shrinking ids.
     return _transaction((tx) async {
       final current = ministrySettingsFromJson((await tx.get(ref)).data());
-      if (!listEquals(current.ministries, before)) throw const CloudException(CloudErrorCode.conflict);
+      if (!listEquals(current.ministries, before)) {
+        if (listEquals(current.ministries, after)) return;
+        throw const CloudException(CloudErrorCode.conflict);
+      }
       tx.set(ref, {
         ...ministrySettingsToJson(current.withMinistries(after)),
         'updatedAt': FieldValue.serverTimestamp(),
@@ -947,13 +950,14 @@ class FirestoreChurchData implements ChurchData {
         for (final id in ids) tx.get(_col('rosters').doc(id)),
         if (staffOrder case final o?) tx.get(_col('staff_orders').doc(o.serviceType)),
       ]);
-      for (final (i, id) in ids.indexed) {
-        final data = reads[i].data();
-        if (!change.expects(id, data == null ? null : rosterFromJson(data))) {
-          throw const CloudException(CloudErrorCode.conflict);
-        }
-      }
-      if (staffOrder case final o? when StaffOrder.fromJson(reads.last.data() ?? const {}) != o.before) {
+      final saved = [
+        for (final (i, id) in ids.indexed)
+          (id: id, roster: reads[i].data() == null ? null : rosterFromJson(reads[i].data()!)),
+      ];
+      final savedOrder = staffOrder == null ? null : StaffOrder.fromJson(reads.last.data() ?? const {});
+      if (!saved.every((s) => change.expects(s.id, s.roster)) || savedOrder != staffOrder?.before) {
+        // Saved already: this change sent before, its answer lost.
+        if (saved.every((s) => change.landed(s.id, s.roster)) && savedOrder == staffOrder?.after) return;
         throw const CloudException(CloudErrorCode.conflict);
       }
       for (final entry in next.entries) {
@@ -996,7 +1000,10 @@ class FirestoreChurchData implements ChurchData {
     // Merge ids inside the transaction: the rules reject shrinking ids.
     return _transaction((tx) async {
       final current = serviceSettingsFromJson((await tx.get(ref)).data());
-      if (!listEquals(current.services, before)) throw const CloudException(CloudErrorCode.conflict);
+      if (!listEquals(current.services, before)) {
+        if (listEquals(current.services, after)) return;
+        throw const CloudException(CloudErrorCode.conflict);
+      }
       final next = current.withServices(after);
       tx.set(ref, {
         'services': [for (final s in next.services) serviceToJson(s)],
@@ -1030,7 +1037,11 @@ class FirestoreChurchData implements ChurchData {
     return _transaction((tx) async {
       final data = (await tx.get(ref)).data();
       if (data == null) throw const CloudException(CloudErrorCode.notFound);
-      if (!memberFromJson(after.uid, data).sameAdminFields(before)) throw const CloudException(CloudErrorCode.conflict);
+      final current = memberFromJson(after.uid, data);
+      if (!current.sameAdminFields(before)) {
+        if (current.sameAdminFields(after)) return;
+        throw const CloudException(CloudErrorCode.conflict);
+      }
       tx.update(ref, memberToJson(after));
     });
   }

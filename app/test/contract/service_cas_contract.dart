@@ -68,6 +68,13 @@ void serviceCasContractTests(Future<ContractWorld> Function() open) {
     expect((await g.church.services().first).byId('sunday'), sunday);
   });
 
+  test('a list of services saved already, sent again as its answer was lost, is saved', () async {
+    final g = await Grace.open(await open());
+    await g.church.compareAndSetServiceList(before: const [sunday, youth], after: const [youth, sunday]);
+    await g.church.compareAndSetServiceList(before: const [sunday, youth], after: const [youth, sunday]);
+    expect((await g.church.services().first).services, const [youth, sunday]);
+  });
+
   test('replacing the list of services another admin changed meanwhile is refused', () async {
     final g = await Grace.open(await open());
     final changed = sunday.copyWith(name: '別人改的聚會');

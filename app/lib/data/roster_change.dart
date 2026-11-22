@@ -56,4 +56,8 @@ final class RosterChange {
   /// Whether [actual] is what this change expects at [id].
   /// [Roster.saved] is an on-screen draft marker, never a persisted value.
   bool expects(String id, Roster? actual) => actual?.copyWith(saved: true) == before[id]?.copyWith(saved: true);
+
+  /// Whether [actual] is what this change leaves at [id]: saved already, by
+  /// this change sent before (its answer lost) or by someone else's same one.
+  bool landed(String id, Roster? actual) => actual?.copyWith(saved: true) == after[id]?.copyWith(saved: true);
 }

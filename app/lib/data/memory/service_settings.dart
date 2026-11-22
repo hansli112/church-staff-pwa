@@ -8,7 +8,10 @@ mixin _MemoryServiceSettings on _MemoryChurchBase {
     _requireAdmin();
     await _b.write(() {
       final current = _b.ministries[churchId] ?? const MinistrySettings();
-      if (!listEquals(current.ministries, before)) throw const CloudException(CloudErrorCode.conflict);
+      if (!listEquals(current.ministries, before)) {
+        if (listEquals(current.ministries, after)) return;
+        throw const CloudException(CloudErrorCode.conflict);
+      }
       _b.ministries[churchId] = current.withMinistries(after);
     });
   }
@@ -21,7 +24,10 @@ mixin _MemoryServiceSettings on _MemoryChurchBase {
     }
     await _b.write(() {
       final settings = _b.services[churchId]!;
-      if (!listEquals(settings.services, before)) throw const CloudException(CloudErrorCode.conflict);
+      if (!listEquals(settings.services, before)) {
+        if (listEquals(settings.services, after)) return;
+        throw const CloudException(CloudErrorCode.conflict);
+      }
       _b.services[churchId] = settings.withServices(after);
     });
   }

@@ -31,7 +31,10 @@ mixin _MemoryGroupMembers on _MemoryChurchBase {
       final members = _b.members[churchId]!;
       final current = members[after.uid];
       if (current == null) throw const CloudException(CloudErrorCode.notFound);
-      if (!current.sameAdminFields(before)) throw const CloudException(CloudErrorCode.conflict);
+      if (!current.sameAdminFields(before)) {
+        if (current.sameAdminFields(after)) return;
+        throw const CloudException(CloudErrorCode.conflict);
+      }
       // As memberToJson writes it.
       members[after.uid] = current.copyWith(
         name: after.name,

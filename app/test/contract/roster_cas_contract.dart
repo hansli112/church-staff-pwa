@@ -41,6 +41,47 @@ void rosterCasContractTests(Future<ContractWorld> Function() open) {
     expect((await g.church.staffOrder('sunday').first).rankingOf('司琴'), ['乙', '甲']);
   });
 
+  test('a change saved already, sent again as its answer was lost, is saved; another is still refused', () async {
+    final g = await Grace.open(await open());
+    final first = sundayOn(
+      18,
+      duties: const [
+        Duty(role: '司琴', people: ['甲']),
+      ],
+    );
+    final second = sundayOn(
+      25,
+      duties: const [
+        Duty(role: '司琴', people: ['乙']),
+      ],
+    );
+    await g.church.putRoster(first);
+    final change = RosterChange(
+      before: {first.id: first, second.id: null},
+      after: {first.id: null, second.id: second},
+      staffOrder: (
+        serviceType: 'sunday',
+        before: StaffOrder(),
+        after: StaffOrder({
+          '司琴': ['乙'],
+        }),
+      ),
+    );
+    await g.church.compareAndSetRosters(change);
+    await g.church.compareAndSetRosters(change);
+    expect(await g.church.readOnce.rosters(), [second]);
+    expect((await g.church.staffOrder('sunday').first).rankingOf('司琴'), ['乙']);
+    await expectLater(
+      g.church.compareAndSetRosters(
+        RosterChange(
+          before: {second.id: null},
+          after: {second.id: second.copyWith(duties: const [])},
+        ),
+      ),
+      fails(CloudErrorCode.conflict),
+    );
+  });
+
   test('bulk compare-and-set creates and deletes atomically, and undo restores absence', () async {
     final g = await Grace.open(await open());
     final first = sundayOn(
