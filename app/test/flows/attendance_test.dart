@@ -433,11 +433,10 @@ void main() {
       await tester.tap(find.byTooltip('下一週'));
       await settle(tester);
       expect(find.text('10月11日 – 10月17日'), findsOneWidget);
-      expect(inRow('主日崇拜', '未填'), findsNothing, reason: 'today, still to fill in: not 未填 yet');
-      expect(inRow('主日崇拜', '今天 · 10月11日 週日'), findsOneWidget);
+      expect(inRow('主日崇拜', '未填'), findsOneWidget, reason: 'today, still to fill in');
       expect(find.text('提醒'), findsNothing, reason: "today's reminder is still to come");
       expect(find.textContaining('個未填'), findsNothing, reason: "today's not counted, as on 首頁");
-      expect(at(inRow('主日崇拜', '今天 · 10月11日 週日')), lessThan(at(find.text('喜樂小組'))), reason: 'the same order every week');
+      expect(at(inRow('主日崇拜', '未填')), lessThan(at(find.text('喜樂小組'))), reason: 'the same order every week');
       expect(arrow(Symbols.chevron_right_rounded).onPressed, isNull, reason: 'this week is the last');
     });
 
@@ -780,8 +779,7 @@ void main() {
       await pumpApp(tester, b);
       await go(tester, '/me/attendance');
       expect(find.text('10月11日 – 10月17日'), findsOneWidget, reason: "the week before all filled in: today's week");
-      expect(inRow('主日崇拜', '今天 · 10月11日 週日'), findsOneWidget);
-      expect(inRow('主日崇拜', '未填'), findsNothing);
+      expect(inRow('主日崇拜', '未填'), findsOneWidget);
       expect(find.textContaining('個未填'), findsNothing);
       expect(find.textContaining('都填好了'), findsNothing);
     });

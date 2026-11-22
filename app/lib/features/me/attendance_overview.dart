@@ -155,7 +155,7 @@ class _AttendanceOverviewScreenState extends ConsumerState<AttendanceOverviewScr
     onTap: () => _addGathering(context, ref),
   );
 
-  /// A meeting of [week]: its 人數, 未填 (not today's), or the day it next meets.
+  /// A meeting of [week]: its 人數, 未填, or the day it next meets.
   Widget _row(BuildContext context, AttendanceRow r, Day sunday, Day today, String Function(String key) nameOf) {
     final l10n = L10n.of(context);
     return ListRow(
@@ -170,8 +170,7 @@ class _AttendanceOverviewScreenState extends ConsumerState<AttendanceOverviewScr
           null => attendanceNotYet(l10n, ref.watch(meetingTimeProvider(r.group.group))),
         },
       },
-      // Today's, still to fill in, is not 未填 yet: its day says 今天.
-      value: r.day == null || (r.day == today && r.value == null) ? null : attendanceValue(l10n, r.value, nameOf),
+      value: r.day == null ? null : attendanceValue(l10n, r.value, nameOf),
       onTap: switch (r.day) {
         final day? => () {
           // Filled in, the week stays, though the page would open on another now.
