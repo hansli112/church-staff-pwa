@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:martha/data/backend.dart';
 import 'package:martha/data/memory/memory_backend.dart';
+import 'package:martha/domain/day.dart';
 import 'package:martha/domain/models.dart';
 import 'package:martha/domain/roster_import.dart';
 import 'package:martha/state/import_session.dart';
@@ -89,7 +90,7 @@ void main() {
     final c = await opened(b);
     session(c).load(_rows);
     session(c).choose('李美玉', const ImportPersonChoice.guest());
-    session(c).updateRow(0, {..._rows.single, 'date': '2026-10-18'});
+    session(c).setDate(0, Day(2026, 10, 18));
     expect(c.read(importSessionProvider('sunday')).people, {'李美玉': const ImportPersonChoice.guest()});
     expect(plan(c).changes.values.single.after.duties.firstWhere((d) => d.role == '司琴').uids, isEmpty);
     session(c).load(_rows);
@@ -132,5 +133,60 @@ void main() {
     );
     await session(c).apply(plan(c)).done;
     expect(savedDay(b, 11).duties.firstWhere((d) => d.role == '司琴').people, ['李美玉']);
+  });
+
+  group('editing a row', () {
+    test('a date picked is the day the row is for', () async {
+      final c = await opened(seededChurch());
+      session(c).load(_rows);
+      session(c).setDate(0, Day(2026, 10, 18));
+      expect(c.read(importSessionProvider('sunday')).rows.single['date'], '2026-10-18');
+      expect(plan(c).changes.keys.single, contains('2026-10-18'));
+    });
+
+    test('a duty is added, changed and taken away; its people trimmed, blank lines left out', () async {
+      final c = await opened(seededChurch());
+      session(c).load(_rows);
+      session(c).putDuty(0, null, role: ' 招待 ', people: const ['陳志豪', '  ', ' 李美玉 ']);
+      session(c).putDuty(0, 0, role: '司琴', people: const ['王小明']);
+      expect(c.read(importSessionProvider('sunday')).rows.single['duties'], [
+        {
+          'role': '司琴',
+          'people': ['王小明'],
+        },
+        {
+          'role': '招待',
+          'people': ['陳志豪', '李美玉'],
+        },
+      ]);
+      session(c).removeDuty(0, 0);
+      expect((c.read(importSessionProvider('sunday')).rows.single['duties'] as List).single['role'], '招待');
+    });
+
+    test('a 特別活動 is added with its color, changed and taken away', () async {
+      final c = await opened(seededChurch());
+      session(c).load(_rows);
+      session(c).putEvent(0, null, name: ' 聖餐 ', color: 2);
+      session(c).putEvent(0, 0, name: '浸禮', color: 4);
+      session(c).putEvent(0, null, name: '愛宴', color: 1);
+      expect(c.read(importSessionProvider('sunday')).rows.single['events'], [
+        {'name': '浸禮', 'color': 4},
+        {'name': '愛宴', 'color': 1},
+      ]);
+      session(c).removeEvent(0, 1);
+      expect(c.read(importSessionProvider('sunday')).rows.single['events'], [
+        {'name': '浸禮', 'color': 4},
+      ]);
+    });
+
+    test('a row is changed as it is now, not as the sheet saw it', () async {
+      final c = await opened(seededChurch());
+      session(c).load(_rows);
+      session(c).putEvent(0, null, name: '聖餐', color: 0);
+      session(c).setDate(0, Day(2026, 10, 18));
+      final row = c.read(importSessionProvider('sunday')).rows.single as Map;
+      expect(row['events'], isNotEmpty, reason: 'the date kept what was added before');
+      expect(row['duties'], isNotEmpty);
+    });
   });
 }

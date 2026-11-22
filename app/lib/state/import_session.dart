@@ -5,6 +5,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../data/backend.dart';
+import '../domain/day.dart';
 import '../domain/models.dart';
 import '../domain/roster_import.dart';
 import 'church_writes.dart';
@@ -181,8 +182,54 @@ class ImportSession extends Notifier<ImportDraft> {
   /// Replaces the rows with [rows], edited: who each name is stays.
   void edit(List<dynamic> rows) => state = state.copyWith(rows: _scoped(rows), clearError: true);
 
-  void updateRow(int index, Map<String, dynamic> row) =>
-      edit([for (final (i, old) in state.rows.indexed) i == index ? row : old]);
+  /// Row [index] as it is now, changed by [change]; a row that is not an
+  /// object (JSON pasted wrong) is left.
+  void _change(int index, void Function(Map<String, dynamic> row) change) {
+    final rows = state.rows;
+    if (index >= rows.length || rows[index] is! Map) return;
+    final row = Map<String, dynamic>.from(rows[index] as Map);
+    change(row);
+    edit([for (final (i, old) in rows.indexed) i == index ? row : old]);
+  }
+
+  /// [key]'s list in [row], a copy, empty when it has none.
+  static List<dynamic> _list(Map<String, dynamic> row, String key) =>
+      row[key] is List ? List<dynamic>.of(row[key] as List<dynamic>) : <dynamic>[];
+
+  /// Puts [item] at [at] of [list], or after the rest when null.
+  static void _put(List<dynamic> list, int? at, Object item) =>
+      at == null || at >= list.length ? list.add(item) : list[at] = item;
+
+  /// Row [index] is for [date].
+  void setDate(int index, Day date) => _change(index, (row) => row['date'] = date.toString());
+
+  /// Duty [at] of row [index] (null: a new one, last) is [role], served by
+  /// [people], each trimmed, blank ones left out.
+  void putDuty(int index, int? at, {required String role, required List<String> people}) => _change(index, (row) {
+    final duties = _list(row, 'duties');
+    _put(duties, at, {
+      'role': role.trim(),
+      'people': [
+        for (final p in people)
+          if (p.trim().isNotEmpty) p.trim(),
+      ],
+    });
+    row['duties'] = duties;
+  });
+
+  /// Takes duty [at] off row [index].
+  void removeDuty(int index, int at) => _change(index, (row) => row['duties'] = _list(row, 'duties')..removeAt(at));
+
+  /// 特別活動 [at] of row [index] (null: a new one, last) is [name] in
+  /// [color].
+  void putEvent(int index, int? at, {required String name, required int color}) => _change(index, (row) {
+    final events = _list(row, 'events');
+    _put(events, at, {'name': name.trim(), 'color': color});
+    row['events'] = events;
+  });
+
+  /// Takes 特別活動 [at] off row [index].
+  void removeEvent(int index, int at) => _change(index, (row) => row['events'] = _list(row, 'events')..removeAt(at));
 
   void choose(String name, ImportPersonChoice choice) =>
       state = state.copyWith(people: {...state.people, name: choice});

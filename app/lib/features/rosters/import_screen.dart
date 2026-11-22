@@ -234,13 +234,11 @@ class _ImportScreenState extends ConsumerState<ImportScreen> {
       ),
     );
     if (picked == null || !(mounted && _sameDraft(key) && _ready)) return;
-    final date = Day(picked.year, picked.month, picked.day);
-    _session.updateRow(index, Map<String, dynamic>.from(row)..['date'] = date.toString());
+    _session.setDate(index, Day(picked.year, picked.month, picked.day));
   }
 
   Future<void> _editDuty(int index, Map<dynamic, dynamic> row, int? dutyIndex) async {
-    final duties = row['duties'] is List ? List<dynamic>.of(row['duties'] as List<dynamic>) : <dynamic>[];
-    final duty = dutyIndex == null ? const <String, dynamic>{} : duties[dutyIndex];
+    final duty = dutyIndex == null ? const <String, dynamic>{} : (row['duties'] as List<dynamic>)[dutyIndex];
     if (duty is! Map) return _editJson();
     final result = await _edit(
       title: dutyIndex == null ? L10n.of(context).addDuty : L10n.of(context).importEditDuty,
@@ -257,24 +255,14 @@ class _ImportScreenState extends ConsumerState<ImportScreen> {
     );
     if (result == null) return;
     if (result.remove) {
-      duties.removeAt(dutyIndex!);
+      _session.removeDuty(index, dutyIndex!);
     } else {
-      final next = {
-        'role': result.values[0].trim(),
-        'people': result.values[1].split('\n').map((s) => s.trim()).where((s) => s.isNotEmpty).toList(),
-      };
-      if (dutyIndex == null) {
-        duties.add(next);
-      } else {
-        duties[dutyIndex] = next;
-      }
+      _session.putDuty(index, dutyIndex, role: result.values[0], people: result.values[1].split('\n'));
     }
-    _session.updateRow(index, Map<String, dynamic>.from(row)..['duties'] = duties);
   }
 
   Future<void> _editEvent(int index, Map<dynamic, dynamic> row, int? eventIndex) async {
-    final events = row['events'] is List ? List<dynamic>.of(row['events'] as List<dynamic>) : <dynamic>[];
-    final event = eventIndex == null ? const <String, dynamic>{} : events[eventIndex];
+    final event = eventIndex == null ? const <String, dynamic>{} : (row['events'] as List<dynamic>)[eventIndex];
     if (event is! Map) return _editJson();
     final color = event['color'];
     final result = await _edit(
@@ -285,16 +273,10 @@ class _ImportScreenState extends ConsumerState<ImportScreen> {
     );
     if (result == null) return;
     if (result.remove) {
-      events.removeAt(eventIndex!);
+      _session.removeEvent(index, eventIndex!);
     } else {
-      final next = {'name': result.values.single.trim(), 'color': result.color};
-      if (eventIndex == null) {
-        events.add(next);
-      } else {
-        events[eventIndex] = next;
-      }
+      _session.putEvent(index, eventIndex, name: result.values.single, color: result.color ?? 0);
     }
-    _session.updateRow(index, Map<String, dynamic>.from(row)..['events'] = events);
   }
 
   /// Admins: changes the service's settings so the import fits them.
