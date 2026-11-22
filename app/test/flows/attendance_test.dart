@@ -572,6 +572,19 @@ void main() {
       );
     });
 
+    testWidgets('匯出 lists 未填 only as far back as the weeks it turns; before, what was filled in', (tester) async {
+      final b = church();
+      b.churches['grace'] = b.churches['grace']!.copyWith(attendanceSince: () => Day(2026, 5, 1));
+      b.attendance['grace']!['small:joy'] = AttendanceRecord(days: {Day(2026, 5, 8): const AttendanceDay.count(7)});
+      final saver = _Saver();
+      await pumpApp(tester, b, overrides: [fileSaverProvider.overrideWithValue(saver)]);
+      await go(tester, '/me/attendance');
+      await tapText(tester, '匯出');
+      final rows = utf8.decode(saver.files.single.$2).split('\r\n');
+      expect(rows[1], '2026-05-08,喜樂小組,7,');
+      expect(rows[2], '2026-07-24,喜樂小組,未填,', reason: '12 weeks before 10/11 on');
+    });
+
     testWidgets("a service's 負責人 exports its own and its 小組' only", (tester) async {
       final b = church(as: editor);
       b.attendance['grace']!['service:youth'] = AttendanceRecord(

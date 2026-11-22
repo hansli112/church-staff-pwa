@@ -369,8 +369,9 @@ AttendanceWeek attendanceWeek(
 
 /// 聚會人數.csv's meetings (匯出): those of [records] from the day
 /// 回報人數 came on ([since]), or the first filled in, to [today], oldest
-/// first, a day's in the order of [records]: each filled in, and each that
-/// asked for its 人數, 未填 till filled in, today's too. [nameOf] names
+/// first, a day's in the order of [records]: each filled in, and, within
+/// [attendanceWeeks], each that asked for its 人數, 未填 till filled in,
+/// today's too. [nameOf] names
 /// the 小組 one met with.
 List<AttendanceLine> attendanceLines(
   List<AttendanceOf> records, {
@@ -378,6 +379,9 @@ List<AttendanceLine> attendanceLines(
   required Day today,
   required String Function(String key) nameOf,
 }) {
+  // 未填 only as far back as the pages list them: before, a pause may be
+  // gone (pausesTurned) and a 小組 may have met on another day.
+  final asked = today.addDays(-7 * attendanceWeeks);
   var from = since;
   for (final (group: _, :record) in records) {
     for (final d in record.days.keys) {
@@ -387,7 +391,7 @@ List<AttendanceLine> attendanceLines(
   return [
     for (var d = from; !d.isAfter(today); d = d.addDays(1))
       for (final (group: g, :record) in records)
-        if (record.days[d] != null || _due(g, since: since, record: record, day: d))
+        if (record.days[d] != null || !d.isBefore(asked) && _due(g, since: since, record: record, day: d))
           (
             day: d,
             group: g.name,

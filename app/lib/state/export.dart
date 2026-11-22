@@ -35,17 +35,19 @@ final fileSaverProvider = Provider<FileSaver>((ref) => const PlatformFileSaver()
 /// 人數 of its meetings too, with 回報人數 on.
 Future<ChurchSnapshot> loadChurchSnapshot(WidgetRef ref) async {
   final data = ref.churchData;
-  final attendance = loadAttendanceLines(ref);
-  final church = await data.church().first;
-  final (services, members, pending, staffOrders, rosters, calendar, link, webhook) = await (
-    data.services().first,
-    data.readOnce.members(),
-    data.readOnce.pendingMembers(),
-    data.readOnce.staffOrders(),
-    data.readOnce.rosters(),
-    data.calendar.settings().first,
-    data.churchLink.watch().first,
-    data.webhook.watch().first,
+  final ((church, services, members, pending, staffOrders, rosters, calendar, link, webhook), attendance) = await (
+    (
+      data.church().first,
+      data.services().first,
+      data.readOnce.members(),
+      data.readOnce.pendingMembers(),
+      data.readOnce.staffOrders(),
+      data.readOnce.rosters(),
+      data.calendar.settings().first,
+      data.churchLink.watch().first,
+      data.webhook.watch().first,
+    ).wait,
+    loadAttendanceLines(ref),
   ).wait;
   return ChurchSnapshot(
     church: church!,
@@ -57,6 +59,6 @@ Future<ChurchSnapshot> loadChurchSnapshot(WidgetRef ref) async {
     calendar: calendar,
     link: link,
     webhook: webhook,
-    attendance: await attendance,
+    attendance: attendance,
   );
 }

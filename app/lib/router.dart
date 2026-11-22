@@ -210,7 +210,7 @@ final routerProvider = Provider<GoRouter>((ref) {
                   ),
                   page(
                     'table/:type',
-                    (s) => PlanWeeksScreen(serviceType: s.pathParameters['type']!, view: true),
+                    (s) => PlanWeeksScreen(serviceType: s.pathParameters['type']!, readOnly: true),
                   ),
                   page(
                     'request/:id',

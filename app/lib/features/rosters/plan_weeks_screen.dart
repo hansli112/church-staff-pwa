@@ -36,17 +36,17 @@ import 'roster_image.dart';
 /// Opens at this month, arranged or not, as the 服事表 tab does; later
 /// months join on as it scrolls.
 ///
-/// [view]: 表格, the same table only to look at, every duty, for whoever
+/// [readOnly]: 表格, the same table only to look at, every duty, for whoever
 /// does not arrange all of it: from the 服事表 tab, arranging none of it,
 /// or 安排服事's ⋯, arranging some. Their own cells are marked; a date
 /// still opens its day.
 class PlanWeeksScreen extends ConsumerStatefulWidget {
-  const PlanWeeksScreen({super.key, required this.serviceType, this.view = false});
+  const PlanWeeksScreen({super.key, required this.serviceType, this.readOnly = false});
 
   /// The service it opens at, the one the 服事表 tab showed.
   final String serviceType;
 
-  final bool view;
+  final bool readOnly;
 
   @override
   ConsumerState<PlanWeeksScreen> createState() => _PlanWeeksScreenState();
@@ -287,6 +287,8 @@ class _PlanWeeksScreenState extends ConsumerState<PlanWeeksScreen> with SingleTi
   /// service, or, when greyed, that there is nobody on a list to ask.
   Widget _menu(L10n l10n, AppColors c, Day from) {
     final type = _type;
+    // Some duties only: the rest of the day, to look at.
+    final some = !ref.watch(arrangesProvider(type)).all;
     final asked = ref.watch(lastUnavailableAskProvider(type)).value;
     final people = _askedToFill(type);
     final canAsk = people.isNotEmpty;
@@ -321,8 +323,7 @@ class _PlanWeeksScreenState extends ConsumerState<PlanWeeksScreen> with SingleTi
         ),
         PopupMenuItem(value: 'image', child: Text(l10n.rosterShareImage)),
         PopupMenuItem(value: 'photo', child: Text(l10n.photoImportAction)),
-        // Some duties only: the rest of the day, to look at.
-        if (!ref.watch(arrangesProvider(type)).all) PopupMenuItem(value: 'table', child: Text(l10n.planWholeTable)),
+        if (some) PopupMenuItem(value: 'table', child: Text(l10n.planWholeTable)),
         const PopupMenuDivider(),
         PopupMenuItem(value: 'guide', child: Text(l10n.howToUse)),
       ],
@@ -421,7 +422,7 @@ class _PlanWeeksScreenState extends ConsumerState<PlanWeeksScreen> with SingleTi
     final settings = ref.watch(servicesProvider).value;
     final me = ref.watch(meProvider).value;
     final ministries = ref.watch(ministriesProvider).value?.ministries ?? const <Ministry>[];
-    final view = widget.view;
+    final view = widget.readOnly;
     final mine = [
       for (final s in me?.rosterServices(settings?.services ?? const [], ministries: ministries) ?? const <Service>[])
         if (view || me!.arranges(ministries, s.id).any) s,
@@ -627,7 +628,7 @@ class _PlanWeeksScreenState extends ConsumerState<PlanWeeksScreen> with SingleTi
     final monthHeight = scale.scale(17) * 1.3 + Space.m + Space.s;
     final line = BorderSide(color: c.separator, width: 0.5);
 
-    final everyone = widget.view
+    final everyone = widget.readOnly
         ? const <String, UnavailableDays>{}
         : ref.watch(unavailableDaysProvider).value ?? const <String, UnavailableDays>{};
     final me = ref.watch(uidProvider);
@@ -696,7 +697,7 @@ class _PlanWeeksScreenState extends ConsumerState<PlanWeeksScreen> with SingleTi
               onTap: () => context.push('/rosters/${day.type}/${day.day.key}'),
             ),
           );
-        case final Roster day when widget.view:
+        case final Roster day when widget.readOnly:
           return _ViewCell(roster: day, role: role!, today: today, border: line, me: me);
         case final Roster day:
           return _DutyCell(

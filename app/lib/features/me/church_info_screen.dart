@@ -36,6 +36,8 @@ class _ChurchInfoScreenState extends ConsumerState<ChurchInfoScreen> {
 
   Future<void> _export(Church church) async {
     final l10n = L10n.of(context);
+    final saver = ref.read(fileSaverProvider);
+    final telemetry = ref.read(telemetryProvider);
     setState(() => _exporting = true);
     try {
       final now = ref.read(clockProvider)();
@@ -48,10 +50,10 @@ class _ChurchInfoScreenState extends ConsumerState<ChurchInfoScreen> {
         separator: l10n.listSeparator,
       );
       final zip = exportZip(await loadChurchSnapshot(ref), now, csv, attendance: attendanceCsvWords(l10n));
-      final saved = await ref.read(fileSaverProvider).save(exportFileName(church, now), zip, 'application/zip');
+      final saved = await saver.save(exportFileName(church, now), zip, 'application/zip');
       if (!saved) return;
       // That it happened, never what was in it.
-      ref.read(telemetryProvider).logEvent('church_export');
+      telemetry.logEvent('church_export');
       if (mounted) showToast(context, l10n.exported);
     } catch (e) {
       if (mounted) showToast(context, errorText(l10n, e));
