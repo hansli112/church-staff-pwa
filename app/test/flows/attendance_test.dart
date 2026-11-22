@@ -642,6 +642,10 @@ void main() {
       await tester.enterText(find.widgetWithText(TextField, '人數'), '30');
       await tester.pump();
       expect(find.text('和其他小組一起'), findsOneWidget);
+      double y(Finder f) => tester.getTopLeft(f).dy;
+      final count = find.widgetWithText(TextField, '人數');
+      expect(y(find.text('這次沒聚會')), lessThan(y(count)), reason: 'up by the date, above the keyboard');
+      expect(y(find.text('平安小組')), lessThan(y(find.widgetWithText(TextField, '備註'))), reason: 'the note last');
       expect(b.warmedUp, contains(WarmUp.attendanceTogether), reason: 'filled in together through the backend');
       await tapText(tester, '平安小組');
       await tapText(tester, '儲存');

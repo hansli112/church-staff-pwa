@@ -417,11 +417,24 @@ class _FillSheetState extends State<_FillSheet> {
                         mainAxisSize: MainAxisSize.min,
                         crossAxisAlignment: CrossAxisAlignment.stretch,
                         children: [
-                          Text(
-                            widget.title,
-                            style: AppText.footnote.copyWith(color: AppColors.of(context).secondaryLabel),
+                          // 這次沒聚會 by the date: below, the keyboard the
+                          // count opens with covers it (2026-11-23).
+                          Row(
+                            children: [
+                              Expanded(
+                                child: Text(
+                                  widget.title,
+                                  style: AppText.footnote.copyWith(color: AppColors.of(context).secondaryLabel),
+                                ),
+                              ),
+                              // Met with nobody, then: those it named are cleared.
+                              SecondaryButton(
+                                label: l10n.attendanceNoMeeting,
+                                onPressed: () => Navigator.pop(context, const AttendanceDay.none()),
+                              ),
+                            ],
                           ),
-                          const SizedBox(height: Space.m),
+                          const SizedBox(height: Space.s),
                           TextField(
                             controller: _count,
                             autofocus: true,
@@ -432,13 +445,6 @@ class _FillSheetState extends State<_FillSheet> {
                             ],
                             decoration: InputDecoration(labelText: l10n.attendanceCountField),
                             onChanged: (_) => setState(() {}),
-                          ),
-                          const SizedBox(height: Space.s),
-                          TextField(
-                            controller: _note,
-                            maxLength: TextLimits.attendanceNote,
-                            buildCounter: nearLimitCounter,
-                            decoration: InputDecoration(labelText: l10n.attendanceNote),
                           ),
                         ],
                       ),
@@ -460,12 +466,14 @@ class _FillSheetState extends State<_FillSheet> {
                       )
                     else
                       const SizedBox(height: Space.s),
+                    // The note last: what it says is for anyone to add.
                     Padding(
                       padding: const EdgeInsets.symmetric(horizontal: Space.m),
-                      // Met with nobody, then: those it named are cleared.
-                      child: SecondaryButton(
-                        label: l10n.attendanceNoMeeting,
-                        onPressed: () => Navigator.pop(context, const AttendanceDay.none()),
+                      child: TextField(
+                        controller: _note,
+                        maxLength: TextLimits.attendanceNote,
+                        buildCounter: nearLimitCounter,
+                        decoration: InputDecoration(labelText: l10n.attendanceNote),
                       ),
                     ),
                   ],
