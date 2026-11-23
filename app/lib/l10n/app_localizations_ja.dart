@@ -3739,4 +3739,17 @@ class L10nJa extends L10n {
 
   @override
   String get myFamilyServicesTitle => '自分と家族のこれからの奉仕';
+
+  @override
+  String serviceDutyCount(int count) {
+    return '$count件';
+  }
+
+  @override
+  String serviceItemCount(int count) {
+    return '$count件';
+  }
+
+  @override
+  String get servicePartNone => 'なし';
 }

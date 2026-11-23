@@ -3737,4 +3737,17 @@ class L10nKo extends L10n {
 
   @override
   String get myFamilyServicesTitle => '나와 가족의 다가오는 봉사';
+
+  @override
+  String serviceDutyCount(int count) {
+    return '$count개';
+  }
+
+  @override
+  String serviceItemCount(int count) {
+    return '$count개';
+  }
+
+  @override
+  String get servicePartNone => '없음';
 }

@@ -2502,5 +2502,11 @@
   "familyAcceptLabel": "接受{name}的家人邀請",
   "@familyAcceptLabel": {"description": "Screen reader label of 接受", "placeholders": {"name": {"type": "String"}}},
   "myFamilyServicesTitle": "我和家人接下來的服事",
-  "@myFamilyServicesTitle": {"description": "首頁 header over my days and my family's, once I have family"}
+  "@myFamilyServicesTitle": {"description": "首頁 header over my days and my family's, once I have family"},
+  "serviceDutyCount": "{count} 項",
+  "@serviceDutyCount": {"description": "On a service's page, beside 服事項目: how many it has; the row opens them", "placeholders": {"count": {"type": "int"}}},
+  "serviceItemCount": "{count} 個",
+  "@serviceItemCount": {"description": "On a service's page, beside 事工, 常用特別活動 or 小組: how many it has; the row opens them", "placeholders": {"count": {"type": "int"}}},
+  "servicePartNone": "沒有",
+  "@servicePartNone": {"description": "On a service's page, beside 服事項目, 事工, 常用特別活動 or 小組 when it has none"}
 }

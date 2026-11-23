@@ -35,11 +35,7 @@ void main() {
     await go(tester, '/me');
     await tapText(tester, '聚會與事工');
     await tapText(tester, '主日崇拜');
-    await tester.scrollUntilVisible(find.text('新增事工'), 200, scrollable: find.byType(Scrollable).last);
-    expect(find.text('事工'), findsNothing, reason: 'none yet: no heading over 新增事工 alone');
-    // Clear of the tab bar.
-    await tester.drag(find.byType(Scrollable).last, const Offset(0, -200));
-    await settle(tester);
+    await tapText(tester, '事工');
     await tapText(tester, '新增事工');
     await tester.enterText(find.byType(TextField), '敬拜團');
     await tapText(tester, '儲存');
@@ -63,8 +59,7 @@ void main() {
     expect(find.text('同工'), findsNothing, reason: 'a 事工 has no 同工 of its own (#94)');
     expect(find.text('加入同工'), findsNothing);
 
-    await go(tester, '/me/groups/service/sunday');
-    await tester.scrollUntilVisible(find.text('陳志豪 · 司琴'), 200, scrollable: find.byType(Scrollable).last);
+    await go(tester, '/me/groups/service/sunday/ministries');
     expect(find.text('陳志豪 · 司琴'), findsOneWidget, reason: 'who leads it and what, on its service\'s page');
     await go(tester, '/me/groups');
     expect(find.text('敬拜團'), findsNothing, reason: "not church-wide: 主日崇拜's own");
@@ -254,11 +249,8 @@ void main() {
     final b = seededChurch(as: editor);
     await pumpApp(tester, b);
     await go(tester, '/me/groups/service/sunday');
-    await tester.scrollUntilVisible(find.text('招待').first, 200, scrollable: find.byType(Scrollable).last);
-    await tester.drag(find.byType(Scrollable).last, const Offset(0, -200));
-    await settle(tester);
-    await tester.tap(find.text('招待').first);
-    await settle(tester);
+    await tapText(tester, '服事項目');
+    await tapText(tester, '招待');
     expect(find.text('服事項目名稱'), findsNothing);
     await tapText(tester, 'John Chen');
     expect(b.members['grace']!['john']!.serves('sunday', '招待'), isTrue);
@@ -273,7 +265,7 @@ void main() {
       ids: ['worship'],
     );
     await pumpApp(tester, b);
-    await go(tester, '/me/groups/service/sunday');
+    await go(tester, '/me/groups/service/sunday/duties');
     expect(find.text('2 人'), findsOneWidget, reason: "how many are on 招待's list");
     await tapText(tester, '司琴');
     expect(find.text('事工'), findsOneWidget);
@@ -396,7 +388,7 @@ void main() {
       ],
     );
     await pumpApp(tester, b);
-    await go(tester, '/me/groups/service/sunday');
+    await go(tester, '/me/groups/service/sunday/duties');
     expect(find.text('5 人'), findsOneWidget);
   });
 
@@ -416,7 +408,7 @@ void main() {
   ) async {
     final b = seededChurch();
     await pumpApp(tester, b);
-    await go(tester, '/me/groups/service/sunday');
+    await go(tester, '/me/groups/service/sunday/duties');
     expect(find.byIcon(Symbols.drag_handle_rounded), findsNothing);
     expect(findShown('按住拖曳排序，左滑刪除'), findsWidgets);
     await dragRow(tester, '司會', 1);
@@ -425,7 +417,7 @@ void main() {
 
   testWidgets('with one duty there is nothing to put in order: the note only says to swipe', (tester) async {
     await pumpApp(tester, seededChurch());
-    await go(tester, '/me/groups/service/youth');
+    await go(tester, '/me/groups/service/youth/duties');
     expect(findShown('左滑刪除'), findsWidgets);
     expect(find.textContaining('按住拖曳排序'), findsNothing);
   });
@@ -441,6 +433,106 @@ void main() {
     await tester.enterText(find.byType(TextField), '沒有這個人');
     await settle(tester);
     expect(find.text('找不到這位同工'), findsOneWidget);
+  });
+
+  testWidgets("a service's page keeps to a screen: each of its lists a row saying how many, opening its own page", (
+    tester,
+  ) async {
+    final b = seededChurch();
+    b.smallGroups['grace'] = {'joy': const SmallGroupDetails(id: 'joy', name: '喜樂小組', service: 'sunday')};
+    await pumpApp(tester, b);
+    await go(tester, '/me/groups/service/sunday');
+    Finder inRow(String title, String text) => find.descendant(
+      of: find.ancestor(of: find.text(title), matching: find.byType(ListRow)),
+      matching: find.text(text),
+    );
+    expect(inRow('服事項目', '3 項'), findsOneWidget);
+    expect(inRow('事工', '沒有'), findsOneWidget);
+    expect(inRow('常用特別活動', '1 個'), findsOneWidget);
+    expect(inRow('小組', '1 個'), findsOneWidget);
+    expect(inRow('同工', '3 人'), findsOneWidget);
+    expect(find.text('司琴'), findsNothing, reason: 'on its own page');
+    expect(find.text('喜樂小組'), findsNothing);
+    expect(tester.getBottomLeft(find.text('刪除聚會')).dy, lessThan(852 - 83), reason: 'above the tab bar, unscrolled');
+
+    await tapText(tester, '服事項目');
+    expect(find.text('司琴'), findsOneWidget);
+    expect(find.text('2 人'), findsOneWidget, reason: "how many are on 招待's list");
+    await tapText(tester, '新增服事項目');
+    await tester.enterText(find.byType(TextField), '音控');
+    await tapText(tester, '儲存');
+    expect(b.services['grace']!.byId('sunday')!.duties, ['司會', '司琴', '招待', '音控']);
+    await tester.tap(find.byType(BackButton).last);
+    await settle(tester);
+    expect(inRow('服事項目', '4 項'), findsOneWidget);
+
+    await tapText(tester, '常用特別活動');
+    expect(find.text('聖餐'), findsOneWidget);
+    await tester.tap(find.byType(BackButton).last);
+    await settle(tester);
+    await tapText(tester, '小組');
+    expect(find.text('喜樂小組'), findsOneWidget);
+    await tester.tap(find.byType(BackButton).last);
+    await settle(tester);
+    await tapText(tester, '事工');
+    expect(find.text('新增事工'), findsOneWidget);
+  });
+
+  testWidgets("an admin assigns a duty's 負責人 on its page; with no 事工 yet, one of that duty alone is made", (
+    tester,
+  ) async {
+    final b = seededChurch();
+    await pumpApp(tester, b);
+    await go(tester, '/me/groups/duty?service=sunday&name=%E6%8B%9B%E5%BE%85');
+    expect(findShown('指派之後，負責人可以排主日崇拜、活動的招待，也可以改這幾項的名單'), findsOneWidget);
+    await tapText(tester, '指派負責人');
+    await tapText(tester, '陳志豪');
+    final made = b.ministries['grace']!.ministries.single;
+    expect(made.name, '招待');
+    expect(made.duties, const [MinistryDuty('sunday', '招待')]);
+    expect(made.service, 'sunday');
+    expect(b.members['grace']!['hao']!.leadMinistries, [made.id]);
+    expect(findShown('陳志豪可以排主日崇拜、活動的招待，也可以改這幾項的名單'), findsOneWidget);
+    expect(find.text('再加一位負責人'), findsOneWidget);
+    await tapText(tester, '復原');
+    expect(b.ministries['grace']!.ministries, isEmpty, reason: 'one 復原 takes back both');
+    expect(b.members['grace']!['hao']!.leadMinistries, isEmpty);
+  });
+
+  testWidgets('a 負責人 refused on a duty\'s page leaves no 事工 behind', (tester) async {
+    final b = seededChurch();
+    await pumpApp(tester, b);
+    await go(tester, '/me/groups/duty?service=sunday&name=%E6%8B%9B%E5%BE%85');
+    await tapText(tester, '指派負責人');
+    // Changed by someone else while the list is open.
+    b.members['grace']!['hao'] = b.members['grace']!['hao']!.copyWith(name: '陳志豪牧師');
+    await tapText(tester, '陳志豪');
+    expect(b.ministries['grace']?.ministries ?? const [], isEmpty);
+    expect(b.members['grace']!['hao']!.leadMinistries, isEmpty);
+  });
+
+  testWidgets("a duty in a 事工 shows that 事工's 負責人 on its page; one more added leads the 事工", (tester) async {
+    final b = seededChurch(
+      extra: [
+        staffMei.withIdentities(const [MinistryLead('worship')]),
+      ],
+    );
+    b.ministries['grace'] = worship;
+    await pumpApp(tester, b);
+    await go(tester, '/me/groups/duty?service=sunday&name=%E5%8F%B8%E7%90%B4');
+    expect(findShown('李美玉可以排主日崇拜、活動的司琴，也可以改這幾項的名單'), findsOneWidget);
+    expect(find.text('移出'), findsOneWidget);
+    await tapText(tester, '再加一位負責人');
+    await tapText(tester, '陳志豪');
+    expect(b.members['grace']!['hao']!.leadMinistries, ['worship']);
+    expect(b.ministries['grace']!.ministries, worship.ministries, reason: 'no other 事工 made');
+  });
+
+  testWidgets("a service's 負責人 assigns no duty's 負責人", (tester) async {
+    await pumpApp(tester, seededChurch(as: editor));
+    await go(tester, '/me/groups/duty?service=sunday&name=%E6%8B%9B%E5%BE%85');
+    expect(find.text('指派負責人'), findsNothing);
+    expect(find.text('負責人'), findsNothing, reason: 'it has none to read');
   });
 
   testWidgets("a 小組's name and 小組長 are under the service it is part of, with no row for it", (tester) async {

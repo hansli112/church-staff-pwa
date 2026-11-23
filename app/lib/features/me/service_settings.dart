@@ -19,6 +19,7 @@ import '../rosters/future_changes.dart';
 import '../common/errors.dart';
 import '../common/labels.dart';
 import '../common/saving_indicator.dart';
+import 'groups_screen.dart' show assignLead, leadRow, ministrySummary, newMinistryId, pickLead;
 
 // A service's settings (#94), on its page in 聚會與事工: what used to be
 // 服事設定. IDs only ever grow: a deleted service's rosters stay saved
@@ -431,14 +432,12 @@ Widget serviceDutiesSliver(BuildContext context, WidgetRef ref, Service service,
   if (!admin) {
     return SliverToBoxAdapter(
       child: ListSection(
-        header: l10n.templateDuties,
         children: [for (final d in service.duties) row(d)],
       ),
     );
   }
   final edits = ServiceEdits(context, ref, service);
   return ReorderableSection<String>(
-    header: l10n.templateDuties,
     footer: switch (service.duties.length) {
       0 => null,
       1 => l10n.swipeToDelete,
@@ -469,7 +468,6 @@ Widget serviceEventsSliver(BuildContext context, WidgetRef ref, Service service,
       child: service.events.isEmpty
           ? const SizedBox.shrink()
           : ListSection(
-              header: l10n.commonEvents,
               children: [
                 for (final e in service.events)
                   ListRow(title: e.name, leading: Tag.event(context, ' ', e.color), chevron: false),
@@ -484,7 +482,6 @@ Widget serviceEventsSliver(BuildContext context, WidgetRef ref, Service service,
     ref.watch(todayProvider),
   ).events;
   return ReorderableSection<EventTag>(
-    header: l10n.commonEvents,
     footer: switch (service.events.length) {
       0 => null,
       1 => l10n.swipeToDelete,
@@ -511,10 +508,11 @@ Widget serviceEventsSliver(BuildContext context, WidgetRef ref, Service service,
   );
 }
 
-/// One 服事項目's page (#94): who is on its list, ticked on and off by
-/// whoever edits it (Member.editsDutyList), the service's 同工 first; and,
-/// for an admin, its name, its 事工, bringing the rosters after today in
-/// line, and deleting it.
+/// One 服事項目's page (#94): its 事工's 負責人, whom an admin assigns
+/// here; who is on its list, ticked on and off by whoever edits it
+/// (Member.editsDutyList), the service's 同工 first; and, for an admin,
+/// its name, its 事工, bringing the rosters after today in line, and
+/// deleting it.
 class DutyScreen extends ConsumerStatefulWidget {
   const DutyScreen({super.key, required this.serviceId, required this.duty});
 
@@ -562,6 +560,11 @@ class _DutyScreenState extends ConsumerState<DutyScreen> {
     if (admin) ref.watch(recentRostersProvider);
     final edits = me.editsDutyList(ministries, service.id, duty);
     final ministry = ministries.where((m) => m.duties.contains(MinistryDuty(service.id, duty))).firstOrNull;
+    // Its 事工's: leading the duty is leading that.
+    final leaders = [
+      for (final m in members)
+        if (ministry != null && m.leadMinistries.contains(ministry.id)) m,
+    ]..sort((a, b) => a.name.compareTo(b.name));
     final serving = dutyPeople(
       members,
       service.id,
@@ -589,6 +592,7 @@ class _DutyScreenState extends ConsumerState<DutyScreen> {
       body: ListView(
         padding: const EdgeInsets.only(bottom: 32),
         children: [
+          if (me.isAdmin || leaders.isNotEmpty) _leads(service, duty, ministry, members, leaders, admin: me.isAdmin),
           if (edits) ...[
             ListSection(
               header: l10n.zoneSwitch(service.name),
@@ -657,6 +661,70 @@ class _DutyScreenState extends ConsumerState<DutyScreen> {
       ),
     );
   }
+
+  /// Who leads the duty: its 事工's 負責人, and what they can do. An admin
+  /// assigns one here; with no 事工 yet, one of this duty alone is made
+  /// for them, unseen (2026-11-23).
+  Widget _leads(
+    Service service,
+    String duty,
+    Ministry? ministry,
+    List<Member> members,
+    List<Member> leaders, {
+    required bool admin,
+  }) {
+    final l10n = L10n.of(context);
+    final services = ref.watch(servicesProvider).value;
+    final name = ministry == null ? duty : ref.watch(ministriesProvider).value?.nameOf(ministry.id, services) ?? duty;
+    // With none yet, what one made for its 負責人 will lead.
+    final led = ministry ?? _ministryOf(service, duty, id: '');
+    return ListSection(
+      header: l10n.leads,
+      footer: ministrySummary(l10n, led, services?.services ?? const [], leaders),
+      children: [
+        for (final m in leaders) leadRow(context, ref, m, MinistryGroup(led.id), name, admin: admin),
+        if (admin)
+          ListRow(
+            title: leaders.isEmpty ? l10n.assignLead : l10n.addAnotherLead,
+            leading: const Icon(Symbols.add_rounded),
+            chevron: false,
+            onTap: () => _assignLead(service, duty, ministry, name, members, leaders),
+          ),
+      ],
+    );
+  }
+
+  Future<void> _assignLead(
+    Service service,
+    String duty,
+    Ministry? ministry,
+    String name,
+    List<Member> members,
+    List<Member> leaders,
+  ) async {
+    final others = [
+      for (final m in members)
+        if (!leaders.contains(m)) m,
+    ];
+    if (ministry != null) {
+      return assignLead(context, ref, MinistryGroup(ministry.id), name, others, another: leaders.isNotEmpty);
+    }
+    final settings = ref.read(ministriesProvider).value;
+    if (settings == null) return;
+    final l10n = L10n.of(context);
+    final picked = await pickLead(context, others);
+    if (picked == null || !mounted) return;
+    final made = _ministryOf(service, duty, id: newMinistryId(settings.ids));
+    await runWithUndo(
+      context,
+      l10n.identityAdded(l10n.identityLeadOf(duty)),
+      () => ref.read(churchWritesProvider).ministryWithLead(settings.ministries, made, picked),
+    );
+  }
+
+  /// A 事工 of [duty] alone, named after it.
+  static Ministry _ministryOf(Service service, String duty, {required String id}) =>
+      Ministry(id: id, name: duty, duties: [MinistryDuty(service.id, duty)], addedIn: service.id);
 
   /// [m] put on the list or taken off it; one of the service's 同工 now, if
   /// they were not.

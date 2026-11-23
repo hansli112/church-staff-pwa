@@ -80,11 +80,7 @@ void main() {
     final b = seededChurch();
     final arranged = savedDay(b, 4);
     await pumpApp(tester, b);
-    await go(tester, '/me/groups/service/sunday');
-    await tester.scrollUntilVisible(find.text('聖餐'), 300);
-    // Clear of the tab bar.
-    await tester.drag(find.byType(Scrollable).first, const Offset(0, -200));
-    await settle(tester);
+    await go(tester, '/me/groups/service/sunday/events');
     await tapText(tester, '聖餐');
     await tapText(tester, '顏色');
     await tapText(tester, '藍');
@@ -123,14 +119,11 @@ void main() {
     ]);
     final arranged = savedDay(b, 4);
     await pumpApp(tester, b);
-    await go(tester, '/me/groups/service/sunday');
+    await go(tester, '/me/groups/service/sunday/duties');
     await dragRow(tester, '司會', 2);
     expect(b.services['grace']!.byId('sunday')!.duties, ['司琴', '招待', '司會']);
 
-    await tester.scrollUntilVisible(find.text('浸禮'), 300);
-    // Clear of the tab bar, past the 事工 above.
-    await tester.drag(find.byType(Scrollable).last, const Offset(0, -200));
-    await settle(tester);
+    await go(tester, '/me/groups/service/sunday/events');
     await dragRow(tester, '浸禮', -1);
     expect(b.services['grace']!.byId('sunday')!.events.map((e) => e.name), ['浸禮', '聖餐']);
     expect(savedDay(b, 4), arranged);
@@ -144,7 +137,7 @@ void main() {
     b.rosters['grace']![historic.id] = historic;
     final arranged = savedDay(b, 4);
     await pumpApp(tester, b);
-    await go(tester, '/me/groups/service/sunday');
+    await go(tester, '/me/groups/service/sunday/duties');
     await tapText(tester, '司琴');
     await tapText(tester, '服事項目名稱');
     await tester.enterText(find.byType(TextField), '鋼琴');
@@ -169,7 +162,7 @@ void main() {
   testWidgets('cancelled future synchronization can be previewed again from the renamed option', (tester) async {
     final b = seededChurch();
     await pumpApp(tester, b);
-    await go(tester, '/me/groups/service/sunday');
+    await go(tester, '/me/groups/service/sunday/duties');
     await tapText(tester, '司琴');
     await tapText(tester, '服事項目名稱');
     await tester.enterText(find.byType(TextField), '鋼琴');
@@ -178,6 +171,9 @@ void main() {
     expect(savedDay(b, 4).duties[1].role, '司琴');
 
     expect(find.text('鋼琴'), findsWidgets, reason: 'its page, by its new name');
+    // Past the 負責人 above, clear of the tab bar and the toast.
+    await tester.drag(find.byType(Scrollable).last, const Offset(0, -400));
+    await settle(tester);
     await tapText(tester, '同步未來服事表');
     await tapText(tester, '司琴');
     expect(find.text('同步「司琴」為「鋼琴」'), findsOneWidget);
@@ -189,11 +185,7 @@ void main() {
     final b = seededChurch();
     final arranged = savedDay(b, 4);
     await pumpApp(tester, b);
-    await go(tester, '/me/groups/service/sunday');
-    await tester.scrollUntilVisible(find.text('聖餐'), 300);
-    // Clear of the tab bar.
-    await tester.drag(find.byType(Scrollable).first, const Offset(0, -200));
-    await settle(tester);
+    await go(tester, '/me/groups/service/sunday/events');
     await tapText(tester, '聖餐');
     await tapText(tester, '改名');
     await tester.enterText(find.byType(TextField), '聖餐主日');
@@ -214,18 +206,21 @@ void main() {
     await go(tester, '/me/groups/service/sunday');
     expect(find.text('聚會名稱'), findsOneWidget);
     expect(find.text('啟用'), findsNothing);
-    expect(find.text('新增服事項目'), findsNothing);
-    expect(find.text('新增特別活動'), findsNothing);
-    expect(find.byIcon(Symbols.drag_handle_rounded), findsNothing);
     await tapText(tester, '聚會名稱');
     expect(find.byType(TextField), findsNothing);
+    await go(tester, '/me/groups/service/sunday/duties');
+    expect(find.text('司琴'), findsOneWidget);
+    expect(find.text('新增服事項目'), findsNothing);
+    expect(find.textContaining('左滑刪除'), findsNothing);
+    await go(tester, '/me/groups/service/sunday/events');
+    expect(find.text('聖餐'), findsOneWidget);
+    expect(find.text('新增特別活動'), findsNothing);
   });
 
   testWidgets('swiping a duty or a common event away says 刪除 on the red', (tester) async {
     await pumpApp(tester, seededChurch());
-    await go(tester, '/me/groups/service/sunday');
-    for (final row in ['司琴', '聖餐']) {
-      await tester.scrollUntilVisible(find.text(row), 300);
+    for (final (row, part) in [('司琴', 'duties'), ('聖餐', 'events')]) {
+      await go(tester, '/me/groups/service/sunday/$part');
       final swipe = await tester.startGesture(tester.getCenter(find.text(row).last));
       await swipe.moveBy(const Offset(-40, 0));
       await swipe.moveBy(const Offset(-80, 0));
@@ -244,7 +239,7 @@ void main() {
   testWidgets('a refused swipe removal leaves the configured option visible and reports failure', (tester) async {
     final b = seededChurch();
     await pumpApp(tester, b);
-    await go(tester, '/me/groups/service/sunday');
+    await go(tester, '/me/groups/service/sunday/duties');
     b.failNextWrite = const CloudException(CloudErrorCode.unavailable, reason: CloudReason.offlineReadOnly);
     await tester.drag(find.text('司琴'), const Offset(-500, 0));
     await settle(tester);
@@ -260,7 +255,7 @@ void main() {
     final b = seededChurch();
     final arranged = savedDay(b, 4);
     await pumpApp(tester, b);
-    await go(tester, '/me/groups/service/sunday');
+    await go(tester, '/me/groups/service/sunday/duties');
     await tapText(tester, '司琴');
     await tapText(tester, '刪除');
     expect(b.services['grace']!.byId('sunday')!.duties, isNot(contains('司琴')));
@@ -269,10 +264,7 @@ void main() {
     await tapText(tester, '復原');
     expect(b.services['grace']!.byId('sunday')!.duties, contains('司琴'));
 
-    await tester.scrollUntilVisible(find.text('聖餐'), 300);
-    // Clear of the tab bar.
-    await tester.drag(find.byType(Scrollable).first, const Offset(0, -200));
-    await settle(tester);
+    await go(tester, '/me/groups/service/sunday/events');
     await tapText(tester, '聖餐');
     await tapText(tester, '移除');
     expect(b.services['grace']!.byId('sunday')!.events, isEmpty);
@@ -284,7 +276,7 @@ void main() {
   testWidgets('a rejected settings undo is reported rather than silently ignored', (tester) async {
     final b = seededChurch();
     await pumpApp(tester, b);
-    await go(tester, '/me/groups/service/sunday');
+    await go(tester, '/me/groups/service/sunday/duties');
     await tapText(tester, '司琴');
     await tapText(tester, '刪除');
     b.failNextWrite = const CloudException(CloudErrorCode.unavailable);

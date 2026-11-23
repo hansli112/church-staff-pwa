@@ -298,6 +298,14 @@ final routerProvider = Provider<GoRouter>((ref) {
                               child: GroupStaffScreen(group: ServiceGroup(s.pathParameters['id']!)),
                             ),
                           ),
+                          for (final part in ServicePart.values)
+                            page(
+                              part.path,
+                              (s) => WarmUpOnOpen(
+                                WarmUp.serviceEdit,
+                                child: ServicePartScreen(serviceId: s.pathParameters['id']!, part: part),
+                              ),
+                            ),
                         ],
                       ),
                       // Not under the service's page, which a 事工's 負責人

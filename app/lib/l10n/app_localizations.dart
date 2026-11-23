@@ -6531,6 +6531,24 @@ abstract class L10n {
   /// In zh, this message translates to:
   /// **'我和家人接下來的服事'**
   String get myFamilyServicesTitle;
+
+  /// On a service's page, beside 服事項目: how many it has; the row opens them
+  ///
+  /// In zh, this message translates to:
+  /// **'{count} 項'**
+  String serviceDutyCount(int count);
+
+  /// On a service's page, beside 事工, 常用特別活動 or 小組: how many it has; the row opens them
+  ///
+  /// In zh, this message translates to:
+  /// **'{count} 個'**
+  String serviceItemCount(int count);
+
+  /// On a service's page, beside 服事項目, 事工, 常用特別活動 or 小組 when it has none
+  ///
+  /// In zh, this message translates to:
+  /// **'沒有'**
+  String get servicePartNone;
 }
 
 class _L10nDelegate extends LocalizationsDelegate<L10n> {

@@ -3966,4 +3966,23 @@ class L10nEn extends L10n {
 
   @override
   String get myFamilyServicesTitle => 'Upcoming for You and Family';
+
+  @override
+  String serviceDutyCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count roles',
+      one: '1 role',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String serviceItemCount(int count) {
+    return '$count';
+  }
+
+  @override
+  String get servicePartNone => 'None';
 }

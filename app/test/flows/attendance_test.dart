@@ -215,7 +215,7 @@ void main() {
     final b = seededChurch(as: editor);
     await pumpApp(tester, b);
     await go(tester, '/me/groups/service/sunday');
-    await tester.scrollUntilVisible(find.text('新增小組'), 200, scrollable: find.byType(Scrollable).last);
+    await tapText(tester, '小組');
     await tapText(tester, '新增小組');
     await tester.enterText(find.byType(TextField), '喜樂小組');
     b.smallGroupSaveHeld = Completer();
@@ -742,8 +742,7 @@ void main() {
       final b = withJoy(withAttendance(seededChurch(clock: eveningOf(Day(2026, 10, 11)))));
       b.smallGroups['grace']!['peace'] = const SmallGroupDetails(id: 'peace', name: '平安小組', service: 'sunday');
       await pumpApp(tester, b);
-      await go(tester, '/me/groups/service/sunday');
-      await scrollToShow(tester, find.text('喜樂小組'));
+      await go(tester, '/me/groups/service/sunday/small-groups');
       double at(String text) => tester.getTopLeft(find.text(text).first).dy;
       expect(at('平安小組'), greaterThan(at('喜樂小組')), reason: 'by name, never placed');
       await dragRow(tester, '平安小組', -1);
@@ -782,8 +781,7 @@ void main() {
       );
       b.smallGroups['grace']!['joy'] = joy.copyWith(order: () => 1);
       await pumpApp(tester, b);
-      await go(tester, '/me/groups/service/sunday');
-      await scrollToShow(tester, find.text('喜樂小組'));
+      await go(tester, '/me/groups/service/sunday/small-groups');
       expect(tester.getTopLeft(find.text('平安小組')).dy, lessThan(tester.getTopLeft(find.text('喜樂小組')).dy));
       expect(find.byIcon(Symbols.drag_handle_rounded), findsNothing);
     });

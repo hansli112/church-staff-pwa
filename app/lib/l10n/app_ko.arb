@@ -1095,5 +1095,8 @@
   "familyDecline": "거절",
   "familyDeclineLabel": "{name} 님의 가족 초대 거절",
   "familyAcceptLabel": "{name} 님의 가족 초대 수락",
-  "myFamilyServicesTitle": "나와 가족의 다가오는 봉사"
+  "myFamilyServicesTitle": "나와 가족의 다가오는 봉사",
+  "serviceDutyCount": "{count}개",
+  "serviceItemCount": "{count}개",
+  "servicePartNone": "없음"
 }

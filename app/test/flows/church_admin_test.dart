@@ -637,7 +637,7 @@ void main() {
     testWidgets('renaming a duty moves members\' zones and the staff order with it', (tester) async {
       final b = seededChurch();
       await pumpApp(tester, b);
-      await go(tester, '/me/groups/service/sunday');
+      await go(tester, '/me/groups/service/sunday/duties');
       await tapText(tester, '招待');
       await tapText(tester, '服事項目名稱');
       await tester.enterText(find.byType(TextField).last, '接待');
@@ -651,7 +651,7 @@ void main() {
     testWidgets('a duty can be deleted from its page, not only by swiping', (tester) async {
       final b = seededChurch();
       await pumpApp(tester, b);
-      await go(tester, '/me/groups/service/sunday');
+      await go(tester, '/me/groups/service/sunday/duties');
       await tapText(tester, '司琴');
       await tapText(tester, '刪除');
       expect(b.services['grace']!.byId('sunday')!.duties, ['司會', '招待']);
@@ -662,7 +662,7 @@ void main() {
     testWidgets('changing the template does not touch arranged rosters', (tester) async {
       final b = seededChurch();
       await pumpApp(tester, b);
-      await go(tester, '/me/groups/service/sunday');
+      await go(tester, '/me/groups/service/sunday/duties');
       expect(find.textContaining('左滑刪除'), findsWidgets, reason: 'the swipe is not seen otherwise');
       await tester.drag(find.text('司琴').first, const Offset(-500, 0));
       await settle(tester);

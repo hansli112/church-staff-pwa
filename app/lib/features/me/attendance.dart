@@ -27,41 +27,28 @@ import 'groups_screen.dart' show attendancePage;
 import '../../state/session.dart';
 
 /// 人數 on a group's page (回報人數, #85), one row since #95: its latest
-/// meeting's, or when it next meets, opening its 人數 page. Nothing with
+/// meeting's, or when it next meets, opening its 人數 page. None with
 /// 回報人數 off, or for who may not see them.
-class GroupAttendanceRow extends ConsumerWidget {
-  const GroupAttendanceRow({super.key, required this.group});
-
-  final AttendanceGroup group;
-
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final l10n = L10n.of(context);
-    final since = ref.watch(churchProvider.select((c) => c.value?.attendanceSince));
-    final me = ref.watch(meProvider).value;
-    if (since == null || me == null || !me.readsAttendance(group.group)) {
-      return const SizedBox.shrink();
-    }
-    final record = ref.watch(attendanceProvider(group.group.key)).value;
-    if (record == null) return const SizedBox.shrink();
-    final today = ref.watch(todayProvider);
-    final latest = latestAttendanceDay(group, since: since, record: record, today: today);
-    return ListSection(
-      children: [
-        ListRow(
-          title: l10n.attendanceHeader,
-          value: latest == null ? null : attendanceValue(l10n, record.days[latest], attendanceGroupName(ref)),
-          subtitle: switch (latest) {
-            final day? => dayLabel(l10n, day, today),
-            // A 小組's page says its 聚會時間 a row above.
-            null when group.group is SmallGroup => null,
-            null => attendanceNotYet(l10n, ref.watch(meetingTimeProvider(group.group))),
-          },
-          onTap: () => context.push(attendancePage(group.group)),
-        ),
-      ],
-    );
-  }
+ListRow? groupAttendanceRow(BuildContext context, WidgetRef ref, AttendanceGroup group) {
+  final l10n = L10n.of(context);
+  final since = ref.watch(churchProvider.select((c) => c.value?.attendanceSince));
+  final me = ref.watch(meProvider).value;
+  if (since == null || me == null || !me.readsAttendance(group.group)) return null;
+  final record = ref.watch(attendanceProvider(group.group.key)).value;
+  if (record == null) return null;
+  final today = ref.watch(todayProvider);
+  final latest = latestAttendanceDay(group, since: since, record: record, today: today);
+  return ListRow(
+    title: l10n.attendanceHeader,
+    value: latest == null ? null : attendanceValue(l10n, record.days[latest], attendanceGroupName(ref)),
+    subtitle: switch (latest) {
+      final day? => dayLabel(l10n, day, today),
+      // A 小組's page says its 聚會時間 a row above.
+      null when group.group is SmallGroup => null,
+      null => attendanceNotYet(l10n, ref.watch(meetingTimeProvider(group.group))),
+    },
+    onTap: () => context.push(attendancePage(group.group)),
+  );
 }
 
 /// A group's 人數 page (#95), from its page, 人數總覽 or 填寫人數: its

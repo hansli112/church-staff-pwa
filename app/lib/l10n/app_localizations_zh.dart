@@ -3734,6 +3734,19 @@ class L10nZh extends L10n {
 
   @override
   String get myFamilyServicesTitle => '我和家人接下來的服事';
+
+  @override
+  String serviceDutyCount(int count) {
+    return '$count 項';
+  }
+
+  @override
+  String serviceItemCount(int count) {
+    return '$count 個';
+  }
+
+  @override
+  String get servicePartNone => '沒有';
 }
 
 /// The translations for Chinese, using the Han script (`zh_Hans`).
@@ -7466,4 +7479,17 @@ class L10nZhHans extends L10nZh {
 
   @override
   String get myFamilyServicesTitle => '我和家人接下来的事奉';
+
+  @override
+  String serviceDutyCount(int count) {
+    return '$count 项';
+  }
+
+  @override
+  String serviceItemCount(int count) {
+    return '$count 个';
+  }
+
+  @override
+  String get servicePartNone => '没有';
 }

@@ -248,6 +248,13 @@ class MinistrySettings {
     return null;
   }
 
+  /// The 事工 of service [service] alone (Ministry.service), as its page
+  /// lists them.
+  List<Ministry> of(String service) => [
+    for (final m in ministries)
+      if (m.service == service) m,
+  ];
+
   /// The name of 事工 [id] wherever those of every service show together:
   /// with its service's, 「青年崇拜 · 敬拜團」, when another has the same
   /// name (each service its own 敬拜團); [id] for one gone.

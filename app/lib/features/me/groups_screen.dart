@@ -26,6 +26,49 @@ import 'attendance.dart';
 import 'service_settings.dart';
 import 'service_staff.dart';
 
+/// What of a service has a page of its own, a row on the service's.
+enum ServicePart {
+  duties('duties'),
+  ministries('ministries'),
+  events('events'),
+  smallGroups('small-groups')
+  ;
+
+  const ServicePart(this.path);
+
+  /// Its page's, under the service's.
+  final String path;
+
+  /// Its row's on the service's page, and its own page's.
+  String title(L10n l10n) => switch (this) {
+    duties => l10n.templateDuties,
+    ministries => l10n.ministries,
+    events => l10n.commonEvents,
+    smallGroups => l10n.smallGroups,
+  };
+}
+
+/// The page of [service]'s [part].
+String servicePartPage(String service, ServicePart part) => '/me/groups/service/$service/${part.path}';
+
+/// [service]'s row opening its [part], with how many it has: [count] in
+/// [words] (「8 項」), or 沒有.
+ListRow _partRow(BuildContext context, Service service, ServicePart part, int count, String Function(int) words) {
+  final l10n = L10n.of(context);
+  return ListRow(
+    title: part.title(l10n),
+    value: count == 0 ? l10n.servicePartNone : words(count),
+    onTap: () => context.push(servicePartPage(service.id, part)),
+  );
+}
+
+/// A group's 聚會人數 row in a section of its own; none for who does not see it.
+Widget? _attendanceSection(BuildContext context, WidgetRef ref, AttendanceGroup group) =>
+    switch (groupAttendanceRow(context, ref, group)) {
+      final row? => SliverToBoxAdapter(child: ListSection(children: [row])),
+      null => null,
+    };
+
 /// The page of [group]: `/me/groups/service/<id>`, `ministry/<id>` or
 /// `small/<id>`.
 String groupPage(ChurchGroup group) => '/me/groups/${group.key.replaceFirst(':', '/')}';
@@ -100,7 +143,7 @@ Future<void> addMinistry(BuildContext context, WidgetRef ref, MinistrySettings s
     maxLength: TextLimits.profileName,
   );
   if (name == null || !context.mounted) return;
-  final id = _newMinistryId(settings.ids);
+  final id = newMinistryId(settings.ids);
   final before = settings.ministries;
   final ok = await runWithUndo(
     context,
@@ -116,7 +159,8 @@ Future<void> addMinistry(BuildContext context, WidgetRef ref, MinistrySettings s
   if (context.mounted) unawaited(context.push('/me/groups/ministry/$id'));
 }
 
-String _newMinistryId(List<String> taken) {
+/// A fresh 事工 ID that was never used in this church.
+String newMinistryId(List<String> taken) {
   final rng = Random();
   while (true) {
     final id = 'm${DateTime.now().millisecondsSinceEpoch.toRadixString(36)}${rng.nextInt(1296).toRadixString(36)}';
@@ -439,6 +483,56 @@ class GroupStaffSections extends ConsumerWidget {
   );
 }
 
+/// A service's [part] on a page of its own, from the row on the service's
+/// page (2026-11-23): there each as the page had it before.
+class ServicePartScreen extends ConsumerWidget {
+  const ServicePartScreen({super.key, required this.serviceId, required this.part});
+
+  final String serviceId;
+  final ServicePart part;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final l10n = L10n.of(context);
+    final me = ref.watch(meProvider).value;
+    final service = ref.watch(servicesProvider).value?.byId(serviceId);
+    final ministries = ref.watch(ministriesProvider).value;
+    final members = ref.watch(staffProvider).value?.all;
+    final group = ServiceGroup(serviceId);
+    // Who sees the service's page, 行政 too (#93).
+    if (me == null || service == null || members == null || !(me.managesGroup(group) || me.readsAttendance(group))) {
+      return Scaffold(appBar: AppBar());
+    }
+    final editsSettings = me.editsServiceSettings;
+    return Scaffold(
+      appBar: AppBar(
+        title: Text(part.title(l10n)),
+        actions: me.isAdmin ? const [SavingIndicator()] : null,
+      ),
+      body: CustomScrollView(
+        slivers: [
+          switch (part) {
+            ServicePart.duties => serviceDutiesSliver(context, ref, service, admin: editsSettings),
+            ServicePart.ministries => SliverToBoxAdapter(
+              child: ministries == null
+                  ? null
+                  : _ServiceMinistries(service: service, settings: ministries, members: members),
+            ),
+            ServicePart.events => serviceEventsSliver(context, ref, service, admin: editsSettings),
+            ServicePart.smallGroups => _SmallGroupsSection(
+              service: serviceId,
+              smallGroups: [...?ref.watch(smallGroupsProvider).value?.where((g) => g.service == serviceId)],
+              opens: me.mayEditSmallGroup(null, serviceId),
+              attendanceOn: ref.watch(churchProvider.select((c) => c.value?.attendanceSince != null)),
+            ),
+          },
+          const SliverToBoxAdapter(child: SizedBox(height: Space.xl)),
+        ],
+      ),
+    );
+  }
+}
+
 /// 加入同工's list: those who may be added, narrowed by a search; with
 /// [byName], a name nobody in [everyone] has is offered as someone new.
 /// Closes with the [Member] picked, or the name typed.
@@ -494,11 +588,11 @@ class _AddStaffSheetState extends State<_AddStaffSheet> {
   }
 }
 
-/// One group's page (#82, #94). A service's: its settings (name, weekday,
-/// 服事項目 with who is on each list, 常用特別活動; an admin's to change),
-/// its 負責人, its 小組 (#85), its 人數, its 同工 and those who served it
-/// without being one. A 事工's: its name, its 負責人 and the duties it
-/// leads with their lists; it has no 同工 of its own. A 小組's, managed
+/// One group's page (#82, #94). A service's: its name and weekday, its
+/// 負責人, then a row each opening its 服事項目, 事工, 常用特別活動, 小組
+/// (#85), 同工 (and those who served it without being one) and 人數. A
+/// 事工's: its name, its 負責人 and the duties it leads with their lists;
+/// it has no 同工 of its own. A 小組's, managed
 /// also by its service's 負責人: when it meets, its 小組長, its 人數 and
 /// its 同工. Admins assign and 移出 a 負責人 here; a 牧者 only on their own
 /// page.
@@ -548,6 +642,7 @@ class GroupScreen extends ConsumerWidget {
       ServiceGroup(:final id) => [...smallGroups.where((g) => g.service == id)],
       _ => const <SmallGroupDetails>[],
     };
+    final serviceMinistries = service == null ? const <Ministry>[] : ministries?.of(service.id) ?? const <Ministry>[];
     final opensSmall = switch (group) {
       ServiceGroup(:final id) => me.mayEditSmallGroup(null, id),
       _ => false,
@@ -621,7 +716,7 @@ class GroupScreen extends ConsumerWidget {
                 header: l10n.leads,
                 footer: leaders.isEmpty ? l10n.noLeads : null,
                 children: [
-                  for (final m in leaders) _leadRow(context, ref, m, name, admin: admin),
+                  for (final m in leaders) leadRow(context, ref, m, group, name, admin: admin),
                   // One is enough; more share it, all alike.
                   if (admin)
                     ListRow(
@@ -640,11 +735,6 @@ class GroupScreen extends ConsumerWidget {
                 ],
               ),
             ),
-          if (service != null) ...[
-            serviceDutiesSliver(context, ref, service, admin: me.editsServiceSettings),
-            if (ministries != null) box(_ServiceMinistries(service: service, settings: ministries, members: members)),
-            serviceEventsSliver(context, ref, service, admin: me.editsServiceSettings),
-          ],
           if (ministry != null)
             box(
               _MinistryDuties(
@@ -654,21 +744,26 @@ class GroupScreen extends ConsumerWidget {
                 admin: admin,
               ),
             ),
-          // Above the 同工, which may be many.
-          if (serviceSmallGroups.isNotEmpty || opensSmall)
-            _SmallGroupsSection(
-              service: group.id,
-              smallGroups: serviceSmallGroups,
-              opens: opensSmall,
-              attendanceOn: attendanceOn,
-            ),
-          if (attendance != null) box(GroupAttendanceRow(group: attendance)),
-          // A service's 同工 may be a hundred: counted here, listed on
-          // their own page, with who served it without being one.
-          if (group is ServiceGroup)
+          // A service's lists each a row, on their own pages, so its page
+          // keeps to a screen however long they are (2026-11-23). Its 同工
+          // may be a hundred: listed with who served it without being one.
+          if (service != null)
             box(
               ListSection(
                 children: [
+                  _partRow(context, service, ServicePart.duties, service.duties.length, l10n.serviceDutyCount),
+                  if (admin || serviceMinistries.isNotEmpty)
+                    _partRow(context, service, ServicePart.ministries, serviceMinistries.length, l10n.serviceItemCount),
+                  if (me.editsServiceSettings || service.events.isNotEmpty)
+                    _partRow(context, service, ServicePart.events, service.events.length, l10n.serviceItemCount),
+                  if (serviceSmallGroups.isNotEmpty || opensSmall)
+                    _partRow(
+                      context,
+                      service,
+                      ServicePart.smallGroups,
+                      serviceSmallGroups.length,
+                      l10n.serviceItemCount,
+                    ),
                   ListRow(
                     title: l10n.groupStaff,
                     value: l10n.groupStaffCount(staff.length),
@@ -680,12 +775,15 @@ class GroupScreen extends ConsumerWidget {
                       value: l10n.groupStaffCount(candidates.length),
                       onTap: () => context.push(groupStaffPage(group)),
                     ),
+                  if (attendance != null) ?groupAttendanceRow(context, ref, attendance),
                 ],
               ),
             )
-          // A 小組's, here; a 事工's are those on its duties' lists (#94).
-          else if (ministry == null)
-            box(GroupStaffSections(group: group, name: name)),
+          else ...[
+            if (attendance != null) ?_attendanceSection(context, ref, attendance),
+            // A 小組's, here; a 事工's are those on its duties' lists (#94).
+            if (ministry == null) box(GroupStaffSections(group: group, name: name)),
+          ],
           if (admin && service != null)
             box(
               ListSection(
@@ -732,43 +830,6 @@ class GroupScreen extends ConsumerWidget {
           const SliverToBoxAdapter(child: SizedBox(height: Space.xl)),
         ],
       ),
-    );
-  }
-
-  /// One of the 負責人, [m], of the group named [name]. A 牧者 of it says
-  /// so and is changed only on their own page; a 負責人 an admin takes out
-  /// here at once, with 復原 (#94). None left is fine.
-  Widget _leadRow(BuildContext context, WidgetRef ref, Member m, String name, {required bool admin}) {
-    final l10n = L10n.of(context);
-    final lead = switch (group) {
-      ServiceGroup(:final id) => ServiceLead(id) as Identity,
-      MinistryGroup(:final id) => MinistryLead(id),
-      SmallGroup(:final id) => SmallGroupLead(id),
-      // No page of its own, nor 負責人.
-      GatheringGroup() => throw StateError('a 其他聚會 has no 負責人'),
-    };
-    final pastor = switch (group) {
-      ServiceGroup(:final id) => m.identities.any(
-        (i) => i is PastorIdentity && (i.services == null || i.services!.contains(id)),
-      ),
-      _ => false,
-    };
-    final identity = l10n.identityLeadOf(name);
-    return ListRow(
-      title: m.name,
-      subtitle: pastor ? l10n.identityPastor : null,
-      chevron: false,
-      trailing: admin && !pastor && m.identities.contains(lead)
-          ? RowButton(
-              label: l10n.moveOutShort,
-              semanticsLabel: l10n.removeIdentityLabel(identity),
-              onPressed: () => runWithUndo(
-                context,
-                l10n.identityRemoved(identity),
-                () => ref.read(churchWritesProvider).member(m, m.withIdentities([...m.identities]..remove(lead))),
-              ),
-            )
-          : null,
     );
   }
 
@@ -925,15 +986,9 @@ class _ServiceMinistries extends ConsumerWidget {
     final l10n = L10n.of(context);
     final me = ref.watch(meProvider).value;
     final admin = me?.isAdmin ?? false;
-    final own = [
-      for (final m in settings.ministries)
-        if (m.service == service.id) m,
-    ];
+    final own = settings.of(service.id);
     if (own.isEmpty && !admin) return const SizedBox.shrink();
     return ListSection(
-      // With none yet only 新增事工: a heading over it alone said nothing
-      // (2026-11-19).
-      header: own.isEmpty ? null : l10n.ministries,
       children: [
         for (final m in own)
           ListRow(
@@ -1005,11 +1060,10 @@ class _SmallGroupsSectionState extends ConsumerState<_SmallGroupsSection> {
     ];
     if (!widget.opens) {
       return SliverToBoxAdapter(
-        child: ListSection(header: l10n.smallGroups, children: [for (final g in widget.smallGroups) row(g), ...after]),
+        child: ListSection(children: [for (final g in widget.smallGroups) row(g), ...after]),
       );
     }
     return ReorderableSection<SmallGroupDetails>(
-      header: l10n.smallGroups,
       items: widget.smallGroups,
       keyOf: (g) => g.id,
       row: row,
@@ -1118,20 +1172,7 @@ Future<void> assignLead(
   bool another = false,
 }) async {
   final l10n = L10n.of(context);
-  final title = another ? l10n.addAnotherLead : l10n.assignLead;
-  final sorted = [...others]..sort((a, b) => a.name.compareTo(b.name));
-  final picked = await showAppSheet<Member>(
-    context,
-    expand: sorted.length > 8,
-    builder: (context) => SafeArea(
-      child: SingleChildScrollView(
-        child: ListSection(
-          header: title,
-          children: [for (final m in sorted) ListRow(title: m.name, onTap: () => Navigator.pop(context, m))],
-        ),
-      ),
-    ),
-  );
+  final picked = await pickLead(context, others, another: another);
   if (picked == null || !context.mounted) return;
   final identity = switch (group) {
     ServiceGroup(:final id) => ServiceLead(id) as Identity,
@@ -1143,6 +1184,61 @@ Future<void> assignLead(
     context,
     l10n.identityAdded(l10n.identityLeadOf(name)),
     () => ref.read(churchWritesProvider).member(picked, picked.withIdentities([...picked.identities, identity])),
+  );
+}
+
+/// One of the 負責人, [m], of [group], named [name]. A 牧者 of it says
+/// so and is changed only on their own page; a 負責人 an admin takes out
+/// here at once, with 復原 (#94). None left is fine.
+Widget leadRow(BuildContext context, WidgetRef ref, Member m, ChurchGroup group, String name, {required bool admin}) {
+  final l10n = L10n.of(context);
+  final lead = switch (group) {
+    ServiceGroup(:final id) => ServiceLead(id) as Identity,
+    MinistryGroup(:final id) => MinistryLead(id),
+    SmallGroup(:final id) => SmallGroupLead(id),
+    // No page of its own, nor 負責人.
+    GatheringGroup() => throw StateError('a 其他聚會 has no 負責人'),
+  };
+  final pastor = switch (group) {
+    ServiceGroup(:final id) => m.identities.any(
+      (i) => i is PastorIdentity && (i.services == null || i.services!.contains(id)),
+    ),
+    _ => false,
+  };
+  final identity = l10n.identityLeadOf(name);
+  return ListRow(
+    title: m.name,
+    subtitle: pastor ? l10n.identityPastor : null,
+    chevron: false,
+    trailing: admin && !pastor && m.identities.contains(lead)
+        ? RowButton(
+            label: l10n.moveOutShort,
+            semanticsLabel: l10n.removeIdentityLabel(identity),
+            onPressed: () => runWithUndo(
+              context,
+              l10n.identityRemoved(identity),
+              () => ref.read(churchWritesProvider).member(m, m.withIdentities([...m.identities]..remove(lead))),
+            ),
+          )
+        : null,
+  );
+}
+
+/// 指派負責人's list: one of [others], by name; null if 取消.
+Future<Member?> pickLead(BuildContext context, List<Member> others, {bool another = false}) {
+  final l10n = L10n.of(context);
+  final sorted = [...others]..sort((a, b) => a.name.compareTo(b.name));
+  return showAppSheet<Member>(
+    context,
+    expand: sorted.length > 8,
+    builder: (context) => SafeArea(
+      child: SingleChildScrollView(
+        child: ListSection(
+          header: another ? l10n.addAnotherLead : l10n.assignLead,
+          children: [for (final m in sorted) ListRow(title: m.name, onTap: () => Navigator.pop(context, m))],
+        ),
+      ),
+    ),
   );
 }
 
