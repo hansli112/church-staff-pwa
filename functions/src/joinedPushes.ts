@@ -9,7 +9,8 @@ import { quietUntil } from './rosterChange.js';
 import { timeZoneOf } from './timeZones.js';
 
 /**
- * Admins hear that someone joined by invite: the first at once, then at
+ * Admins hear that someone joined, by invite or as data moved here under
+ * their email (claim.ts): the first at once, then at
  * most one push an hour, saying how many came since; none from 22:00 to
  * 7:00 on the church's clock. A link posted in a group can bring a dozen
  * in an evening.
@@ -49,7 +50,7 @@ async function tellAdmins(deps: JoinedDeps, church: DocumentSnapshot, names: str
 }
 
 /**
- * [name] just joined church [church] by invite: its admins are told now,
+ * [name] just joined church [church]: its admins are told now,
  * or it waits with whoever else joins until they are. Returns how many
  * devices it reached.
  */

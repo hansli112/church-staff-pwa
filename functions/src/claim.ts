@@ -1,4 +1,5 @@
 import { FieldPath } from 'firebase-admin/firestore';
+import { logger } from 'firebase-functions/v2';
 
 import { churchAccess, churchClosed, isChurchOpen } from './access.js';
 import { fail, id, record, requireCaller, serverTime, text, type Caller, type Deps } from './common.js';
@@ -8,6 +9,9 @@ import { nameKey } from './text.js';
 import { renameInChurch, rewriteDutiesOf } from './renames.js';
 import { dateKeyIn, timeZoneOf } from './timeZones.js';
 import { repointFamily } from './family.js';
+import { tellJoined } from './joinedPushes.js';
+import type { PushDeps } from './push.js';
+import { loggable } from './redact.js';
 import { callerKeys, dropPending, emailKey, waitingFor, waitsFor, type ClaimDeps } from './pendingMembers.js';
 import { claimedSmallGroups, smallGroupsByName } from './smallGroups.js';
 import { isEvent } from './eventRosters.js';
@@ -228,18 +232,30 @@ function mergedMember(member: FirebaseFirestore.DocumentSnapshot, pending: Fireb
 /**
  * Joins the caller to the church as the pending member with one of their
  * emails, or, one with no email, merges it into them by name ([pendingClaims]).
+ * One not a member before is told to its admins (joinedPushes.ts).
  */
-export async function claimPending(deps: ClaimDeps, caller: Caller | null, data: unknown) {
+export async function claimPending(deps: ClaimDeps & PushDeps, caller: Caller | null, data: unknown) {
   const c = requireCaller(caller);
   const pid = id((data as { pendingId?: unknown })?.pendingId);
   const keys = await callerKeys(deps, c);
   // Not a member yet, most likely: anyone signed in, but the church open.
   const { cid } = await churchAccess(deps, c, data, 'anyone');
-  await take(deps, cid, c, pid, (member, pending) => {
+  let joins = false;
+  const took = await take(deps, cid, c, pid, (member, pending) => {
+    joins = !member.exists;
     if (waitsFor(pending, keys) || takesByName(member, pending)) return true;
     if (!keys.length) fail('failed-precondition', 'unverifiedEmail');
     return fail('permission-denied', 'permissionDenied');
   });
+  if (took && joins) {
+    // Joined as their pending data, as one joining by invite would (2026-11-24).
+    try {
+      const name = String((await deps.db.doc(`churches/${cid}/members/${c.uid}`).get()).get('name') ?? '');
+      await tellJoined(deps, await deps.db.doc(`churches/${cid}`).get(), name);
+    } catch (e) {
+      logger.error('Joined push failed', { cid, error: loggable(e).message });
+    }
+  }
   return { churchId: cid };
 }
 

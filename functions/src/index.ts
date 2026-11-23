@@ -206,7 +206,7 @@ export const movePreview = callable(move.movePreview, moveDeps, moveOpts);
 export const moveCommit = callable(move.moveCommit, moveDeps, moveOpts);
 const claimDeps = () => ({ ...deps(), auth: getAuth() });
 export const pendingClaims = callable(claim.pendingClaims, claimDeps);
-export const claimPending = callable(claim.claimPending, claimDeps);
+export const claimPending = callable(claim.claimPending, () => withPush(claimDeps()));
 export const mergePending = callable(claim.mergePending);
 export const renamePending = callable(claim.renamePending);
 export const renameMember = callable(renames.renameMember);

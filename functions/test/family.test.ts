@@ -242,7 +242,7 @@ describe('家人 hear of those without an account', () => {
 async function signIn(pid: string, email: string) {
   await db.doc(`churches/C1/pendingMembers/${pid}`).update({ email, emailHash: emailKey(email) });
   const user = await auth.createUser({ email, emailVerified: true }).catch(() => auth.getUserByEmail(email));
-  await claimPending({ ...deps, auth }, caller(user.uid, { email, emailVerified: true }), { churchId: 'C1', pendingId: pid });
+  await claimPending({ ...deps, auth, messaging: fakePush().messaging, appUrl: 'https://app.example' }, caller(user.uid, { email, emailVerified: true }), { churchId: 'C1', pendingId: pid });
   return user.uid;
 }
 

@@ -13,8 +13,9 @@ import { auth, caller, clearFirestore, db, deps, fakePush, rejectsWith } from '.
 
 const bucket = getStorage().bucket('demo-martha.appspot.com');
 const d: MoveDeps = { ...deps, bucket };
-/** Claims look up the caller's linked sign-ins too. */
-const cd = { ...deps, auth };
+/** Claims look up the caller's linked sign-ins too; the admins hear of one who joins so ([claimSent]). */
+let claimPush = fakePush();
+let cd = { ...deps, auth, messaging: claimPush.messaging, appUrl: 'https://app.example' };
 
 /** A church moved from self-host by 'mover', with 美玉 and 志豪 pending. */
 async function moved(name = '恩典堂', mover = 'mover') {
@@ -46,6 +47,8 @@ const uidsOn = async (cid: string, day: string) =>
 beforeEach(async () => {
   await clearFirestore();
   await bucket.deleteFiles({ prefix: 'moves/' });
+  claimPush = fakePush();
+  cd = { ...deps, auth, messaging: claimPush.messaging, appUrl: 'https://app.example' };
 });
 
 describe('claiming', () => {
@@ -129,6 +132,20 @@ describe('claiming', () => {
     assert.equal((await pendingClaims(cd, mei())).claims.length, 1);
     await claimPending(cd, mei(), { churchId: cid, pendingId: 'old-mei' });
     assert.equal((await db.doc(`churches/${cid}/members/new-mei`).get()).get('claimedFrom'), 'old-mei');
+  });
+
+  test('one joining by a claim is told to the admins, as one joining by invite; one already in is not', async () => {
+    const cid = await moved();
+    await db.doc('users/mover').set({ name: 'mover', fcm: { phone: 'tok-mover' } });
+    await claimPending(cd, mei(), { churchId: cid, pendingId: 'old-mei' });
+    assert.deepEqual(
+      claimPush.sent.map((s) => [s.tokens, s.title, s.body, s.link]),
+      [[['tok-mover'], '恩典堂', '「李美玉」加入了教會', `/c/${cid}?to=%2Fme%2Fmembers`]],
+    );
+    await claimPending(cd, mei(), { churchId: cid, pendingId: 'old-mei' });
+    await db.doc(`churches/${cid}/members/new-hao`).set({ uid: 'new-hao', name: '志豪', email: 'hao@example.com', role: 'staff', groups: [], zones: [], zoneTypes: [] });
+    await claimPending(cd, caller('new-hao', { email: 'hao@example.com' }), { churchId: cid, pendingId: 'old-hao' });
+    assert.equal(claimPush.sent.length, 1, 'a second claim, and one already a member, tell nothing');
   });
 
   test('claiming twice is fine', async () => {
