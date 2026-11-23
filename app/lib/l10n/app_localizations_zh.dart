@@ -3443,7 +3443,24 @@ class L10nZh extends L10n {
   String get share => '分享';
 
   @override
-  String get planAskUntil => '要填到哪個月？';
+  String get planAskWhich => '要問哪幾個月？';
+
+  @override
+  String get planAskPick => '點開始和結束的月份';
+
+  @override
+  String get planMonthArranged => '已排好';
+
+  @override
+  String get planAskStart => '開始';
+
+  @override
+  String get planAskEnd => '結束';
+
+  @override
+  String planAskNotifyMonths(String months) {
+    return '通知 $months';
+  }
 
   @override
   String planAskConfirm(int count, String months) {
@@ -7171,7 +7188,24 @@ class L10nZhHans extends L10nZh {
   String get share => '分享';
 
   @override
-  String get planAskUntil => '要填到哪个月？';
+  String get planAskWhich => '要问哪几个月？';
+
+  @override
+  String get planAskPick => '点开始和结束的月份';
+
+  @override
+  String get planMonthArranged => '已排好';
+
+  @override
+  String get planAskStart => '开始';
+
+  @override
+  String get planAskEnd => '结束';
+
+  @override
+  String planAskNotifyMonths(String months) {
+    return '通知 $months';
+  }
 
   @override
   String planAskConfirm(int count, String months) {

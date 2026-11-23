@@ -3446,7 +3446,24 @@ class L10nKo extends L10n {
   String get share => '공유';
 
   @override
-  String get planAskUntil => '몇 월까지인가요?';
+  String get planAskWhich => '어느 달을 물어볼까요?';
+
+  @override
+  String get planAskPick => '시작 달과 끝 달을 누르세요';
+
+  @override
+  String get planMonthArranged => '편성 완료';
+
+  @override
+  String get planAskStart => '시작';
+
+  @override
+  String get planAskEnd => '끝';
+
+  @override
+  String planAskNotifyMonths(String months) {
+    return '$months 요청하기';
+  }
 
   @override
   String planAskConfirm(int count, String months) {

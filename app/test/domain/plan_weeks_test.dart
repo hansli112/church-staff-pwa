@@ -19,6 +19,20 @@ void main() {
       expect(planDuties(sunday, days, const Arranges.only({'司琴', '敬拜'})), ['司琴', '敬拜']);
     });
 
+    test('a month is 已排好 when every duty I arrange on each of its days has someone', () {
+      const mei = ['李美玉'];
+      final full = [
+        day(12, 6, const [Duty(role: '司琴', people: mei), Duty(role: '招待', people: mei)]),
+        day(12, 13, const [Duty(role: '司琴', people: mei)]),
+      ];
+      expect(monthArranged(full, const Arranges.all()), isTrue, reason: 'a duty taken off a day is not missing');
+      final gap = [...full, day(12, 20, const [Duty(role: '司琴'), Duty(role: '招待', people: mei)])];
+      expect(monthArranged(gap, const Arranges.all()), isFalse);
+      expect(monthArranged(gap, const Arranges.only({'招待'})), isTrue, reason: 'only the duties I arrange');
+      expect(monthArranged(gap, const Arranges.only({'敬拜'})), isFalse, reason: 'none of mine: nothing arranged');
+      expect(monthArranged(const [], const Arranges.all()), isFalse);
+    });
+
     test('the days by month: every one on the weekday, and others saved, from today on', () {
       final months = planMonths(
         service: sunday,

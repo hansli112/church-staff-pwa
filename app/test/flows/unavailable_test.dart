@@ -236,7 +236,7 @@ void main() {
     expect(findShownContaining('這天不行'), findsOneWidget);
   });
 
-  testWidgets('通知同工填 asks those on the lists, through the month picked from a grid by year, once confirmed', (
+  testWidgets('通知同工填 asks those on the lists about the months picked from a grid by year, once confirmed', (
     tester,
   ) async {
     final b = seededChurch(as: editor);
@@ -248,18 +248,24 @@ void main() {
     await settle(tester);
     await tester.tap(find.text('請同工填不能服事日'));
     await settle(tester);
-    expect(find.bySemanticsLabel('2027年12月'), findsOneWidget, reason: 'all of next year');
-    expect(find.bySemanticsLabel('2028年1月'), findsNothing);
+    expect(find.text('要問哪幾個月？'), findsOneWidget);
+    expect(find.bySemanticsLabel(RegExp('^2027年12月')), findsOneWidget, reason: 'all of next year');
+    expect(find.bySemanticsLabel(RegExp('^2028年1月')), findsNothing);
     expect(find.text('2026年'), findsOneWidget);
     expect(find.text('2027年'), findsOneWidget);
     expect(find.text('12月'), findsNWidgets(2), reason: 'each year its own months');
     expect(
       tester.getTopLeft(find.text('2027年')).dy,
-      greaterThan(tester.getTopLeft(find.bySemanticsLabel('2026年12月').last).dy),
+      greaterThan(tester.getTopLeft(find.bySemanticsLabel(RegExp('^2026年12月')).last).dy),
       reason: 'next year below this one',
     );
     expect(findShownContaining('通知過'), findsNothing, reason: 'not when it last asked');
-    await tester.tap(find.bySemanticsLabel('2026年12月').last);
+    expect(find.bySemanticsLabel('2026年10月, 開始'), findsOneWidget, reason: 'the first month not arranged');
+    expect(find.text('通知 10月'), findsOneWidget, reason: 'one month, till an end is picked');
+    await tester.tap(find.bySemanticsLabel(RegExp('^2026年12月')).last);
+    await settle(tester);
+    expect(find.bySemanticsLabel('2026年12月, 結束'), findsOneWidget);
+    await tester.tap(find.text('通知 10月到12月'));
     await settle(tester);
     expect(find.text('要通知 2 位同工填 10月到12月不能服事的日子嗎？'), findsOneWidget);
     await tester.tap(find.text('取消'));
@@ -270,17 +276,49 @@ void main() {
     await settle(tester);
     await tester.tap(find.text('請同工填不能服事日'));
     await settle(tester);
-    await tester.tap(find.bySemanticsLabel('2026年12月').last);
+    await tester.tap(find.bySemanticsLabel(RegExp('^2026年12月')).last);
+    await settle(tester);
+    await tester.tap(find.bySemanticsLabel(RegExp('^2026年11月')).last);
+    await settle(tester);
+    expect(find.text('通知 11月'), findsOneWidget, reason: 'with an end picked, a tap starts anew');
+    await tester.tap(find.bySemanticsLabel(RegExp('^2027年1月')).last);
+    await settle(tester);
+    await tester.tap(find.text('通知 11月到1月'));
     await settle(tester);
     await tester.tap(find.text('通知'));
     await settle(tester);
     expect(find.text('已通知 2 位同工'), findsOneWidget);
     final asked = b.unavailableAsks['grace']!['sunday']!;
-    expect((asked.from, asked.to), (_oct(1), Day(2026, 12, 1)));
+    expect((asked.from, asked.to), (Day(2026, 11, 1), Day(2027, 1, 1)));
     expect(asked.told..sort(), ['hao', 'mei']);
     expect(telemetry.named('unavailable_ask'), [
       {'people': 2},
     ], reason: 'once confirmed, not the time 取消 was tapped');
+  });
+
+  testWidgets('a month whose every day has someone on each duty is 已排好, and the months start after it', (tester) async {
+    final b = seededChurch(as: editor);
+    await pumpApp(tester, b);
+    await go(tester, '/rosters/plan/sunday');
+    final sundays = [for (var d = _oct(4); d.month == 10; d = d.addDays(7)) d];
+    for (final d in sundays) {
+      final r = b.rosters['grace']![Roster.idFor('sunday', d)];
+      final duties = r?.duties ?? [for (final role in b.services['grace']!.byId('sunday')!.duties) Duty(role: role)];
+      b.rosters['grace']![Roster.idFor('sunday', d)] = Roster(
+        type: 'sunday',
+        day: d,
+        duties: [for (final x in duties) x.people.isEmpty ? x.copyWith(people: const ['李美玉']) : x],
+        saved: true,
+      );
+    }
+    b.notify();
+    await settle(tester);
+    await tester.tap(find.byIcon(Symbols.more_horiz_rounded));
+    await settle(tester);
+    await tester.tap(find.text('請同工填不能服事日'));
+    await settle(tester);
+    expect(find.bySemanticsLabel('2026年10月, 已排好'), findsOneWidget);
+    expect(find.bySemanticsLabel('2026年11月, 開始'), findsOneWidget);
   });
 
   testWidgets('asked, home says the months until sent; the page opens on the first, with 都可以服事 or 送出', (tester) async {
@@ -402,13 +440,15 @@ void main() {
 
     await openMonths();
     expect(find.textContaining('還沒填'), findsNothing, reason: 'never asked');
-    await tester.tap(find.bySemanticsLabel('2026年12月').last);
+    await tester.tap(find.bySemanticsLabel(RegExp('^2026年12月')).last);
+    await settle(tester);
+    await tester.tap(find.text('通知 10月到12月'));
     await settle(tester);
     await tester.tap(find.text('通知'));
     await settle(tester);
 
     await openMonths();
-    expect(find.bySemanticsLabel('2027年12月'), findsOneWidget, reason: 'new months still to pick');
+    expect(find.bySemanticsLabel(RegExp('^2027年12月')), findsOneWidget, reason: 'new months still to pick');
     await tester.tap(find.text('10月到12月・2 位還沒填'));
     await settle(tester);
     expect(find.text('10月到12月不能服事的日子'), findsOneWidget);
@@ -458,6 +498,6 @@ void main() {
     await settle(tester);
     await tester.tap(find.text('請同工填不能服事日'));
     await settle(tester);
-    expect(find.text('要填到哪個月？'), findsNothing, reason: 'greyed: nothing opens');
+    expect(find.text('要問哪幾個月？'), findsNothing, reason: 'greyed: nothing opens');
   });
 }

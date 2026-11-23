@@ -47,3 +47,18 @@ List<({Day month, List<Roster> days})> planMonths({
   }
   return [for (final MapEntry(key: m, value: inMonth) in byMonth.entries) (month: m, days: inMonth)];
 }
+
+/// Whether [days], a month of a service, is 已排好 for who arranges
+/// [arranges]: it has a day, and every duty of each day they arrange has
+/// someone. A duty taken off a day (這一天沒有這項服事) is not on it.
+bool monthArranged(Iterable<Roster> days, Arranges arranges) {
+  var any = false;
+  for (final day in days) {
+    for (final d in day.duties) {
+      if (!arranges.has(d.role)) continue;
+      if (d.people.isEmpty) return false;
+      any = true;
+    }
+  }
+  return any;
+}

@@ -317,10 +317,11 @@ class _PlanWeeksScreenState extends ConsumerState<PlanWeeksScreen> with SingleTi
     return askedToFill(ref.watch(membersProvider).value ?? const [], type, ref.watch(arrangesProvider(type)), me.uid);
   }
 
-  /// 通知同工填 (#91): through which month, from [from], the months in a
-  /// grid by year, under the last ask while its months last, which opens
-  /// who has not sent theirs; then, asked first as it cannot be taken
-  /// back, one push each.
+  /// 通知同工填 (#91): which months, the months from [from] (the table's
+  /// first) in a grid by year, each 已排好 marked; it opens on the first
+  /// not arranged, and a tap after it ends the months. Under the last ask
+  /// while its months last, which opens who has not sent theirs; then,
+  /// asked first as it cannot be taken back, one push each.
   Future<void> _askUnavailable(String type, Day from) async {
     final l10n = L10n.of(context);
     final today = ref.read(todayProvider);
@@ -328,51 +329,37 @@ class _PlanWeeksScreenState extends ConsumerState<PlanWeeksScreen> with SingleTi
     // Its months not all gone by, and someone told still here.
     final last = round != null && round.currentOn(today) && _stillHere(round.told).isNotEmpty ? round : null;
     final waiting = last == null ? 0 : _stillHere(last.waiting).length;
-    final choices = [
-      for (var i = 0; i < monthsThroughNextYear(from, today: ref.read(todayProvider)); i++)
-        Day(from.year, from.month + i, 1),
-    ];
-    final to = await showAppSheet<Day>(
+    final ahead = monthsThroughNextYear(from, today: today);
+    final choices = [for (var i = 0; i < ahead; i++) Day(from.year, from.month + i, 1)];
+    final service = ref.read(servicesProvider).value?.byId(type);
+    final saved = ref.read(savedRostersProvider).value ?? const <Roster>[];
+    final arranges = ref.read(arrangesProvider(type));
+    final arranged = service == null
+        ? const <Day>{}
+        : {
+            for (final m in planMonths(service: service, saved: saved, today: today, month: from, months: ahead))
+              if (monthArranged(m.days, arranges)) m.month,
+          };
+    final picked = await showAppSheet<(Day, Day)>(
       context,
-      builder: (context) => SafeArea(
-        child: SingleChildScrollView(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              Padding(
-                padding: const EdgeInsets.only(bottom: Space.s),
-                child: Text(l10n.planAskUntil, style: AppText.headline, textAlign: TextAlign.center),
-              ),
-              if (last != null)
-                ListSection(
-                  children: [
-                    ListRow(
-                      title: waiting == 0
-                          ? l10n.planAskRoundDone(monthsLabel(l10n, last.from, last.to))
-                          : l10n.planAskRound(monthsLabel(l10n, last.from, last.to), waiting),
-                      onTap: () {
-                        Navigator.pop(context);
-                        _showRound(type);
-                      },
-                    ),
-                  ],
-                ),
-              for (final year in {for (final m in choices) m.year})
-                _MonthGrid(
-                  year: year,
-                  months: [
-                    for (final m in choices)
-                      if (m.year == year) m,
-                  ],
-                  onPick: (month) => Navigator.pop(context, month),
-                ),
-            ],
-          ),
-        ),
+      builder: (context) => _AskMonths(
+        months: choices,
+        arranged: arranged,
+        first: choices.firstWhere((m) => !arranged.contains(m), orElse: () => choices.first),
+        round: last == null
+            ? null
+            : waiting == 0
+            ? l10n.planAskRoundDone(monthsLabel(l10n, last.from, last.to))
+            : l10n.planAskRound(monthsLabel(l10n, last.from, last.to), waiting),
+        onRound: () {
+          Navigator.pop(context);
+          _showRound(type);
+        },
       ),
     );
-    if (to == null || !mounted) return;
-    final months = monthsLabel(l10n, from, to);
+    if (picked == null || !mounted) return;
+    final (start, to) = picked;
+    final months = monthsLabel(l10n, start, to);
     final count = _askedToFill(type).length;
     final ok = await confirmAction(
       context,
@@ -383,7 +370,7 @@ class _PlanWeeksScreenState extends ConsumerState<PlanWeeksScreen> with SingleTi
     if (!ok || !mounted) return;
     final toasts = _toasts;
     try {
-      final told = await ref.read(rosterActionsProvider).askUnavailable(type, from: from, to: to);
+      final told = await ref.read(rosterActionsProvider).askUnavailable(type, from: start, to: to);
       if (toasts.mounted) showToast(toasts, l10n.planNotified(told));
     } catch (e) {
       if (toasts.mounted) showToast(toasts, errorText(l10n, e));
@@ -1483,18 +1470,126 @@ Future<void> _tellPlanned(
   }
 }
 
-/// One year's months in 要填到哪個月？, four to a row; a tap picks.
+/// 要問哪幾個月 (#91): [months] in a grid by year, [arranged] ones marked
+/// 已排好, [first] picked to start. A tap on or after the start ends the
+/// months there; before it, or once they have an end, starts them anew.
+/// The button says the months and pops them. [round], the last ask, opens
+/// it ([onRound]).
+class _AskMonths extends StatefulWidget {
+  const _AskMonths({
+    required this.months,
+    required this.arranged,
+    required this.first,
+    required this.round,
+    required this.onRound,
+  });
+
+  final List<Day> months;
+  final Set<Day> arranged;
+  final Day first;
+  final String? round;
+  final VoidCallback onRound;
+
+  @override
+  State<_AskMonths> createState() => _AskMonthsState();
+}
+
+class _AskMonthsState extends State<_AskMonths> {
+  late Day _start = widget.first;
+  Day? _end;
+
+  void _tap(Day month) {
+    Haptics.selection();
+    setState(() {
+      if (_end == null && !month.isBefore(_start)) {
+        _end = month;
+      } else {
+        _start = month;
+        _end = null;
+      }
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = L10n.of(context);
+    final c = AppColors.of(context);
+    final end = _end ?? _start;
+    return SafeArea(
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Text(l10n.planAskWhich, style: AppText.headline, textAlign: TextAlign.center),
+          Padding(
+            padding: const EdgeInsets.only(top: Space.xs, bottom: Space.s),
+            child: Text(
+              l10n.planAskPick,
+              style: AppText.footnote.copyWith(color: c.secondaryLabel),
+              textAlign: TextAlign.center,
+            ),
+          ),
+          Flexible(
+            child: SingleChildScrollView(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  if (widget.round case final round?)
+                    ListSection(children: [ListRow(title: round, onTap: widget.onRound)]),
+                  for (final year in {for (final m in widget.months) m.year})
+                    _MonthGrid(
+                      year: year,
+                      months: [
+                        for (final m in widget.months)
+                          if (m.year == year) m,
+                      ],
+                      start: _start,
+                      end: _end,
+                      arranged: widget.arranged,
+                      onPick: _tap,
+                    ),
+                ],
+              ),
+            ),
+          ),
+          Padding(
+            padding: const EdgeInsets.fromLTRB(Space.m, Space.s, Space.m, Space.s),
+            child: PrimaryButton(
+              label: l10n.planAskNotifyMonths(monthsLabel(l10n, _start, end)),
+              onPressed: () => Navigator.pop(context, (_start, end)),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// One year's [months] of [_AskMonths], four to a row: [start] to [end]
+/// filled, those between tinted; under a month 開始, 結束 or 已排好.
 class _MonthGrid extends StatelessWidget {
-  const _MonthGrid({required this.year, required this.months, required this.onPick});
+  const _MonthGrid({
+    required this.year,
+    required this.months,
+    required this.start,
+    required this.end,
+    required this.arranged,
+    required this.onPick,
+  });
 
   final int year;
   final List<Day> months;
+  final Day start;
+  final Day? end;
+  final Set<Day> arranged;
   final ValueChanged<Day> onPick;
 
   @override
   Widget build(BuildContext context) {
+    final l10n = L10n.of(context);
     final c = AppColors.of(context);
     final year = DateFormat.y().format(DateTime(this.year));
+    final last = end ?? start;
     return Padding(
       padding: const EdgeInsets.fromLTRB(Space.m, Space.s, Space.m, Space.s),
       child: Column(
@@ -1516,26 +1611,59 @@ class _MonthGrid extends StatelessWidget {
                     runSpacing: Space.s,
                     children: [
                       for (final month in months)
-                        SizedBox(
-                          width: width,
-                          height: Space.minTap(Theme.of(context).platform),
-                          child: Semantics(
-                            button: true,
-                            label: DateFormat.yMMMM().format(month.midnight),
-                            excludeSemantics: true,
-                            child: Material(
-                              color: c.background,
-                              borderRadius: BorderRadius.circular(Radii.s + 2),
-                              child: InkWell(
+                        () {
+                          final edge = month == start || month == end;
+                          final inside = month.isAfter(start) && month.isBefore(last);
+                          final note = month == start
+                              ? l10n.planAskStart
+                              : month == end
+                              ? l10n.planAskEnd
+                              : arranged.contains(month)
+                              ? l10n.planMonthArranged
+                              : null;
+                          final ink = edge ? c.onAccent : c.label;
+                          return SizedBox(
+                            width: width,
+                            height: Space.minTap(Theme.of(context).platform) + Space.s,
+                            child: Semantics(
+                              button: true,
+                              selected: edge || inside,
+                              label: [DateFormat.yMMMM().format(month.midnight), ?note].join(', '),
+                              excludeSemantics: true,
+                              child: Material(
+                                color: edge
+                                    ? c.accent
+                                    : inside
+                                    ? c.accentSoft
+                                    : c.background,
                                 borderRadius: BorderRadius.circular(Radii.s + 2),
-                                onTap: () => onPick(month),
-                                child: Center(
-                                  child: Text(DateFormat.MMM().format(month.midnight), style: AppText.body),
+                                child: InkWell(
+                                  borderRadius: BorderRadius.circular(Radii.s + 2),
+                                  onTap: () => onPick(month),
+                                  child: Column(
+                                    mainAxisAlignment: MainAxisAlignment.center,
+                                    children: [
+                                      Text(
+                                        DateFormat.MMM().format(month.midnight),
+                                        style: AppText.body.copyWith(color: ink),
+                                        maxLines: 1,
+                                      ),
+                                      if (note != null)
+                                        Text(
+                                          note,
+                                          style: AppText.caption2.copyWith(
+                                            color: edge ? c.onAccent : c.secondaryLabel,
+                                          ),
+                                          maxLines: 1,
+                                          overflow: TextOverflow.ellipsis,
+                                        ),
+                                    ],
+                                  ),
                                 ),
                               ),
                             ),
-                          ),
-                        ),
+                          );
+                        }(),
                     ],
                   );
                 },

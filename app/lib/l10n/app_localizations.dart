@@ -6070,11 +6070,41 @@ abstract class L10n {
   /// **'分享'**
   String get share;
 
-  /// No description provided for @planAskUntil.
+  /// No description provided for @planAskWhich.
   ///
   /// In zh, this message translates to:
-  /// **'要填到哪個月？'**
-  String get planAskUntil;
+  /// **'要問哪幾個月？'**
+  String get planAskWhich;
+
+  /// No description provided for @planAskPick.
+  ///
+  /// In zh, this message translates to:
+  /// **'點開始和結束的月份'**
+  String get planAskPick;
+
+  /// Under a month in 要問哪幾個月: every day of it has someone on each duty I arrange
+  ///
+  /// In zh, this message translates to:
+  /// **'已排好'**
+  String get planMonthArranged;
+
+  /// Under the first month picked in 要問哪幾個月
+  ///
+  /// In zh, this message translates to:
+  /// **'開始'**
+  String get planAskStart;
+
+  /// Under the last month picked in 要問哪幾個月
+  ///
+  /// In zh, this message translates to:
+  /// **'結束'**
+  String get planAskEnd;
+
+  /// The button under 要問哪幾個月, with the months picked (planAskMonths or one month)
+  ///
+  /// In zh, this message translates to:
+  /// **'通知 {months}'**
+  String planAskNotifyMonths(String months);
 
   /// No description provided for @planAskConfirm.
   ///

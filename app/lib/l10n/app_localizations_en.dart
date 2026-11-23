@@ -3643,7 +3643,24 @@ class L10nEn extends L10n {
   String get share => 'Share';
 
   @override
-  String get planAskUntil => 'Through which month?';
+  String get planAskWhich => 'Which months to ask about?';
+
+  @override
+  String get planAskPick => 'Tap the first and the last month';
+
+  @override
+  String get planMonthArranged => 'Arranged';
+
+  @override
+  String get planAskStart => 'Start';
+
+  @override
+  String get planAskEnd => 'End';
+
+  @override
+  String planAskNotifyMonths(String months) {
+    return 'Ask about $months';
+  }
 
   @override
   String planAskConfirm(int count, String months) {

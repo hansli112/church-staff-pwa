@@ -3448,7 +3448,24 @@ class L10nJa extends L10n {
   String get share => '共有';
 
   @override
-  String get planAskUntil => '何月までの分ですか？';
+  String get planAskWhich => 'どの月の分を聞きますか？';
+
+  @override
+  String get planAskPick => '最初と最後の月をタップ';
+
+  @override
+  String get planMonthArranged => '作成済み';
+
+  @override
+  String get planAskStart => '開始';
+
+  @override
+  String get planAskEnd => '終了';
+
+  @override
+  String planAskNotifyMonths(String months) {
+    return '$monthsを依頼する';
+  }
 
   @override
   String planAskConfirm(int count, String months) {
