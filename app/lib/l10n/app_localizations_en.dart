@@ -3681,6 +3681,71 @@ class L10nEn extends L10n {
   String get planAskSend => 'Ask';
 
   @override
+  String get homeUnavailableAsked => 'Mark days you can\'t serve';
+
+  @override
+  String get unavailableSend => 'Send';
+
+  @override
+  String get unavailableAllFree => 'I can serve every day';
+
+  @override
+  String get unavailableSent => 'Sent';
+
+  @override
+  String planAskRound(String months, int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$months · $count yet to reply',
+      one: '$months · 1 yet to reply',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String planAskRoundDone(String months) {
+    return '$months · Everyone replied';
+  }
+
+  @override
+  String planAskRoundTitle(String months) {
+    return 'Days they can\'t serve, $months';
+  }
+
+  @override
+  String planAskRoundAt(String date) {
+    return 'Asked $date';
+  }
+
+  @override
+  String planAskWaiting(int count) {
+    return 'Yet to reply · $count';
+  }
+
+  @override
+  String planAskFilled(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count replied',
+      one: '1 replied',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String planAskRemind(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'Remind these $count',
+      one: 'Remind 1 person',
+    );
+    return '$_temp0';
+  }
+
+  @override
   String get notifSwap => 'Covers and swaps';
 
   @override

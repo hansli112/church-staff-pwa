@@ -1,4 +1,4 @@
-import { FieldValue } from 'firebase-admin/firestore';
+import { FieldValue, Timestamp, type DocumentReference } from 'firebase-admin/firestore';
 
 import { churchAccess } from './access.js';
 import { fail, record, type Caller, type Deps } from './common.js';
@@ -6,6 +6,7 @@ import { LIMITS, TEXT_LIMITS, withinTextLimit } from './limits.js';
 import { ledDuties, ministriesOf, type Ministry } from './ministries.js';
 import { powersOf, type MemberFields } from './powers.js';
 import { notifyMembers, type PushDeps } from './push.js';
+import { dateKeyIn, timeZoneOf } from './timeZones.js';
 
 /** A member doc as askedToFill reads it: who, and the duties of each 牧區. */
 interface Listed {
@@ -38,8 +39,11 @@ const MONTH = /^\d{4}-(0[1-9]|1[0-2])$/;
 /**
  * 通知同工填不能服事的日子 (#91), by anyone who arranges service
  * `data.serviceId`: one push each to [askedToFill], asking for the months
- * `data.from` to `data.to` (`YYYY-MM`). Remembers when, for the next to
- * see. Returns how many people.
+ * `data.from` to `data.to` (`YYYY-MM`). Remembers when and whom, for the
+ * next to see who has sent theirs; and tells each, in their own
+ * unavailable/{uid} as `asked: {at, from, to}`, the months stretched over
+ * any they were asked before and have not sent, from this month on. Writes
+ * first, then pushes. Returns how many people.
  */
 export async function askUnavailable(deps: Deps & PushDeps, caller: Caller | null, data: unknown) {
   const input = record(data);
@@ -58,18 +62,87 @@ export async function askUnavailable(deps: Deps & PushDeps, caller: Caller | nul
     serviceId,
     members.docs.map((m) => ({ ...(m.data() as Listed), uid: m.id })),
   );
+  const theirs = asked.length ? await deps.db.getAll(...asked.map((uid) => deps.db.doc(`churches/${cid}/unavailable/${uid}`))) : [];
+  const thisMonth = dateKeyIn(timeZoneOf(church), deps.now()).slice(0, 7);
+  const at = FieldValue.serverTimestamp();
+  const writes: [DocumentReference, Record<string, unknown>][] = [
+    [deps.db.doc(`churches/${cid}/unavailableAsks/${serviceId}`), { at, by: member.id, from, to, told: asked }],
+  ];
+  for (const doc of theirs) {
+    const before = doc.get('asked') as { from?: unknown; to?: unknown } | undefined;
+    const open = typeof before?.from === 'string' && typeof before.to === 'string' && before.to >= thisMonth
+      && !sentSince(doc.get('sentAt'), doc.get('asked.at'));
+    const months = open
+      ? { from: [later(before.from as string, thisMonth), from].sort()[0], to: later(before.to as string, to) }
+      : { from, to };
+    writes.push([doc.ref, { asked: { at, ...months } }]);
+  }
+  // A batch takes 500 writes at most.
+  for (let i = 0; i < writes.length; i += 400) {
+    const batch = deps.db.batch();
+    for (const [ref, value] of writes.slice(i, i + 400)) batch.set(ref, value, { merge: true });
+    await batch.commit();
+  }
   await notifyMembers(deps, cid, asked, 'swap', (w) => ({
     title: church.get('name') as string,
     body: w.askUnavailable(from, to),
     link: '/me/unavailable',
   }));
-  await deps.db.doc(`churches/${cid}/unavailableAsks/${serviceId}`).set({
-    at: FieldValue.serverTimestamp(),
-    by: member.id,
-    from,
-    to,
-  });
   return { people: asked.length };
+}
+
+/** The later of two `YYYY-MM` months. */
+function later(a: string, b: string) {
+  return a > b ? a : b;
+}
+
+/** Whether [sentAt] is since [askedAt]: what was asked then is answered. */
+function sentSince(sentAt: unknown, askedAt: unknown) {
+  return sentAt instanceof Timestamp && askedAt instanceof Timestamp
+    && (sentAt.seconds > askedAt.seconds || (sentAt.seconds === askedAt.seconds && sentAt.nanoseconds >= askedAt.nanoseconds));
+}
+
+/**
+ * 再通知 (#91): by anyone who arranges service `data.serviceId`, one push
+ * again to each its last 通知同工填 told who is still in the church and has
+ * not sent theirs since. Returns how many people.
+ */
+export async function remindUnavailable(deps: Deps & PushDeps, caller: Caller | null, data: unknown) {
+  const input = record(data);
+  const { serviceId } = input;
+  if (typeof serviceId !== 'string' || !/^[A-Za-z0-9_-]{1,64}$/.test(serviceId)
+      || Object.keys(input).some((k) => !['churchId', 'serviceId'].includes(k))) fail('invalid-argument', 'unknown');
+  const { cid, church } = await churchAccess(deps, caller, data, { arranges: serviceId });
+  const ask = await deps.db.doc(`churches/${cid}/unavailableAsks/${serviceId}`).get();
+  const told = ask.get('told');
+  if (!ask.exists || !Array.isArray(told)) fail('not-found', 'unknown');
+  const uids = (told as unknown[]).filter((u): u is string => typeof u === 'string');
+  const [members, theirs] = uids.length
+    ? await Promise.all([
+        deps.db.getAll(...uids.map((uid) => deps.db.doc(`churches/${cid}/members/${uid}`))),
+        deps.db.getAll(...uids.map((uid) => deps.db.doc(`churches/${cid}/unavailable/${uid}`))),
+      ])
+    : [[], []];
+  const waiting = uids.filter((_, i) => members[i].exists && !sentSince(theirs[i].get('sentAt'), ask.get('at')));
+  const [from, to] = [ask.get('from') as string, ask.get('to') as string];
+  await notifyMembers(deps, cid, waiting, 'swap', (w) => ({
+    title: church.get('name') as string,
+    body: w.askUnavailable(from, to),
+    link: '/me/unavailable',
+  }));
+  return { people: waiting.length };
+}
+
+/**
+ * 送出 or 都可以服事 (#91): the caller says their 不能服事的日子 are as they
+ * are, answering what they were asked so far.
+ */
+export async function sendUnavailableDays(deps: Deps, caller: Caller | null, data: unknown) {
+  const input = record(data);
+  if (Object.keys(input).some((k) => k !== 'churchId')) fail('invalid-argument', 'unknown');
+  const { cid, caller: c } = await churchAccess(deps, caller, data, 'member');
+  await deps.db.doc(`churches/${cid}/unavailable/${c.uid}`).set({ sentAt: FieldValue.serverTimestamp() }, { merge: true });
+  return {};
 }
 
 const DAY = /^\d{4}-(0[1-9]|1[0-2])-(0[1-9]|[12]\d|3[01])$/;
@@ -94,9 +167,10 @@ export async function saveUnavailableDays(deps: Deps, caller: Caller | null, dat
     return { from, to, note: note.trim() };
   });
   const { cid, caller: c } = await churchAccess(deps, caller, data, 'member');
+  // Merged: what they were asked, and when they sent, stay.
   await deps.db.doc(`churches/${cid}/unavailable/${c.uid}`).set({
     spans: kept.sort((a, b) => a.from.localeCompare(b.from)),
     updatedAt: FieldValue.serverTimestamp(),
-  });
+  }, { merge: true });
   return {};
 }

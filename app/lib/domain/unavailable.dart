@@ -3,6 +3,8 @@
 /// note for whoever arranges.
 library;
 
+import 'package:flutter/foundation.dart';
+
 import 'day.dart';
 import 'models.dart';
 
@@ -130,3 +132,78 @@ List<Member> askedToFill(Iterable<Member> members, String serviceType, Arranges 
 Map<String, UnavailableSpan> unavailableOn(Roster roster, Map<String, UnavailableDays> everyone) => {
   for (final MapEntry(key: uid, value: days) in everyone.entries) uid: ?days.during(roster.day, roster.lastDay),
 };
+
+/// Sent at [sentAt] answers an ask made at [askedAt]: not sent before it.
+bool sentSince(DateTime? sentAt, DateTime askedAt) => sentAt != null && !sentAt.isBefore(askedAt);
+
+/// What 通知同工填 (#91) asked of me: the months [from] to [to] (each its
+/// first day), asked at [at]; and when I last sent mine, if ever.
+class UnavailableAsked {
+  const UnavailableAsked({required this.at, required this.from, required this.to, this.sentAt});
+
+  final DateTime at;
+  final Day from;
+  final Day to;
+  final DateTime? sentAt;
+
+  /// Sent since it was asked: answered.
+  bool get sent => sentSince(sentAt, at);
+
+  /// Its months not all gone by in [today]'s month.
+  bool currentOn(Day today) => !to.isBefore(today.firstOfMonth);
+
+  /// Still waiting on me on [today]: not sent, and [currentOn].
+  bool waitingOn(Day today) => !sent && currentOn(today);
+
+  @override
+  bool operator ==(Object other) =>
+      other is UnavailableAsked && other.at == at && other.from == from && other.to == to && other.sentAt == sentAt;
+
+  @override
+  int get hashCode => Object.hash(at, from, to, sentAt);
+
+  @override
+  String toString() => 'UnavailableAsked($from–$to at $at, sent $sentAt)';
+}
+
+/// A service's last 通知同工填 (#91) as it stands: the months [from] to [to],
+/// asked at [at] of [told] (uids); of them, [sent] have sent theirs since.
+class UnavailableRound {
+  const UnavailableRound({
+    required this.at,
+    required this.from,
+    required this.to,
+    required this.told,
+    this.sent = const {},
+  });
+
+  final DateTime at;
+  final Day from;
+  final Day to;
+  final List<String> told;
+  final Set<String> sent;
+
+  /// Who of [told] has not sent, in the order told.
+  List<String> get waiting => [
+    for (final uid in told)
+      if (!sent.contains(uid)) uid,
+  ];
+
+  /// Its months not all gone by in [today]'s month.
+  bool currentOn(Day today) => !to.isBefore(today.firstOfMonth);
+
+  @override
+  bool operator ==(Object other) =>
+      other is UnavailableRound &&
+      other.at == at &&
+      other.from == from &&
+      other.to == to &&
+      listEquals(other.told, told) &&
+      setEquals(other.sent, sent);
+
+  @override
+  int get hashCode => Object.hash(at, from, to, Object.hashAll(told), Object.hashAllUnordered(sent));
+
+  @override
+  String toString() => 'UnavailableRound($from–$to at $at, told $told, sent $sent)';
+}

@@ -356,6 +356,14 @@ class RosterActions {
     return told;
   }
 
+  /// 再通知 (#91) for [type]: those its last 通知同工填 told who have not sent
+  /// theirs. How many.
+  Future<int> remindUnavailable(String type) async {
+    final told = await _data.remindUnavailable(type);
+    _ref.read(telemetryProvider).logEvent('unavailable_remind', {'people': told});
+    return told;
+  }
+
   /// Gives [member] the duty, so the picker lists them first next time.
   Future<void> grantDuty(Member member, String type, String role) => _data.grantDuty(member.uid, type, role);
 

@@ -3481,6 +3481,53 @@ class L10nJa extends L10n {
   String get planAskSend => '依頼する';
 
   @override
+  String get homeUnavailableAsked => '奉仕できない日を入力';
+
+  @override
+  String get unavailableSend => '送信';
+
+  @override
+  String get unavailableAllFree => 'どの日も奉仕できます';
+
+  @override
+  String get unavailableSent => '送信しました';
+
+  @override
+  String planAskRound(String months, int count) {
+    return '$months・未入力 $count人';
+  }
+
+  @override
+  String planAskRoundDone(String months) {
+    return '$months・全員入力済み';
+  }
+
+  @override
+  String planAskRoundTitle(String months) {
+    return '$monthsの奉仕できない日';
+  }
+
+  @override
+  String planAskRoundAt(String date) {
+    return '$dateに依頼';
+  }
+
+  @override
+  String planAskWaiting(int count) {
+    return '未入力・$count人';
+  }
+
+  @override
+  String planAskFilled(int count) {
+    return '$count人が入力済み';
+  }
+
+  @override
+  String planAskRemind(int count) {
+    return 'この$count人にもう一度依頼';
+  }
+
+  @override
   String get notifSwap => '代わり・交換';
 
   @override

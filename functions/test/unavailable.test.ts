@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import { beforeEach, describe, test } from 'node:test';
 
 import { onMemberDeleted } from '../src/triggers.js';
-import { askUnavailable, saveUnavailableDays } from '../src/unavailable.js';
+import { askUnavailable, remindUnavailable, saveUnavailableDays, sendUnavailableDays } from '../src/unavailable.js';
 import { memoryGoogle } from '../src/memoryGoogle.js';
 import { caller, clearFirestore, db, deps, fakePush, rejectsWith, seedChurch, setNow } from './support.js';
 
@@ -24,7 +24,7 @@ async function church() {
   for (const uid of ['lead', 'mei', 'hao', 'lin']) await db.doc(`users/${uid}`).set({ fcm: { phone: `tok-${uid}` } });
 }
 
-describe('請同工填 (askUnavailable)', () => {
+describe('通知同工填 (askUnavailable)', () => {
   test('one push to each on the lists of what they arrange, opening the page to fill in', async () => {
     await church();
     const { messaging, sent } = fakePush();
@@ -36,7 +36,48 @@ describe('請同工填 (askUnavailable)', () => {
     ]);
     const asked = await db.doc('churches/C1/unavailableAsks/sunday').get();
     assert.deepEqual([asked.get('by'), asked.get('from'), asked.get('to')], ['lead', '2026-12', '2027-01']);
+    assert.deepEqual([...asked.get('told')].sort(), ['hao', 'mei']);
     assert.ok(asked.get('at'));
+    const mei = await db.doc('churches/C1/unavailable/mei').get();
+    assert.deepEqual([mei.get('asked.from'), mei.get('asked.to')], ['2026-12', '2027-01'], 'told in their own');
+    assert.equal(mei.get('asked.at').toMillis(), asked.get('at').toMillis());
+  });
+
+  test('asked again before sending, the months stretch over both; once sent, only the new', async () => {
+    await church();
+    await db.doc('churches/C1/members/lead').update({ leadTypes: ['sunday', 'youth'] });
+    await db.doc('churches/C1/members/mei').update({ zones: [{ serviceType: 'sunday', duties: ['司琴'] }, { serviceType: 'youth', duties: ['司琴'] }] });
+    const { messaging } = fakePush();
+    const ask = (serviceId: string, from: string, to: string) =>
+      askUnavailable({ ...deps, messaging, appUrl }, caller('lead'), { churchId: 'C1', serviceId, from, to });
+    const asked = async () => {
+      const d = await db.doc('churches/C1/unavailable/mei').get();
+      return [d.get('asked.from'), d.get('asked.to')];
+    };
+    await ask('sunday', '2026-12', '2027-01');
+    await ask('youth', '2027-01', '2027-03');
+    assert.deepEqual(await asked(), ['2026-12', '2027-03']);
+    await sendUnavailableDays(deps, caller('mei'), { churchId: 'C1' });
+    await ask('youth', '2027-04', '2027-04');
+    assert.deepEqual(await asked(), ['2027-04', '2027-04']);
+  });
+
+  test('stretched from this month on: months gone by are not asked again', async () => {
+    await church();
+    const { messaging } = fakePush();
+    const ask = (from: string, to: string) =>
+      askUnavailable({ ...deps, messaging, appUrl }, caller('lead'), { churchId: 'C1', serviceId: 'sunday', from, to });
+    const asked = async () => {
+      const d = await db.doc('churches/C1/unavailable/mei').get();
+      return [d.get('asked.from'), d.get('asked.to')];
+    };
+    await ask('2026-11', '2027-01');
+    setNow(new Date('2026-12-15T10:00:00+08:00'));
+    await ask('2027-02', '2027-02');
+    assert.deepEqual(await asked(), ['2026-12', '2027-02'], 'November is gone by');
+    setNow(new Date('2027-03-15T10:00:00+08:00'));
+    await ask('2027-04', '2027-04');
+    assert.deepEqual(await asked(), ['2027-04', '2027-04'], 'all of the last is gone by');
   });
 
   test('one month is said once, in their language', async () => {
@@ -57,6 +98,63 @@ describe('請同工填 (askUnavailable)', () => {
     await rejectsWith(ask('lead', { from: '2027-02' }), 'unknown');
     await rejectsWith(ask('lead', { to: '2027-13' }), 'unknown');
     await rejectsWith(ask('lead', { extra: 1 }), 'unknown');
+  });
+});
+
+describe('再通知 (remindUnavailable)', () => {
+  test('one push again to those told who are still here and have not sent since', async () => {
+    await church();
+    await seedChurch('C1', { yu: 'staff' }, { name: '恩典堂' });
+    await db.doc('churches/C1/members/yu').update({ zones: [{ serviceType: 'sunday', duties: ['招待'] }] });
+    await db.doc('users/yu').set({ fcm: { phone: 'tok-yu' } });
+    const first = fakePush();
+    await askUnavailable({ ...deps, messaging: first.messaging, appUrl }, caller('lead'), { churchId: 'C1', serviceId: 'sunday', from: '2026-12', to: '2027-01' });
+    await sendUnavailableDays(deps, caller('mei'), { churchId: 'C1' });
+    await db.doc('churches/C1/members/yu').delete();
+    const { messaging, sent } = fakePush();
+    const r = await remindUnavailable({ ...deps, messaging, appUrl }, caller('lead'), { churchId: 'C1', serviceId: 'sunday' });
+    assert.deepEqual(r, { people: 1 });
+    assert.deepEqual(sent.flatMap((p) => p.tokens.map((t) => [t, p.body])), [['tok-hao', '請填 12 月到 1 月不能服事的日子']]);
+  });
+
+  test('only who arranges the service, and only once asked', async () => {
+    await church();
+    const { messaging } = fakePush();
+    const remind = (uid: string, data: Record<string, unknown> = {}) =>
+      remindUnavailable({ ...deps, messaging, appUrl }, caller(uid), { churchId: 'C1', serviceId: 'sunday', ...data });
+    await rejectsWith(remind('lead'), 'unknown');
+    await askUnavailable({ ...deps, messaging, appUrl }, caller('lead'), { churchId: 'C1', serviceId: 'sunday', from: '2026-12', to: '2026-12' });
+    await rejectsWith(remind('mei'), 'permissionDenied');
+    await rejectsWith(remind('lead', { serviceId: 'youth' }), 'permissionDenied');
+    await rejectsWith(remind('lead', { extra: 1 }), 'unknown');
+  });
+
+  test('an ask from before whom it told was kept has nobody to tell again', async () => {
+    await church();
+    const { messaging, sent } = fakePush();
+    await db.doc('churches/C1/unavailableAsks/sunday').set({ at: new Date(), by: 'lead', from: '2026-12', to: '2026-12' });
+    await rejectsWith(
+      remindUnavailable({ ...deps, messaging, appUrl }, caller('lead'), { churchId: 'C1', serviceId: 'sunday' }),
+      'unknown',
+    );
+    assert.deepEqual(sent, []);
+  });
+});
+
+describe('送出 (sendUnavailableDays)', () => {
+  test('says when, keeping the days and what was asked; saving the days keeps when too', async () => {
+    await church();
+    const { messaging } = fakePush();
+    await saveUnavailableDays(deps, caller('mei'), { churchId: 'C1', spans: [{ from: '2026-12-20', to: '2026-12-20', note: '' }] });
+    await askUnavailable({ ...deps, messaging, appUrl }, caller('lead'), { churchId: 'C1', serviceId: 'sunday', from: '2026-12', to: '2026-12' });
+    await sendUnavailableDays(deps, caller('mei'), { churchId: 'C1' });
+    await saveUnavailableDays(deps, caller('mei'), { churchId: 'C1', spans: [] });
+    const mei = await db.doc('churches/C1/unavailable/mei').get();
+    assert.ok(mei.get('sentAt'));
+    assert.equal(mei.get('asked.from'), '2026-12');
+    assert.deepEqual(mei.get('spans'), []);
+    await rejectsWith(sendUnavailableDays(deps, caller('mei'), { churchId: 'C1', extra: 1 }), 'unknown');
+    await rejectsWith(sendUnavailableDays(deps, caller('stranger'), { churchId: 'C1' }), 'permissionDenied');
   });
 });
 

@@ -680,6 +680,38 @@ UnavailableDays unavailableDaysFromJson(Map<String, dynamic>? data) {
   return UnavailableDays(spans..sort((a, b) => a.from.compareTo(b.from)));
 }
 
+/// The first day of month [key] (`YYYY-MM`), if it is one.
+Day? _monthOf(Object? key) => key is String && key.length == 7 ? Day.tryParse('$key-01') : null;
+
+/// What 通知同工填 asked of a member, from their unavailable/{uid}; null when
+/// never asked.
+UnavailableAsked? unavailableAskedFromJson(Map<String, dynamic>? data) {
+  final asked = data?['asked'];
+  if (asked is! Map) return null;
+  final (at, from, to) = ((asked['at'] as Timestamp?)?.toDate(), _monthOf(asked['from']), _monthOf(asked['to']));
+  if (at == null || from == null || to == null) return null;
+  return UnavailableAsked(at: at, from: from, to: to, sentAt: (data?['sentAt'] as Timestamp?)?.toDate());
+}
+
+/// A service's last 通知同工填 from unavailableAsks/{type}, with [sentAt] by
+/// uid; null when never asked, or asked before whom it told was kept.
+UnavailableRound? unavailableRoundFromJson(Map<String, dynamic>? ask, Map<String, DateTime?> sentAt) {
+  final told = ask?['told'];
+  final (at, from, to) = ((ask?['at'] as Timestamp?)?.toDate(), _monthOf(ask?['from']), _monthOf(ask?['to']));
+  if (told is! List || at == null || from == null || to == null) return null;
+  final uids = told.whereType<String>().toList();
+  return UnavailableRound(
+    at: at,
+    from: from,
+    to: to,
+    told: uids,
+    sent: {
+      for (final uid in uids)
+        if (sentSince(sentAt[uid], at)) uid,
+    },
+  );
+}
+
 Map<String, Object> unavailableDaysToJson(UnavailableDays days) => {
   'spans': [
     for (final s in days.spans) {'from': s.from.key, 'to': s.to.key, 'note': s.note},

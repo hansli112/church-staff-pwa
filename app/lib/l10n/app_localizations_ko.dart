@@ -3479,6 +3479,53 @@ class L10nKo extends L10n {
   String get planAskSend => '요청하기';
 
   @override
+  String get homeUnavailableAsked => '봉사할 수 없는 날 입력';
+
+  @override
+  String get unavailableSend => '보내기';
+
+  @override
+  String get unavailableAllFree => '모든 날 가능해요';
+
+  @override
+  String get unavailableSent => '보냈어요';
+
+  @override
+  String planAskRound(String months, int count) {
+    return '$months · $count명 아직 안 함';
+  }
+
+  @override
+  String planAskRoundDone(String months) {
+    return '$months · 모두 입력했어요';
+  }
+
+  @override
+  String planAskRoundTitle(String months) {
+    return '$months 봉사할 수 없는 날';
+  }
+
+  @override
+  String planAskRoundAt(String date) {
+    return '$date 요청';
+  }
+
+  @override
+  String planAskWaiting(int count) {
+    return '아직 안 함 · $count명';
+  }
+
+  @override
+  String planAskFilled(int count) {
+    return '$count명 입력했어요';
+  }
+
+  @override
+  String planAskRemind(int count) {
+    return '이 $count명에게 다시 요청';
+  }
+
+  @override
   String get notifSwap => '대신 봉사·교환';
 
   @override

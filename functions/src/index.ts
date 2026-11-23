@@ -226,6 +226,8 @@ export const editLedDuties = callable(ledDuties.editLedDuties);
 export const notifyPlanned = callable(rosterChange.notifyPlanned, pushDeps);
 export const askUnavailable = callable(unavailable.askUnavailable, pushDeps);
 export const saveUnavailableDays = callable(unavailable.saveUnavailableDays);
+export const remindUnavailable = callable(unavailable.remindUnavailable, pushDeps);
+export const sendUnavailableDays = callable(unavailable.sendUnavailableDays);
 // 備註 of a day's roster, and its files.
 export const saveRosterNote = callable(rosterNotes.saveRosterNote, () => ({ ...deps(), bucket: bucket() }));
 export const onRosterNoteWritten = onDocumentWritten(

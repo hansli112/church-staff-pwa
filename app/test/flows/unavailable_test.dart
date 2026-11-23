@@ -241,6 +241,124 @@ void main() {
     ], reason: 'once confirmed, not the time 取消 was tapped');
   });
 
+  testWidgets('asked, home says the months until sent; the page opens on the first, with 都可以服事 or 送出', (tester) async {
+    final b = seededChurch(as: staffMei);
+    final telemetry = RecordingTelemetry();
+    b.unavailableAsked['grace'] = {'mei': (at: testNow, from: Day(2026, 12, 1), to: Day(2027, 1, 1))};
+    await pumpApp(tester, b, overrides: [telemetryProvider.overrideWithValue(telemetry)]);
+    await go(tester, '/home');
+    expect(find.text('12月到1月'), findsOneWidget);
+    await tester.tap(find.text('填不能服事的日子'));
+    await settle(tester);
+
+    expect(find.text('2026年12月'), findsOneWidget, reason: 'the first month asked');
+    expect(find.text('都可以服事'), findsOneWidget, reason: 'none of those days marked');
+    final dec13 = find.byWidgetPredicate(
+      (w) => w is Semantics && (w.properties.label?.startsWith('2026年12月13日') ?? false),
+    );
+    await tester.tap(dec13);
+    await settle(tester);
+    expect(find.text('都可以服事'), findsNothing);
+    await tester.tap(find.text('送出'));
+    await settle(tester);
+    expect(b.unavailableSentAt['grace']?['mei'], isNotNull);
+    expect(meisDays(b), const UnavailableDays().add(Day(2026, 12, 13), Day(2026, 12, 13)), reason: 'kept first');
+    expect(find.text('已送出'), findsOneWidget);
+    expect(telemetry.named('unavailable_send'), [
+      {'free': false},
+    ]);
+
+    await tester.tap(dec13);
+    await settle(tester);
+    expect(meisDays(b)!.isEmpty, isTrue, reason: 'still kept as it changes');
+    expect(find.text('已送出'), findsOneWidget);
+
+    await go(tester, '/home');
+    expect(find.text('填不能服事的日子'), findsNothing, reason: 'sent');
+  });
+
+  testWidgets('都可以服事 sends with no days marked, and home stops asking', (tester) async {
+    final b = seededChurch(as: staffMei);
+    final telemetry = RecordingTelemetry();
+    b.unavailableAsked['grace'] = {'mei': (at: testNow, from: Day(2026, 12, 1), to: Day(2026, 12, 1))};
+    await pumpApp(tester, b, overrides: [telemetryProvider.overrideWithValue(telemetry)]);
+    await go(tester, '/me/unavailable');
+    await tester.tap(find.text('都可以服事'));
+    await settle(tester);
+    expect(b.unavailableSentAt['grace']?['mei'], isNotNull);
+    expect(find.text('已送出'), findsOneWidget);
+    expect(telemetry.named('unavailable_send'), [
+      {'free': true},
+    ]);
+    await go(tester, '/home');
+    expect(find.text('填不能服事的日子'), findsNothing);
+  });
+
+  testWidgets('not asked, nothing to send', (tester) async {
+    await pumpApp(tester, seededChurch(as: staffMei));
+    await go(tester, '/me/unavailable');
+    expect(find.text('送出'), findsNothing);
+    expect(find.text('都可以服事'), findsNothing);
+    expect(find.text('2026年10月'), findsOneWidget);
+  });
+
+  testWidgets("asked again, the months' sheet says who has not sent, by name; 再通知 tells only them", (tester) async {
+    final b = seededChurch(as: editor);
+    final telemetry = RecordingTelemetry();
+    await pumpApp(tester, b, overrides: [telemetryProvider.overrideWithValue(telemetry)]);
+    await go(tester, '/rosters/plan/sunday');
+    Future<void> openMonths() async {
+      await tester.tap(find.byIcon(Symbols.more_horiz_rounded));
+      await settle(tester);
+      await tester.tap(find.text('請同工填不能服事日'));
+      await settle(tester);
+    }
+
+    await openMonths();
+    expect(find.textContaining('還沒填'), findsNothing, reason: 'never asked');
+    await tester.tap(find.bySemanticsLabel('2026年12月').last);
+    await settle(tester);
+    await tester.tap(find.text('通知'));
+    await settle(tester);
+
+    await openMonths();
+    expect(find.bySemanticsLabel('2027年12月'), findsOneWidget, reason: 'new months still to pick');
+    await tester.tap(find.text('10月到12月・2 位還沒填'));
+    await settle(tester);
+    expect(find.text('10月到12月不能服事的日子'), findsOneWidget);
+    expect(find.text('10月1日通知'), findsOneWidget);
+    expect(find.text('還沒填・2 位'), findsOneWidget);
+
+    b.unavailableSentAt['grace'] = {'mei': testNow};
+    b.notify();
+    await settle(tester);
+    expect(find.text('還沒填・1 位'), findsOneWidget);
+    expect(find.text('1 位填好了'), findsOneWidget);
+    await tester.tap(find.text('再通知這 1 位'));
+    await settle(tester);
+    expect(find.text('已通知 1 位同工'), findsOneWidget);
+    expect(telemetry.named('unavailable_remind'), [
+      {'people': 1},
+    ]);
+
+    await openMonths();
+    expect(find.text('10月到12月・1 位還沒填'), findsOneWidget);
+  });
+
+  testWidgets('an ask whose months are gone by is not shown', (tester) async {
+    final b = seededChurch(as: editor);
+    b.unavailableAsks['grace'] = {
+      'sunday': (at: testNow, from: Day(2026, 8, 1), to: Day(2026, 9, 1), told: ['mei']),
+    };
+    await pumpApp(tester, b);
+    await go(tester, '/rosters/plan/sunday');
+    await tester.tap(find.byIcon(Symbols.more_horiz_rounded));
+    await settle(tester);
+    await tester.tap(find.text('請同工填不能服事日'));
+    await settle(tester);
+    expect(find.textContaining('還沒填'), findsNothing);
+  });
+
   testWidgets('with nobody on the lists to ask, 通知 is greyed', (tester) async {
     final b = seededChurch(as: editor);
     final people = b.members['grace']!;

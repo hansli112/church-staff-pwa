@@ -307,6 +307,19 @@ final myUnavailableDaysProvider = StreamProvider<UnavailableDays>((ref) {
   return openChurch(ref).unavailable.of(uid);
 });
 
+/// What 通知同工填 (#91) asked of me, if ever, and when I last sent mine.
+final unavailableAskedProvider = StreamProvider<UnavailableAsked?>((ref) {
+  if (ref.watch(uidProvider) == null) return Stream.value(null);
+  return openChurch(ref).unavailable.askedOfMe();
+});
+
+/// [serviceType]'s last 通知同工填 (#91), with who has sent since. Only for
+/// those who arrange rosters.
+final unavailableRoundProvider = StreamProvider.autoDispose.family<UnavailableRound?, String>((ref, serviceType) {
+  if (!ref.watch(_arrangesRostersProvider)) return Stream.value(null);
+  return openChurch(ref).unavailable.round(serviceType);
+});
+
 /// Everyone's 不能服事的日子 (#91), by uid. Only for those who arrange
 /// rosters (Member.arrangesRosters); nobody's for others.
 final unavailableDaysProvider = StreamProvider<Map<String, UnavailableDays>>((ref) {

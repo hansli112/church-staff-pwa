@@ -76,4 +76,33 @@ void main() {
     );
     expect(unavailableOn(retreat, everyone).keys, ['hao']);
   });
+
+  test('asked of me: sent only from the moment asked on; waiting until the last month asked is over', () {
+    final at = DateTime.utc(2026, 11, 20, 9);
+    final asked = UnavailableAsked(at: at, from: Day(2026, 12, 1), to: Day(2027, 1, 1));
+    expect(asked.waitingOn(_nov(23)), isTrue);
+    expect(UnavailableAsked(at: at, from: asked.from, to: asked.to, sentAt: at).sent, isTrue);
+    final before = UnavailableAsked(
+      at: at,
+      from: asked.from,
+      to: asked.to,
+      sentAt: at.subtract(const Duration(seconds: 1)),
+    );
+    expect(before.sent, isFalse, reason: 'sent for an earlier ask');
+    expect(asked.waitingOn(Day(2027, 1, 31)), isTrue);
+    expect(asked.waitingOn(Day(2027, 2, 1)), isFalse);
+  });
+
+  test('a round waits on whom it told and has not sent, in the order told', () {
+    final round = UnavailableRound(
+      at: DateTime.utc(2026, 11, 20),
+      from: Day(2026, 12, 1),
+      to: Day(2026, 12, 1),
+      told: const ['mei', 'hao', 'yu'],
+      sent: const {'hao'},
+    );
+    expect(round.waiting, ['mei', 'yu']);
+    expect(round.currentOn(Day(2026, 12, 31)), isTrue);
+    expect(round.currentOn(Day(2027, 1, 1)), isFalse);
+  });
 }

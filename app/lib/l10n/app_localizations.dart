@@ -6124,6 +6124,72 @@ abstract class L10n {
   /// **'通知'**
   String get planAskSend;
 
+  /// Home row (#91): asked by 通知同工填 to mark the days one cannot serve, not sent yet
+  ///
+  /// In zh, this message translates to:
+  /// **'填不能服事的日子'**
+  String get homeUnavailableAsked;
+
+  /// 不能服事的日子 (#91): says the days marked are all, answering 通知同工填
+  ///
+  /// In zh, this message translates to:
+  /// **'送出'**
+  String get unavailableSend;
+
+  /// 不能服事的日子 (#91): the send button when no day is marked
+  ///
+  /// In zh, this message translates to:
+  /// **'都可以服事'**
+  String get unavailableAllFree;
+
+  /// 不能服事的日子 (#91): sent, at the bottom
+  ///
+  /// In zh, this message translates to:
+  /// **'已送出'**
+  String get unavailableSent;
+
+  /// No description provided for @planAskRound.
+  ///
+  /// In zh, this message translates to:
+  /// **'{months}・{count} 位還沒填'**
+  String planAskRound(String months, int count);
+
+  /// No description provided for @planAskRoundDone.
+  ///
+  /// In zh, this message translates to:
+  /// **'{months}・都填好了'**
+  String planAskRoundDone(String months);
+
+  /// No description provided for @planAskRoundTitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'{months}不能服事的日子'**
+  String planAskRoundTitle(String months);
+
+  /// No description provided for @planAskRoundAt.
+  ///
+  /// In zh, this message translates to:
+  /// **'{date}通知'**
+  String planAskRoundAt(String date);
+
+  /// No description provided for @planAskWaiting.
+  ///
+  /// In zh, this message translates to:
+  /// **'還沒填・{count} 位'**
+  String planAskWaiting(int count);
+
+  /// No description provided for @planAskFilled.
+  ///
+  /// In zh, this message translates to:
+  /// **'{count} 位填好了'**
+  String planAskFilled(int count);
+
+  /// No description provided for @planAskRemind.
+  ///
+  /// In zh, this message translates to:
+  /// **'再通知這 {count} 位'**
+  String planAskRemind(int count);
+
   /// Notification kind (#92): asked to cover or swap, or an answer to one's own request
   ///
   /// In zh, this message translates to:

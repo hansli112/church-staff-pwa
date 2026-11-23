@@ -25,7 +25,9 @@ import '../../state/session.dart';
 /// service, a month at a time through next December (monthsThroughNextYear). A tap marks a day or
 /// clears it; a drag marks the days it crosses, or clears them when it
 /// starts on a marked one. Each change shows at once and is kept in turn. Only those who arrange rosters see them,
-/// with what I wrote about each stretch.
+/// with what I wrote about each stretch. Asked by 通知同工填, it opens on the
+/// first month asked, with 送出 (都可以服事 with none of those days marked)
+/// at the bottom until I send; changes after go on being kept.
 class UnavailableScreen extends ConsumerStatefulWidget {
   const UnavailableScreen({super.key});
 
@@ -44,6 +46,12 @@ class _UnavailableScreenState extends ConsumerState<UnavailableScreen> {
 
   /// Which month shows: this one, or so many after it.
   var _page = 0;
+
+  /// Whether it has opened on the month asked, once what was asked is
+  /// known.
+  var _opened = false;
+
+  var _sending = false;
 
   UnavailableDays get _days => _shown ?? ref.read(myUnavailableDaysProvider).value ?? const UnavailableDays();
 
@@ -84,6 +92,23 @@ class _UnavailableScreenState extends ConsumerState<UnavailableScreen> {
     if (!mounted || shown == null || _writing != null) return;
     if (ref.read(myUnavailableDaysProvider).value?.since(ref.read(todayProvider)) == shown) {
       setState(() => _shown = null);
+    }
+  }
+
+  /// 送出 or 都可以服事: once the days on their way are kept.
+  Future<void> _send({required bool free}) async {
+    final l10n = L10n.of(context);
+    final data = ref.churchData;
+    final telemetry = ref.read(telemetryProvider);
+    setState(() => _sending = true);
+    try {
+      await _writing;
+      await data.unavailable.send();
+      telemetry.logEvent('unavailable_send', {'free': free});
+    } catch (e) {
+      if (mounted) showToast(context, errorText(l10n, e));
+    } finally {
+      if (mounted) setState(() => _sending = false);
     }
   }
 
@@ -143,10 +168,50 @@ class _UnavailableScreenState extends ConsumerState<UnavailableScreen> {
     ];
     final services = ref.watch(servicesProvider).value;
     ref.listen(myUnavailableDaysProvider, (_, _) => _settle());
+    final askedState = ref.watch(unavailableAskedProvider);
+    final asked = askedState.value;
+    if (!_opened && askedState.hasValue) {
+      _opened = true;
+      if (asked != null && asked.waitingOn(today)) {
+        _page = ((asked.from.year - today.year) * 12 + asked.from.month - today.month).clamp(0, months - 1).toInt();
+      }
+    }
+    final c = AppColors.of(context);
     // What 找人代 says of a day already asked about (#92).
     ref.watch(myOpenSwapRequestsProvider);
     return Scaffold(
       appBar: AppBar(title: Text(l10n.unavailableTitle)),
+      bottomNavigationBar: switch (asked) {
+        final a? when a.waitingOn(today) => SafeArea(
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(Space.m, Space.s, Space.m, Space.m),
+            child: Builder(
+              builder: (context) {
+                final free = days.during(a.from, a.to.lastOfMonth) == null;
+                return PrimaryButton(
+                  label: free ? l10n.unavailableAllFree : l10n.unavailableSend,
+                  busy: _sending,
+                  onPressed: () => _send(free: free),
+                );
+              },
+            ),
+          ),
+        ),
+        final a? when a.sent && a.currentOn(today) => SafeArea(
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(Space.m, Space.s, Space.m, Space.l),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(Symbols.check_circle_rounded, fill: 1, size: 20, color: c.success),
+                const SizedBox(width: Space.xs + 2),
+                Text(l10n.unavailableSent, style: AppText.subheadline.copyWith(color: c.secondaryLabel)),
+              ],
+            ),
+          ),
+        ),
+        _ => null,
+      },
       body: saved.hasError && saved.value == null
           ? EmptyState(
               message: errorText(l10n, saved.error!),

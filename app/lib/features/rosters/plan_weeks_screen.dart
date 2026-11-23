@@ -287,6 +287,7 @@ class _PlanWeeksScreenState extends ConsumerState<PlanWeeksScreen> with SingleTi
     final some = !ref.watch(arrangesProvider(type)).all;
     final canAsk = _askedToFill(type).isNotEmpty;
     // Read ahead, for the months' sheet to say.
+    ref.watch(unavailableRoundProvider(type));
     return PopupMenuButton<String>(
       tooltip: MaterialLocalizations.of(context).moreButtonTooltip,
       icon: const Icon(Symbols.more_horiz_rounded),
@@ -317,10 +318,16 @@ class _PlanWeeksScreenState extends ConsumerState<PlanWeeksScreen> with SingleTi
   }
 
   /// 通知同工填 (#91): through which month, from [from], the months in a
-  /// grid by year; then, asked first as it cannot be taken back, one push
-  /// each.
+  /// grid by year, under the last ask while its months last, which opens
+  /// who has not sent theirs; then, asked first as it cannot be taken
+  /// back, one push each.
   Future<void> _askUnavailable(String type, Day from) async {
     final l10n = L10n.of(context);
+    final today = ref.read(todayProvider);
+    final round = ref.read(unavailableRoundProvider(type)).value;
+    // Its months not all gone by, and someone told still here.
+    final last = round != null && round.currentOn(today) && _stillHere(round.told).isNotEmpty ? round : null;
+    final waiting = last == null ? 0 : _stillHere(last.waiting).length;
     final choices = [
       for (var i = 0; i < monthsThroughNextYear(from, today: ref.read(todayProvider)); i++)
         Day(from.year, from.month + i, 1),
@@ -336,6 +343,20 @@ class _PlanWeeksScreenState extends ConsumerState<PlanWeeksScreen> with SingleTi
                 padding: const EdgeInsets.only(bottom: Space.s),
                 child: Text(l10n.planAskUntil, style: AppText.headline, textAlign: TextAlign.center),
               ),
+              if (last != null)
+                ListSection(
+                  children: [
+                    ListRow(
+                      title: waiting == 0
+                          ? l10n.planAskRoundDone(monthsLabel(l10n, last.from, last.to))
+                          : l10n.planAskRound(monthsLabel(l10n, last.from, last.to), waiting),
+                      onTap: () {
+                        Navigator.pop(context);
+                        _showRound(type);
+                      },
+                    ),
+                  ],
+                ),
               for (final year in {for (final m in choices) m.year})
                 _MonthGrid(
                   year: year,
@@ -351,8 +372,7 @@ class _PlanWeeksScreenState extends ConsumerState<PlanWeeksScreen> with SingleTi
       ),
     );
     if (to == null || !mounted) return;
-    String name(Day month) => DateFormat.MMM().format(month.midnight);
-    final months = to == from ? name(from) : l10n.planAskMonths(name(from), name(to));
+    final months = monthsLabel(l10n, from, to);
     final count = _askedToFill(type).length;
     final ok = await confirmAction(
       context,
@@ -364,6 +384,83 @@ class _PlanWeeksScreenState extends ConsumerState<PlanWeeksScreen> with SingleTi
     final toasts = _toasts;
     try {
       final told = await ref.read(rosterActionsProvider).askUnavailable(type, from: from, to: to);
+      if (toasts.mounted) showToast(toasts, l10n.planNotified(told));
+    } catch (e) {
+      if (toasts.mounted) showToast(toasts, errorText(l10n, e));
+    }
+  }
+
+  /// Those of [uids] still in the church, in that order.
+  List<Member> _stillHere(Iterable<String> uids) {
+    final members = {for (final m in ref.read(membersProvider).value ?? const <Member>[]) m.uid: m};
+    return [for (final uid in uids) ?members[uid]];
+  }
+
+  /// [type]'s last 通知同工填 (#91): who has not sent theirs, by name, and
+  /// how many have; 再通知 tells those again.
+  Future<void> _showRound(String type) async {
+    final l10n = L10n.of(context);
+    final remind = await showAppSheet<bool>(
+      context,
+      builder: (context) => Consumer(
+        builder: (context, ref, _) {
+          final round = ref.watch(unavailableRoundProvider(type)).value;
+          final members = ref.watch(membersProvider).value ?? const <Member>[];
+          if (round == null) return const SizedBox.shrink();
+          final here = {for (final m in members) m.uid: m};
+          final waiting = [for (final uid in round.waiting) ?here[uid]];
+          final filled = round.sent.where(here.containsKey).length;
+          final c = AppColors.of(context);
+          return SafeArea(
+            child: SingleChildScrollView(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  Text(
+                    l10n.planAskRoundTitle(monthsLabel(l10n, round.from, round.to)),
+                    style: AppText.headline,
+                    textAlign: TextAlign.center,
+                  ),
+                  Text(
+                    l10n.planAskRoundAt(DateFormat.MMMd().format(round.at)),
+                    style: AppText.footnote.copyWith(color: c.secondaryLabel),
+                    textAlign: TextAlign.center,
+                  ),
+                  const SizedBox(height: Space.s),
+                  if (waiting.isNotEmpty)
+                    ListSection(
+                      header: l10n.planAskWaiting(waiting.length),
+                      footer: filled == 0 ? null : l10n.planAskFilled(filled),
+                      children: [for (final m in waiting) ListRow(title: m.name, chevron: false)],
+                    )
+                  else
+                    Padding(
+                      padding: const EdgeInsets.all(Space.m),
+                      child: Text(
+                        l10n.planAskFilled(filled),
+                        style: AppText.footnote.copyWith(color: c.secondaryLabel),
+                        textAlign: TextAlign.center,
+                      ),
+                    ),
+                  if (waiting.isNotEmpty)
+                    Padding(
+                      padding: const EdgeInsets.fromLTRB(Space.m, Space.s, Space.m, Space.m),
+                      child: PrimaryButton(
+                        label: l10n.planAskRemind(waiting.length),
+                        onPressed: () => Navigator.pop(context, true),
+                      ),
+                    ),
+                ],
+              ),
+            ),
+          );
+        },
+      ),
+    );
+    if (remind != true || !mounted) return;
+    final toasts = _toasts;
+    try {
+      final told = await ref.read(rosterActionsProvider).remindUnavailable(type);
       if (toasts.mounted) showToast(toasts, l10n.planNotified(told));
     } catch (e) {
       if (toasts.mounted) showToast(toasts, errorText(l10n, e));

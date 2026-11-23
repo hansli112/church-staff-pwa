@@ -368,9 +368,16 @@ abstract interface class UnavailableData {
   /// [TextLimits.unavailableNote] characters.
   Future<void> saveMine(UnavailableDays days);
 
-  /// When 通知同工填 last asked for [serviceType], if ever: for whoever
-  /// arranges rosters.
-  Stream<DateTime?> lastAsk(String serviceType);
+  /// Keeps that the caller sent theirs now (送出, or 都可以服事): it answers
+  /// what they were asked so far.
+  Future<void> send();
+
+  /// What 通知同工填 asked of the caller, if ever, and when they last sent.
+  Stream<UnavailableAsked?> askedOfMe();
+
+  /// [serviceType]'s last 通知同工填, if ever, with who has sent since: for
+  /// whoever arranges rosters.
+  Stream<UnavailableRound?> round(String serviceType);
 }
 
 /// 找人代／交換 (#92). Asking and answering are [ChurchCall]s.

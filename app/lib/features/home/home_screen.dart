@@ -121,6 +121,8 @@ class HomeScreen extends ConsumerWidget {
             ref.watch(uidProvider),
             today,
           ).where((r) => services == null || services.byId(r.serviceId) != null).toList();
+          // 通知同工填 (#91) asking me, until I send mine.
+          final asked = ref.watch(unavailableAskedProvider).value;
           // Each a section of its own above my days, and the calendar's below.
           final above = <Widget>[
             // 首頁連結 (每日靈糧): the top of the page, above what is mine to do.
@@ -146,6 +148,17 @@ class HomeScreen extends ConsumerWidget {
                       ].where((t) => t.isNotEmpty).join(' · '),
                       onTap: () => context.push('/rosters/request/${r.id}'),
                     ),
+                ],
+              ),
+            if (asked != null && asked.waitingOn(today))
+              ListSection(
+                children: [
+                  ListRow(
+                    leading: const Icon(Symbols.event_busy_rounded),
+                    title: l10n.homeUnavailableAsked,
+                    value: monthsLabel(l10n, asked.from, asked.to),
+                    onTap: () => context.push('/me/unavailable'),
+                  ),
                 ],
               ),
             if (attendance) const AttendanceDueCard(),

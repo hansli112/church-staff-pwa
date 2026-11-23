@@ -13,6 +13,13 @@ String dayLabel(L10n l10n, Day day, Day today) {
   return base;
 }
 
+/// 「12月到1月」, or 「12月」 alone: the months [from] to [to], each the
+/// first of its month.
+String monthsLabel(L10n l10n, Day from, Day to) {
+  String name(Day month) => DateFormat.MMM().format(month.midnight);
+  return to == from ? name(from) : l10n.planAskMonths(name(from), name(to));
+}
+
 /// What [dayLabel] says beside a [dayBlock], which shows the month and
 /// date: 「週日」, 「今天 · 週日」, 「2027年 · 週日」.
 String dayBesideBlock(L10n l10n, Day day, Day today) {

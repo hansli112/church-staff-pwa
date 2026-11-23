@@ -190,6 +190,8 @@ mixin _MemoryGroupMembers on _MemoryChurchBase {
       // their 不能服事的日子.
       _b.notifications[uid]?.removeWhere((n) => n.churchId == churchId);
       _b.unavailable[churchId]?.remove(uid);
+      _b.unavailableAsked[churchId]?.remove(uid);
+      _b.unavailableSentAt[churchId]?.remove(uid);
     });
   }
 

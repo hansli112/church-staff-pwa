@@ -3476,6 +3476,53 @@ class L10nZh extends L10n {
   String get planAskSend => '通知';
 
   @override
+  String get homeUnavailableAsked => '填不能服事的日子';
+
+  @override
+  String get unavailableSend => '送出';
+
+  @override
+  String get unavailableAllFree => '都可以服事';
+
+  @override
+  String get unavailableSent => '已送出';
+
+  @override
+  String planAskRound(String months, int count) {
+    return '$months・$count 位還沒填';
+  }
+
+  @override
+  String planAskRoundDone(String months) {
+    return '$months・都填好了';
+  }
+
+  @override
+  String planAskRoundTitle(String months) {
+    return '$months不能服事的日子';
+  }
+
+  @override
+  String planAskRoundAt(String date) {
+    return '$date通知';
+  }
+
+  @override
+  String planAskWaiting(int count) {
+    return '還沒填・$count 位';
+  }
+
+  @override
+  String planAskFilled(int count) {
+    return '$count 位填好了';
+  }
+
+  @override
+  String planAskRemind(int count) {
+    return '再通知這 $count 位';
+  }
+
+  @override
   String get notifSwap => '找人代／交換';
 
   @override
@@ -7086,6 +7133,53 @@ class L10nZhHans extends L10nZh {
 
   @override
   String get planAskSend => '通知';
+
+  @override
+  String get homeUnavailableAsked => '填不能事奉的日子';
+
+  @override
+  String get unavailableSend => '提交';
+
+  @override
+  String get unavailableAllFree => '都可以事奉';
+
+  @override
+  String get unavailableSent => '已提交';
+
+  @override
+  String planAskRound(String months, int count) {
+    return '$months・$count 位还没填';
+  }
+
+  @override
+  String planAskRoundDone(String months) {
+    return '$months・都填好了';
+  }
+
+  @override
+  String planAskRoundTitle(String months) {
+    return '$months不能事奉的日子';
+  }
+
+  @override
+  String planAskRoundAt(String date) {
+    return '$date通知';
+  }
+
+  @override
+  String planAskWaiting(int count) {
+    return '还没填・$count 位';
+  }
+
+  @override
+  String planAskFilled(int count) {
+    return '$count 位填好了';
+  }
+
+  @override
+  String planAskRemind(int count) {
+    return '再通知这 $count 位';
+  }
 
   @override
   String get notifSwap => '找人代／交换';

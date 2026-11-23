@@ -167,6 +167,20 @@ final class AskUnavailable extends ChurchCall<int> {
   int answer(Map<String, Object?> data) => _count(data['people']);
 }
 
+final class RemindUnavailable extends ChurchCall<int> {
+  const RemindUnavailable(this.serviceType);
+  final String serviceType;
+
+  @override
+  String get callable => 'remindUnavailable';
+
+  @override
+  Map<String, Object?> get data => {'serviceId': serviceType};
+
+  @override
+  int answer(Map<String, Object?> data) => _count(data['people']);
+}
+
 final class SetGroupMember extends _Write {
   const SetGroupMember(
     this.uid,
@@ -365,6 +379,11 @@ extension ChurchCalls on ChurchData {
   /// [askedToFill], for the months of [from] to [to]. How many it told.
   Future<int> askUnavailable(String serviceType, {required Day from, required Day to}) =>
       run(AskUnavailable(serviceType, from: from, to: to));
+
+  /// 再通知 (#91), by whoever arranges [serviceType]: one push again to
+  /// each its last 通知同工填 told who is still here and has not sent since.
+  /// How many.
+  Future<int> remindUnavailable(String serviceType) => run(RemindUnavailable(serviceType));
 
   /// 加為同工 ([member] true; for a service with the [duties] they serve and
   /// their [smallGroups] there) or 移出 [group], a service or a 小組 (a

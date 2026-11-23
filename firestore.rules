@@ -536,9 +536,10 @@ service cloud.firestore {
       // 不能服事的日子 (#91): the stretches of days a member cannot serve
       // (`spans`, each {from, to, note}). Whoever arranges rosters reads
       // them; the member writes their own through saveUnavailableDays,
-      // which checks inside the list as rules cannot. 請同工填's last ask
-      // per service (unavailableAsks/{type}: at, by, from, to) is the
-      // backend's too.
+      // which checks inside the list as rules cannot, and sends them
+      // through sendUnavailableDays (sentAt). 請同工填's last ask per
+      // service (unavailableAsks/{type}: at, by, from, to, told) and what it
+      // asked of each (asked) are the backend's too.
       match /unavailable/{uid} {
         allow read: if (isSelf(uid) && isMember(cid)) || arrangesRosters(cid);
       }

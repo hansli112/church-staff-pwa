@@ -1107,12 +1107,23 @@ class _FirestoreUnavailable implements UnavailableData {
   Future<void> saveMine(UnavailableDays days) => _c._call('saveUnavailableDays', unavailableDaysToJson(days));
 
   @override
-  Stream<DateTime?> lastAsk(String serviceType) => _c
-      ._col('unavailableAsks')
-      .doc(serviceType)
-      .live()
-      .map((s) => (s.data()?['at'] as Timestamp?)?.toDate())
-      .translated();
+  Future<void> send() => _c._call('sendUnavailableDays', const {});
+
+  @override
+  Stream<UnavailableAsked?> askedOfMe() {
+    final uid = _c._calls._auth.currentUser?.uid;
+    if (uid == null) return Stream.value(null);
+    return _c._col('unavailable').doc(uid).live().map((s) => unavailableAskedFromJson(s.data())).translated();
+  }
+
+  @override
+  Stream<UnavailableRound?> round(String serviceType) => _latestOfBoth(
+    _c._col('unavailableAsks').doc(serviceType).live(),
+    _c._col('unavailable').live(),
+    (ask, everyone) => unavailableRoundFromJson(ask.data(), {
+      for (final d in everyone.docs) d.id: (d.data()['sentAt'] as Timestamp?)?.toDate(),
+    }),
+  ).translated();
 }
 
 /// [SwapData] of a [FirestoreChurchData].

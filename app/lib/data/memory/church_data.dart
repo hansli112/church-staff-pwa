@@ -27,6 +27,7 @@ class MemoryChurchData extends _MemoryChurchBase
       UndoSwap(:final id) => undoSwap(id),
       WithdrawSwap(:final id) => withdrawSwap(id),
       AskUnavailable(:final serviceType, :final from, :final to) => askUnavailable(serviceType, from: from, to: to),
+      RemindUnavailable(:final serviceType) => remindUnavailable(serviceType),
       SetGroupMember(:final uid, :final group, :final member, :final duties, :final smallGroups) => setGroupMember(
         uid,
         group,

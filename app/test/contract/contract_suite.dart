@@ -1220,14 +1220,35 @@ void contractTests(Future<ContractWorld> Function() open) {
       expect(await g.church.unavailable.of(g.mei).first, trip);
       await g.church.unavailable.saveMine(const UnavailableDays());
       expect(await g.church.unavailable.of(g.mei).first, trip, reason: 'his own, not hers');
-      expect(await g.church.unavailable.lastAsk('sunday').first, isNull);
+      expect(await g.church.unavailable.round('sunday').first, isNull);
       await expectLater(
         g.church.askUnavailable('youth', from: Day(2030, 12, 1), to: Day(2031, 1, 1)),
         denied(),
         reason: 'not a service he arranges',
       );
       expect(await g.church.askUnavailable('sunday', from: Day(2030, 12, 1), to: Day(2031, 1, 1)), 1);
-      expect(await g.church.unavailable.lastAsk('sunday').firstWhere((at) => at != null).timeout(wait), isNotNull);
+      final round = await g.church.unavailable.round('sunday').firstWhere((r) => r != null).timeout(wait);
+      expect((round!.from, round.to), (Day(2030, 12, 1), Day(2031, 1, 1)));
+      expect(round.told, [g.mei]);
+      expect(round.waiting, [g.mei]);
+      expect(await g.church.remindUnavailable('sunday'), 1, reason: 'she has not sent hers');
+
+      await w.signIn(Grace.meiEmail);
+      await expectLater(g.church.remindUnavailable('sunday'), denied());
+      await expectLater(g.church.unavailable.round('sunday').first, denied());
+      final asked = await g.church.unavailable.askedOfMe().firstWhere((a) => a != null).timeout(wait);
+      expect((asked!.from, asked.to, asked.sent), (Day(2030, 12, 1), Day(2031, 1, 1), false));
+      await g.church.unavailable.saveMine(const UnavailableDays());
+      await g.church.unavailable.send();
+      expect(await g.church.unavailable.askedOfMe().firstWhere((a) => a?.sent ?? false).timeout(wait), isNotNull);
+      expect(await g.church.unavailable.of(g.mei).first, const UnavailableDays());
+
+      await w.signIn(Grace.editorEmail);
+      expect(
+        (await g.church.unavailable.round('sunday').firstWhere((r) => r?.waiting.isEmpty ?? false).timeout(wait))!.sent,
+        {g.mei},
+      );
+      expect(await g.church.remindUnavailable('sunday'), 0);
     });
   });
 
