@@ -3526,7 +3526,7 @@ class L10nZh extends L10n {
   String get notifSwap => '找人代／交換';
 
   @override
-  String get notifSwapSub => '找人代、交換、填不能服事的日子、加入家人';
+  String get notifSwapSub => '找人代、交換、填不能服事的日子';
 
   @override
   String get swapMenu => '找人代／交換';
@@ -3702,6 +3702,16 @@ class L10nZh extends L10n {
   @override
   String familyMoveOutAsk(String name) {
     return '把$name移出家人？';
+  }
+
+  @override
+  String familyTakeOutLabel(String name, String family) {
+    return '把$name移出$family的家';
+  }
+
+  @override
+  String familyTakeOutAsk(String name, String family) {
+    return '把$name移出$family的家？';
   }
 
   @override
@@ -7248,7 +7258,7 @@ class L10nZhHans extends L10nZh {
   String get notifSwap => '找人代／交换';
 
   @override
-  String get notifSwapSub => '找人代、交换、填不能事奉的日子、加入家人';
+  String get notifSwapSub => '找人代、交换、填不能事奉的日子';
 
   @override
   String get swapMenu => '找人代／交换';
@@ -7424,6 +7434,16 @@ class L10nZhHans extends L10nZh {
   @override
   String familyMoveOutAsk(String name) {
     return '把$name移出家人？';
+  }
+
+  @override
+  String familyTakeOutLabel(String name, String family) {
+    return '把$name移出$family的家';
+  }
+
+  @override
+  String familyTakeOutAsk(String name, String family) {
+    return '把$name移出$family的家？';
   }
 
   @override

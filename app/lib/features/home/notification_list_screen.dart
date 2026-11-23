@@ -181,4 +181,5 @@ const _icons = {
   NotificationKind.joinRequest: Symbols.person_add_rounded,
   NotificationKind.identity: Symbols.badge_rounded,
   NotificationKind.swap: Symbols.swap_horiz_rounded,
+  NotificationKind.family: Symbols.family_restroom_rounded,
 };

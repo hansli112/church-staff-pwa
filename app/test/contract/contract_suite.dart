@@ -1302,8 +1302,19 @@ void contractTests(Future<ContractWorld> Function() open) {
       );
 
       await w.signIn(Grace.meiEmail);
+      await expectLater(
+        g.church.removeFromHousehold(joined.id, kid),
+        throwsA(isA<CloudException>()),
+        reason: 'only an admin, on their page',
+      );
+      await w.signIn(Grace.pastorEmail);
+      final hers = await g.church.family.householdsOf(kid).firstWhere((h) => h.isNotEmpty).timeout(wait);
+      expect(hers.single.id, joined.id);
+      await g.church.removeFromHousehold(joined.id, kid);
+      expect(await g.church.family.householdsOf(kid).firstWhere((h) => h.isEmpty).timeout(wait), isEmpty);
+
+      await w.signIn(Grace.meiEmail);
       await g.church.removeFamily(g.editor);
-      await g.church.removeFamily(kid);
       expect(
         await g.church.family.mine().firstWhere((h) => h.isEmpty).timeout(wait),
         isEmpty,

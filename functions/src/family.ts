@@ -19,8 +19,8 @@ import type { Words } from './languages.js';
  *
  * Someone without an account is added at once; someone with one is asked
  * (a push, and a row on their 首頁), and once they accept, the family they
- * had joins this one. Only the backend writes; those in it or asked read
- * (firestore.rules).
+ * had joins this one. Only the backend writes; those in it or asked, and
+ * the admins, read (firestore.rules).
  */
 
 interface Household {
@@ -109,7 +109,8 @@ export async function addFamily(deps: Deps & PushDeps, caller: Caller | null, da
   });
   if (asked) {
     const name = nameOf(me);
-    await notifyMembers(deps, cid, [who], 'swap', (w) => ({ title: church.get('name') as string, body: w.familyAsked(name), link: '/home' }));
+    // Asked once, and to be answered: the app has no switch to turn it off.
+    await notifyMembers(deps, cid, [who], 'family', (w) => ({ title: church.get('name') as string, body: w.familyAsked(name), link: '/home' }));
   }
   return {};
 }
@@ -117,6 +118,8 @@ export async function addFamily(deps: Deps & PushDeps, caller: Caller | null, da
 /**
  * The caller answers being asked into household `data.householdId`:
  * `data.yes` joins it, and the family they had joins it too; no leaves it.
+ * One in two families already (a child of parents apart, who each added
+ * them before they signed in) joins only this one: theirs stay apart.
  */
 export async function answerFamily(deps: Deps, caller: Caller | null, data: unknown) {
   const input = record(data);
@@ -129,7 +132,8 @@ export async function answerFamily(deps: Deps, caller: Caller | null, data: unkn
     const ref = households(deps, cid).doc(hid);
     const doc = await tx.get(ref);
     if (!doc.exists || !read(doc).invited.includes(c.uid)) fail('not-found', 'notFound');
-    const mine = (await ofPerson(tx, deps, cid, c.uid)).docs.filter((d) => d.id !== hid);
+    const theirs = (await ofPerson(tx, deps, cid, c.uid)).docs.filter((d) => d.id !== hid);
+    const mine = theirs.length > 1 ? [] : theirs;
     const h = read(doc);
     if (!input.yes) return put(tx, ref, without(h, c.uid));
     const joined: Household = { ...without(h, c.uid), names: h.names };
@@ -164,6 +168,25 @@ export async function removeFamily(deps: Deps, caller: Caller | null, data: unkn
   const { cid, caller: c } = await churchAccess(deps, caller, data, 'member');
   await deps.db.runTransaction(async (tx) => {
     for (const d of (await ofPerson(tx, deps, cid, c.uid)).docs) put(tx, d.ref, without(read(d), who));
+  });
+  return {};
+}
+
+/**
+ * An admin, on someone's page: `data.id` out of household
+ * `data.householdId`, as a family member's 移出 does.
+ */
+export async function removeFromHousehold(deps: Deps, caller: Caller | null, data: unknown) {
+  const input = record(data);
+  if (Object.keys(input).some((k) => !['churchId', 'householdId', 'id'].includes(k))) fail('invalid-argument', 'unknown');
+  const who = id(input.id);
+  const hid = id(input.householdId);
+  const { cid } = await churchAccess(deps, caller, data, 'admin');
+  await deps.db.runTransaction(async (tx) => {
+    const ref = households(deps, cid).doc(hid);
+    const doc = await tx.get(ref);
+    if (!doc.exists || !read(doc).people.includes(who)) fail('not-found', 'notFound');
+    put(tx, ref, without(read(doc), who));
   });
   return {};
 }

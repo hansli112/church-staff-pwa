@@ -6199,7 +6199,7 @@ abstract class L10n {
   /// No description provided for @notifSwapSub.
   ///
   /// In zh, this message translates to:
-  /// **'找人代、交換、填不能服事的日子、加入家人'**
+  /// **'找人代、交換、填不能服事的日子'**
   String get notifSwapSub;
 
   /// On one's own name on a roster (#92)
@@ -6489,6 +6489,18 @@ abstract class L10n {
   /// In zh, this message translates to:
   /// **'把{name}移出家人？'**
   String familyMoveOutAsk(String name);
+
+  /// Screen reader label of 移出 on a member's page, for an admin: [name] out of the family of [family], its others' names
+  ///
+  /// In zh, this message translates to:
+  /// **'把{name}移出{family}的家'**
+  String familyTakeOutLabel(String name, String family);
+
+  /// Asked before an admin's 移出 on a member's page
+  ///
+  /// In zh, this message translates to:
+  /// **'把{name}移出{family}的家？'**
+  String familyTakeOutAsk(String name, String family);
 
   /// 首頁 under 等你回覆: someone asked me into their family
   ///

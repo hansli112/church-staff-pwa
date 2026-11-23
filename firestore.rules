@@ -385,7 +385,7 @@ service cloud.firestore {
             || (p is map
               && changed.hasOnly(['muted', 'reminderTiming'])
               && (!changed.hasAny(['muted']) || !('muted' in p)
-                  || (p.muted is list && p.muted.hasOnly(['reminder', 'rosterChange', 'memberLeft', 'attendance', 'joinRequest', 'identity', 'swap', 'memberJoined'])))
+                  || (p.muted is list && p.muted.hasOnly(['reminder', 'rosterChange', 'memberLeft', 'attendance', 'joinRequest', 'identity', 'swap', 'memberJoined', 'family'])))
               && (!changed.hasAny(['reminderTiming']) || !('reminderTiming' in p)
                   || p.reminderTiming in ['weekly', 'dayBefore', 'both']));
         }
@@ -562,11 +562,13 @@ service cloud.firestore {
       }
 
       // 家人 (functions/src/family.ts): those in a family, and those asked
-      // into it, read it; only the backend writes.
+      // into it, read it, as do the admins, who see each one's on their
+      // page; only the backend writes.
       match /households/{id} {
-        allow read: if isMember(cid)
-          && (request.auth.uid in resource.data.get('people', [])
-            || request.auth.uid in resource.data.get('invited', []));
+        allow read: if isAdmin(cid)
+          || isMember(cid)
+            && (request.auth.uid in resource.data.get('people', [])
+              || request.auth.uid in resource.data.get('invited', []));
       }
 
       match /unavailableAsks/{type} {

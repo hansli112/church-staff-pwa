@@ -1207,12 +1207,13 @@ class _FirestoreFamily implements FamilyData {
 
   final FirestoreChurchData _c;
 
-  Stream<List<Household>> _where(String field) {
-    final uid = _c._calls._auth.currentUser?.uid;
-    if (uid == null) return Stream.value(const []);
+  /// The households with [person] (me, when null) in [field].
+  Stream<List<Household>> _where(String field, {String? person}) {
+    final who = person ?? _c._calls._auth.currentUser?.uid;
+    if (who == null) return Stream.value(const []);
     return _c
         ._col('households')
-        .where(field, arrayContains: uid)
+        .where(field, arrayContains: who)
         .live()
         .map((snap) => [for (final d in snap.docs) householdFromJson(d.id, d.data())])
         .translated();
@@ -1227,6 +1228,9 @@ class _FirestoreFamily implements FamilyData {
   @override
   Future<List<FamilyCandidate>> addable() async =>
       familyCandidatesFromJson((await _c._call('familyCandidates'))['people']);
+
+  @override
+  Stream<List<Household>> householdsOf(String id) => _where('people', person: id);
 }
 
 /// [JoiningData] of a [FirestoreChurchData].

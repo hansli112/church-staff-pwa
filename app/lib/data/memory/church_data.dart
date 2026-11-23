@@ -50,6 +50,7 @@ class MemoryChurchData extends _MemoryChurchBase
       AddFamily(:final id) => addFamily(id),
       AnswerFamily(:final householdId, :final yes) => answerFamily(householdId, yes: yes),
       RemoveFamily(:final id) => removeFamily(id),
+      RemoveFromHousehold(:final householdId, :final id) => removeFromHousehold(householdId, id),
     };
     return await answer as R;
   }

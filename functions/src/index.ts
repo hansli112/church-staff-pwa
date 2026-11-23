@@ -235,6 +235,7 @@ export const sendUnavailableDays = callable(unavailable.sendUnavailableDays);
 export const addFamily = callable(family.addFamily, pushDeps);
 export const answerFamily = callable(family.answerFamily);
 export const removeFamily = callable(family.removeFamily);
+export const removeFromHousehold = callable(family.removeFromHousehold);
 export const familyCandidates = callable(family.familyCandidates);
 // 備註 of a day's roster, and its files.
 export const saveRosterNote = callable(rosterNotes.saveRosterNote, () => ({ ...deps(), bucket: bucket() }));

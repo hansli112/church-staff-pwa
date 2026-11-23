@@ -3,6 +3,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
 import 'package:martha/data/memory/memory_backend.dart';
 import 'package:martha/domain/day.dart';
+import 'package:martha/domain/family.dart';
 import 'package:martha/domain/models.dart';
 
 import '../support/harness.dart';
@@ -101,5 +102,49 @@ void main() {
     await tapText(tester, '不要');
     expect(findShown('李美玉想加你為家人'), findsNothing);
     expect(b.households['grace'], isEmpty);
+  });
+
+  testWidgets('an admin sees whose family one is on their page, and takes them out', (tester) async {
+    final b = church(as: pastor);
+    b.households['grace'] = {
+      'h1': const Household(
+        id: 'h1',
+        people: ['mei', 'hao', 'kid'],
+        noAccount: ['kid'],
+        names: {'mei': '李美玉', 'hao': '陳志豪', 'kid': '李小恩'},
+      ),
+      'h2': const Household(
+        id: 'h2',
+        people: ['john', 'kid'],
+        noAccount: ['kid'],
+        names: {'john': 'John Chen', 'kid': '李小恩'},
+      ),
+      // 林同工 asked 王牧師 only: no family yet.
+      'h3': const Household(
+        id: 'h3',
+        people: ['editor'],
+        invited: ['pastor'],
+        invitedBy: {'pastor': 'editor'},
+        names: {'editor': '林同工', 'pastor': '王牧師'},
+      ),
+    };
+    b.notify();
+    await pumpApp(tester, b);
+    await go(tester, '/me/members/mei');
+    await tester.scrollUntilVisible(find.text('陳志豪、李小恩'), 200);
+    expect(find.text('陳志豪、李小恩'), findsOneWidget);
+
+    await go(tester, '/me/members/editor');
+    expect(find.text('家人'), findsNothing, reason: 'only asked');
+
+    await go(tester, '/me/members/kid');
+    await tester.scrollUntilVisible(find.text('John Chen'), 200);
+    expect(find.text('李美玉、陳志豪'), findsOneWidget);
+    await tester.tap(find.bySemanticsLabel('把李小恩移出John Chen的家'));
+    await settle(tester);
+    expect(findShown('把李小恩移出John Chen的家？'), findsOneWidget);
+    await tapText(tester, '移出');
+    expect(b.households['grace']!.keys, ['h1', 'h3'], reason: 'a family of one is none');
+    expect(find.text('John Chen'), findsNothing);
   });
 }

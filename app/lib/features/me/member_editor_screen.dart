@@ -4,6 +4,7 @@ import 'package:material_symbols_icons/symbols.dart';
 
 import '../../core/design/components.dart';
 import '../../core/design/tokens.dart';
+import '../../domain/family.dart';
 import '../../domain/limits.dart';
 import '../../domain/models.dart';
 import '../../l10n/app_localizations.dart';
@@ -19,10 +20,10 @@ import '../rosters/future_changes.dart';
 /// An admin editing one member: their name here (tapped in the title),
 /// their 身分 (#82), and each service they are one of the 同工 of, with the
 /// duties they serve there and their 小組 in it (#94); 加入聚會 for
-/// another. Every change saves at once.
+/// another; whose family they are in (家人). Every change saves at once.
 ///
 /// 行政 edit anyone but an admin the same, through the backend, but give no
-/// 身分, merge nobody and remove nobody (2026-11-23).
+/// 身分, merge nobody, remove nobody and see nobody's 家人 (2026-11-23).
 ///
 /// An admin cannot demote or remove themself (the rules forbid it too), so
 /// those controls do not appear on their own page.
@@ -204,6 +205,7 @@ class MemberEditorScreen extends ConsumerWidget {
                 ),
               ],
             ),
+          if (admin) _FamiliesSection(id: uid, name: member.name),
           if (!mergeFirst) ?merge,
           if (admin && !self)
             ListSection(
@@ -333,6 +335,7 @@ class _NoAccountScreen extends ConsumerWidget {
                 ),
               ],
             ),
+          if (admin) _FamiliesSection(id: id, name: name),
           if (admin)
             ListSection(
               children: [
@@ -384,6 +387,60 @@ class _NoAccountScreen extends ConsumerWidget {
     } catch (e) {
       if (context.mounted) showToast(context, errorText(l10n, e));
     }
+  }
+}
+
+/// 家人, for an admin on [id]'s page: each family they are in, by the
+/// others' names, with 移出 (a parent who added someone not theirs, say).
+class _FamiliesSection extends ConsumerWidget {
+  const _FamiliesSection({required this.id, required this.name});
+
+  final String id;
+  final String name;
+
+  Future<void> _takeOut(BuildContext context, WidgetRef ref, Household h, String others) async {
+    final l10n = L10n.of(context);
+    final ok = await askChoice(
+      context,
+      title: l10n.familyTakeOutAsk(name, others),
+      yes: l10n.moveOutShort,
+      no: l10n.cancel,
+    );
+    if (ok != true || !context.mounted) return;
+    await savedOrSaid(context, ref.churchData.removeFromHousehold(h.id, id));
+  }
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final l10n = L10n.of(context);
+    // One who only asked someone has no family yet.
+    final families = [
+      for (final h in ref.watch(householdsOfProvider(id)).value ?? const <Household>[])
+        if (h.people.any((p) => p != id)) h,
+    ];
+    if (families.isEmpty) return const SizedBox.shrink();
+    return ListSection(
+      header: l10n.family,
+      children: [
+        for (final h in families) _row(context, ref, h),
+      ],
+    );
+  }
+
+  Widget _row(BuildContext context, WidgetRef ref, Household h) {
+    final l10n = L10n.of(context);
+    final others = [
+      for (final p in h.people)
+        if (p != id && (h.names[p] ?? '').isNotEmpty) h.names[p]!,
+    ].join(l10n.listSeparator);
+    return ListRow(
+      title: others,
+      trailing: RowButton(
+        label: l10n.moveOutShort,
+        semanticsLabel: l10n.familyTakeOutLabel(name, others),
+        onPressed: () => _takeOut(context, ref, h, others),
+      ),
+    );
   }
 }
 

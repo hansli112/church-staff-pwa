@@ -3529,7 +3529,7 @@ class L10nKo extends L10n {
   String get notifSwap => '대신 봉사·교환';
 
   @override
-  String get notifSwapSub => '대신 봉사, 교환, 봉사할 수 없는 날 입력, 가족 초대';
+  String get notifSwapSub => '대신 봉사, 교환, 봉사할 수 없는 날 입력';
 
   @override
   String get swapMenu => '대신 봉사·교환';
@@ -3705,6 +3705,16 @@ class L10nKo extends L10n {
   @override
   String familyMoveOutAsk(String name) {
     return '$name 님을 가족에서 뺄까요?';
+  }
+
+  @override
+  String familyTakeOutLabel(String name, String family) {
+    return '$name 님을 $family 님의 가족에서 빼기';
+  }
+
+  @override
+  String familyTakeOutAsk(String name, String family) {
+    return '$name 님을 $family 님의 가족에서 뺄까요?';
   }
 
   @override

@@ -2,9 +2,9 @@ import assert from 'node:assert/strict';
 import { beforeEach, describe, test } from 'node:test';
 
 import { claimPending, renamePending } from '../src/claim.js';
-import { addFamily, answerFamily, familyCandidates, removeFamily } from '../src/family.js';
+import { addFamily, answerFamily, familyCandidates, removeFamily, removeFromHousehold } from '../src/family.js';
 import { sendReminders } from '../src/notifications.js';
-import { onPendingMemberDeleted } from '../src/pendingMembers.js';
+import { emailKey, onPendingMemberDeleted } from '../src/pendingMembers.js';
 import { notifyPlanned, onRosterWritten, sendHeldPushes } from '../src/rosterChange.js';
 import { onMemberDeleted } from '../src/triggers.js';
 import { memoryGoogle } from '../src/memoryGoogle.js';
@@ -74,6 +74,16 @@ describe('加入家人', () => {
     const h = await householdOf('mom');
     await answerFamily(deps, caller('dad'), { churchId: 'C1', householdId: h.id, yes: true });
     assert.deepEqual(await households(), [{ people: ['dad', 'mom'], invited: [] }]);
+  });
+
+  test('the ask is pushed even to one who turned 找人代／交換 off', async () => {
+    await church();
+    await db.doc('churches/C1/members/dad').update({ 'notificationPrefs.muted': ['swap', 'rosterChange'] });
+    const { messaging, sent } = fakePush();
+    await add('mom', 'dad', messaging);
+    assert.deepEqual(sent.map((p) => p.tokens), [['tok-dad']]);
+    const list = await db.collection('users/dad/notifications').get();
+    assert.deepEqual(list.docs.map((d) => d.get('kind')), ['family']);
   });
 
   test('accepting brings the family they had: one family for both', async () => {
@@ -228,17 +238,23 @@ describe('家人 hear of those without an account', () => {
   });
 });
 
+/** Pending member [pid] signs in as [email] and claims to be them: their uid. */
+async function signIn(pid: string, email: string) {
+  await db.doc(`churches/C1/pendingMembers/${pid}`).update({ email, emailHash: emailKey(email) });
+  const user = await auth.createUser({ email, emailVerified: true }).catch(() => auth.getUserByEmail(email));
+  await claimPending({ ...deps, auth }, caller(user.uid, { email, emailVerified: true }), { churchId: 'C1', pendingId: pid });
+  return user.uid;
+}
+
 describe('a family as people come and go', () => {
   test('one without an account who signs in is still family, with an account', async () => {
     await church();
     await add('mom', 'kid1');
-    await db.doc('churches/C1/pendingMembers/kid1').update({ email: 'en@example.com', emailHash: (await import('../src/pendingMembers.js')).emailKey('en@example.com') });
-    const user = await auth.createUser({ email: 'en@example.com', emailVerified: true }).catch(() => auth.getUserByEmail('en@example.com'));
-    await claimPending({ ...deps, auth }, caller(user.uid, { email: 'en@example.com', emailVerified: true }), { churchId: 'C1', pendingId: 'kid1' });
+    const kid = await signIn('kid1', 'en@example.com');
     const h = await householdOf('mom');
-    assert.deepEqual([...h.get('people')].sort(), [user.uid, 'mom'].sort());
+    assert.deepEqual([...h.get('people')].sort(), [kid, 'mom'].sort());
     assert.deepEqual(h.get('noAccount'), []);
-    await auth.deleteUser(user.uid);
+    await auth.deleteUser(kid);
   });
 
   test('deleted, or left: out of the family', async () => {
@@ -257,6 +273,21 @@ describe('a family as people come and go', () => {
     assert.deepEqual(await households(), [], 'nobody with an account to tell');
   });
 
+  test('one in two families, as a child of parents apart, joins only the one asking: theirs stay apart', async () => {
+    await church();
+    await add('mom', 'kid1');
+    await add('dad', 'kid1');
+    const kid = await signIn('kid1', 'en@example.com');
+    await add('mei', kid);
+    await answerFamily(deps, caller(kid), { churchId: 'C1', householdId: (await householdOf('mei')).id, yes: true });
+    const q = await db.collection('churches/C1/households').get();
+    assert.deepEqual(
+      q.docs.map((d) => [...(d.get('people') as string[])].filter((p) => p !== kid).sort().join()).sort(),
+      ['dad', 'mei', 'mom'],
+    );
+    await auth.deleteUser(kid);
+  });
+
   test('who asked leaves: the ask goes with them', async () => {
     await church();
     await add('mom', 'kid1');
@@ -266,6 +297,23 @@ describe('a family as people come and go', () => {
     await answerFamily(deps, caller('mei'), { churchId: 'C1', householdId: (await householdOf('mom')).id, yes: true });
     await removeFamily(deps, caller('mom'), { churchId: 'C1', id: 'mom' });
     assert.deepEqual(await households(), [{ people: ['kid1', 'mei'], invited: [] }], 'nobody asks dad any more');
+  });
+
+  test('an admin takes one out of a family; nobody else can', async () => {
+    await church();
+    await add('mom', 'kid1');
+    await add('mom', 'kid2');
+    await add('mei', 'kid1');
+    const h = await householdOf('mom');
+    await rejectsWith(removeFromHousehold(deps, caller('mom'), { churchId: 'C1', householdId: h.id, id: 'kid1' }), 'permissionDenied');
+    await removeFromHousehold(deps, caller('pastor'), { churchId: 'C1', householdId: h.id, id: 'kid1' });
+    assert.deepEqual(await households(), [
+      { people: ['kid1', 'mei'], invited: [] },
+      { people: ['kid2', 'mom'], invited: [] },
+    ]);
+    await removeFromHousehold(deps, caller('pastor'), { churchId: 'C1', householdId: h.id, id: 'kid2' });
+    assert.deepEqual(await households(), [{ people: ['kid1', 'mei'], invited: [] }], 'a family of one is none');
+    await rejectsWith(removeFromHousehold(deps, caller('pastor'), { churchId: 'C1', householdId: h.id, id: 'kid2' }), 'notFound');
   });
 
   test('a new name reaches the family', async () => {

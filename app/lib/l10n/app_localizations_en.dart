@@ -3750,7 +3750,7 @@ class L10nEn extends L10n {
   String get notifSwap => 'Covers and swaps';
 
   @override
-  String get notifSwapSub => 'Covering, swapping, days you can’t serve, and family invites';
+  String get notifSwapSub => 'Covering, swapping, and days you can’t serve';
 
   @override
   String get swapMenu => 'Find a cover or swap';
@@ -3934,6 +3934,16 @@ class L10nEn extends L10n {
   @override
   String familyMoveOutAsk(String name) {
     return 'Remove $name from family?';
+  }
+
+  @override
+  String familyTakeOutLabel(String name, String family) {
+    return 'Remove $name from the family of $family';
+  }
+
+  @override
+  String familyTakeOutAsk(String name, String family) {
+    return 'Remove $name from the family of $family?';
   }
 
   @override

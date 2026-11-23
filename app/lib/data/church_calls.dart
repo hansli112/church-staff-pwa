@@ -365,6 +365,18 @@ final class RemoveFamily extends _Write {
   Map<String, Object?> get data => {'id': id};
 }
 
+final class RemoveFromHousehold extends _Write {
+  const RemoveFromHousehold(this.householdId, this.id);
+  final String householdId;
+  final String id;
+
+  @override
+  String get callable => 'removeFromHousehold';
+
+  @override
+  Map<String, Object?> get data => {'householdId': householdId, 'id': id};
+}
+
 /// Each [ChurchCall], by name, as the app asks for them.
 extension ChurchCalls on ChurchData {
   /// 加入家人: [id], anyone else in the church, into my family. One without
@@ -377,6 +389,9 @@ extension ChurchCalls on ChurchData {
 
   /// 移出, or 收回 for one asked: [id] out of my family.
   Future<void> removeFamily(String id) => run(RemoveFamily(id));
+
+  /// An admin, on [id]'s page: [id] out of family [householdId].
+  Future<void> removeFromHousehold(String householdId, String id) => run(RemoveFromHousehold(householdId, id));
 
   /// The caller says they are pending member [pendingId]; null takes it
   /// back. The admins are told.

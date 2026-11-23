@@ -23,6 +23,15 @@ mixin _MemoryFamily on _MemoryChurchBase implements FamilyData {
   }, equals: listEquals);
 
   @override
+  Stream<List<Household>> householdsOf(String id) => _b.watch(() {
+    _requireAdmin();
+    return [
+      for (final h in _households.values)
+        if (h.people.contains(id)) h,
+    ];
+  }, equals: listEquals);
+
+  @override
   Future<List<FamilyCandidate>> addable() async {
     final me = _b.functionAccess(churchId, allowed: (_) => true)!;
     return [
@@ -73,10 +82,12 @@ mixin _MemoryFamily on _MemoryChurchBase implements FamilyData {
     if (!yes) {
       _put(asked);
     } else {
-      final others = [
+      final theirs = [
         for (final o in _households.values)
           if (o.id != h.id && o.people.contains(me.uid)) o,
       ];
+      // In two already (a child of parents apart): theirs stay apart.
+      final others = theirs.length > 1 ? const <Household>[] : theirs;
       final people = [...asked.people, me.uid];
       final noAccount = [...asked.noAccount];
       final invited = [...asked.invited];
@@ -120,6 +131,14 @@ mixin _MemoryFamily on _MemoryChurchBase implements FamilyData {
     for (final h in [..._households.values]) {
       if (h.people.contains(me.uid)) _put(_without(h, id));
     }
+    _b.notify();
+  }
+
+  Future<void> removeFromHousehold(String householdId, String id) async {
+    _b.functionAccess(churchId, allowed: (m) => m.isAdmin);
+    final h = _households[householdId];
+    if (h == null || !h.people.contains(id)) throw const CloudException(CloudErrorCode.notFound);
+    _put(_without(h, id));
     _b.notify();
   }
 

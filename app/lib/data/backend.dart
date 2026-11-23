@@ -410,6 +410,10 @@ abstract interface class FamilyData {
 
   /// Everyone in the church but me, to add.
   Future<List<FamilyCandidate>> addable();
+
+  /// The families [id] (a uid, or a pending member's ID) is in, for an
+  /// admin on their page.
+  Stream<List<Household>> householdsOf(String id);
 }
 
 /// 認領 (claiming to be one of the pending members). Asking and answering

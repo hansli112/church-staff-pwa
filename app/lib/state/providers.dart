@@ -362,6 +362,11 @@ final familyProvider = Provider<List<FamilyPerson>>((ref) {
   return familyOf(ref.watch(myHouseholdsProvider).value ?? const [], uid);
 });
 
+/// The families [id] is in, for an admin on their page.
+final householdsOfProvider = StreamProvider.autoDispose.family<List<Household>, String>(
+  (ref, id) => openChurch(ref).family.householdsOf(id),
+);
+
 /// Everyone in the church but me, for 加入家人.
 final familyAddableProvider = FutureProvider.autoDispose<List<FamilyCandidate>>(
   (ref) => openChurch(ref).family.addable(),

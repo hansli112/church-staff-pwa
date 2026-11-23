@@ -3531,7 +3531,7 @@ class L10nJa extends L10n {
   String get notifSwap => '代わり・交換';
 
   @override
-  String get notifSwapSub => '代わり・交換・奉仕できない日の入力・家族の招待';
+  String get notifSwapSub => '代わり・交換・奉仕できない日の入力';
 
   @override
   String get swapMenu => '代わり・交換';
@@ -3707,6 +3707,16 @@ class L10nJa extends L10n {
   @override
   String familyMoveOutAsk(String name) {
     return '$nameを家族から外しますか？';
+  }
+
+  @override
+  String familyTakeOutLabel(String name, String family) {
+    return '$nameを$familyの家族から外す';
+  }
+
+  @override
+  String familyTakeOutAsk(String name, String family) {
+    return '$nameを$familyの家族から外しますか？';
   }
 
   @override
