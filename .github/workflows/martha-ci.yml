@@ -9,8 +9,17 @@ on:
 # Pinned rather than ubuntu-latest, so a new runner image (Ubuntu 26 from
 # 2026-10-19) is a change made here, not one that breaks CI by itself.
 jobs:
+  # The app's tests take about five minutes in one job, so they run as three
+  # shards side by side.
   app:
     runs-on: ubuntu-24.04
+    strategy:
+      fail-fast: false
+      matrix:
+        shard: [0, 1, 2]
+    env:
+      TEST_SHARDS: 3
+      TEST_SHARD: ${{ matrix.shard }}
     steps:
       - uses: actions/checkout@v7
       - uses: subosito/flutter-action@v2

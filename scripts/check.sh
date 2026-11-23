@@ -7,6 +7,9 @@
 #   scripts/check.sh functions  # only Cloud Functions
 #   scripts/check.sh rules      # only firestore.rules / storage.rules
 #   scripts/check.sh contract   # the Backend contract on the emulators, in Chrome
+#
+# CI splits the app's test files over several jobs: TEST_SHARDS=3 TEST_SHARD=0
+# runs one third of them. Without these, `app` runs every test.
 set -euo pipefail
 root="$(cd "$(dirname "$0")/.." && pwd)"
 what="${1:-all}"
@@ -17,7 +20,16 @@ run_app() {
   flutter gen-l10n
   dart format --output=none --set-exit-if-changed lib test
   flutter analyze
-  flutter test --no-pub
+  if [ -n "${TEST_SHARDS:-}" ]; then
+    # Whole test files per shard, not --total-shards: that one compiles
+    # every file in every shard.
+    local files
+    files=$(find test -name '*_test.dart' | sort |
+      awk -v n="$TEST_SHARDS" -v i="${TEST_SHARD:?TEST_SHARD goes with TEST_SHARDS}" 'NR % n == i')
+    flutter test --no-pub $files
+  else
+    flutter test --no-pub
+  fi
 }
 
 run_functions() {
