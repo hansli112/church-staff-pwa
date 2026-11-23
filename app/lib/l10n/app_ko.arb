@@ -1094,6 +1094,5 @@
   "myFamilyServicesTitle": "나와 가족의 다가오는 봉사",
   "serviceDutyCount": "{count}개",
   "serviceItemCount": "{count}개",
-  "servicePartNone": "없음",
-  "addIdentityLeadsElsewhere": "리더와 소그룹 리더는 예배, 담당, 소그룹 페이지에서 지정해요"
+  "servicePartNone": "없음"
 }

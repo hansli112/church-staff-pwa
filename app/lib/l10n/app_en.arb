@@ -1094,6 +1094,5 @@
   "myFamilyServicesTitle": "Upcoming for You and Family",
   "serviceDutyCount": "{count, plural, =1{1 role} other{{count} roles}}",
   "serviceItemCount": "{count}",
-  "servicePartNone": "None",
-  "addIdentityLeadsElsewhere": "Leads and small group leaders are assigned on the page of their service, role or small group"
+  "servicePartNone": "None"
 }

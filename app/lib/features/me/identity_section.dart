@@ -11,10 +11,9 @@ import '../common/errors.dart';
 import '../common/labels.dart';
 
 /// A member's 身分 (#82), on their page, for an admin: each by its name,
-/// which says what it is, one more added from a short list (行政 saying
-/// what it is, which its name does not), one taken away with 復原. Only the
-/// church-wide ones are added here: a 負責人 or 小組長 on the page of what
-/// they lead (2026-11-23), listed here too.
+/// which says what it is, one more added from a short list of names, one
+/// taken away with 復原. Only the church-wide ones are added here: a 負責人
+/// or 小組長 on the page of what they lead (2026-11-23), listed here too.
 ///
 /// An admin cannot take away what makes themself an admin (the rules
 /// refuse it too), so that row offers no removal on their own page.
@@ -103,11 +102,12 @@ class IdentitySection extends ConsumerWidget {
   Future<Identity?> _pick(BuildContext context, WidgetRef ref, List<Identity> held) async {
     final l10n = L10n.of(context);
     final services = ref.read(servicesProvider).value?.services ?? const <Service>[];
+    // 牧者 before 行政, out of respect (2026-11-23).
     final kind = await _choose<String>(context, l10n.addIdentity, [
       if (!held.contains(const AdminIdentity())) ('admin', l10n.roleAdmin, null),
-      if (!held.contains(const OfficeIdentity())) ('office', l10n.identityOffice, l10n.canOffice),
       ('pastor', l10n.identityPastor, null),
-    ], footer: l10n.addIdentityLeadsElsewhere);
+      if (!held.contains(const OfficeIdentity())) ('office', l10n.identityOffice, null),
+    ]);
     if (kind == null || !context.mounted) return null;
     switch (kind) {
       case 'admin':
@@ -123,26 +123,20 @@ class IdentitySection extends ConsumerWidget {
     }
   }
 
-  /// One of [options] (value, title, what it means), picked in a sheet,
-  /// [footer] under them.
-  static Future<T?> _choose<T>(
-    BuildContext context,
-    String header,
-    List<(T, String, String?)> options, {
-    String? footer,
-  }) => showAppSheet<T>(
-    context,
-    builder: (context) => SafeArea(
-      child: SingleChildScrollView(
-        child: ListSection(
-          header: header,
-          footer: footer,
-          children: [
-            for (final (value, title, subtitle) in options)
-              ListRow(title: title, subtitle: subtitle, onTap: () => Navigator.pop(context, value)),
-          ],
+  /// One of [options] (value, title, what it means), picked in a sheet.
+  static Future<T?> _choose<T>(BuildContext context, String header, List<(T, String, String?)> options) =>
+      showAppSheet<T>(
+        context,
+        builder: (context) => SafeArea(
+          child: SingleChildScrollView(
+            child: ListSection(
+              header: header,
+              children: [
+                for (final (value, title, subtitle) in options)
+                  ListRow(title: title, subtitle: subtitle, onTap: () => Navigator.pop(context, value)),
+              ],
+            ),
+          ),
         ),
-      ),
-    ),
-  );
+      );
 }

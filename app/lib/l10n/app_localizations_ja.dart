@@ -3740,7 +3740,4 @@ class L10nJa extends L10n {
 
   @override
   String get servicePartNone => 'なし';
-
-  @override
-  String get addIdentityLeadsElsewhere => 'リーダー・小グループリーダーは、集会・担当・小グループのページで指名します';
 }

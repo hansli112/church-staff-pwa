@@ -2504,7 +2504,5 @@
   "serviceItemCount": "{count} 個",
   "@serviceItemCount": {"description": "On a service's page, beside 事工, 常用特別活動 or 小組: how many it has; the row opens them", "placeholders": {"count": {"type": "int"}}},
   "servicePartNone": "沒有",
-  "@servicePartNone": {"description": "On a service's page, beside 服事項目, 事工, 常用特別活動 or 小組 when it has none"},
-  "addIdentityLeadsElsewhere": "負責人、小組長到聚會、服事項目或小組的頁面指派",
-  "@addIdentityLeadsElsewhere": {"description": "Under 新增身分's list on a member's page: where leads are assigned instead"}
+  "@servicePartNone": {"description": "On a service's page, beside 服事項目, 事工, 常用特別活動 or 小組 when it has none"}
 }

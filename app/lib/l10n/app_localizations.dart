@@ -6525,12 +6525,6 @@ abstract class L10n {
   /// In zh, this message translates to:
   /// **'沒有'**
   String get servicePartNone;
-
-  /// Under 新增身分's list on a member's page: where leads are assigned instead
-  ///
-  /// In zh, this message translates to:
-  /// **'負責人、小組長到聚會、服事項目或小組的頁面指派'**
-  String get addIdentityLeadsElsewhere;
 }
 
 class _L10nDelegate extends LocalizationsDelegate<L10n> {

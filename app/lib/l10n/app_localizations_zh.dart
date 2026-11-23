@@ -3735,9 +3735,6 @@ class L10nZh extends L10n {
 
   @override
   String get servicePartNone => '沒有';
-
-  @override
-  String get addIdentityLeadsElsewhere => '負責人、小組長到聚會、服事項目或小組的頁面指派';
 }
 
 /// The translations for Chinese, using the Han script (`zh_Hans`).
@@ -7471,7 +7468,4 @@ class L10nZhHans extends L10nZh {
 
   @override
   String get servicePartNone => '没有';
-
-  @override
-  String get addIdentityLeadsElsewhere => '负责人、小组长到聚会、事奉项目或小组的页面指派';
 }

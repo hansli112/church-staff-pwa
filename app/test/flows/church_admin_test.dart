@@ -31,7 +31,7 @@ Future<void> scrollTo(WidgetTester tester, String text) async {
 
 void main() {
   group('members', () {
-    testWidgets('an admin gives a 身分 and takes it back (#82); only 行政 says what it is when picked', (tester) async {
+    testWidgets('an admin gives a 身分 and takes it back (#82): 管理員, 牧者 then 行政, by name alone', (tester) async {
       final b = seededChurch(
         extra: [
           staffMei.withIdentities(const [ServiceLead('sunday')]),
@@ -43,13 +43,14 @@ void main() {
       await tapText(tester, '李美玉');
       expect(find.text('主日崇拜 負責人'), findsOneWidget, reason: 'a 負責人 given on its page is listed here too');
       await tapText(tester, '新增身分');
-      expect(findShown('排所有服事表、改所有活動和同工，不能給身分、改設定'), findsOneWidget, reason: 'how 行政 differs from 管理員');
-      expect(find.text('管理員'), findsOneWidget);
-      expect(find.text('牧者'), findsOneWidget);
+      double at(String text) => tester.getTopLeft(find.text(text).last).dy;
+      expect(at('管理員'), lessThan(at('牧者')));
+      expect(at('牧者'), lessThan(at('行政')), reason: '牧者 before 行政, out of respect (2026-11-23)');
       for (final lead in ['聚會負責人', '事工負責人', '小組長']) {
         expect(find.text(lead), findsNothing, reason: 'given on its own page (2026-11-23)');
       }
-      expect(findShown('負責人、小組長到聚會、服事項目或小組的頁面指派'), findsOneWidget);
+      expect(find.textContaining('排所有服事表'), findsNothing, reason: 'the names alone, as 牧者 has (2026-11-23)');
+      expect(find.textContaining('頁面指派'), findsNothing);
       await tapText(tester, '行政');
       expect(b.members['grace']!['mei']!.groups, {Group.rosterEditors, Group.calendarEditors});
 

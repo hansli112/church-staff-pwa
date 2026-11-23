@@ -1094,6 +1094,5 @@
   "myFamilyServicesTitle": "我和家人接下来的事奉",
   "serviceDutyCount": "{count} 项",
   "serviceItemCount": "{count} 个",
-  "servicePartNone": "没有",
-  "addIdentityLeadsElsewhere": "负责人、小组长到聚会、事奉项目或小组的页面指派"
+  "servicePartNone": "没有"
 }

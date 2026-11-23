@@ -3973,8 +3973,4 @@ class L10nEn extends L10n {
 
   @override
   String get servicePartNone => 'None';
-
-  @override
-  String get addIdentityLeadsElsewhere =>
-      'Leads and small group leaders are assigned on the page of their service, role or small group';
 }

@@ -3738,7 +3738,4 @@ class L10nKo extends L10n {
 
   @override
   String get servicePartNone => '없음';
-
-  @override
-  String get addIdentityLeadsElsewhere => '리더와 소그룹 리더는 예배, 담당, 소그룹 페이지에서 지정해요';
 }
