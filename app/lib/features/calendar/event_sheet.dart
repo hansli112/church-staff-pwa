@@ -420,7 +420,9 @@ class _EventEditorState extends State<_EventEditor> {
                         grey: true,
                         selected: _opened.copyWith(colorId: () => _colorId).color,
                         onPick: (c) => setState(() {
-                          _colorId = _opened.copyWith(colorId: () => _colorId).withColor(c).colorId;
+                          // From the color it opened with: back to it, Google's
+                          // own shade is kept.
+                          _colorId = _opened.withColor(c).colorId;
                           _open = null;
                         }),
                       ),

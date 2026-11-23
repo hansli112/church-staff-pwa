@@ -1669,7 +1669,12 @@ class _SwipeActionState extends State<SwipeAction> with SingleTickerProviderStat
   }
 
   void _to(double dx) {
-    _ctrl.animateTo((dx / _width).clamp(0.0, 1.0), curve: Curves.easeOutCubic);
+    final to = (dx / _width).clamp(0.0, 1.0);
+    if (MediaQuery.disableAnimationsOf(context)) {
+      _ctrl.value = to;
+    } else {
+      _ctrl.animateTo(to, curve: Curves.easeOutCubic);
+    }
     if (dx > 0) {
       if (_open != this) _open?._close();
       _open = this;

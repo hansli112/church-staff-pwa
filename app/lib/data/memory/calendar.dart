@@ -81,6 +81,7 @@ class MemoryCalendarData implements CalendarData {
             location: event.location,
             description: event.description,
             group: event.group,
+            colorId: event.colorId,
           )
         : event;
     await _c._b.write(() {

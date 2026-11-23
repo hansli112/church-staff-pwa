@@ -1363,9 +1363,13 @@ class _FirestoreCalendar implements CalendarData {
 
   @override
   Future<CalendarEvent> save(CalendarEvent event, {CalendarEvent? previous, String? restoreRosterOf}) async {
+    final json = calendarEventToJson(event);
+    // Its color only when picked here: an event read from a month cached
+    // before colors came has none, and saying so would take Google's off.
+    if (event.colorId == (previous?.colorId)) json.remove('colorId');
     final d = await _c._call('calendarWrite', {
       'op': 'upsert',
-      'event': calendarEventToJson(event),
+      'event': json,
       'restoreRosterOf': ?restoreRosterOf,
       // The months the event was in, for the function to drop from its
       // cache. previousStart is what functions before `previous` read.

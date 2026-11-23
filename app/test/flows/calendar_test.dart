@@ -315,6 +315,11 @@ void main() {
 
     await tapText(tester, '洗禮班');
     expect(tester.getSemantics(find.bySemanticsLabel('綠')).flagsCollection.isSelected, Tristate.isTrue);
+    // Red, then back to green: as it was.
+    await tester.tap(find.bySemanticsLabel('紅'));
+    await tester.pump();
+    await tester.tap(find.bySemanticsLabel('綠'));
+    await tester.pump();
     await tester.enterText(find.byType(TextField).first, '洗禮課');
     await tester.pump();
     await tapText(tester, '儲存');
@@ -325,6 +330,15 @@ void main() {
     await tester.pump();
     await tapText(tester, '儲存');
     expect(saved('b').colorId, isNull);
+
+    // A new one, in its color from the start.
+    await tester.tap(find.byTooltip('新增活動'));
+    await settle(tester);
+    await tester.enterText(find.byType(TextField).first, '詩班練習');
+    await tester.tap(find.bySemanticsLabel('紫'));
+    await tester.pump();
+    await tapText(tester, '儲存');
+    expect(b.calendarEvents['grace']!.firstWhere((e) => e.title == '詩班練習').color, 5);
   });
 
   testWidgets('renaming a three-day event keeps its three days', (tester) async {
