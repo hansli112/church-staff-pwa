@@ -40,16 +40,21 @@ class _UnavailableScreenState extends ConsumerState<UnavailableScreen> {
   /// same: they come back after the save, sometimes well after.
   UnavailableDays? _shown;
 
-  /// The save on its way, if any. The next waits for it, so they land in
-  /// order, and one overtaken while waiting is left to the next.
-  Future<void>? _writing;
+  /// The save on its way, if any, and whether it was kept. The next waits
+  /// for it, so they land in order, and one overtaken while waiting is left
+  /// to the next.
+  Future<bool>? _writing;
 
   /// Which month shows: this one, or so many after it.
   var _page = 0;
 
   /// Whether it has opened on the month asked, once what was asked is
-  /// known.
+  /// known, and on which ask (when it was made). Another ask known later,
+  /// as when the backend's comes after one remembered on the phone, opens on
+  /// its month too, unless I have moved to another month myself.
   var _opened = false;
+  DateTime? _openedOn;
+  var _moved = false;
 
   var _sending = false;
 
@@ -64,14 +69,15 @@ class _UnavailableScreenState extends ConsumerState<UnavailableScreen> {
     final kept = next.since(ref.read(todayProvider));
     setState(() => _shown = kept);
     final before = _writing;
-    final done = Completer<void>();
+    final done = Completer<bool>();
     _writing = done.future;
+    var ok = false;
     try {
       await before;
-      if (!identical(_shown, kept)) return true;
+      if (!identical(_shown, kept)) return ok = true;
       await data.unavailable.saveMine(kept);
       telemetry.logEvent('unavailable_set');
-      return true;
+      return ok = true;
     } catch (e) {
       if (mounted) {
         showToast(context, errorText(l10n, e));
@@ -79,7 +85,7 @@ class _UnavailableScreenState extends ConsumerState<UnavailableScreen> {
       }
       return false;
     } finally {
-      done.complete();
+      done.complete(ok);
       if (identical(_writing, done.future)) _writing = null;
       _settle();
     }
@@ -95,14 +101,16 @@ class _UnavailableScreenState extends ConsumerState<UnavailableScreen> {
     }
   }
 
-  /// 送出 or 都可以服事: once the days on their way are kept.
+  /// 送出 or 都可以服事: once the days on their way are kept. Not when
+  /// they were refused: what was asked for is not what was kept, and the
+  /// toast has said why.
   Future<void> _send({required bool free}) async {
     final l10n = L10n.of(context);
     final data = ref.churchData;
     final telemetry = ref.read(telemetryProvider);
     setState(() => _sending = true);
     try {
-      await _writing;
+      if (await _writing == false) return;
       await data.unavailable.send();
       telemetry.logEvent('unavailable_send', {'free': free});
     } catch (e) {
@@ -170,8 +178,9 @@ class _UnavailableScreenState extends ConsumerState<UnavailableScreen> {
     ref.listen(myUnavailableDaysProvider, (_, _) => _settle());
     final askedState = ref.watch(unavailableAskedProvider);
     final asked = askedState.value;
-    if (!_opened && askedState.hasValue) {
+    if (askedState.hasValue && (!_opened || (!_moved && asked != null && asked.at != _openedOn))) {
       _opened = true;
+      _openedOn = asked?.at;
       if (asked != null && asked.waitingOn(today)) {
         _page = ((asked.from.year - today.year) * 12 + asked.from.month - today.month).clamp(0, months - 1).toInt();
       }
@@ -227,7 +236,10 @@ class _UnavailableScreenState extends ConsumerState<UnavailableScreen> {
                   days: days,
                   onTap: _toggle,
                   onDrag: _drag,
-                  onShift: (by) => setState(() => _page = (_page + by).clamp(0, months - 1).toInt()),
+                  onShift: (by) => setState(() {
+                    _moved = true;
+                    _page = (_page + by).clamp(0, months - 1).toInt();
+                  }),
                   first: _page == 0,
                   last: _page == months - 1,
                 ),
