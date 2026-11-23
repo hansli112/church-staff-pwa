@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
 import 'package:material_symbols_icons/symbols.dart';
+import 'package:martha/data/backend.dart';
 import 'package:martha/data/memory/memory_backend.dart';
 import 'package:martha/domain/day.dart';
 import 'package:martha/domain/models.dart';
@@ -292,6 +293,50 @@ void main() {
     ]);
     await go(tester, '/home');
     expect(find.text('填不能服事的日子'), findsNothing);
+  });
+
+  testWidgets('送出 while a day is being kept, and the keeping fails: nothing is sent', (tester) async {
+    final b = seededChurch(as: staffMei);
+    b.unavailableAsked['grace'] = {'mei': (at: testNow, from: Day(2026, 12, 1), to: Day(2026, 12, 1))};
+    await pumpApp(tester, b);
+    await go(tester, '/me/unavailable');
+    b.writeDelay = const Duration(seconds: 1);
+    b.failNextWrite = const CloudException(CloudErrorCode.unknown);
+
+    await tester.tap(
+      find.byWidgetPredicate((w) => w is Semantics && (w.properties.label?.startsWith('2026年12月13日') ?? false)),
+    );
+    await tester.pump(const Duration(milliseconds: 300));
+    await tester.tap(find.text('送出'));
+    await tester.pump(const Duration(seconds: 3));
+    await settle(tester);
+    expect(meisDays(b), isNull);
+    expect(b.unavailableSentAt['grace']?['mei'], isNull, reason: 'the days asked for are not those kept');
+    expect(find.text('已送出'), findsNothing);
+    expect(find.text('都可以服事'), findsOneWidget, reason: 'still to send');
+  });
+
+  testWidgets('the ask known only after the page opens: it goes to the month asked, unless moved by hand', (
+    tester,
+  ) async {
+    final b = seededChurch(as: staffMei);
+    await pumpApp(tester, b);
+    await go(tester, '/me/unavailable');
+    expect(find.text('2026年10月'), findsOneWidget, reason: 'nothing asked, as far as it knows');
+
+    b.unavailableAsked['grace'] = {'mei': (at: testNow, from: Day(2026, 12, 1), to: Day(2026, 12, 1))};
+    b.notify();
+    await settle(tester);
+    expect(find.text('2026年12月'), findsOneWidget, reason: 'the month asked');
+
+    await tester.tap(find.byTooltip('下個月'));
+    await settle(tester);
+    b.unavailableAsked['grace'] = {
+      'mei': (at: testNow.add(const Duration(hours: 1)), from: Day(2026, 11, 1), to: Day(2026, 11, 1)),
+    };
+    b.notify();
+    await settle(tester);
+    expect(find.text('2027年1月'), findsOneWidget, reason: 'left where it was moved to');
   });
 
   testWidgets('not asked, nothing to send', (tester) async {
