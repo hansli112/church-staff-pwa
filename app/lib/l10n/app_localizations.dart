@@ -3886,17 +3886,23 @@ abstract class L10n {
   /// **'選一位沒有帳號的同工'**
   String get mergePendingPick;
 
-  /// No description provided for @mergePendingTitle.
+  /// Asked before merging one without an account into a member: whether they are one person
   ///
   /// In zh, this message translates to:
-  /// **'合併「{pending}」？'**
-  String mergePendingTitle(String pending);
+  /// **'{pending}和{member}是同一個人？'**
+  String mergePendingTitle(String pending, String member);
 
-  /// No description provided for @mergePendingBody.
+  /// mergePendingTitle when both have the same name
   ///
   /// In zh, this message translates to:
-  /// **'「{pending}」的服事、聚會和小組會接到「{member}」'**
-  String mergePendingBody(String pending, String member);
+  /// **'這兩位{name}是同一個人？'**
+  String mergePendingSameName(String name);
+
+  /// Under mergePendingTitle: a merge has no 復原
+  ///
+  /// In zh, this message translates to:
+  /// **'合併後無法分開'**
+  String get mergePendingBody;
 
   /// No description provided for @mergePendingAction.
   ///

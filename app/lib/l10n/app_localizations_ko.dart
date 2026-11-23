@@ -2146,14 +2146,17 @@ class L10nKo extends L10n {
   String get mergePendingPick => '계정 없는 멤버 선택';
 
   @override
-  String mergePendingTitle(String pending) {
-    return '‘$pending’ 님을 합칠까요?';
+  String mergePendingTitle(String pending, String member) {
+    return '$pending 님과 $member 님은 같은 사람인가요?';
   }
 
   @override
-  String mergePendingBody(String pending, String member) {
-    return '‘$pending’ 님의 봉사, 예배, 소그룹이 ‘$member’ 님에게 옮겨져요';
+  String mergePendingSameName(String name) {
+    return '두 명의 $name 님은 같은 사람인가요?';
   }
+
+  @override
+  String get mergePendingBody => '합치면 다시 나눌 수 없어요';
 
   @override
   String get mergePendingAction => '합치기';

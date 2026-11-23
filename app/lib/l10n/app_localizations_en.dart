@@ -2275,14 +2275,17 @@ class L10nEn extends L10n {
   String get mergePendingPick => 'Choose a team member without an account';
 
   @override
-  String mergePendingTitle(String pending) {
-    return 'Merge “$pending”?';
+  String mergePendingTitle(String pending, String member) {
+    return 'Are $pending and $member the same person?';
   }
 
   @override
-  String mergePendingBody(String pending, String member) {
-    return 'What “$pending” serves, their services and small groups move to “$member”';
+  String mergePendingSameName(String name) {
+    return 'Are these two $name the same person?';
   }
+
+  @override
+  String get mergePendingBody => 'Once merged, they can’t be separated';
 
   @override
   String get mergePendingAction => 'Merge';

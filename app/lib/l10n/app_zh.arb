@@ -1314,16 +1314,9 @@
   "mergePending": "合併沒有帳號的同工",
   "mergePendingFooter": "原本就在服事表上的話，合併後會接上原本的服事",
   "mergePendingPick": "選一位沒有帳號的同工",
-  "mergePendingTitle": "合併「{pending}」？",
+  "mergePendingTitle": "{pending}和{member}是同一個人？",
   "@mergePendingTitle": {
-    "placeholders": {
-      "pending": {
-        "type": "String"
-      }
-    }
-  },
-  "mergePendingBody": "「{pending}」的服事、聚會和小組會接到「{member}」",
-  "@mergePendingBody": {
+    "description": "Asked before merging one without an account into a member: whether they are one person",
     "placeholders": {
       "pending": {
         "type": "String"
@@ -1332,6 +1325,19 @@
         "type": "String"
       }
     }
+  },
+  "mergePendingSameName": "這兩位{name}是同一個人？",
+  "@mergePendingSameName": {
+    "description": "mergePendingTitle when both have the same name",
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "mergePendingBody": "合併後無法分開",
+  "@mergePendingBody": {
+    "description": "Under mergePendingTitle: a merge has no 復原"
   },
   "mergePendingAction": "合併",
   "merged": "已合併",

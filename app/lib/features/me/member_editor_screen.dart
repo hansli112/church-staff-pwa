@@ -237,8 +237,9 @@ Future<void> mergePendingInto(BuildContext context, WidgetRef ref, PendingMember
   }
 }
 
-/// 「合併「黃鎮台」？」, with their 小組 and what they serve to be sure it
-/// is them; true for 合併.
+/// 「王小明和小明是同一個人？」 (「這兩位黃鎮台…」 for one name), with their
+/// 小組 and what they serve to be sure it is them, and that a merge is not
+/// undone; true for 合併.
 Future<bool> confirmMerge(BuildContext context, WidgetRef ref, PendingMember pending, String memberName) async {
   final l10n = L10n.of(context);
   final name = pending.name.isEmpty ? pending.email : pending.name;
@@ -250,8 +251,8 @@ Future<bool> confirmMerge(BuildContext context, WidgetRef ref, PendingMember pen
   );
   final ok = await askChoice(
     context,
-    title: l10n.mergePendingTitle(name),
-    message: [if (details.isNotEmpty) details, l10n.mergePendingBody(name, memberName)].join('\n\n'),
+    title: name == memberName ? l10n.mergePendingSameName(name) : l10n.mergePendingTitle(name, memberName),
+    message: [if (details.isNotEmpty) details, l10n.mergePendingBody].join('\n\n'),
     yes: l10n.mergePendingAction,
     no: l10n.cancel,
   );

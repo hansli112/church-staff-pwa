@@ -303,8 +303,8 @@ void main() {
     await tester.scrollUntilVisible(find.text('合併沒有帳號的同工'), 200, scrollable: find.byType(Scrollable).last);
     await tapText(tester, '合併沒有帳號的同工');
     await tapText(tester, '李美玉');
-    expect(find.text('合併「李美玉」？'), findsOneWidget);
-    expect(findShownContaining('「李美玉」的服事、聚會和小組會接到「美玉」'), findsOneWidget);
+    expect(find.text('李美玉和美玉是同一個人？'), findsOneWidget);
+    expect(findShownContaining('合併後無法分開'), findsOneWidget, reason: 'no 復原 after');
     expect(findShownContaining('主日崇拜：司琴'), findsOneWidget, reason: 'what they serve, to be sure of them');
     b.mergeHeld = Completer();
     await tapText(tester, '合併');
@@ -380,8 +380,7 @@ void main() {
     expect(findShownContaining('有同名、沒有帳號的同工'), findsOneWidget);
     await tester.tap(find.bySemanticsLabel('合併黃鎮台'));
     await settle(tester);
-    expect(find.text('合併「黃鎮台」？'), findsOneWidget);
-    expect(findShownContaining('「黃鎮台」的服事、聚會和小組會接到「黃鎮台」'), findsOneWidget);
+    expect(find.text('這兩位黃鎮台是同一個人？'), findsOneWidget, reason: 'one name, said once');
     await tapText(tester, '合併');
 
     expect(b.pendingMembers['grace'], isEmpty);
@@ -481,7 +480,7 @@ void main() {
       await settle(tester);
       expect(findShown('王小明'), findsNothing);
       await tapText(tester, '陳大華');
-      expect(find.text('合併「陳大華」？'), findsOneWidget);
+      expect(find.text('陳大華和小明是同一個人？'), findsOneWidget);
     });
   });
 }

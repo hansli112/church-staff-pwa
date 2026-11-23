@@ -2143,14 +2143,17 @@ class L10nZh extends L10n {
   String get mergePendingPick => '選一位沒有帳號的同工';
 
   @override
-  String mergePendingTitle(String pending) {
-    return '合併「$pending」？';
+  String mergePendingTitle(String pending, String member) {
+    return '$pending和$member是同一個人？';
   }
 
   @override
-  String mergePendingBody(String pending, String member) {
-    return '「$pending」的服事、聚會和小組會接到「$member」';
+  String mergePendingSameName(String name) {
+    return '這兩位$name是同一個人？';
   }
+
+  @override
+  String get mergePendingBody => '合併後無法分開';
 
   @override
   String get mergePendingAction => '合併';
@@ -5876,14 +5879,17 @@ class L10nZhHans extends L10nZh {
   String get mergePendingPick => '选一位没有账号的同工';
 
   @override
-  String mergePendingTitle(String pending) {
-    return '合并“$pending”？';
+  String mergePendingTitle(String pending, String member) {
+    return '$pending和$member是同一个人？';
   }
 
   @override
-  String mergePendingBody(String pending, String member) {
-    return '“$pending”的事奉、聚会和小组会接到“$member”';
+  String mergePendingSameName(String name) {
+    return '这两位$name是同一个人？';
   }
+
+  @override
+  String get mergePendingBody => '合并后无法分开';
 
   @override
   String get mergePendingAction => '合并';

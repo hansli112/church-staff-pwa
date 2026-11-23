@@ -2148,14 +2148,17 @@ class L10nJa extends L10n {
   String get mergePendingPick => 'アカウントのないメンバーを選択';
 
   @override
-  String mergePendingTitle(String pending) {
-    return '「$pending」を統合しますか？';
+  String mergePendingTitle(String pending, String member) {
+    return '$pendingさんと$memberさんは同じ人ですか？';
   }
 
   @override
-  String mergePendingBody(String pending, String member) {
-    return '「$pending」の奉仕・集会・小グループが「$member」に引き継がれます';
+  String mergePendingSameName(String name) {
+    return 'この2人の$nameさんは同じ人ですか？';
   }
+
+  @override
+  String get mergePendingBody => '統合すると元に戻せません';
 
   @override
   String get mergePendingAction => '統合';

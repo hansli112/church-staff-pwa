@@ -395,6 +395,27 @@ void main() {
       expect(result, isTrue);
     });
 
+    for (final (platform, align) in [
+      (TargetPlatform.iOS, TextAlign.center),
+      (TargetPlatform.android, TextAlign.start),
+    ]) {
+      testWidgets("a dialog's message is ${align.name} on $platform, as the platform's own alerts", (tester) async {
+        await pumpWidgetInApp(
+          tester,
+          Builder(
+            builder: (context) => TextButton(
+              onPressed: () => askChoice(context, title: '同一個人？', message: '合併後無法分開', yes: '合併', no: '取消'),
+              child: const Text('go'),
+            ),
+          ),
+          platform: platform,
+        );
+        await tester.tap(find.text('go'));
+        await tester.pumpAndSettle();
+        expect(tester.widget<BalancedText>(find.byType(BalancedText).last).textAlign, align);
+      });
+    }
+
     testWidgets('SearchField clears with its button', (tester) async {
       final seen = <String>[];
       await pumpWidgetInApp(tester, SearchField(onChanged: seen.add));

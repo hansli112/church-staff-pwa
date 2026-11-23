@@ -1031,7 +1031,7 @@ Future<bool> confirmDestructive(
       final ios = Theme.of(context).platform == TargetPlatform.iOS;
       return AlertDialog.adaptive(
         title: Text(title),
-        content: message == null ? null : BalancedText(message, textAlign: TextAlign.start),
+        content: message == null ? null : _dialogMessage(message, ios: ios),
         actions: [
           _dialogAction(
             context,
@@ -1055,6 +1055,12 @@ Future<bool> confirmDestructive(
   return result ?? false;
 }
 
+/// A dialog's message: centered on iPhone, as its own alerts are; at the
+/// start on Android, as Material's (2026-11-23: start everywhere since
+/// 10/18 read oddly on iPhone).
+Widget _dialogMessage(String message, {required bool ios}) =>
+    BalancedText(message, textAlign: ios ? TextAlign.center : TextAlign.start);
+
 /// A dialog that just asks one question with two answers, e.g. whether to
 /// also add a duty to someone. Returns true for [yes].
 Future<bool?> askChoice(
@@ -1070,7 +1076,7 @@ Future<bool?> askChoice(
       final ios = Theme.of(context).platform == TargetPlatform.iOS;
       return AlertDialog.adaptive(
         title: Text(title),
-        content: message == null ? null : BalancedText(message, textAlign: TextAlign.start),
+        content: message == null ? null : _dialogMessage(message, ios: ios),
         actions: [
           _dialogAction(context, ios, no, () => Navigator.pop(context, false)),
           _dialogAction(

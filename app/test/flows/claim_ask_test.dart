@@ -111,7 +111,7 @@ void main() {
     expect(findShownContaining('說自己是「王小明」'), findsOneWidget);
     await tester.tap(find.bySemanticsLabel('確認小明'));
     await settle(tester);
-    expect(find.text('合併「王小明」？'), findsOneWidget);
+    expect(find.text('王小明和小明是同一個人？'), findsOneWidget);
     expect(findShownContaining('喜樂小組'), findsWidgets);
     await tapText(tester, '合併');
 
