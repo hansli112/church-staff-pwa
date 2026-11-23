@@ -208,13 +208,18 @@ class UnavailableRound {
   String toString() => 'UnavailableRound($from–$to at $at, told $told, sent $sent)';
 }
 
-/// The weekdays (1 = Monday … 7 = Sunday) [me] serves on, those of the
-/// services they are one of the 同工 of: on 不能服事的日子 the others are
-/// dimmed. None for one in no service, who has none dimmed.
-Set<int> servedWeekdays(Member me, Iterable<Service> services) {
+/// The weekdays (1 = Monday … 7 = Sunday) dimmed on [me]'s 不能服事的日子:
+/// those none of the services they are one of the 同工 of meet on. None
+/// for one in no service, who might serve any day.
+Set<int> dimmedWeekdays(Member me, Iterable<Service> services) {
   final mine = me.zoneTypes.toSet();
-  return {
+  final served = {
     for (final s in services)
       if (mine.contains(s.id)) ...s.weekdays,
+  };
+  if (served.isEmpty) return const {};
+  return {
+    for (var w = DateTime.monday; w <= DateTime.sunday; w++)
+      if (!served.contains(w)) w,
   };
 }

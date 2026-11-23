@@ -176,7 +176,7 @@ class _UnavailableScreenState extends ConsumerState<UnavailableScreen> {
     ];
     final services = ref.watch(servicesProvider).value;
     final me = ref.watch(meProvider).value;
-    final served = me == null || services == null ? const <int>{} : servedWeekdays(me, services.services);
+    final dimmed = me == null || services == null ? const <int>{} : dimmedWeekdays(me, services.services);
     ref.listen(myUnavailableDaysProvider, (_, _) => _settle());
     final askedState = ref.watch(unavailableAskedProvider);
     final asked = askedState.value;
@@ -236,7 +236,7 @@ class _UnavailableScreenState extends ConsumerState<UnavailableScreen> {
                   month: Day(today.year, today.month + _page, 1),
                   today: today,
                   days: days,
-                  served: served,
+                  dimmed: dimmed,
                   onTap: _toggle,
                   onDrag: _drag,
                   onShift: (by) => setState(() {
@@ -319,7 +319,7 @@ class _Month extends StatefulWidget {
     required this.month,
     required this.today,
     required this.days,
-    required this.served,
+    required this.dimmed,
     required this.onTap,
     required this.onDrag,
     required this.onShift,
@@ -332,12 +332,9 @@ class _Month extends StatefulWidget {
   final Day today;
   final UnavailableDays days;
 
-  /// The weekdays I serve on (1 = Monday … 7 = Sunday): the others are
-  /// dimmed, still to be marked. None: none dimmed.
-  final Set<int> served;
-
-  /// Whether [weekday] is one I serve on, or there are none.
-  bool _serves(int weekday) => served.isEmpty || served.contains(weekday);
+  /// The weekdays (1 = Monday … 7 = Sunday) none of my services meet on:
+  /// dimmed, still to be marked.
+  final Set<int> dimmed;
 
   final ValueChanged<Day> onTap;
 
@@ -426,7 +423,9 @@ class _MonthState extends State<_Month> {
                       textAlign: TextAlign.center,
                       style: AppText.caption.copyWith(
                         // Those I serve on stand out, when the others are dimmed.
-                        color: widget.served.contains(start.addDays(i).weekday) ? c.label : c.secondaryLabel,
+                        color: widget.dimmed.isNotEmpty && !widget.dimmed.contains(start.addDays(i).weekday)
+                            ? c.label
+                            : c.secondaryLabel,
                       ),
                     ),
                   ),
@@ -520,9 +519,9 @@ class _MonthState extends State<_Month> {
                 ? c.tertiaryLabel
                 : marked
                 ? c.accent
-                : widget._serves(day.weekday)
-                ? c.label
-                : c.secondaryLabel,
+                : widget.dimmed.contains(day.weekday)
+                ? c.secondaryLabel
+                : c.label,
             fontWeight: day == widget.today || marked ? FontWeight.w600 : null,
           ),
         ),

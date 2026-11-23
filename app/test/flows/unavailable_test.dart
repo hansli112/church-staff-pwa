@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
 import 'package:material_symbols_icons/symbols.dart';
+import 'package:martha/core/design/tokens.dart';
 import 'package:martha/data/backend.dart';
 import 'package:martha/data/memory/memory_backend.dart';
 import 'package:martha/domain/day.dart';
@@ -61,6 +62,16 @@ Future<void> dragAcross(WidgetTester tester, int from, int to) async {
   await settle(tester);
 }
 
+/// The color October [day] is shown in.
+Future<Color?> dayColor(WidgetTester tester, int day) async =>
+    tester.widget<Text>(find.descendant(of: await october(tester, day), matching: find.byType(Text))).style?.color;
+
+/// The color of [weekday]'s letter atop the month.
+Color? weekdayColor(WidgetTester tester, String weekday) => tester
+    .widget<Text>(find.descendant(of: find.byType(ExcludeSemantics), matching: find.text(weekday)).first)
+    .style
+    ?.color;
+
 bool shownMarked(WidgetTester tester, int day) {
   final f = find.byWidgetPredicate(
     (w) => w is Semantics && (w.properties.label?.startsWith('2026年10月$day日') ?? false),
@@ -89,6 +100,35 @@ void main() {
     expect(meisDays(b)!.isEmpty, isTrue);
     expect(find.text('這幾天你已經被排到'), findsNothing);
     expect(telemetry.named('unavailable_set'), [null, null], reason: 'each change kept');
+  });
+
+  testWidgets('the weekdays one does not serve on are dimmed, and still marked with a tap', (tester) async {
+    const c = AppColors.light;
+    final b = seededChurch(as: staffMei);
+    await pumpApp(tester, b);
+    await go(tester, '/me/unavailable');
+
+    expect(weekdayColor(tester, '日'), c.label, reason: '李美玉 serves on Sundays');
+    expect(weekdayColor(tester, '一'), c.secondaryLabel);
+    expect(await dayColor(tester, 4), c.label);
+    expect(await dayColor(tester, 5), c.secondaryLabel);
+    expect(await dayColor(tester, 5), isNot(c.tertiaryLabel), reason: 'not to be taken for a day gone by');
+
+    await tester.tap(await october(tester, 5));
+    await settle(tester);
+    expect(meisDays(b), const UnavailableDays().add(_oct(5), _oct(5)));
+    expect(await dayColor(tester, 5), c.accent);
+  });
+
+  testWidgets('one in no service has none dimmed', (tester) async {
+    const c = AppColors.light;
+    await pumpApp(tester, seededChurch(as: john));
+    await go(tester, '/me/unavailable');
+
+    expect(await dayColor(tester, 4), c.label);
+    expect(await dayColor(tester, 5), c.label);
+    await top(tester);
+    expect(weekdayColor(tester, '日'), c.secondaryLabel, reason: 'the weekdays as they were, none standing out');
   });
 
   testWidgets('the months go on through next December, so all of next year can be marked', (tester) async {

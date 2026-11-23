@@ -106,7 +106,7 @@ void main() {
     expect(round.currentOn(Day(2027, 1, 1)), isFalse);
   });
 
-  test('the weekdays one serves on: those of their services; none for one in none', () {
+  test("the weekdays dimmed: those none of one's services meet on; none for one in no service", () {
     const services = [
       Service(id: 'sunday', name: '主日崇拜', weekdays: [7]),
       Service(id: 'dawn', name: '晨更', weekdays: [1, 2, 3, 4, 5]),
@@ -120,7 +120,7 @@ void main() {
         Zone(serviceType: 'prayer'),
       ],
     );
-    expect(servedWeekdays(mei, services), {3, 7});
-    expect(servedWeekdays(const Member(uid: 'hao', name: '陳志豪'), services), isEmpty);
+    expect(dimmedWeekdays(mei, services), {1, 2, 4, 5, 6});
+    expect(dimmedWeekdays(const Member(uid: 'hao', name: '陳志豪'), services), isEmpty);
   });
 }
