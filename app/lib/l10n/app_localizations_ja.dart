@@ -3454,11 +3454,6 @@ class L10nJa extends L10n {
   String get planAskUnavailable => '奉仕できない日の入力を依頼';
 
   @override
-  String planAskedLast(String date) {
-    return '前回の依頼 $date';
-  }
-
-  @override
   String get rosterShareImage => '画像で共有';
 
   @override

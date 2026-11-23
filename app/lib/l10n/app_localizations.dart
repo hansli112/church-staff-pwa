@@ -6082,12 +6082,6 @@ abstract class L10n {
   /// **'請同工填不能服事日'**
   String get planAskUnavailable;
 
-  /// No description provided for @planAskedLast.
-  ///
-  /// In zh, this message translates to:
-  /// **'上次 {date} 通知過'**
-  String planAskedLast(String date);
-
   /// Menu on 安排服事: a month of the service's roster as a picture to send to a group chat
   ///
   /// In zh, this message translates to:

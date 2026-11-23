@@ -1021,7 +1021,6 @@
   "pickerUnavailableBecause": "この日は不可：{note}",
   "dutyUpdatedUnavailable": "{duty}を更新しました・{names}はこの日は不可",
   "planAskUnavailable": "奉仕できない日の入力を依頼",
-  "planAskedLast": "前回の依頼 {date}",
   "rosterShareImage": "画像で共有",
   "rosterImageTitle": "{service} {month}",
   "share": "共有",

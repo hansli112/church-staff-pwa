@@ -3452,11 +3452,6 @@ class L10nKo extends L10n {
   String get planAskUnavailable => '봉사할 수 없는 날 입력 요청';
 
   @override
-  String planAskedLast(String date) {
-    return '마지막 요청 $date';
-  }
-
-  @override
   String get rosterShareImage => '이미지로 공유';
 
   @override

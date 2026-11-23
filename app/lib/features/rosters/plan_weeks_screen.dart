@@ -287,12 +287,11 @@ class _PlanWeeksScreenState extends ConsumerState<PlanWeeksScreen> with SingleTi
     final some = !ref.watch(arrangesProvider(type)).all;
     final canAsk = _askedToFill(type).isNotEmpty;
     // Read ahead, for the months' sheet to say.
-    final asked = ref.watch(lastUnavailableAskProvider(type)).value;
     return PopupMenuButton<String>(
       tooltip: MaterialLocalizations.of(context).moreButtonTooltip,
       icon: const Icon(Symbols.more_horiz_rounded),
       onSelected: (v) => switch (v) {
-        'ask' => _askUnavailable(type, from, asked: asked),
+        'ask' => _askUnavailable(type, from),
         'photo' => context.push('/rosters/import/$type'),
         'image' => showRosterImage(context, serviceType: type, month: from),
         'table' => context.push('/rosters/table/$type'),
@@ -317,26 +316,35 @@ class _PlanWeeksScreenState extends ConsumerState<PlanWeeksScreen> with SingleTi
     return askedToFill(ref.watch(membersProvider).value ?? const [], type, ref.watch(arrangesProvider(type)), me.uid);
   }
 
-  /// 通知同工填 (#91): through which month, from [from], saying when it
-  /// [asked] last; then, asked first as
-  /// it cannot be taken back, one push each.
-  Future<void> _askUnavailable(String type, Day from, {DateTime? asked}) async {
+  /// 通知同工填 (#91): through which month, from [from], the months in a
+  /// grid by year; then, asked first as it cannot be taken back, one push
+  /// each.
+  Future<void> _askUnavailable(String type, Day from) async {
     final l10n = L10n.of(context);
+    final choices = [
+      for (var i = 0; i < monthsThroughNextYear(from, today: ref.read(todayProvider)); i++)
+        Day(from.year, from.month + i, 1),
+    ];
     final to = await showAppSheet<Day>(
       context,
       builder: (context) => SafeArea(
         child: SingleChildScrollView(
-          child: ListSection(
-            header: l10n.planAskUntil,
-            // When it last asked, so it is not asked twice by mistake.
-            footer: asked == null ? null : l10n.planAskedLast(DateFormat.MMMd().format(asked)),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              for (var i = 0; i < monthsThroughNextYear(from, today: ref.read(todayProvider)); i++)
-                if (Day(from.year, from.month + i, 1) case final month)
-                  ListRow(
-                    title: DateFormat.yMMMM().format(month.midnight),
-                    onTap: () => Navigator.pop(context, month),
-                  ),
+              Padding(
+                padding: const EdgeInsets.only(bottom: Space.s),
+                child: Text(l10n.planAskUntil, style: AppText.headline, textAlign: TextAlign.center),
+              ),
+              for (final year in {for (final m in choices) m.year})
+                _MonthGrid(
+                  year: year,
+                  months: [
+                    for (final m in choices)
+                      if (m.year == year) m,
+                  ],
+                  onPick: (month) => Navigator.pop(context, month),
+                ),
             ],
           ),
         ),
@@ -1372,5 +1380,70 @@ Future<void> _tellPlanned(
     }
   } catch (e) {
     if (toasts.mounted) showToast(toasts, errorText(l10n, e), onRetry: onRetry);
+  }
+}
+
+/// One year's months in 要填到哪個月？, four to a row; a tap picks.
+class _MonthGrid extends StatelessWidget {
+  const _MonthGrid({required this.year, required this.months, required this.onPick});
+
+  final int year;
+  final List<Day> months;
+  final ValueChanged<Day> onPick;
+
+  @override
+  Widget build(BuildContext context) {
+    final c = AppColors.of(context);
+    final year = DateFormat.y().format(DateTime(this.year));
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(Space.m, Space.s, Space.m, Space.s),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Padding(
+            padding: const EdgeInsets.fromLTRB(Space.m, 0, Space.m, Space.s),
+            child: Text(year, style: AppText.footnote.copyWith(color: c.secondaryLabel)),
+          ),
+          DecoratedBox(
+            decoration: BoxDecoration(color: c.surface, borderRadius: BorderRadius.circular(Radii.m)),
+            child: Padding(
+              padding: const EdgeInsets.all(Space.m - Space.xs),
+              child: LayoutBuilder(
+                builder: (context, box) {
+                  final width = (box.maxWidth - 3 * Space.s) / 4;
+                  return Wrap(
+                    spacing: Space.s,
+                    runSpacing: Space.s,
+                    children: [
+                      for (final month in months)
+                        SizedBox(
+                          width: width,
+                          height: Space.minTap(Theme.of(context).platform),
+                          child: Semantics(
+                            button: true,
+                            label: DateFormat.yMMMM().format(month.midnight),
+                            excludeSemantics: true,
+                            child: Material(
+                              color: c.background,
+                              borderRadius: BorderRadius.circular(Radii.s + 2),
+                              child: InkWell(
+                                borderRadius: BorderRadius.circular(Radii.s + 2),
+                                onTap: () => onPick(month),
+                                child: Center(
+                                  child: Text(DateFormat.MMM().format(month.midnight), style: AppText.body),
+                                ),
+                              ),
+                            ),
+                          ),
+                        ),
+                    ],
+                  );
+                },
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
   }
 }

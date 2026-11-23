@@ -2382,8 +2382,6 @@
   "@dutyUpdatedUnavailable": {"description": "Toast after picking someone who marked the day as one they can't serve", "placeholders": {"duty": {"type": "String"}, "names": {"type": "String"}}},
   "planAskUnavailable": "請同工填不能服事日",
   "@planAskUnavailable": {"description": "Menu on 安排服事 (#91): pushes the people on the lists to mark the days they can't serve"},
-  "planAskedLast": "上次 {date} 通知過",
-  "@planAskedLast": {"placeholders": {"date": {"type": "String"}}},
   "rosterShareImage": "分享成圖片",
   "@rosterShareImage": {"description": "Menu on 安排服事: a month of the service's roster as a picture to send to a group chat"},
   "rosterImageTitle": "{service} {month}",

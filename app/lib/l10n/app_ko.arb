@@ -1021,7 +1021,6 @@
   "pickerUnavailableBecause": "이날은 안 돼요: {note}",
   "dutyUpdatedUnavailable": "{duty}을(를) 바꿨어요 · {names}은(는) 이날 안 돼요",
   "planAskUnavailable": "봉사할 수 없는 날 입력 요청",
-  "planAskedLast": "마지막 요청 {date}",
   "rosterShareImage": "이미지로 공유",
   "rosterImageTitle": "{service} {month}",
   "share": "공유",

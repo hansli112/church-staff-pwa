@@ -1021,7 +1021,6 @@
   "pickerUnavailableBecause": "Can't serve this day: {note}",
   "dutyUpdatedUnavailable": "Updated {duty} · {names} can't serve this day",
   "planAskUnavailable": "Ask for days they can't serve",
-  "planAskedLast": "Last asked {date}",
   "rosterShareImage": "Share as image",
   "rosterImageTitle": "{service} · {month}",
   "share": "Share",

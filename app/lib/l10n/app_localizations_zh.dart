@@ -3449,11 +3449,6 @@ class L10nZh extends L10n {
   String get planAskUnavailable => '請同工填不能服事日';
 
   @override
-  String planAskedLast(String date) {
-    return '上次 $date 通知過';
-  }
-
-  @override
   String get rosterShareImage => '分享成圖片';
 
   @override
@@ -7064,11 +7059,6 @@ class L10nZhHans extends L10nZh {
 
   @override
   String get planAskUnavailable => '请同工填不能事奉日';
-
-  @override
-  String planAskedLast(String date) {
-    return '上次 $date 通知过';
-  }
 
   @override
   String get rosterShareImage => '分享为图片';

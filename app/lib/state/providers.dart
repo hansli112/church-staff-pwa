@@ -314,12 +314,6 @@ final unavailableDaysProvider = StreamProvider<Map<String, UnavailableDays>>((re
   return openChurch(ref).unavailable.everyones();
 });
 
-/// When 通知同工填 last asked for [serviceType] (#91).
-final lastUnavailableAskProvider = StreamProvider.autoDispose.family<DateTime?, String>((ref, serviceType) {
-  if (!ref.watch(_arrangesRostersProvider)) return Stream.value(null);
-  return openChurch(ref).unavailable.lastAsk(serviceType);
-});
-
 /// 找人代／交換 (#92) I asked for that are still open.
 final myOpenSwapRequestsProvider = StreamProvider<List<SwapRequest>>((ref) {
   if (ref.watch(uidProvider) == null) return Stream.value(const []);

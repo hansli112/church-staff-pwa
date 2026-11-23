@@ -194,7 +194,9 @@ void main() {
     expect(findShownContaining('這天不行'), findsOneWidget);
   });
 
-  testWidgets('通知同工填 asks those on the lists, through the month picked, once confirmed', (tester) async {
+  testWidgets('通知同工填 asks those on the lists, through the month picked from a grid by year, once confirmed', (
+    tester,
+  ) async {
     final b = seededChurch(as: editor);
     final telemetry = RecordingTelemetry();
     await pumpApp(tester, b, overrides: [telemetryProvider.overrideWithValue(telemetry)]);
@@ -204,9 +206,18 @@ void main() {
     await settle(tester);
     await tester.tap(find.text('請同工填不能服事日'));
     await settle(tester);
-    expect(find.text('2027年12月'), findsOneWidget, reason: 'all of next year');
-    expect(find.text('2028年1月'), findsNothing);
-    await tester.tap(find.text('2026年12月').last);
+    expect(find.bySemanticsLabel('2027年12月'), findsOneWidget, reason: 'all of next year');
+    expect(find.bySemanticsLabel('2028年1月'), findsNothing);
+    expect(find.text('2026年'), findsOneWidget);
+    expect(find.text('2027年'), findsOneWidget);
+    expect(find.text('12月'), findsNWidgets(2), reason: 'each year its own months');
+    expect(
+      tester.getTopLeft(find.text('2027年')).dy,
+      greaterThan(tester.getTopLeft(find.bySemanticsLabel('2026年12月').last).dy),
+      reason: 'next year below this one',
+    );
+    expect(findShownContaining('通知過'), findsNothing, reason: 'not when it last asked');
+    await tester.tap(find.bySemanticsLabel('2026年12月').last);
     await settle(tester);
     expect(find.text('要通知 2 位同工填 10月到12月不能服事的日子嗎？'), findsOneWidget);
     await tester.tap(find.text('取消'));
@@ -217,7 +228,7 @@ void main() {
     await settle(tester);
     await tester.tap(find.text('請同工填不能服事日'));
     await settle(tester);
-    await tester.tap(find.text('2026年12月').last);
+    await tester.tap(find.bySemanticsLabel('2026年12月').last);
     await settle(tester);
     await tester.tap(find.text('通知'));
     await settle(tester);
@@ -228,13 +239,6 @@ void main() {
     expect(telemetry.named('unavailable_ask'), [
       {'people': 2},
     ], reason: 'once confirmed, not the time 取消 was tapped');
-
-    await tester.tap(find.byIcon(Symbols.more_horiz_rounded));
-    await settle(tester);
-    expect(find.text('上次 10月1日 通知過'), findsNothing, reason: 'the menu only names what it does');
-    await tester.tap(find.text('請同工填不能服事日'));
-    await settle(tester);
-    expect(find.text('上次 10月1日 通知過'), findsOneWidget, reason: 'where the months are picked');
   });
 
   testWidgets('with nobody on the lists to ask, 通知 is greyed', (tester) async {

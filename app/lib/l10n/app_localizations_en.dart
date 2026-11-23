@@ -3648,11 +3648,6 @@ class L10nEn extends L10n {
   String get planAskUnavailable => 'Ask for days they can\'t serve';
 
   @override
-  String planAskedLast(String date) {
-    return 'Last asked $date';
-  }
-
-  @override
   String get rosterShareImage => 'Share as image';
 
   @override

@@ -1021,7 +1021,6 @@
   "pickerUnavailableBecause": "这天不行：{note}",
   "dutyUpdatedUnavailable": "已更新{duty} · {names}这天不行",
   "planAskUnavailable": "请同工填不能事奉日",
-  "planAskedLast": "上次 {date} 通知过",
   "rosterShareImage": "分享为图片",
   "rosterImageTitle": "{service} {month}",
   "share": "分享",
