@@ -71,6 +71,7 @@ void main() {
       expect(find.text('青年崇拜 牧者'), findsOneWidget);
       await tapText(tester, '新增身分');
       await tapText(tester, '牧者');
+      expect(find.text('什麼都能管'), findsNothing, reason: '全教會 says it (2026-11-23)');
       await tapText(tester, '全教會');
       final mei = b.members['grace']!['mei']!;
       expect(mei.identities, const [PastorIdentity(null)]);

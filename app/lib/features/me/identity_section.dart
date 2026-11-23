@@ -134,7 +134,7 @@ class IdentitySection extends ConsumerWidget {
         return const OfficeIdentity();
       case 'pastor':
         final id = await _choose<String>(context, l10n.pickPastorScope, [
-          ('', l10n.wholeChurch, l10n.canAdmin),
+          ('', l10n.wholeChurch, null),
           for (final s in services) (s.id, s.name, null),
         ]);
         return id == null ? null : PastorIdentity(id.isEmpty ? null : [id]);
