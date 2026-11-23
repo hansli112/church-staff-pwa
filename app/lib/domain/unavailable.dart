@@ -207,3 +207,14 @@ class UnavailableRound {
   @override
   String toString() => 'UnavailableRound($from–$to at $at, told $told, sent $sent)';
 }
+
+/// The weekdays (1 = Monday … 7 = Sunday) [me] serves on, those of the
+/// services they are one of the 同工 of: on 不能服事的日子 the others are
+/// dimmed. None for one in no service, who has none dimmed.
+Set<int> servedWeekdays(Member me, Iterable<Service> services) {
+  final mine = me.zoneTypes.toSet();
+  return {
+    for (final s in services)
+      if (mine.contains(s.id)) ...s.weekdays,
+  };
+}

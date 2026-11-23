@@ -105,4 +105,22 @@ void main() {
     expect(round.currentOn(Day(2026, 12, 31)), isTrue);
     expect(round.currentOn(Day(2027, 1, 1)), isFalse);
   });
+
+  test('the weekdays one serves on: those of their services; none for one in none', () {
+    const services = [
+      Service(id: 'sunday', name: '主日崇拜', weekdays: [7]),
+      Service(id: 'dawn', name: '晨更', weekdays: [1, 2, 3, 4, 5]),
+      Service(id: 'prayer', name: '禱告會', weekdays: [3]),
+    ];
+    const mei = Member(
+      uid: 'mei',
+      name: '李美玉',
+      zones: [
+        Zone(serviceType: 'sunday'),
+        Zone(serviceType: 'prayer'),
+      ],
+    );
+    expect(servedWeekdays(mei, services), {3, 7});
+    expect(servedWeekdays(const Member(uid: 'hao', name: '陳志豪'), services), isEmpty);
+  });
 }

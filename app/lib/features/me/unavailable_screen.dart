@@ -175,6 +175,8 @@ class _UnavailableScreenState extends ConsumerState<UnavailableScreen> {
         if (days.during(s.roster.day, s.roster.lastDay) != null && !s.roster.lastDay.isBefore(today)) s,
     ];
     final services = ref.watch(servicesProvider).value;
+    final me = ref.watch(meProvider).value;
+    final served = me == null || services == null ? const <int>{} : servedWeekdays(me, services.services);
     ref.listen(myUnavailableDaysProvider, (_, _) => _settle());
     final askedState = ref.watch(unavailableAskedProvider);
     final asked = askedState.value;
@@ -234,6 +236,7 @@ class _UnavailableScreenState extends ConsumerState<UnavailableScreen> {
                   month: Day(today.year, today.month + _page, 1),
                   today: today,
                   days: days,
+                  served: served,
                   onTap: _toggle,
                   onDrag: _drag,
                   onShift: (by) => setState(() {
@@ -316,6 +319,7 @@ class _Month extends StatefulWidget {
     required this.month,
     required this.today,
     required this.days,
+    required this.served,
     required this.onTap,
     required this.onDrag,
     required this.onShift,
@@ -327,6 +331,14 @@ class _Month extends StatefulWidget {
   final Day month;
   final Day today;
   final UnavailableDays days;
+
+  /// The weekdays I serve on (1 = Monday … 7 = Sunday): the others are
+  /// dimmed, still to be marked. None: none dimmed.
+  final Set<int> served;
+
+  /// Whether [weekday] is one I serve on, or there are none.
+  bool _serves(int weekday) => served.isEmpty || served.contains(weekday);
+
   final ValueChanged<Day> onTap;
 
   /// [from] to [to] dragged over: to clear when it started on a marked day.
@@ -412,7 +424,10 @@ class _MonthState extends State<_Month> {
                     child: Text(
                       material.narrowWeekdays[(firstWeekday + i) % 7],
                       textAlign: TextAlign.center,
-                      style: AppText.caption.copyWith(color: c.secondaryLabel),
+                      style: AppText.caption.copyWith(
+                        // Those I serve on stand out, when the others are dimmed.
+                        color: widget.served.contains(start.addDays(i).weekday) ? c.label : c.secondaryLabel,
+                      ),
                     ),
                   ),
               ],
@@ -501,7 +516,13 @@ class _MonthState extends State<_Month> {
         child: Text(
           '${day.day}',
           style: AppText.subheadline.copyWith(
-            color: past ? c.tertiaryLabel : (marked ? c.accent : c.label),
+            color: past
+                ? c.tertiaryLabel
+                : marked
+                ? c.accent
+                : widget._serves(day.weekday)
+                ? c.label
+                : c.secondaryLabel,
             fontWeight: day == widget.today || marked ? FontWeight.w600 : null,
           ),
         ),
