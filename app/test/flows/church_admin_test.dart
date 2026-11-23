@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:material_symbols_icons/symbols.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -148,15 +150,8 @@ void main() {
       tester,
     ) async {
       final b = seededChurch();
-      b.addPending('grace', const PendingMember(id: 'old-huang', name: '黃鎮台'));
       await pumpApp(tester, b);
       await go(tester, '/me/members/mei');
-      await tester.tap(find.byIcon(Symbols.edit_rounded));
-      await settle(tester);
-      await tester.enterText(find.byType(TextField).last, '黃鎮台');
-      await tapText(tester, '儲存');
-      expect(find.text('教會裡已經有人叫「黃鎮台」'), findsOneWidget, reason: 'one without an account would be taken for her');
-
       await tapText(tester, '李美玉');
       await tester.enterText(find.byType(TextField).last, '美玉姐');
       await tapText(tester, '儲存');
@@ -166,6 +161,68 @@ void main() {
       await tapText(tester, '復原');
       expect(b.members['grace']!['mei']!.name, '李美玉');
     });
+
+    testWidgets('a name someone has is said as it is typed, and 儲存 waits for another', (tester) async {
+      final b = seededChurch();
+      await pumpApp(tester, b);
+      await go(tester, '/me/members/mei');
+      await tapText(tester, '李美玉');
+      await tester.enterText(find.byType(TextField).last, '陳志豪 ');
+      await settle(tester);
+      expect(find.text('教會裡已經有人叫「陳志豪」'), findsOneWidget, reason: 'before 儲存, not after the backend says so');
+      await tapText(tester, '儲存');
+      expect(find.byType(TextField), findsWidgets, reason: 'still asking');
+      expect(b.members['grace']!['mei']!.name, '李美玉');
+    });
+
+    testWidgets('a new name shows at once while the backend renames them, and comes off again if it cannot', (
+      tester,
+    ) async {
+      final b = seededChurch();
+      await pumpApp(tester, b);
+      await go(tester, '/me/members/mei');
+      b.renameHeld = Completer();
+      await tapText(tester, '李美玉');
+      await tester.enterText(find.byType(TextField).last, '美玉姐');
+      await tapText(tester, '儲存');
+      expect(find.text('美玉姐'), findsOneWidget, reason: 'the title, though the server has not answered');
+      b.renameHeld!.complete();
+      await settle(tester);
+      expect(find.text('已改名'), findsOneWidget);
+      expect(b.members['grace']!['mei']!.name, '美玉姐');
+
+      b.renameHeld = Completer();
+      await tapText(tester, '美玉姐');
+      await tester.enterText(find.byType(TextField).last, '美玉');
+      await tapText(tester, '儲存');
+      expect(find.text('美玉'), findsOneWidget);
+      b.renameHeld!.completeError(const CloudException(CloudErrorCode.unavailable));
+      await settle(tester);
+      expect(find.text('美玉姐'), findsOneWidget, reason: 'as it is');
+      expect(find.text('美玉'), findsNothing);
+    });
+
+    testWidgets(
+      'an admin giving the name of one without an account is asked whether they are one person, and merges them',
+      (
+        tester,
+      ) async {
+        final b = seededChurch();
+        b.addPending('grace', const PendingMember(id: 'old-huang', name: '黃鎮台'));
+        await pumpApp(tester, b);
+        await go(tester, '/me/members/mei');
+        await tapText(tester, '李美玉');
+        await tester.enterText(find.byType(TextField).last, '黃鎮台');
+        await settle(tester);
+        expect(find.text('黃鎮台是沒有帳號的同工'), findsOneWidget);
+        await tapText(tester, '儲存');
+        expect(find.text('黃鎮台和李美玉是同一個人？'), findsOneWidget);
+        await tapText(tester, '合併');
+        expect(b.pendingMembers['grace']!.containsKey('old-huang'), isFalse);
+        expect(b.members['grace']!['mei']!.name, '黃鎮台');
+        expect(find.text('已合併'), findsOneWidget);
+      },
+    );
 
     testWidgets('行政 open anyone but an admin: their name and services, no 身分, merging or removing', (tester) async {
       final b = seededChurch(as: office, extra: [office]);
@@ -181,6 +238,12 @@ void main() {
       await tapText(tester, '加入聚會');
       await tapText(tester, '青年崇拜');
       expect(b.members['grace']!['mei']!.zoneTypes, ['sunday', 'youth']);
+
+      await tapText(tester, '李美玉');
+      await tester.enterText(find.byType(TextField).last, '黃鎮台');
+      await settle(tester);
+      expect(find.text('教會裡已經有人叫「黃鎮台」'), findsOneWidget, reason: 'merging is an admin\'s');
+      await tapText(tester, '取消');
 
       await go(tester, '/me/members/pastor');
       expect(find.text('加入聚會'), findsNothing, reason: 'an admin is the admins\' to change');

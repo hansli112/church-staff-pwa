@@ -371,6 +371,7 @@
   "pushView": "보기",
   "nameTaken": "‘{name}’이라는 사람이 이미 있어요",
   "@nameTaken": {"placeholders": {"name": {"type": "String"}}},
+  "renameNoAccount": "‘{name}’ 님은 계정 없는 멤버예요",
   "staffDuties": "담당",
   "joinService": "예배에 추가",
   "leaveService": "{service}에서 빼기",

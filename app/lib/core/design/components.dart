@@ -1095,8 +1095,9 @@ Future<bool?> askChoice(
 /// Asks for a line of text. Null when cancelled or empty; with
 /// [optional], empty is an answer and only cancelling is null. The action
 /// is [action], or 「儲存」. [helper] says something under the field about
-/// what is typed so far. Platform style, as the other dialogs: on iPhone,
-/// Apple's alert with a text field.
+/// what is typed so far; [error], what keeps it from being saved, said as
+/// it is typed and holding the action back (a name someone has). Platform
+/// style, as the other dialogs: on iPhone, Apple's alert with a text field.
 Future<String?> promptText(
   BuildContext context, {
   required String title,
@@ -1108,6 +1109,7 @@ Future<String?> promptText(
   String? action,
   bool optional = false,
   String? Function(String text)? helper,
+  String? Function(String text)? error,
 }) async {
   final result = await showAdaptiveDialog<String>(
     context: context,
@@ -1120,6 +1122,7 @@ Future<String?> promptText(
       maxLines: maxLines,
       action: action,
       helper: helper,
+      error: error,
     ),
   );
   final t = result?.trim();
@@ -1138,6 +1141,7 @@ class _PromptDialog extends StatefulWidget {
     required this.maxLines,
     this.action,
     this.helper,
+    this.error,
   });
 
   final String title;
@@ -1148,6 +1152,7 @@ class _PromptDialog extends StatefulWidget {
   final int maxLines;
   final String? action;
   final String? Function(String text)? helper;
+  final String? Function(String text)? error;
 
   @override
   State<_PromptDialog> createState() => _PromptDialogState();
@@ -1156,7 +1161,7 @@ class _PromptDialog extends StatefulWidget {
 class _PromptDialogState extends State<_PromptDialog> {
   late final _controller = TextEditingController(text: widget.initial)
     ..addListener(() {
-      if (widget.helper != null) setState(() {});
+      if (widget.helper != null || widget.error != null) setState(() {});
     });
 
   @override
@@ -1169,8 +1174,12 @@ class _PromptDialogState extends State<_PromptDialog> {
   Widget build(BuildContext context) {
     final l10n = L10n.of(context);
     final oneLine = widget.maxLines == 1;
-    final helper = widget.helper?.call(_controller.text);
-    void submit(String v) => Navigator.pop(context, v);
+    final error = widget.error?.call(_controller.text);
+    final helper = error == null ? widget.helper?.call(_controller.text) : null;
+    void submit(String v) {
+      if (error == null) Navigator.pop(context, v);
+    }
+
     if (Theme.of(context).platform == TargetPlatform.iOS) {
       final c = AppColors.of(context);
       return CupertinoAlertDialog(
@@ -1190,10 +1199,13 @@ class _PromptDialogState extends State<_PromptDialog> {
               textInputAction: oneLine ? TextInputAction.done : null,
               onSubmitted: oneLine ? submit : null,
             ),
-            if (helper != null)
+            if (error ?? helper case final said?)
               Padding(
                 padding: const EdgeInsets.only(top: Space.xs),
-                child: BalancedText(helper, style: AppText.footnote.copyWith(color: c.secondaryLabel)),
+                child: BalancedText(
+                  said,
+                  style: AppText.footnote.copyWith(color: error != null ? c.destructive : c.secondaryLabel),
+                ),
               ),
           ],
         ),
@@ -1203,7 +1215,7 @@ class _PromptDialogState extends State<_PromptDialog> {
             context,
             true,
             widget.action ?? l10n.save,
-            () => submit(_controller.text),
+            error == null ? () => submit(_controller.text) : null,
             defaultAction: true,
           ),
         ],
@@ -1223,12 +1235,17 @@ class _PromptDialogState extends State<_PromptDialog> {
           hintText: widget.hint,
           helperText: helper,
           helperMaxLines: 3,
+          errorText: error,
+          errorMaxLines: 3,
         ),
         onSubmitted: oneLine ? submit : null,
       ),
       actions: [
         TextButton(onPressed: () => Navigator.pop(context), child: Text(l10n.cancel)),
-        TextButton(onPressed: () => submit(_controller.text), child: Text(widget.action ?? l10n.save)),
+        TextButton(
+          onPressed: error == null ? () => submit(_controller.text) : null,
+          child: Text(widget.action ?? l10n.save),
+        ),
       ],
     );
   }
@@ -1238,7 +1255,7 @@ Widget _dialogAction(
   BuildContext context,
   bool ios,
   String label,
-  VoidCallback onPressed, {
+  VoidCallback? onPressed, {
   Color? color,
   bool destructive = false,
   bool defaultAction = false,

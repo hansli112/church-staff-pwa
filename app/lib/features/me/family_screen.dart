@@ -6,14 +6,20 @@ import '../../core/design/components.dart';
 import '../../domain/family.dart';
 import '../../l10n/app_localizations.dart';
 import '../../state/providers.dart';
+import '../../state/shown_changes.dart';
 import '../common/errors.dart';
+import '../common/saving_indicator.dart';
 import 'no_account_picker.dart';
+
+/// 家人 added or taken out (null) here, by ID, shown before the backend has it.
+final _familyShown = NotifierProvider<ShownChanges<FamilyPerson?>, Map<String, FamilyPerson?>>(ShownChanges.new);
 
 /// 「設定 → 家人」: my family in this church. 加入家人 picks anyone in the
 /// church: one without an account is in at once, one with an account is
 /// asked and shows 等對方接受 until they accept (收回 takes it back). 移出
 /// one without an account can be undone; one with an account is asked
-/// first, as they would have to accept again.
+/// first, as they would have to accept again. Each shows at once, the
+/// backend taking seconds (2026-11-23).
 class FamilyScreen extends ConsumerWidget {
   const FamilyScreen({super.key});
 
@@ -45,13 +51,14 @@ class FamilyScreen extends ConsumerWidget {
       ),
     );
     if (picked == null || !context.mounted) return;
-    await _run(context, () => ref.churchData.addFamily(picked.id));
+    final shown = FamilyPerson(id: picked.id, name: picked.name, account: picked.account, asked: picked.account);
+    await _run(context, ref, picked.id, shown, () => ref.churchData.addFamily(picked.id));
   }
 
   Future<void> _remove(BuildContext context, WidgetRef ref, FamilyPerson p) async {
     final l10n = L10n.of(context);
     if (p.asked) {
-      await _run(context, () => ref.churchData.removeFamily(p.id));
+      await _run(context, ref, p.id, null, () => ref.churchData.removeFamily(p.id));
       return;
     }
     if (p.account) {
@@ -62,20 +69,28 @@ class FamilyScreen extends ConsumerWidget {
         no: l10n.cancel,
       );
       if (ok != true || !context.mounted) return;
-      await _run(context, () => ref.churchData.removeFamily(p.id));
+      await _run(context, ref, p.id, null, () => ref.churchData.removeFamily(p.id));
       return;
     }
     final data = ref.churchData;
-    if (await _run(context, () => data.removeFamily(p.id)) && context.mounted) {
-      showToast(context, l10n.familyMovedOut(p.name), onUndo: () => data.addFamily(p.id));
+    final shown = ref.read(_familyShown.notifier);
+    if (await _run(context, ref, p.id, null, () => data.removeFamily(p.id)) && context.mounted) {
+      showToast(context, l10n.familyMovedOut(p.name), onUndo: () => shown.show(p.id, p, () => data.addFamily(p.id)));
     }
   }
 
-  /// Runs [write], saying why when it is refused. Whether it went through.
-  Future<bool> _run(BuildContext context, Future<void> Function() write) async {
+  /// Runs [write], [id] shown as [person] (null: out) meanwhile, saying
+  /// why when it is refused. Whether it went through.
+  Future<bool> _run(
+    BuildContext context,
+    WidgetRef ref,
+    String id,
+    FamilyPerson? person,
+    Future<void> Function() write,
+  ) async {
     final l10n = L10n.of(context);
     try {
-      await write();
+      await ref.read(_familyShown.notifier).show(id, person, write);
       return true;
     } catch (e) {
       if (context.mounted) showToast(context, errorText(l10n, e));
@@ -87,9 +102,16 @@ class FamilyScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final l10n = L10n.of(context);
     final me = ref.watch(meProvider).value;
-    final family = ref.watch(familyProvider);
+    final changed = ref.watch(_familyShown);
+    final had = ref.watch(familyProvider);
+    final family = [
+      for (final p in had)
+        if (!changed.containsKey(p.id)) p else ?changed[p.id],
+      for (final MapEntry(key: id, value: p) in changed.entries)
+        if (p != null && !had.any((h) => h.id == id)) p,
+    ];
     return Scaffold(
-      appBar: AppBar(title: Text(l10n.family)),
+      appBar: AppBar(title: Text(l10n.family), actions: const [SavingIndicator()]),
       body: ListView(
         children: [
           ListSection(

@@ -748,6 +748,11 @@
       }
     }
   },
+  "renameNoAccount": "{name}是沒有帳號的同工",
+  "@renameNoAccount": {
+    "description": "Under the name typed in 改名: it is the name of one of the 同工 without an account, whom 儲存 offers to merge with them.",
+    "placeholders": {"name": {"type": "String"}}
+  },
   "eventRosterGone": "找不到這個活動的服事表",
   "eventRoster": "服事表",
   "eventRosterPeople": "{count} 人",

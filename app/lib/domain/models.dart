@@ -1298,9 +1298,9 @@ class PendingMember {
   PendingMember withoutDuty(String serviceType, String duty) =>
       copyWith(zones: asMember(const []).withoutDuty(serviceType, duty).zones);
 
-  PendingMember copyWith({List<Zone>? zones, Set<String>? smallGroups}) => PendingMember(
+  PendingMember copyWith({String? name, List<Zone>? zones, Set<String>? smallGroups}) => PendingMember(
     id: id,
-    name: name,
+    name: name ?? this.name,
     email: email,
     role: role,
     groups: groups,

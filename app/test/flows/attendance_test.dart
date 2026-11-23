@@ -234,6 +234,35 @@ void main() {
     expect(b.members['grace']!['hao']!.identities, [SmallGroupLead(made.id)]);
   });
 
+  testWidgets('刪除小組 goes back at once, the 小組 off the list while the backend deletes it, and back if it cannot', (
+    tester,
+  ) async {
+    final b = withJoy(seededChurch(as: editor));
+    await pumpApp(tester, b);
+    await go(tester, '/me/groups/service/sunday/small-groups');
+    Future<void> delete() async {
+      await tapText(tester, '喜樂小組');
+      await tester.scrollUntilVisible(find.text('刪除小組'), 300);
+      await tapText(tester, '刪除小組');
+      await tester.tap(find.text('刪除小組').last);
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 500));
+    }
+
+    b.smallGroupSaveHeld = Completer();
+    await delete();
+    expect(find.text('喜樂小組'), findsNothing, reason: 'off the list at once, though the server has not answered');
+    b.smallGroupSaveHeld!.completeError(const CloudException(CloudErrorCode.unavailable));
+    await settle(tester);
+    expect(find.text('喜樂小組'), findsOneWidget, reason: 'back, as the server has it');
+
+    b.smallGroupSaveHeld = null;
+    await delete();
+    await settle(tester);
+    expect(b.smallGroups['grace']!.containsKey('joy'), isFalse);
+    expect(find.text('已刪除「喜樂小組」'), findsOneWidget);
+  });
+
   testWidgets('a 小組 has one 小組長: another picked takes the place, and 取消指派 leaves none', (tester) async {
     final b = withJoy(seededChurch(as: editor));
     await pumpApp(tester, b);

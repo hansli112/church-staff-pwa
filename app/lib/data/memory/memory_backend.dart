@@ -265,9 +265,19 @@ class MemoryBackend implements Backend {
   /// as on a slow network.
   Completer<void>? invitePreviewHeld;
 
-  /// Scripted: while set, opening or changing a 小組 waits for this to
-  /// complete, as on a slow network or a cold start.
+  /// Scripted: while set, opening, changing or deleting a 小組 waits for
+  /// this to complete, as on a slow network or a cold start. Completing it
+  /// with an error fails it.
   Completer<void>? smallGroupSaveHeld;
+
+  /// Scripted: while set, adding or taking out 家人 waits for this to
+  /// complete, as on a slow network or a cold start.
+  Completer<void>? familyHeld;
+
+  /// Scripted: while set, renaming someone (renameMember, renamePending)
+  /// waits for this to complete, as the backend takes seconds over a
+  /// church's rosters. Completing it with an error fails it.
+  Completer<void>? renameHeld;
 
   /// Scripted: while set, 合併 (mergePending) waits for this to complete,
   /// as it takes seconds on the real backend.

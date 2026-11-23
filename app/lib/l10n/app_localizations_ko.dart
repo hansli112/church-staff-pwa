@@ -1228,6 +1228,11 @@ class L10nKo extends L10n {
   }
 
   @override
+  String renameNoAccount(String name) {
+    return '‘$name’ 님은 계정 없는 멤버예요';
+  }
+
+  @override
   String get eventRosterGone => '이 행사의 봉사표를 찾을 수 없어요';
 
   @override

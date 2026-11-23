@@ -371,6 +371,7 @@
   "pushView": "View",
   "nameTaken": "Someone here is already called {name}",
   "@nameTaken": {"placeholders": {"name": {"type": "String"}}},
+  "renameNoAccount": "{name} is a team member without an account",
   "staffDuties": "Roles",
   "joinService": "Add to a service",
   "leaveService": "Remove from {service}",

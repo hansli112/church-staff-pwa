@@ -2254,6 +2254,12 @@ abstract class L10n {
   /// **'不再是{service}的同工'**
   String zoneLeft(String service);
 
+  /// Under the name typed in 改名: it is the name of one of the 同工 without an account, whom 儲存 offers to merge with them.
+  ///
+  /// In zh, this message translates to:
+  /// **'{name}是沒有帳號的同工'**
+  String renameNoAccount(String name);
+
   /// No description provided for @eventRosterGone.
   ///
   /// In zh, this message translates to:

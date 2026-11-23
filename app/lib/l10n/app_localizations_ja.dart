@@ -1227,6 +1227,11 @@ class L10nJa extends L10n {
   }
 
   @override
+  String renameNoAccount(String name) {
+    return '「$name」はアカウントのないメンバーです';
+  }
+
+  @override
   String get eventRosterGone => 'この行事の奉仕表が見つかりません';
 
   @override

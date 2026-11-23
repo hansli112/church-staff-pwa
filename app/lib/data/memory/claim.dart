@@ -3,6 +3,7 @@ part of 'memory_backend.dart';
 /// [MemoryChurchData] as functions/src/claim.ts and claimAsks.ts do it.
 mixin _MemoryClaim on _MemoryChurchBase implements ClaimData {
   Future<void> renamePending(String id, String name) async {
+    await _b.renameHeld?.future;
     // As functions/src/claim.ts renamePending.
     final me = _b.functionAccess(churchId, allowed: (me) => me.inGroup(Group.rosterEditors))!;
     final named = _text(name, TextLimits.profileName);
@@ -33,6 +34,7 @@ mixin _MemoryClaim on _MemoryChurchBase implements ClaimData {
   }
 
   Future<void> renameMember(String uid, String name) async {
+    await _b.renameHeld?.future;
     // As functions/src/renames.ts renameMember.
     final me = _b.functionAccess(churchId, allowed: (me) => me.inGroup(Group.rosterEditors))!;
     final named = _text(name, TextLimits.profileName);

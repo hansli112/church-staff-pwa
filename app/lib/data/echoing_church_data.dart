@@ -198,8 +198,8 @@ class EchoingChurchData implements ChurchData {
   JoiningData get joining => _inner.joining;
 
   /// The calls that change what is listed show it at once: who is in a
-  /// group, on a duty's list, added by name; the rest as the backend has
-  /// them.
+  /// group, on a duty's list, added by name, renamed (seconds on the
+  /// backend, over every roster); the rest as the backend has them.
   @override
   Future<R> run<R>(ChurchCall<R> call) async {
     final echo = switch (call) {
@@ -210,10 +210,13 @@ class EchoingChurchData implements ChurchData {
         members: {uid: (m) => on ? m.withDuty(serviceType, duty) : m.withoutDuty(serviceType, duty)},
         pending: {uid: (p) => on ? p?.withDuty(serviceType, duty) : p?.withoutDuty(serviceType, duty)},
       ),
+      RenameMember(:final uid, :final name) => _Echo(members: {uid: (m) => m.copyWith(name: name.trim())}),
+      RenamePending(:final id, :final name) => _Echo(pending: {id: (p) => p?.copyWith(name: name.trim())}),
       // The new 同工 shows once the backend gives them an ID.
       AddByName() => _Echo(pending: {}),
       // Seconds on the backend, shown on its way (儲存中…) with nothing to echo.
-      MergePending() => _Echo(),
+      MergePending() || AddFamily() || RemoveFamily() || RemoveFromHousehold() => _Echo(),
+      DeleteSmallGroup(:final id) => _Echo(smallGroups: {id: null}),
       _ => null,
     };
     if (echo == null) return _inner.run(call);
@@ -428,7 +431,10 @@ class EchoingChurchData implements ChurchData {
     for (final echo in _echoes) {
       for (final MapEntry(key: id, value: after) in echo.smallGroups.entries) {
         if (!_shows(echo, ('smallGroup', id), server.byId(id) == after, arrived)) continue;
-        shown = [for (final g in shown) g.id == id ? after : g];
+        shown = [
+          for (final g in shown)
+            if (g.id != id) g else ?after,
+        ];
       }
     }
     return shown;
@@ -489,7 +495,8 @@ class _Echo {
   final Member Function(Member)? everyMember;
 
   /// Each 小組 changed.
-  final Map<String, SmallGroupDetails> smallGroups;
+  /// Each changed, or (null) deleted.
+  final Map<String, SmallGroupDetails?> smallGroups;
 
   /// Each 同工 without an account changed or added, from what is shown of
   /// them (null: not yet).

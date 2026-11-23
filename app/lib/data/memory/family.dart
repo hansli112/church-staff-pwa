@@ -43,6 +43,7 @@ mixin _MemoryFamily on _MemoryChurchBase implements FamilyData {
   }
 
   Future<void> addFamily(String id) async {
+    await _b.familyHeld?.future;
     final me = _b.functionAccess(churchId, allowed: (_) => true)!;
     if (id == me.uid) throw const CloudException(CloudErrorCode.unknown);
     final member = _b.memberOf(churchId, id);
@@ -127,6 +128,7 @@ mixin _MemoryFamily on _MemoryChurchBase implements FamilyData {
   }
 
   Future<void> removeFamily(String id) async {
+    await _b.familyHeld?.future;
     final me = _b.functionAccess(churchId, allowed: (_) => true)!;
     for (final h in [..._households.values]) {
       if (h.people.contains(me.uid)) _put(_without(h, id));
@@ -135,6 +137,7 @@ mixin _MemoryFamily on _MemoryChurchBase implements FamilyData {
   }
 
   Future<void> removeFromHousehold(String householdId, String id) async {
+    await _b.familyHeld?.future;
     _b.functionAccess(churchId, allowed: (m) => m.isAdmin);
     final h = _households[householdId];
     if (h == null || !h.people.contains(id)) throw const CloudException(CloudErrorCode.notFound);

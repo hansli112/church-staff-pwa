@@ -371,6 +371,7 @@
   "pushView": "表示",
   "nameTaken": "「{name}」という人がもういます",
   "@nameTaken": {"placeholders": {"name": {"type": "String"}}},
+  "renameNoAccount": "「{name}」はアカウントのないメンバーです",
   "staffDuties": "担当",
   "joinService": "集会に加える",
   "leaveService": "{service}から外す",

@@ -656,7 +656,8 @@ class GroupScreen extends ConsumerWidget {
     return Scaffold(
       appBar: AppBar(
         title: Text(name),
-        actions: admin ? savingActions(guide) : guide,
+        // Leads' changes wait on the backend as much as an admin's (2026-11-23).
+        actions: savingActions(guide),
       ),
       body: CustomScrollView(
         slivers: [
@@ -921,14 +922,16 @@ class GroupScreen extends ConsumerWidget {
       action: l10n.deleteSmallGroup,
     );
     if (!ok || !context.mounted) return;
+    // Back at once, off the list while the backend deletes it (2026-11-23);
+    // said on the page under it, this one gone.
+    final feedback = Navigator.of(context).context;
+    final data = ref.churchData;
+    context.pop();
     try {
-      await ref.churchData.deleteSmallGroup(small.id);
-      if (context.mounted) {
-        showToast(context, l10n.smallGroupDeleted(small.name));
-        context.pop();
-      }
+      await data.deleteSmallGroup(small.id);
+      if (feedback.mounted) showToast(feedback, l10n.smallGroupDeleted(small.name));
     } catch (e) {
-      if (context.mounted) showToast(context, saveErrorText(l10n, e));
+      if (feedback.mounted) showToast(feedback, saveErrorText(l10n, e));
     }
   }
 

@@ -1,6 +1,9 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
+import 'package:martha/data/backend.dart';
 import 'package:martha/data/memory/memory_backend.dart';
 import 'package:martha/domain/day.dart';
 import 'package:martha/domain/family.dart';
@@ -52,7 +55,12 @@ void main() {
     await pumpApp(tester, b);
     await go(tester, '/me');
     await tapText(tester, '家人');
+    b.familyHeld = Completer();
     await add(tester, '李小恩');
+    expect(find.text('李小恩'), findsOneWidget, reason: 'in at once, though the server has not answered');
+    b.familyHeld!.complete();
+    b.familyHeld = null;
+    await settle(tester);
     expect(find.text('李美玉（你）'), findsOneWidget);
     expect(find.text('李小恩'), findsOneWidget);
     expect(find.text('沒有帳號'), findsOneWidget);
@@ -65,6 +73,14 @@ void main() {
     expect(find.textContaining('招待'), findsNWidgets(3), reason: '10/4 and 10/11 mine, 10/11 his');
 
     await go(tester, '/me/family');
+    b.familyHeld = Completer();
+    await tapText(tester, '移出');
+    expect(find.text('李小恩'), findsNothing, reason: 'out at once, though the server has not answered');
+    expect(find.text('儲存中…'), findsOneWidget);
+    b.familyHeld!.completeError(const CloudException(CloudErrorCode.unavailable));
+    await settle(tester);
+    expect(find.text('李小恩'), findsOneWidget, reason: 'back, as the server has it');
+    b.familyHeld = null;
     await tapText(tester, '移出');
     expect(findShown('已把李小恩移出家人'), findsOneWidget);
     expect(b.households['grace'], isEmpty);
@@ -143,7 +159,11 @@ void main() {
     await tester.tap(find.bySemanticsLabel('把李小恩移出John Chen的家'));
     await settle(tester);
     expect(findShown('把李小恩移出John Chen的家？'), findsOneWidget);
+    b.familyHeld = Completer();
     await tapText(tester, '移出');
+    expect(find.text('John Chen'), findsNothing, reason: 'out at once, though the server has not answered');
+    b.familyHeld!.complete();
+    await settle(tester);
     expect(b.households['grace']!.keys, ['h1', 'h3'], reason: 'a family of one is none');
     expect(find.text('John Chen'), findsNothing);
   });

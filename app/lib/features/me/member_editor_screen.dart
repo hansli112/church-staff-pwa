@@ -7,9 +7,11 @@ import '../../core/design/tokens.dart';
 import '../../domain/family.dart';
 import '../../domain/limits.dart';
 import '../../domain/models.dart';
+import '../../domain/text.dart' show nameKey;
 import '../../l10n/app_localizations.dart';
 import '../../state/church_writes.dart';
 import '../../state/providers.dart';
+import '../../state/shown_changes.dart';
 import '../common/errors.dart';
 import '../common/saving_indicator.dart';
 import 'identity_section.dart';
@@ -86,26 +88,62 @@ class MemberEditorScreen extends ConsumerWidget {
     await mergePendingInto(context, ref, picked, member);
   }
 
-  /// 改名: [member]'s name in this church, on the rosters too, with 復原.
+  /// 改名: [member]'s name in this church, on the rosters too, with 復原,
+  /// shown at once while the backend renames them (2026-11-23). A name one
+  /// of the others has is said as it is typed; an admin giving the name of
+  /// one without an account is asked whether they are one person, and
+  /// merges them.
   Future<void> _rename(BuildContext context, WidgetRef ref, Member member) async {
     final l10n = L10n.of(context);
-    final next = await promptText(
-      context,
-      title: l10n.rename,
-      label: l10n.name,
-      initial: member.name,
-      maxLength: TextLimits.profileName,
-    );
-    if (next == null || next == member.name || !context.mounted) return;
+    final admin = ref.read(meProvider).value?.isAdmin ?? false;
+    final others = _OtherNames(ref, self: member.uid);
     final data = ref.churchData;
-    try {
-      await data.renameMember(member.uid, next);
-      Haptics.success();
-      if (context.mounted) {
-        showToast(context, l10n.pendingRenamed, onUndo: () => data.renameMember(member.uid, member.name));
+    var typed = member.name;
+    while (true) {
+      if (!context.mounted) return;
+      final next = await promptText(
+        context,
+        title: l10n.rename,
+        label: l10n.name,
+        initial: typed,
+        maxLength: TextLimits.profileName,
+        // Merging is an admin's: to 行政, one without an account is a name taken.
+        error: (t) => others.taken(t, merging: admin) ? l10n.nameTaken(t.trim()) : null,
+        helper: (t) => switch (others.pending(t)) {
+          final p? when admin => l10n.renameNoAccount(p.name),
+          _ => null,
+        },
+      );
+      if (next == null || next == member.name || !context.mounted) return;
+      final p = admin ? others.pending(next) : null;
+      if (p == null) {
+        await runWithUndo(
+          context,
+          l10n.pendingRenamed,
+          () => (done: data.renameMember(member.uid, next), undo: () => data.renameMember(member.uid, member.name)),
+        );
+        return;
       }
-    } catch (e) {
-      if (context.mounted) showToast(context, nameErrorText(l10n, e, next));
+      // Not one person after all: the name typed, asked again.
+      if (!await confirmMerge(context, ref, p, member.name)) {
+        typed = next;
+        continue;
+      }
+      try {
+        await data.mergePending(p.id, member.uid);
+      } catch (e) {
+        if (context.mounted) showToast(context, errorText(l10n, e));
+        return;
+      }
+      try {
+        await data.renameMember(member.uid, next);
+        Haptics.success();
+        if (context.mounted) showToast(context, l10n.merged);
+      } catch (e) {
+        // Merged, which stays, but still called what they were.
+        if (context.mounted) showToast(context, nameErrorText(l10n, e, next));
+      }
+      return;
     }
   }
 
@@ -291,7 +329,7 @@ class _NoAccountScreen extends ConsumerWidget {
         if (!zoneTypes.contains(s.id)) s,
     ];
     return Scaffold(
-      appBar: AppBar(title: Text(name)),
+      appBar: AppBar(title: Text(name), actions: const [SavingIndicator()]),
       body: ListView(
         children: [
           // Whoever arranges them tells them: said once, at the top.
@@ -349,25 +387,27 @@ class _NoAccountScreen extends ConsumerWidget {
     );
   }
 
-  /// A typo fixed: their name here and on the rosters they are on.
+  /// A typo fixed: their name here and on the rosters they are on, shown
+  /// at once while the backend renames them. A name one of the others has
+  /// is said as it is typed.
   Future<void> _rename(BuildContext context, WidgetRef ref, String name) async {
     final l10n = L10n.of(context);
+    final others = _OtherNames(ref, self: id);
     final next = await promptText(
       context,
       title: l10n.rename,
       label: l10n.name,
       initial: name,
       maxLength: TextLimits.profileName,
+      error: (t) => others.taken(t, merging: false) ? l10n.nameTaken(t.trim()) : null,
     );
     if (next == null || next == name || !context.mounted) return;
-    try {
-      await ref.churchData.renamePending(id, next);
-      Haptics.success();
-      if (context.mounted) showToast(context, l10n.pendingRenamed);
-    } catch (e) {
-      if (!context.mounted) return;
-      showToast(context, nameErrorText(l10n, e, next));
-    }
+    final data = ref.churchData;
+    await runWithUndo(
+      context,
+      l10n.pendingRenamed,
+      () => (done: data.renamePending(id, next), undo: () => data.renamePending(id, name)),
+    );
   }
 
   /// Deleted once confirmed; their name stays on the rosters.
@@ -391,6 +431,10 @@ class _NoAccountScreen extends ConsumerWidget {
   }
 }
 
+/// Those taken out of a family here, by `<family>/<person>`, before the
+/// backend has it.
+final _takenOut = NotifierProvider<ShownChanges<bool>, Map<String, bool>>(ShownChanges.new);
+
 /// 家人, for an admin on [id]'s page: each family they are in, by the
 /// others' names, with 移出 (a parent who added someone not theirs, say).
 class _FamiliesSection extends ConsumerWidget {
@@ -408,16 +452,22 @@ class _FamiliesSection extends ConsumerWidget {
       no: l10n.cancel,
     );
     if (ok != true || !context.mounted) return;
-    await savedOrSaid(context, ref.churchData.removeFromHousehold(h.id, id));
+    final data = ref.churchData;
+    // Out at once, the backend taking seconds (2026-11-23).
+    await savedOrSaid(
+      context,
+      ref.read(_takenOut.notifier).show('${h.id}/$id', true, () => data.removeFromHousehold(h.id, id)),
+    );
   }
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final l10n = L10n.of(context);
     // One who only asked someone has no family yet.
+    final out = ref.watch(_takenOut);
     final families = [
       for (final h in ref.watch(householdsOfProvider(id)).value ?? const <Household>[])
-        if (h.people.any((p) => p != id)) h,
+        if (h.people.any((p) => p != id) && !out.containsKey('${h.id}/$id')) h,
     ];
     if (families.isEmpty) return const SizedBox.shrink();
     return ListSection(
@@ -487,5 +537,33 @@ class NameTitle extends StatelessWidget {
         ),
       ),
     );
+  }
+}
+
+/// Who else in the church goes by a name, however written ([nameKey]), as
+/// the backend tells them apart: a member, or one without an account; read
+/// as they are each time, the lists loading while a name is typed.
+class _OtherNames {
+  _OtherNames(this._ref, {required this.self});
+
+  final WidgetRef _ref;
+
+  /// The one being renamed: a member's uid, or the ID of one without an
+  /// account.
+  final String self;
+
+  Member? member(String name) => _named(_ref.read(membersProvider).value, name, (m) => m.uid, (m) => m.name);
+
+  PendingMember? pending(String name) =>
+      _named(_ref.read(pendingMembersProvider).value, name, (p) => p.id, (p) => p.name);
+
+  /// Whether [name] is someone else's; one without an account is only
+  /// when not [merging] into them.
+  bool taken(String name, {required bool merging}) => member(name) != null || !merging && pending(name) != null;
+
+  T? _named<T>(List<T>? people, String name, String Function(T) id, String Function(T) nameOf) {
+    final key = nameKey(name);
+    if (key.isEmpty) return null;
+    return people?.where((p) => id(p) != self && nameKey(nameOf(p)) == key).firstOrNull;
   }
 }

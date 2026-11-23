@@ -1227,6 +1227,11 @@ class L10nZh extends L10n {
   }
 
   @override
+  String renameNoAccount(String name) {
+    return '$name是沒有帳號的同工';
+  }
+
+  @override
   String get eventRosterGone => '找不到這個活動的服事表';
 
   @override
@@ -4957,6 +4962,11 @@ class L10nZhHans extends L10nZh {
   @override
   String zoneLeft(String service) {
     return '不再属于$service';
+  }
+
+  @override
+  String renameNoAccount(String name) {
+    return '$name是没有账号的同工';
   }
 
   @override

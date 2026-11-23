@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
@@ -166,13 +168,19 @@ void main() {
     await go(tester, '/me/members/old-huang');
     await tapText(tester, '名字');
     await tester.enterText(find.byType(TextField).last, '李美玉');
+    await settle(tester);
+    expect(find.text('教會裡已經有人叫「李美玉」'), findsOneWidget, reason: 'as it is typed');
     await tapText(tester, '儲存');
-    expect(find.text('教會裡已經有人叫「李美玉」'), findsOneWidget);
     expect(b.pendingMembers['grace']!['old-huang']!.name, '黃鎮台');
+    await tapText(tester, '取消');
 
     await tapText(tester, '名字');
     await tester.enterText(find.byType(TextField).last, '黃振台');
+    b.renameHeld = Completer();
     await tapText(tester, '儲存');
+    expect(find.text('黃振台'), findsWidgets, reason: 'shown at once, though the server has not answered');
+    b.renameHeld!.complete();
+    await settle(tester);
     expect(find.text('已改名'), findsOneWidget);
     expect(b.pendingMembers['grace']!['old-huang']!.name, '黃振台');
     final duty = savedDay(b, 11).duties.single;

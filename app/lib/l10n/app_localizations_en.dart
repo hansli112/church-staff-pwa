@@ -1265,6 +1265,11 @@ class L10nEn extends L10n {
   }
 
   @override
+  String renameNoAccount(String name) {
+    return '$name is a team member without an account';
+  }
+
+  @override
   String get eventRosterGone => 'Can’t find this event’s schedule';
 
   @override

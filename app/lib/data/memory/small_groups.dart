@@ -111,6 +111,7 @@ mixin _MemorySmallGroups on _MemoryChurchBase {
   }
 
   Future<void> deleteSmallGroup(String id) async {
+    await _b.smallGroupSaveHeld?.future;
     final me = _b.functionAccess(churchId)!;
     final was = _b.smallGroups[churchId]?[id];
     if (was == null) throw const CloudException(CloudErrorCode.notFound);
