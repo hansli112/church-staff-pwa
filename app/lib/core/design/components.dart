@@ -1717,7 +1717,10 @@ class _SwipeActionState extends State<SwipeAction> with SingleTickerProviderStat
     if (!widget.enabled) return widget.child;
     final c = AppColors.of(context);
     final label = widget.label ?? L10n.of(context).delete;
-    final style = AppText.body.copyWith(color: c.onAccent);
+    // Measured as drawn, in the app's font: measured in another, the
+    // button came out narrower than the word, and only 刪 showed.
+    final style = DefaultTextStyle.of(context).style.merge(AppText.body.copyWith(color: c.onAccent));
+    final locale = Localizations.maybeLocaleOf(context);
     return Semantics(
       customSemanticsActions: {CustomSemanticsAction(label: widget.semanticLabel ?? label): widget.onAction},
       child: LayoutBuilder(
@@ -1727,8 +1730,9 @@ class _SwipeActionState extends State<SwipeAction> with SingleTickerProviderStat
             text: TextSpan(text: label, style: style),
             textDirection: Directionality.of(context),
             textScaler: MediaQuery.textScalerOf(context),
+            locale: locale,
           )..layout();
-          _button = (painter.width + Space.l * 2).clamp(80.0, _width / 2);
+          _button = (painter.width.ceilToDouble() + Space.l * 2).clamp(80.0, _width / 2);
           painter.dispose();
           return GestureDetector(
             behavior: HitTestBehavior.translucent,
@@ -1763,7 +1767,7 @@ class _SwipeActionState extends State<SwipeAction> with SingleTickerProviderStat
                                             : AlignmentDirectional.center,
                                         child: Padding(
                                           padding: const EdgeInsets.symmetric(horizontal: Space.l),
-                                          child: Text(label, style: style, maxLines: 1),
+                                          child: Text(label, style: style, maxLines: 1, softWrap: false),
                                         ),
                                       ),
                                     ),

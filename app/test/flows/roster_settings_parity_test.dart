@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/rendering.dart';
 import 'package:material_symbols_icons/symbols.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
@@ -235,6 +236,9 @@ void main() {
         findsOneWidget,
         reason: row,
       );
+      // The whole word on one line, not 刪 with 除 cut off below it.
+      final word = tester.renderObject<RenderParagraph>(find.descendant(of: swiped, matching: find.text('刪除')));
+      expect(word.didExceedMaxLines, isFalse, reason: row);
       await swipe.cancel();
       await settle(tester);
     }
