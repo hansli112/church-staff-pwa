@@ -32,23 +32,24 @@ Future<void> scrollTo(WidgetTester tester, String text) async {
 void main() {
   group('members', () {
     testWidgets('an admin gives a 身分 and takes it back (#82); only 行政 says what it is when picked', (tester) async {
-      final b = seededChurch();
+      final b = seededChurch(
+        extra: [
+          staffMei.withIdentities(const [ServiceLead('sunday')]),
+        ],
+      );
       await pumpApp(tester, b);
       await go(tester, '/me/members');
       expect(find.text('5 位同工'), findsOneWidget);
       await tapText(tester, '李美玉');
+      expect(find.text('主日崇拜 負責人'), findsOneWidget, reason: 'a 負責人 given on its page is listed here too');
       await tapText(tester, '新增身分');
       expect(findShown('排所有服事表、改所有活動和同工，不能給身分、改設定'), findsOneWidget, reason: 'how 行政 differs from 管理員');
-      expect(findShown('什麼都能管'), findsNothing, reason: '管理員 says it');
-      await tapText(tester, '聚會負責人');
-      await tapText(tester, '主日崇拜');
-      final mei = b.members['grace']!['mei']!;
-      expect(mei.identities, const [ServiceLead('sunday')]);
-      expect(mei.canEditRosters('sunday'), isTrue);
-      expect(find.text('主日崇拜 負責人'), findsOneWidget);
-      expect(findShown('排主日崇拜的服事表、加入和移出它的同工'), findsNothing, reason: 'the name says it');
-
-      await tapText(tester, '新增身分');
+      expect(find.text('管理員'), findsOneWidget);
+      expect(find.text('牧者'), findsOneWidget);
+      for (final lead in ['聚會負責人', '事工負責人', '小組長']) {
+        expect(find.text(lead), findsNothing, reason: 'given on its own page (2026-11-23)');
+      }
+      expect(findShown('負責人、小組長到聚會、服事項目或小組的頁面指派'), findsOneWidget);
       await tapText(tester, '行政');
       expect(b.members['grace']!['mei']!.groups, {Group.rosterEditors, Group.calendarEditors});
 

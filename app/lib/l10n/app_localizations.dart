@@ -1342,18 +1342,6 @@ abstract class L10n {
   /// **'負責人'**
   String get identityLead;
 
-  /// Picking a 身分: lead of a service
-  ///
-  /// In zh, this message translates to:
-  /// **'聚會負責人'**
-  String get identityServiceLead;
-
-  /// Picking a 身分: lead of a ministry
-  ///
-  /// In zh, this message translates to:
-  /// **'事工負責人'**
-  String get identityMinistryLead;
-
   /// What an admin (or a whole church's pastor) can do; one sentence
   ///
   /// In zh, this message translates to:
@@ -1407,18 +1395,6 @@ abstract class L10n {
   /// In zh, this message translates to:
   /// **'牧養範圍'**
   String get pickPastorScope;
-
-  /// Header: pick a service
-  ///
-  /// In zh, this message translates to:
-  /// **'選聚會'**
-  String get pickService;
-
-  /// Header: pick a ministry
-  ///
-  /// In zh, this message translates to:
-  /// **'選事工'**
-  String get pickMinistry;
 
   /// Page and row in 管理教會: the church's services and ministries
   ///
@@ -5164,12 +5140,6 @@ abstract class L10n {
   /// **'管{group}的活動、回報人數，加入和移出它的同工'**
   String canSmallGroupLead(String group);
 
-  /// Sheet header: which 小組 the 小組長 leads
-  ///
-  /// In zh, this message translates to:
-  /// **'選小組'**
-  String get pickSmallGroup;
-
   /// Section on a service's page: its 小組 (#85); on a member's page, the row whose menu ticks theirs
   ///
   /// In zh, this message translates to:
@@ -6549,6 +6519,12 @@ abstract class L10n {
   /// In zh, this message translates to:
   /// **'沒有'**
   String get servicePartNone;
+
+  /// Under 新增身分's list on a member's page: where leads are assigned instead
+  ///
+  /// In zh, this message translates to:
+  /// **'負責人、小組長到聚會、服事項目或小組的頁面指派'**
+  String get addIdentityLeadsElsewhere;
 }
 
 class _L10nDelegate extends LocalizationsDelegate<L10n> {

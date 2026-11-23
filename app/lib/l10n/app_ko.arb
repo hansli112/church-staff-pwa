@@ -224,8 +224,6 @@
   "identityPastorOf": "{services} 목회자",
   "identityLeadOf": "{group} 리더",
   "identityLead": "리더",
-  "identityServiceLead": "예배 리더",
-  "identityMinistryLead": "사역팀 리더",
   "canAdmin": "모든 것을 관리할 수 있어요",
   "canOffice": "모든 봉사표, 일정, 멤버를 편집할 수 있지만 역할과 설정은 바꿀 수 없어요",
   "canServiceLead": "{service}의 봉사표를 편집하고 멤버를 추가하거나 뺄 수 있어요",
@@ -235,8 +233,6 @@
   "identityAdded": "‘{identity}’ 추가함",
   "wholeChurch": "교회 전체",
   "pickPastorScope": "목회 범위",
-  "pickService": "예배 선택",
-  "pickMinistry": "사역팀 선택",
   "groupsTitle": "예배와 사역팀",
   "groupsSub": "담당, 리더, 멤버",
   "ministries": "사역팀",
@@ -863,7 +859,6 @@
   "identitySmallGroupLead": "소그룹 리더",
   "identitySmallGroupLeadOf": "{group} 소그룹 리더",
   "canSmallGroupLead": "{group}의 행사를 관리하고 인원을 기록하며 멤버를 추가하거나 뺄 수 있어요",
-  "pickSmallGroup": "소그룹 선택",
   "smallGroups": "소그룹",
   "addSmallGroup": "소그룹 추가",
   "smallGroupName": "소그룹 이름",
@@ -1098,5 +1093,6 @@
   "myFamilyServicesTitle": "나와 가족의 다가오는 봉사",
   "serviceDutyCount": "{count}개",
   "serviceItemCount": "{count}개",
-  "servicePartNone": "없음"
+  "servicePartNone": "없음",
+  "addIdentityLeadsElsewhere": "리더와 소그룹 리더는 예배, 담당, 소그룹 페이지에서 지정해요"
 }

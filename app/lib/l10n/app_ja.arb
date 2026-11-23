@@ -224,8 +224,6 @@
   "identityPastorOf": "{services} 牧師",
   "identityLeadOf": "{group} リーダー",
   "identityLead": "リーダー",
-  "identityServiceLead": "集会リーダー",
-  "identityMinistryLead": "ミニストリーリーダー",
   "canAdmin": "すべて管理できる",
   "canOffice": "すべての奉仕表・行事・メンバーを編集できるが、役割と設定は変更できない",
   "canServiceLead": "{service}の奉仕表を編集し、メンバーを加えたり外したりできる",
@@ -235,8 +233,6 @@
   "identityAdded": "「{identity}」を追加しました",
   "wholeChurch": "教会全体",
   "pickPastorScope": "牧会の範囲",
-  "pickService": "集会を選ぶ",
-  "pickMinistry": "ミニストリーを選ぶ",
   "groupsTitle": "集会とミニストリー",
   "groupsSub": "担当、リーダー、メンバー",
   "ministries": "ミニストリー",
@@ -863,7 +859,6 @@
   "identitySmallGroupLead": "小グループリーダー",
   "identitySmallGroupLeadOf": "{group}の小グループリーダー",
   "canSmallGroupLead": "{group}の行事を管理し、人数を記録し、メンバーを加えたり外したりできる",
-  "pickSmallGroup": "小グループを選ぶ",
   "smallGroups": "小グループ",
   "addSmallGroup": "小グループを追加",
   "smallGroupName": "小グループ名",
@@ -1098,5 +1093,6 @@
   "myFamilyServicesTitle": "自分と家族のこれからの奉仕",
   "serviceDutyCount": "{count}件",
   "serviceItemCount": "{count}件",
-  "servicePartNone": "なし"
+  "servicePartNone": "なし",
+  "addIdentityLeadsElsewhere": "リーダー・小グループリーダーは、集会・担当・小グループのページで指名します"
 }

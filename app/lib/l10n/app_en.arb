@@ -224,8 +224,6 @@
   "identityPastorOf": "{services} pastor",
   "identityLeadOf": "{group} lead",
   "identityLead": "Lead",
-  "identityServiceLead": "Service lead",
-  "identityMinistryLead": "Ministry lead",
   "canAdmin": "Can manage everything",
   "canOffice": "Arranges every schedule, edits every event and team member, but not church roles or settings",
   "canServiceLead": "Arranges {service}'s schedules and adds or removes its team members",
@@ -235,8 +233,6 @@
   "identityAdded": "Added “{identity}”",
   "wholeChurch": "Whole church",
   "pickPastorScope": "Pastor of",
-  "pickService": "Pick a service",
-  "pickMinistry": "Pick a ministry",
   "groupsTitle": "Services & ministries",
   "groupsSub": "Roles, leads and team members",
   "ministries": "Ministries",
@@ -863,7 +859,6 @@
   "identitySmallGroupLead": "Small group leader",
   "identitySmallGroupLeadOf": "{group} small group leader",
   "canSmallGroupLead": "Runs {group}'s events, fills in its attendance and adds or removes its team members",
-  "pickSmallGroup": "Pick a small group",
   "smallGroups": "Small groups",
   "addSmallGroup": "Add a small group",
   "smallGroupName": "Small group name",
@@ -1098,5 +1093,6 @@
   "myFamilyServicesTitle": "Upcoming for You and Family",
   "serviceDutyCount": "{count, plural, =1{1 role} other{{count} roles}}",
   "serviceItemCount": "{count}",
-  "servicePartNone": "None"
+  "servicePartNone": "None",
+  "addIdentityLeadsElsewhere": "Leads and small group leaders are assigned on the page of their service, role or small group"
 }

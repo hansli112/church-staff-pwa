@@ -224,8 +224,6 @@
   "identityPastorOf": "{services} 牧者",
   "identityLeadOf": "{group} 负责人",
   "identityLead": "负责人",
-  "identityServiceLead": "聚会负责人",
-  "identityMinistryLead": "事工负责人",
   "canAdmin": "什么都能管",
   "canOffice": "排所有事奉表、改所有活动和同工，不能给身份、改设置",
   "canServiceLead": "排{service}的事奉表、加入和移出它的同工",
@@ -235,8 +233,6 @@
   "identityAdded": "已加上“{identity}”",
   "wholeChurch": "全教会",
   "pickPastorScope": "牧养范围",
-  "pickService": "选聚会",
-  "pickMinistry": "选事工",
   "groupsTitle": "聚会与事工",
   "groupsSub": "事奉项目、负责人、同工",
   "ministries": "事工",
@@ -863,7 +859,6 @@
   "identitySmallGroupLead": "小组长",
   "identitySmallGroupLeadOf": "{group} 小组长",
   "canSmallGroupLead": "管{group}的活动、回报人数，加入和移出它的同工",
-  "pickSmallGroup": "选小组",
   "smallGroups": "小组",
   "addSmallGroup": "新增小组",
   "smallGroupName": "小组名称",
@@ -1098,5 +1093,6 @@
   "myFamilyServicesTitle": "我和家人接下来的事奉",
   "serviceDutyCount": "{count} 项",
   "serviceItemCount": "{count} 个",
-  "servicePartNone": "没有"
+  "servicePartNone": "没有",
+  "addIdentityLeadsElsewhere": "负责人、小组长到聚会、事奉项目或小组的页面指派"
 }

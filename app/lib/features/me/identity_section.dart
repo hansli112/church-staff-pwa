@@ -11,9 +11,10 @@ import '../common/errors.dart';
 import '../common/labels.dart';
 
 /// A member's 身分 (#82), on their page, for an admin: each by its name,
-/// which says what it is, one more added from a short list (行政 and a
-/// whole church's 牧者 saying what they are, which their names do not),
-/// one taken away with 復原.
+/// which says what it is, one more added from a short list (行政 saying
+/// what it is, which its name does not), one taken away with 復原. Only the
+/// church-wide ones are added here: a 負責人 or 小組長 on the page of what
+/// they lead (2026-11-23), listed here too.
 ///
 /// An admin cannot take away what makes themself an admin (the rules
 /// refuse it too), so that row offers no removal on their own page.
@@ -98,83 +99,50 @@ class IdentitySection extends ConsumerWidget {
     if (context.mounted) showToast(context, done, onUndo: write.undo);
   }
 
-  /// A 身分 to add: its kind, then where it applies.
+  /// A 身分 to add: 管理員, 行政, or 牧者 and where they shepherd.
   Future<Identity?> _pick(BuildContext context, WidgetRef ref, List<Identity> held) async {
     final l10n = L10n.of(context);
     final services = ref.read(servicesProvider).value?.services ?? const <Service>[];
-    final ministries = ref.read(ministriesProvider).value?.ministries ?? const <Ministry>[];
-    final led = {
-      for (final i in held)
-        if (i case ServiceLead(:final service)) service,
-    };
-    final leadsMinistry = {
-      for (final i in held)
-        if (i case MinistryLead(:final ministry)) ministry,
-    };
-    final smallGroups = ref.read(smallGroupsProvider).value ?? const <SmallGroupDetails>[];
-    // A 小組 has one 小組長: one led, by them or anyone, is not offered.
-    final leadsSmallGroup = {
-      for (final i in held)
-        if (i case SmallGroupLead(:final smallGroup)) smallGroup,
-      for (final m in ref.read(membersProvider).value ?? const <Member>[]) ...m.leadSmallGroups,
-    };
     final kind = await _choose<String>(context, l10n.addIdentity, [
       if (!held.contains(const AdminIdentity())) ('admin', l10n.roleAdmin, null),
       if (!held.contains(const OfficeIdentity())) ('office', l10n.identityOffice, l10n.canOffice),
       ('pastor', l10n.identityPastor, null),
-      if (services.any((s) => !led.contains(s.id))) ('service', l10n.identityServiceLead, null),
-      if (ministries.any((m) => !leadsMinistry.contains(m.id))) ('ministry', l10n.identityMinistryLead, null),
-      if (smallGroups.any((g) => !leadsSmallGroup.contains(g.id))) ('small', l10n.identitySmallGroupLead, null),
-    ]);
+    ], footer: l10n.addIdentityLeadsElsewhere);
     if (kind == null || !context.mounted) return null;
     switch (kind) {
       case 'admin':
         return const AdminIdentity();
       case 'office':
         return const OfficeIdentity();
-      case 'pastor':
+      default:
         final id = await _choose<String>(context, l10n.pickPastorScope, [
           ('', l10n.wholeChurch, null),
           for (final s in services) (s.id, s.name, null),
         ]);
         return id == null ? null : PastorIdentity(id.isEmpty ? null : [id]);
-      case 'service':
-        final id = await _choose<String>(context, l10n.pickService, [
-          for (final s in services)
-            if (!led.contains(s.id)) (s.id, s.name, null),
-        ]);
-        return id == null ? null : ServiceLead(id);
-      case 'small':
-        final id = await _choose<String>(context, l10n.pickSmallGroup, [
-          for (final g in smallGroups)
-            if (!leadsSmallGroup.contains(g.id))
-              (g.id, g.name, ref.read(servicesProvider).value?.byId(g.service)?.name),
-        ]);
-        return id == null ? null : SmallGroupLead(id);
-      default:
-        final id = await _choose<String>(context, l10n.pickMinistry, [
-          for (final m in ministries)
-            if (!leadsMinistry.contains(m.id))
-              (m.id, m.name, m.service == null ? null : ref.read(servicesProvider).value?.byId(m.service!)?.name),
-        ]);
-        return id == null ? null : MinistryLead(id);
     }
   }
 
-  /// One of [options] (value, title, what it means), picked in a sheet.
-  static Future<T?> _choose<T>(BuildContext context, String header, List<(T, String, String?)> options) =>
-      showAppSheet<T>(
-        context,
-        builder: (context) => SafeArea(
-          child: SingleChildScrollView(
-            child: ListSection(
-              header: header,
-              children: [
-                for (final (value, title, subtitle) in options)
-                  ListRow(title: title, subtitle: subtitle, onTap: () => Navigator.pop(context, value)),
-              ],
-            ),
-          ),
+  /// One of [options] (value, title, what it means), picked in a sheet,
+  /// [footer] under them.
+  static Future<T?> _choose<T>(
+    BuildContext context,
+    String header,
+    List<(T, String, String?)> options, {
+    String? footer,
+  }) => showAppSheet<T>(
+    context,
+    builder: (context) => SafeArea(
+      child: SingleChildScrollView(
+        child: ListSection(
+          header: header,
+          footer: footer,
+          children: [
+            for (final (value, title, subtitle) in options)
+              ListRow(title: title, subtitle: subtitle, onTap: () => Navigator.pop(context, value)),
+          ],
         ),
-      );
+      ),
+    ),
+  );
 }

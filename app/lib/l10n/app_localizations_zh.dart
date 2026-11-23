@@ -702,12 +702,6 @@ class L10nZh extends L10n {
   String get identityLead => '負責人';
 
   @override
-  String get identityServiceLead => '聚會負責人';
-
-  @override
-  String get identityMinistryLead => '事工負責人';
-
-  @override
   String get canAdmin => '什麼都能管';
 
   @override
@@ -741,12 +735,6 @@ class L10nZh extends L10n {
 
   @override
   String get pickPastorScope => '牧養範圍';
-
-  @override
-  String get pickService => '選聚會';
-
-  @override
-  String get pickMinistry => '選事工';
 
   @override
   String get groupsTitle => '聚會與事工';
@@ -2902,9 +2890,6 @@ class L10nZh extends L10n {
   }
 
   @override
-  String get pickSmallGroup => '選小組';
-
-  @override
   String get smallGroups => '小組';
 
   @override
@@ -3747,6 +3732,9 @@ class L10nZh extends L10n {
 
   @override
   String get servicePartNone => '沒有';
+
+  @override
+  String get addIdentityLeadsElsewhere => '負責人、小組長到聚會、服事項目或小組的頁面指派';
 }
 
 /// The translations for Chinese, using the Han script (`zh_Hans`).
@@ -4447,12 +4435,6 @@ class L10nZhHans extends L10nZh {
   String get identityLead => '负责人';
 
   @override
-  String get identityServiceLead => '聚会负责人';
-
-  @override
-  String get identityMinistryLead => '事工负责人';
-
-  @override
   String get canAdmin => '什么都能管';
 
   @override
@@ -4486,12 +4468,6 @@ class L10nZhHans extends L10nZh {
 
   @override
   String get pickPastorScope => '牧养范围';
-
-  @override
-  String get pickService => '选聚会';
-
-  @override
-  String get pickMinistry => '选事工';
 
   @override
   String get groupsTitle => '聚会与事工';
@@ -6647,9 +6623,6 @@ class L10nZhHans extends L10nZh {
   }
 
   @override
-  String get pickSmallGroup => '选小组';
-
-  @override
   String get smallGroups => '小组';
 
   @override
@@ -7492,4 +7465,7 @@ class L10nZhHans extends L10nZh {
 
   @override
   String get servicePartNone => '没有';
+
+  @override
+  String get addIdentityLeadsElsewhere => '负责人、小组长到聚会、事奉项目或小组的页面指派';
 }

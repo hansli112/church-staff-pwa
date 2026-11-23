@@ -717,12 +717,6 @@ class L10nEn extends L10n {
   String get identityLead => 'Lead';
 
   @override
-  String get identityServiceLead => 'Service lead';
-
-  @override
-  String get identityMinistryLead => 'Ministry lead';
-
-  @override
   String get canAdmin => 'Can manage everything';
 
   @override
@@ -757,12 +751,6 @@ class L10nEn extends L10n {
 
   @override
   String get pickPastorScope => 'Pastor of';
-
-  @override
-  String get pickService => 'Pick a service';
-
-  @override
-  String get pickMinistry => 'Pick a ministry';
 
   @override
   String get groupsTitle => 'Services & ministries';
@@ -3059,9 +3047,6 @@ class L10nEn extends L10n {
   }
 
   @override
-  String get pickSmallGroup => 'Pick a small group';
-
-  @override
   String get smallGroups => 'Small groups';
 
   @override
@@ -3985,4 +3970,8 @@ class L10nEn extends L10n {
 
   @override
   String get servicePartNone => 'None';
+
+  @override
+  String get addIdentityLeadsElsewhere =>
+      'Leads and small group leaders are assigned on the page of their service, role or small group';
 }

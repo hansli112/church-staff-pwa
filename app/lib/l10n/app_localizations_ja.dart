@@ -702,12 +702,6 @@ class L10nJa extends L10n {
   String get identityLead => 'リーダー';
 
   @override
-  String get identityServiceLead => '集会リーダー';
-
-  @override
-  String get identityMinistryLead => 'ミニストリーリーダー';
-
-  @override
   String get canAdmin => 'すべて管理できる';
 
   @override
@@ -741,12 +735,6 @@ class L10nJa extends L10n {
 
   @override
   String get pickPastorScope => '牧会の範囲';
-
-  @override
-  String get pickService => '集会を選ぶ';
-
-  @override
-  String get pickMinistry => 'ミニストリーを選ぶ';
 
   @override
   String get groupsTitle => '集会とミニストリー';
@@ -2907,9 +2895,6 @@ class L10nJa extends L10n {
   }
 
   @override
-  String get pickSmallGroup => '小グループを選ぶ';
-
-  @override
   String get smallGroups => '小グループ';
 
   @override
@@ -3752,4 +3737,7 @@ class L10nJa extends L10n {
 
   @override
   String get servicePartNone => 'なし';
+
+  @override
+  String get addIdentityLeadsElsewhere => 'リーダー・小グループリーダーは、集会・担当・小グループのページで指名します';
 }

@@ -703,12 +703,6 @@ class L10nKo extends L10n {
   String get identityLead => '리더';
 
   @override
-  String get identityServiceLead => '예배 리더';
-
-  @override
-  String get identityMinistryLead => '사역팀 리더';
-
-  @override
   String get canAdmin => '모든 것을 관리할 수 있어요';
 
   @override
@@ -742,12 +736,6 @@ class L10nKo extends L10n {
 
   @override
   String get pickPastorScope => '목회 범위';
-
-  @override
-  String get pickService => '예배 선택';
-
-  @override
-  String get pickMinistry => '사역팀 선택';
 
   @override
   String get groupsTitle => '예배와 사역팀';
@@ -2905,9 +2893,6 @@ class L10nKo extends L10n {
   }
 
   @override
-  String get pickSmallGroup => '소그룹 선택';
-
-  @override
   String get smallGroups => '소그룹';
 
   @override
@@ -3750,4 +3735,7 @@ class L10nKo extends L10n {
 
   @override
   String get servicePartNone => '없음';
+
+  @override
+  String get addIdentityLeadsElsewhere => '리더와 소그룹 리더는 예배, 담당, 소그룹 페이지에서 지정해요';
 }
