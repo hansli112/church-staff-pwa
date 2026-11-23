@@ -498,51 +498,6 @@ class _FamiliesSection extends ConsumerWidget {
   }
 }
 
-/// A member's name as a page's title, tapped to rename them: a small pencil
-/// after it, which, where titles are centred, the name is centred without.
-class NameTitle extends StatelessWidget {
-  const NameTitle({super.key, required this.name, required this.onTap});
-
-  final String name;
-  final VoidCallback onTap;
-
-  static const _icon = 16.0;
-  static const _gap = 4.0;
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final centred =
-        theme.appBarTheme.centerTitle ??
-        switch (theme.platform) {
-          TargetPlatform.iOS || TargetPlatform.macOS => true,
-          _ => false,
-        };
-    return Semantics(
-      button: true,
-      hint: L10n.of(context).rename,
-      child: GestureDetector(
-        behavior: HitTestBehavior.opaque,
-        onTap: onTap,
-        child: ConstrainedBox(
-          constraints: const BoxConstraints(minHeight: 44),
-          child: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              if (centred) const SizedBox(width: _icon + _gap),
-              Flexible(child: Text(name, maxLines: 1, overflow: TextOverflow.ellipsis)),
-              const SizedBox(width: _gap),
-              ExcludeSemantics(
-                child: Icon(Symbols.edit_rounded, size: _icon, color: AppColors.of(context).tertiaryLabel),
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-}
-
 /// Who else in the church goes by a name, however written ([nameKey]), as
 /// the backend tells them apart: a member, or one without an account; read
 /// as they are each time, the lists loading while a name is typed.

@@ -670,6 +670,10 @@ CalendarEvent? calendarEventFromJson(Object? raw) {
         _ => null,
       },
       googleOnly: raw['googleOnly'] == true,
+      colorId: switch (raw['colorId']) {
+        final String c when c.isNotEmpty => c,
+        _ => null,
+      },
     );
   } on FormatException {
     return null;
@@ -690,6 +694,8 @@ Json calendarEventToJson(CalendarEvent e) {
     'description': ?e.description,
     // Whose it is (#84): '' the church's.
     'group': e.group ?? '',
+    // Null: grey, none of its own.
+    'colorId': e.colorId,
   };
 }
 

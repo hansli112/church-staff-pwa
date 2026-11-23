@@ -158,7 +158,7 @@ App 與 Functions 各寫一次的教會資料規則也一樣：新教會的預�
 
 ## 行事曆活動的歸屬（#84）
 
-活動屬於全教會，或屬於一個群組，存在 Google 活動的 `extendedProperties.private.marthaGroup`（`''` 是全教會，`service:<id>`、`ministry:<id>`、`small:<id>` 是群組的；小組的活動由小組長管，#85），在 Google 日曆改活動也留著；直接在 Google 建的是全教會的。`calendarWrite` 照 Google 上現在的歸屬判斷（`testdata/church_rules.json` 的 `eventWriting`）：admin 和行政（`calendar-editors`）全部；群組的負責人只能建、改、刪自己群組的活動，不能動全教會的，也不能把活動移到全教會或別的群組；其他同工連行事曆都不會被問。
+活動屬於全教會，或屬於一個群組，存在 Google 活動的 `extendedProperties.private.marthaGroup`（`''` 是全教會，`service:<id>`、`ministry:<id>`、`small:<id>` 是群組的；小組的活動由小組長管，#85），在 Google 日曆改活動也留著；直接在 Google 建的是全教會的。活動的顏色是 Google 活動的 `colorId`（'1'–'11'），App 顯示成特別活動六色裡最接近的（`CalendarEvent.color`），沒有就是灰色；`calendarWrite` 收到 `colorId: null` 拿掉顏色，沒帶就不動。`calendarWrite` 照 Google 上現在的歸屬判斷（`testdata/church_rules.json` 的 `eventWriting`）：admin 和行政（`calendar-editors`）全部；群組的負責人只能建、改、刪自己群組的活動，不能動全教會的，也不能把活動移到全教會或別的群組；其他同工連行事曆都不會被問。
 
 - 沒帶 `group` 的寫入（還不認得群組的舊版 App）：改活動就照 Google 上原本的歸屬，新活動算全教會的。
 - 重複活動照系列存：把其中一天改到別的群組，整個系列（Google 上的主活動）跟著改，其他沒個別改過的日子也就跟著。

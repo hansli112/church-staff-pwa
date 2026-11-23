@@ -103,18 +103,16 @@ class EditableRoster extends ConsumerWidget {
         ListSection(
           children: [
             for (final duty in shownDuties(ref, roster))
-              Dismissible(
+              SwipeAction(
                 key: ValueKey('${roster.id}/${duty.role}'),
-                direction: ready && arranges.has(duty.role) ? DismissDirection.endToStart : DismissDirection.none,
-                background: const SwipeDeleteBackground(),
-                confirmDismiss: (_) async {
-                  await runWithUndo(
+                enabled: ready && arranges.has(duty.role),
+                onAction: () => unawaited(
+                  runWithUndo(
                     context,
                     l10n.dutyRemoved(duty.role),
                     () => ref.read(rosterActionsProvider).removeDuty(roster, duty.role),
-                  );
-                  return false;
-                },
+                  ),
+                ),
                 child: _DutyRow(roster: roster, duty: duty, editable: arranges.has(duty.role)),
               ),
             if (onAddDuty != null && (roster.duties.isNotEmpty || whenEmpty == null))

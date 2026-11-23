@@ -137,18 +137,7 @@ class _EventSheetState extends State<EventSheet> {
                           ),
                           Padding(
                             padding: const EdgeInsets.symmetric(horizontal: Space.s, vertical: Space.xs),
-                            child: Wrap(
-                              spacing: Space.s,
-                              children: [
-                                for (var i = 0; i < EventColors.count; i++)
-                                  _ColorDot(
-                                    index: i,
-                                    label: _colorName(l10n, i),
-                                    selected: _color == i,
-                                    onTap: () => setState(() => _color = i),
-                                  ),
-                              ],
-                            ),
+                            child: ColorDots(selected: _color, onPick: (i) => setState(() => _color = i!)),
                           ),
                         ],
                       ],
@@ -157,61 +146,6 @@ class _EventSheetState extends State<EventSheet> {
                 ),
               ),
             ],
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-String _colorName(L10n l10n, int i) => switch (i) {
-  0 => l10n.colorName0,
-  1 => l10n.colorName1,
-  2 => l10n.colorName2,
-  3 => l10n.colorName3,
-  4 => l10n.colorName4,
-  _ => l10n.colorName5,
-};
-
-class _ColorDot extends StatelessWidget {
-  const _ColorDot({
-    required this.index,
-    required this.label,
-    required this.selected,
-    required this.onTap,
-  });
-
-  final int index;
-  final String label;
-  final bool selected;
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    final colors = EventColors.of(context, index);
-    final c = AppColors.of(context);
-    return Semantics(
-      button: true,
-      selected: selected,
-      label: label,
-      child: InkResponse(
-        onTap: onTap,
-        radius: 24,
-        child: SizedBox.square(
-          dimension: 44,
-          child: Center(
-            child: Container(
-              width: 30,
-              height: 30,
-              decoration: BoxDecoration(
-                color: colors.bg,
-                shape: BoxShape.circle,
-                border: Border.all(
-                  color: selected ? c.label : colors.fg,
-                  width: selected ? 3 : 1,
-                ),
-              ),
-            ),
           ),
         ),
       ),

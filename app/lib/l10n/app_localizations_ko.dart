@@ -551,6 +551,9 @@ class L10nKo extends L10n {
   String get colorName5 => '보라';
 
   @override
+  String get colorNameGrey => '회색';
+
+  @override
   String removed(String name) {
     return '‘$name’을(를) 뺐어요';
   }
@@ -2586,14 +2589,6 @@ class L10nKo extends L10n {
   String serviceFutureSyncSaved(int count) {
     return '이후 봉사표 $count개를 동기화했어요';
   }
-
-  @override
-  String serviceEventColorTitle(String name) {
-    return '$name · 색상';
-  }
-
-  @override
-  String get serviceEventColor => '색상';
 
   @override
   String get serviceSyncFutureRosters => '이후 봉사표 동기화';

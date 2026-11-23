@@ -212,7 +212,7 @@ class _Week extends StatelessWidget {
 }
 
 /// An event's name on its days, square where it carries on into the next
-/// or previous week. Bars take the surface colour, apart from today's grey.
+/// or previous week. Bars take the event's own color, or else the surface.
 class _Bar extends StatelessWidget {
   const _Bar({required this.bar});
 
@@ -221,10 +221,14 @@ class _Bar extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final c = AppColors.of(context);
+    final own = switch (bar.event.color) {
+      final i? => EventColors.of(context, i),
+      null => null,
+    };
     const round = Radius.circular(Space.xs);
     return DecoratedBox(
       decoration: BoxDecoration(
-        color: c.surface,
+        color: own?.bg ?? c.surface,
         borderRadius: BorderRadius.horizontal(
           left: bar.continuesBefore ? Radius.zero : round,
           right: bar.continuesAfter ? Radius.zero : round,
@@ -238,7 +242,7 @@ class _Bar extends StatelessWidget {
           bar.event.title,
           maxLines: 1,
           overflow: TextOverflow.clip,
-          style: _Metrics.eventName.copyWith(color: c.label),
+          style: _Metrics.eventName.copyWith(color: own?.fg ?? c.label),
         ),
       ),
     );

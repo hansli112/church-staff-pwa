@@ -49,6 +49,27 @@ test('Google PATCH clears the opposite date field when changing event type, whil
   assert.deepEqual(requests[4].body, { extendedProperties: { private: { marthaGroup: 'ministry:worship' } } }, 'only whose it is');
 });
 
+test("an event's color goes to Google as its colorId: null clears it, none given leaves it; Google's comes back", async () => {
+  const requests: { method?: string; body: Record<string, unknown> }[] = [];
+  const google = googleApi({ fetch: async (_url, init) => {
+    const body = JSON.parse(init!.body as string) as Record<string, unknown>;
+    requests.push({ method: init!.method, body });
+    return Response.json({ id: 'event', summary: body.summary, start: body.start, end: body.end, colorId: '2' });
+  } });
+  const e = { id: 'event', title: '同工會', start: '2026-10-10', end: '2026-10-11', allDay: true };
+  const saved = await google.upsert('access', 'cal', { ...e, colorId: '7' });
+  assert.equal(requests[0].body.colorId, '7');
+  assert.equal(saved.colorId, '2', "as Google has it");
+  await google.upsert('access', 'cal', { ...e, colorId: null });
+  assert.equal(requests[1].body.colorId, null, 'grey: no color of its own');
+  assert.ok(Object.hasOwn(requests[1].body, 'colorId'));
+  await google.upsert('access', 'cal', e);
+  assert.equal(Object.hasOwn(requests[2].body, 'colorId'), false, 'an older app: kept as it is');
+  await google.upsert('access', 'cal', { ...e, id: undefined, colorId: null });
+  assert.equal(requests[3].method, 'POST');
+  assert.equal(Object.hasOwn(requests[3].body, 'colorId'), false, 'a new one with none: nothing to clear');
+});
+
 test('one church reuses its unexpired Google access token', async (t) => {
   let refreshes = 0;
   const fetch = async () => {

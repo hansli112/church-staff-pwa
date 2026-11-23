@@ -1354,14 +1354,9 @@ class _DutyPickerState extends ConsumerState<_DutyPicker> {
       footer: footer ? l10n.swipeToDelete : null,
       children: [
         for (final d in service.duties)
-          Dismissible(
+          SwipeAction(
             key: ValueKey('duty/${service.id}/$d'),
-            direction: DismissDirection.endToStart,
-            background: const SwipeDeleteBackground(),
-            confirmDismiss: (_) async {
-              await edits.removeDuty(d);
-              return false; // The successful server change removes the row.
-            },
+            onAction: () => unawaited(edits.removeDuty(d)),
             child: ListRow(
               title: d,
               selected: _picked.contains(MinistryDuty(service.id, d)),

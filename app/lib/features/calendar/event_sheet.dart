@@ -237,6 +237,7 @@ class _EventEditorState extends State<_EventEditor> {
   late final _description = TextEditingController(text: widget.event?.description ?? '');
   late EventTimes _times = EventTimes.of(widget.event, initialDay: widget.initialDay);
   late String? _group = widget.initialGroup;
+  late String? _colorId = widget.event?.colorId;
 
   /// The picker open under 屬於, 開始 or 結束, at most one, as in the
   /// iPhone's Calendar: it opens in place, with the keyboard put away.
@@ -301,6 +302,7 @@ class _EventEditorState extends State<_EventEditor> {
     recurringEventId: widget.event?.recurringEventId,
     originalStart: widget.event?.originalStart,
     group: _group,
+    colorId: _colorId,
   );
 
   void _save() {
@@ -330,7 +332,8 @@ class _EventEditorState extends State<_EventEditor> {
         edited.allDay != e.allDay ||
         (edited.location ?? '') != (e.location ?? '') ||
         (edited.description ?? '') != (e.description ?? '') ||
-        edited.group != e.group;
+        edited.group != e.group ||
+        edited.colorId != e.colorId;
   }
 
   /// Whether [_edited] can be saved.
@@ -388,10 +391,11 @@ class _EventEditorState extends State<_EventEditor> {
                   ),
                 ),
                 // Its choices open under it, as 開始 and 結束's pickers do: a
-                // sheet over the sheet lost track of the event.
-                if (widget.groups.length > 1)
-                  ListSection(
-                    children: [
+                // sheet over the sheet lost track of the event. Its colors
+                // below, one row of dots, as a 特別活動's.
+                ListSection(
+                  children: [
+                    if (widget.groups.length > 1) ...[
                       ListRow(
                         title: l10n.eventGroup,
                         value: widget.groups.where((g) => g.key == _group).firstOrNull?.label,
@@ -410,7 +414,19 @@ class _EventEditorState extends State<_EventEditor> {
                             }),
                           ),
                     ],
-                  ),
+                    Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: Space.s),
+                      child: ColorDots(
+                        grey: true,
+                        selected: _opened.copyWith(colorId: () => _colorId).color,
+                        onPick: (c) => setState(() {
+                          _colorId = _opened.copyWith(colorId: () => _colorId).withColor(c).colorId;
+                          _open = null;
+                        }),
+                      ),
+                    ),
+                  ],
+                ),
                 // Above the times, in sight as the editor opens.
                 EventRosterRow(event: _edited, onOpen: _savable ? _openRoster : null),
                 ListSection(

@@ -432,7 +432,10 @@ class _AgendaState extends ConsumerState<_Agenda> {
           children: [
             for (final d in byDay.keys.toList()..sort())
               for (final (i, e) in byDay[d]!.indexed)
-                row(e, leading: i == 0 ? dayBlock(d, today) : const SizedBox(width: DateBlock.minWidth)),
+                row(
+                  e,
+                  leading: i == 0 ? dayBlock(d, today, color: e.color) : const SizedBox(width: DateBlock.minWidth),
+                ),
           ],
         ),
       ];

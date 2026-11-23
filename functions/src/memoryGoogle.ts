@@ -65,6 +65,8 @@ export function memoryGoogle(events: CalendarEvent[] = []) {
       if (e.id) alone.add(id);
       const i = events.findIndex((x) => x.id === id);
       const saved = { ...(i >= 0 ? events[i] : {}), ...e, id, link: `https://calendar.google.com/event?eid=${id}` };
+      // Null takes its color off, as Google does.
+      if (saved.colorId === null) delete saved.colorId;
       if (i >= 0) events[i] = saved;
       else events.push(saved);
       return saved;

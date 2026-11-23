@@ -550,6 +550,9 @@ class L10nJa extends L10n {
   String get colorName5 => '紫';
 
   @override
+  String get colorNameGrey => 'グレー';
+
+  @override
   String removed(String name) {
     return '$nameを外しました';
   }
@@ -2588,14 +2591,6 @@ class L10nJa extends L10n {
   String serviceFutureSyncSaved(int count) {
     return '今後の奉仕表$count件を同期しました';
   }
-
-  @override
-  String serviceEventColorTitle(String name) {
-    return '$name・色';
-  }
-
-  @override
-  String get serviceEventColor => '色';
 
   @override
   String get serviceSyncFutureRosters => '今後の奉仕表を同期';

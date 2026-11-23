@@ -948,6 +948,7 @@ class CalendarEvent {
     this.originalStart,
     this.group,
     this.googleOnly = false,
+    this.colorId,
   }) : start = churchCivilTime(start),
        end = churchCivilTime(end);
 
@@ -966,6 +967,38 @@ class CalendarEvent {
   /// One of Google's own (a birthday, an event Gmail made), with rules of
   /// its own: changed only in Google Calendar. Read only.
   final bool googleOnly;
+
+  /// Its color as Google keeps it (an event colorId, '1'–'11'), null none
+  /// of its own. Shown as [color]; kept as it is unless another is picked,
+  /// so Google's 鼠尾草綠 is not made 羅勒綠 by editing its title.
+  final String? colorId;
+
+  /// Which of [EventColors] it shows in, the nearest to Google's; null
+  /// grey: none of its own, or 石墨灰, or one this does not know.
+  int? get color => _paletteOfGoogle[colorId];
+
+  /// With [color] [c]: Google's own color for it, unless it shows in that
+  /// one already.
+  CalendarEvent withColor(int? c) =>
+      c == color ? this : copyWith(colorId: () => c == null ? null : _googleOfPalette[c]);
+
+  /// Google's event colors to [EventColors]' six: 薰衣草 and 葡萄 purple,
+  /// 鼠尾草 and 羅勒 green, 火鶴 and 番茄 red, 孔雀 and 藍莓 blue.
+  static const _paletteOfGoogle = {
+    '1': 5,
+    '2': 3,
+    '3': 5,
+    '4': 0,
+    '5': 2,
+    '6': 1,
+    '7': 4,
+    '9': 4,
+    '10': 3,
+    '11': 0,
+  };
+
+  /// [EventColors]' six as Google's: 番茄, 橘子, 香蕉, 羅勒, 孔雀, 葡萄.
+  static const _googleOfPalette = ['11', '6', '5', '10', '7', '3'];
 
   /// The church's wall time (its time zone's), held in a UTC [DateTime] whatever the
   /// phone's zone; the constructor takes the fields as given. All-day
@@ -1018,6 +1051,7 @@ class CalendarEvent {
     location: location,
     description: description,
     group: group,
+    colorId: colorId,
   );
 
   CalendarEvent copyWith({
@@ -1028,6 +1062,7 @@ class CalendarEvent {
     String? location,
     String? description,
     String? Function()? group,
+    String? Function()? colorId,
   }) => CalendarEvent(
     id: id,
     title: title ?? this.title,
@@ -1040,6 +1075,7 @@ class CalendarEvent {
     originalStart: originalStart,
     group: group == null ? this.group : group(),
     googleOnly: googleOnly,
+    colorId: colorId == null ? this.colorId : colorId(),
   );
 }
 

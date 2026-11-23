@@ -1066,6 +1066,12 @@ abstract class L10n {
   /// **'紫'**
   String get colorName5;
 
+  /// A 行事曆 活動 with no color of its own: the first of its color dots, as it looks with none
+  ///
+  /// In zh, this message translates to:
+  /// **'灰'**
+  String get colorNameGrey;
+
   /// No description provided for @removed.
   ///
   /// In zh, this message translates to:
@@ -4605,18 +4611,6 @@ abstract class L10n {
   /// In zh, this message translates to:
   /// **'已同步 {count} 份未來服事表'**
   String serviceFutureSyncSaved(int count);
-
-  /// No description provided for @serviceEventColorTitle.
-  ///
-  /// In zh, this message translates to:
-  /// **'{name} · 顏色'**
-  String serviceEventColorTitle(String name);
-
-  /// No description provided for @serviceEventColor.
-  ///
-  /// In zh, this message translates to:
-  /// **'顏色'**
-  String get serviceEventColor;
 
   /// No description provided for @serviceSyncFutureRosters.
   ///

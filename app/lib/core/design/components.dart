@@ -16,6 +16,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart' show OverflowBoxFit;
 import 'package:material_symbols_icons/symbols.dart';
+import 'package:flutter/semantics.dart' show CustomSemanticsAction;
 import 'package:flutter/services.dart';
 
 import '../../l10n/app_localizations.dart';
@@ -1611,22 +1612,319 @@ class _SearchFieldState extends State<SearchField> {
   }
 }
 
-/// The red under a row being swiped away, saying 刪除 at its end: red alone
-/// does not tell what letting go does.
-class SwipeDeleteBackground extends StatelessWidget {
-  const SwipeDeleteBackground({super.key, this.label});
+/// A row swiped toward its start to do one thing, 刪除 unless [label]
+/// says otherwise, as iPhone lists do: a short swipe stops with the button
+/// showing, done once it is tapped; one past half the row does it on
+/// letting go. A tap on the row while open closes it; opening another
+/// closes this one. Whatever it does, the row's list decides whether it
+/// stays: this springs back.
+class SwipeAction extends StatefulWidget {
+  const SwipeAction({
+    super.key,
+    required this.onAction,
+    required this.child,
+    this.label,
+    this.semanticLabel,
+    this.enabled = true,
+  });
+
+  final VoidCallback onAction;
+  final Widget child;
 
   /// What the swipe does, if not 刪除.
   final String? label;
 
+  /// What a screen reader offers in its place, if not [label].
+  final String? semanticLabel;
+
+  /// Off: the row as it is, nothing to swipe.
+  final bool enabled;
+
+  @override
+  State<SwipeAction> createState() => _SwipeActionState();
+}
+
+class _SwipeActionState extends State<SwipeAction> with SingleTickerProviderStateMixin {
+  /// The one open now, closed when another opens.
+  static _SwipeActionState? _open;
+
+  late final AnimationController _ctrl;
+
+  @override
+  void initState() {
+    super.initState();
+    _ctrl = AnimationController(vsync: this, duration: const Duration(milliseconds: 220));
+  }
+
+  /// How far it has moved toward its start, in logical pixels.
+  double get _dx => _ctrl.value * _width;
+  double _width = 1;
+  double _button = 80;
+
+  @override
+  void dispose() {
+    if (_open == this) _open = null;
+    _ctrl.dispose();
+    super.dispose();
+  }
+
+  void _to(double dx) {
+    _ctrl.animateTo((dx / _width).clamp(0.0, 1.0), curve: Curves.easeOutCubic);
+    if (dx > 0) {
+      if (_open != this) _open?._close();
+      _open = this;
+    } else if (_open == this) {
+      _open = null;
+    }
+  }
+
+  void _close() => _to(0);
+
+  void _act() {
+    _close();
+    widget.onAction();
+  }
+
+  bool get _rtl => Directionality.of(context) == TextDirection.rtl;
+
+  void _update(DragUpdateDetails d) {
+    final toward = _rtl ? d.primaryDelta! : -d.primaryDelta!;
+    _ctrl.value = ((_dx + toward) / _width).clamp(0.0, 1.0);
+    if (_dx > 0 && _open != this) {
+      _open?._close();
+      _open = this;
+    }
+  }
+
+  void _end(DragEndDetails d) {
+    final v = _rtl ? d.primaryVelocity ?? 0 : -(d.primaryVelocity ?? 0);
+    if (_dx > _width / 2) {
+      _act();
+    } else if (_dx > _button / 2 || v > 300 && _dx > 0) {
+      _to(v < -300 ? 0 : _button);
+    } else {
+      _close();
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    if (!widget.enabled) return widget.child;
+    final c = AppColors.of(context);
+    final label = widget.label ?? L10n.of(context).delete;
+    final style = AppText.body.copyWith(color: c.onAccent);
+    return Semantics(
+      customSemanticsActions: {CustomSemanticsAction(label: widget.semanticLabel ?? label): widget.onAction},
+      child: LayoutBuilder(
+        builder: (context, box) {
+          _width = box.maxWidth.isFinite && box.maxWidth > 0 ? box.maxWidth : 1;
+          final painter = TextPainter(
+            text: TextSpan(text: label, style: style),
+            textDirection: Directionality.of(context),
+            textScaler: MediaQuery.textScalerOf(context),
+          )..layout();
+          _button = (painter.width + Space.l * 2).clamp(80.0, _width / 2);
+          painter.dispose();
+          return GestureDetector(
+            behavior: HitTestBehavior.translucent,
+            onHorizontalDragUpdate: _update,
+            onHorizontalDragEnd: _end,
+            onHorizontalDragCancel: () => _to(_dx > _button / 2 ? _button : 0),
+            child: AnimatedBuilder(
+              animation: _ctrl,
+              builder: (context, child) {
+                final dx = _dx;
+                return Stack(
+                  children: [
+                    // Kept in place when shut, so the row below keeps its state.
+                    Positioned.fill(
+                      child: dx == 0
+                          ? const SizedBox.shrink()
+                          : ColoredBox(
+                              color: c.destructive,
+                              child: Align(
+                                alignment: AlignmentDirectional.centerEnd,
+                                child: SizedBox(
+                                  width: dx < _button ? _button : dx,
+                                  child: Semantics(
+                                    button: true,
+                                    child: GestureDetector(
+                                      behavior: HitTestBehavior.opaque,
+                                      onTap: _act,
+                                      child: Align(
+                                        // Past the button, the word rides at the row's edge.
+                                        alignment: dx > _button
+                                            ? AlignmentDirectional.centerStart
+                                            : AlignmentDirectional.center,
+                                        child: Padding(
+                                          padding: const EdgeInsets.symmetric(horizontal: Space.l),
+                                          child: Text(label, style: style, maxLines: 1),
+                                        ),
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                              ),
+                            ),
+                    ),
+                    Transform.translate(
+                      offset: Offset(_rtl ? dx : -dx, 0),
+                      child: Stack(
+                        children: [
+                          IgnorePointer(ignoring: dx > 0, child: child),
+                          if (dx > 0)
+                            Positioned.fill(
+                              child: GestureDetector(behavior: HitTestBehavior.opaque, onTap: _close),
+                            ),
+                        ],
+                      ),
+                    ),
+                  ],
+                );
+              },
+              child: widget.child,
+            ),
+          );
+        },
+      ),
+    );
+  }
+}
+
+/// The name of a 特別活動 color ([EventColors]), or of none: 灰.
+String eventColorName(L10n l10n, int? i) => switch (i) {
+  null => l10n.colorNameGrey,
+  0 => l10n.colorName0,
+  1 => l10n.colorName1,
+  2 => l10n.colorName2,
+  3 => l10n.colorName3,
+  4 => l10n.colorName4,
+  _ => l10n.colorName5,
+};
+
+/// The [EventColors] as a row of dots, the picked one ringed in black;
+/// tapped, picked. [grey]: a grey one first, for none (null), as a 行事曆
+/// 活動 with no color of its own.
+class ColorDots extends StatelessWidget {
+  const ColorDots({super.key, required this.selected, required this.onPick, this.grey = false});
+
+  final int? selected;
+  final ValueChanged<int?> onPick;
+  final bool grey;
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = L10n.of(context);
+    return Wrap(
+      children: [
+        if (grey)
+          _ColorDot(
+            index: null,
+            label: eventColorName(l10n, null),
+            selected: selected == null,
+            onTap: () => onPick(null),
+          ),
+        for (var i = 0; i < EventColors.count; i++)
+          _ColorDot(index: i, label: eventColorName(l10n, i), selected: selected == i, onTap: () => onPick(i)),
+      ],
+    );
+  }
+}
+
+class _ColorDot extends StatelessWidget {
+  const _ColorDot({
+    required this.index,
+    required this.label,
+    required this.selected,
+    required this.onTap,
+  });
+
+  final int? index;
+  final String label;
+  final bool selected;
+  final VoidCallback onTap;
+
   @override
   Widget build(BuildContext context) {
     final c = AppColors.of(context);
-    return Container(
-      color: c.destructive,
-      alignment: AlignmentDirectional.centerEnd,
-      padding: const EdgeInsets.symmetric(horizontal: Space.l),
-      child: Text(label ?? L10n.of(context).delete, style: AppText.body.copyWith(color: c.onAccent)),
+    final colors = switch (index) {
+      final i? => EventColors.of(context, i),
+      null => (bg: c.fill, fg: c.secondaryLabel),
+    };
+    return Semantics(
+      button: true,
+      selected: selected,
+      label: label,
+      child: InkResponse(
+        onTap: onTap,
+        radius: 24,
+        child: SizedBox.square(
+          dimension: 44,
+          child: Center(
+            child: Container(
+              width: 30,
+              height: 30,
+              decoration: BoxDecoration(
+                color: colors.bg,
+                shape: BoxShape.circle,
+                border: Border.all(
+                  color: selected ? c.label : colors.fg,
+                  width: selected ? 3 : 1,
+                ),
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/// A name as a title, tapped to rename it: a member's on their page, a
+/// 常用特別活動's atop its menu. A small pencil after it, which, where
+/// titles are centred, the name is centred without; [centred] says
+/// whether, if not as the app bar has it.
+class NameTitle extends StatelessWidget {
+  const NameTitle({super.key, required this.name, required this.onTap, this.centred});
+
+  final String name;
+  final VoidCallback onTap;
+  final bool? centred;
+
+  static const _icon = 16.0;
+  static const _gap = 4.0;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final centred =
+        this.centred ??
+        theme.appBarTheme.centerTitle ??
+        switch (theme.platform) {
+          TargetPlatform.iOS || TargetPlatform.macOS => true,
+          _ => false,
+        };
+    return Semantics(
+      button: true,
+      hint: L10n.of(context).rename,
+      child: GestureDetector(
+        behavior: HitTestBehavior.opaque,
+        onTap: onTap,
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(minHeight: 44),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              if (centred) const SizedBox(width: _icon + _gap),
+              Flexible(child: Text(name, maxLines: 1, overflow: TextOverflow.ellipsis)),
+              const SizedBox(width: _gap),
+              ExcludeSemantics(
+                child: Icon(Symbols.edit_rounded, size: _icon, color: AppColors.of(context).tertiaryLabel),
+              ),
+            ],
+          ),
+        ),
+      ),
     );
   }
 }
@@ -1731,6 +2029,7 @@ class DateBlock extends StatelessWidget {
     required this.today,
     required this.semanticLabel,
     this.past = false,
+    this.color,
   });
 
   static const double minWidth = 48;
@@ -1744,9 +2043,17 @@ class DateBlock extends StatelessWidget {
   /// A day gone: its number greyed like the month.
   final bool past;
 
+  /// An event's own color, one of [EventColors], its leaf in it; today's
+  /// stays the accent.
+  final int? color;
+
   @override
   Widget build(BuildContext context) {
     final c = AppColors.of(context);
+    final own = switch (color) {
+      final i? when !today => EventColors.of(context, i),
+      _ => null,
+    };
     return Semantics(
       label: semanticLabel,
       excludeSemantics: true,
@@ -1754,7 +2061,7 @@ class DateBlock extends StatelessWidget {
         constraints: const BoxConstraints(minWidth: DateBlock.minWidth),
         padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 5),
         decoration: BoxDecoration(
-          color: today ? c.accent : c.fill,
+          color: today ? c.accent : own?.bg ?? c.fill,
           borderRadius: BorderRadius.circular(Radii.s),
         ),
         child: Column(
@@ -1765,7 +2072,7 @@ class DateBlock extends StatelessWidget {
               maxLines: 1,
               style: AppText.caption.copyWith(
                 fontWeight: FontWeight.w600,
-                color: today ? c.onAccent : c.secondaryLabel,
+                color: today ? c.onAccent : own?.fg ?? c.secondaryLabel,
                 height: 1.1,
               ),
             ),
@@ -1773,7 +2080,7 @@ class DateBlock extends StatelessWidget {
               '$day',
               style: AppText.title3.copyWith(
                 fontWeight: FontWeight.w700,
-                color: today ? c.onAccent : (past ? c.secondaryLabel : c.label),
+                color: today ? c.onAccent : own?.fg ?? (past ? c.secondaryLabel : c.label),
                 height: 1.15,
               ),
             ),

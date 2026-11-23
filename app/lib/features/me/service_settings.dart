@@ -9,6 +9,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../core/design/components.dart';
+import '../../core/design/tokens.dart';
 import '../../domain/day.dart';
 import '../../domain/models.dart';
 import '../../domain/service_changes.dart';
@@ -309,39 +310,48 @@ class ServiceEdits {
   /// 常用特別活動 [e] taken off; arranged days keep it.
   Future<void> removeEvent(EventTag e) => save(service.withoutEvent(e.name), message: _l10n.deletedName(e.name));
 
-  /// Tapping a 常用特別活動: rename it, its color, bring the rosters after
-  /// today in line ([stale]: the names still on them), or remove it.
+  /// Tapping a 常用特別活動: its name atop, tapped to rename it; its colors,
+  /// one tapped to give it that; bringing the rosters after today in line
+  /// ([stale]: the names still on them); removing it.
   Future<void> eventActions(EventTag e, List<String> stale) async {
     final l10n = _l10n;
-    final choice = await showAppSheet<String>(
+    final choice = await showAppSheet<Object>(
       context,
       builder: (context) => SafeArea(
-        child: ListSection(
-          header: e.name,
-          children: [
-            ListRow(
-              title: l10n.rename,
-              leading: const Icon(Symbols.edit_rounded),
-              onTap: () => Navigator.pop(context, 'rename'),
-            ),
-            ListRow(
-              title: l10n.serviceEventColor,
-              leading: const Icon(Symbols.palette_rounded),
-              onTap: () => Navigator.pop(context, 'color'),
-            ),
-            if (stale.isNotEmpty)
-              ListRow(
-                title: l10n.serviceSyncFutureRosters,
-                leading: const Icon(Symbols.event_repeat_rounded),
-                onTap: () => Navigator.pop(context, 'synchronize'),
+        child: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: Space.xl),
+                child: DefaultTextStyle.merge(
+                  style: AppText.headline,
+                  child: NameTitle(name: e.name, centred: false, onTap: () => Navigator.pop(context, 'rename')),
+                ),
               ),
-            ListRow(
-              title: l10n.remove,
-              destructive: true,
-              leading: const Icon(Symbols.delete_rounded),
-              onTap: () => Navigator.pop(context, 'remove'),
-            ),
-          ],
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: Space.l),
+                child: ColorDots(selected: e.color, onPick: (i) => Navigator.pop(context, i)),
+              ),
+              ListSection(
+                children: [
+                  if (stale.isNotEmpty)
+                    ListRow(
+                      title: l10n.serviceSyncFutureRosters,
+                      leading: const Icon(Symbols.event_repeat_rounded),
+                      onTap: () => Navigator.pop(context, 'synchronize'),
+                    ),
+                  ListRow(
+                    title: l10n.remove,
+                    destructive: true,
+                    leading: const Icon(Symbols.delete_rounded),
+                    onTap: () => Navigator.pop(context, 'remove'),
+                  ),
+                ],
+              ),
+            ],
+          ),
         ),
       ),
     );
@@ -349,8 +359,8 @@ class ServiceEdits {
     switch (choice) {
       case 'rename':
         await _renameEvent(e);
-      case 'color':
-        await _editColor(e);
+      case final int color when color != e.color:
+        await save(service.withEventColor(e.name, color));
       case 'synchronize':
         await synchronize(e.name, stale: stale, event: true);
       case 'remove':
@@ -364,38 +374,6 @@ class ServiceEdits {
     final saved = await save(service.withEventRenamed(from.name, to));
     if (!saved || !context.mounted) return;
     await synchronize(to, from: from.name, event: true);
-  }
-
-  Future<void> _editColor(EventTag event) async {
-    final l10n = _l10n;
-    final color = await showAppSheet<int>(
-      context,
-      builder: (context) => SafeArea(
-        child: SingleChildScrollView(
-          child: ListSection(
-            header: L10n.of(context).serviceEventColorTitle(event.name),
-            children: [
-              for (final (i, name) in [
-                l10n.colorName0,
-                l10n.colorName1,
-                l10n.colorName2,
-                l10n.colorName3,
-                l10n.colorName4,
-                l10n.colorName5,
-              ].indexed)
-                ListRow(
-                  title: name,
-                  leading: Tag.event(context, ' ', i),
-                  selected: i == event.color,
-                  onTap: () => Navigator.pop(context, i),
-                ),
-            ],
-          ),
-        ),
-      ),
-    );
-    if (color == null || color == event.color || !context.mounted) return;
-    await save(service.withEventColor(event.name, color));
   }
 }
 
@@ -450,14 +428,9 @@ Widget serviceDutiesSliver(BuildContext context, WidgetRef ref, Service service,
     items: service.duties,
     keyOf: (d) => 'duty/$d',
     onReorder: (next) => edits.save(service.copyWith(duties: next)),
-    row: (d) => Dismissible(
+    row: (d) => SwipeAction(
       key: ValueKey('duty/$d'),
-      direction: DismissDirection.endToStart,
-      background: const SwipeDeleteBackground(),
-      confirmDismiss: (_) async {
-        await edits.removeDuty(d);
-        return false; // The successful server change removes the row.
-      },
+      onAction: () => unawaited(edits.removeDuty(d)),
       child: row(d),
     ),
     after: [ListRow(title: l10n.addDuty, leading: const Icon(Symbols.add_rounded), onTap: edits.addDuty)],
@@ -494,14 +467,9 @@ Widget serviceEventsSliver(BuildContext context, WidgetRef ref, Service service,
     items: service.events,
     keyOf: (e) => 'event/${e.name}',
     onReorder: (next) => edits.save(service.copyWith(events: next)),
-    row: (e) => Dismissible(
+    row: (e) => SwipeAction(
       key: ValueKey('event/${e.name}'),
-      direction: DismissDirection.endToStart,
-      background: const SwipeDeleteBackground(),
-      confirmDismiss: (_) async {
-        await edits.removeEvent(e);
-        return false;
-      },
+      onAction: () => unawaited(edits.removeEvent(e)),
       child: ListRow(
         title: e.name,
         leading: Tag.event(context, ' ', e.color),

@@ -90,6 +90,12 @@ export interface CalendarEvent {
   /** Whose it is (powers.ts isEventGroup): '' or missing the church's, else a group's. */
   group?: string;
   /**
+   * Google's color for it (its event colorId, '1'–'11'), which the app shows
+   * as the nearest of its own. Missing: none of its own. Writing, null
+   * clears it and leaving it out keeps what Google has.
+   */
+  colorId?: string | null;
+  /**
    * One of Google's own (a birthday, an event Gmail made), with rules of
    * its own: changed only in Google Calendar. Read only.
    */
@@ -494,6 +500,9 @@ export async function calendarWrite(deps: CalDeps, caller: Caller | null, data: 
     }
     const allDay = e.allDay === true;
     if (e.group !== undefined && !isEventGroup(e.group)) fail('invalid-argument', 'unknown');
+    if (e.colorId !== undefined && e.colorId !== null && (typeof e.colorId !== 'string' || !/^[0-9]{1,2}$/.test(e.colorId))) {
+      fail('invalid-argument', 'unknown');
+    }
     // Left out (an older app, which knows no groups), an edit keeps whose
     // it is and a new event is the church's.
     const group = e.group;
@@ -515,6 +524,7 @@ export async function calendarWrite(deps: CalDeps, caller: Caller | null, data: 
       location: typeof e.location === 'string' ? e.location.slice(0, 300) : undefined,
       description: typeof e.description === 'string' ? e.description.slice(0, 4000) : undefined,
       ...(group !== undefined ? { group } : {}),
+      ...(e.colorId !== undefined ? { colorId: e.colorId } : {}),
     }));
     // A day of a recurring event given to another group: the series goes
     // with it (重複活動照系列存), so its other days are that group's too.
@@ -636,6 +646,9 @@ export function googleApi(options: Partial<Pick<Deps, 'fetch' | 'now'>> = {}): G
     // Whose it is, kept with the event so an edit in Google keeps it; left
     // out, a PATCH keeps what it had.
     ...(e.group !== undefined ? { extendedProperties: { private: { marthaGroup: e.group } } } : {}),
+    // Its color: null takes Google's off (a new one has none to take off);
+    // left out, a PATCH keeps it.
+    ...(e.colorId !== undefined && (e.colorId !== null || e.id) ? { colorId: e.colorId } : {}),
     // PATCH merges nested objects: clear the opposite type explicitly.
     // New events have no previous date type, so POST keeps the normal shape.
     start: e.allDay ? { date: e.start, ...(e.id ? { dateTime: null } : {}) } : { dateTime: e.start, ...(e.id ? { date: null } : {}) },
@@ -654,6 +667,7 @@ export function googleApi(options: Partial<Pick<Deps, 'fetch' | 'now'>> = {}): G
     originalStartTime?: { date?: string; dateTime?: string };
     extendedProperties?: { private?: { marthaGroup?: string } };
     eventType?: string;
+    colorId?: string;
   }): CalendarEvent => ({
     id: g.id,
     title: g.summary ?? '',
@@ -670,6 +684,7 @@ export function googleApi(options: Partial<Pick<Deps, 'fetch' | 'now'>> = {}): G
       ? { group: g.extendedProperties.private.marthaGroup }
       : {}),
     ...(g.eventType && g.eventType !== 'default' ? { googleOnly: true as const } : {}),
+    ...(g.colorId ? { colorId: g.colorId } : {}),
   });
   return {
     async exchangeCode(code, config) {

@@ -996,6 +996,25 @@ describe("a group's events (#84)", () => {
     assert.equal((await d.google.get('t', 'cal-1', event!.id!))?.group || '', '');
   });
 
+  test("an event's color is Google's colorId, kept by an edit that sends none and cleared by null", async () => {
+    const d = await withLead();
+    const { event } = await calendarWrite(d, caller('editor'), {
+      churchId: 'C1', op: 'upsert', event: { title: '同工會', colorId: '7', ...at },
+    });
+    assert.equal(event?.colorId, '7');
+    const id = event!.id!;
+    await calendarWrite(d, caller('editor'), { churchId: 'C1', op: 'upsert', event: { id, title: '同工會（改）', ...at } });
+    assert.equal((await d.google.get('t', 'cal-1', id))?.colorId, '7', 'an older app keeps it');
+    const { event: grey } = await calendarWrite(d, caller('editor'), {
+      churchId: 'C1', op: 'upsert', event: { id, title: '同工會', colorId: null, ...at },
+    });
+    assert.equal(grey?.colorId, undefined);
+    await rejectsWith(
+      calendarWrite(d, caller('editor'), { churchId: 'C1', op: 'upsert', event: { id, title: '同工會', colorId: 'red' as never, ...at } }),
+      'unknown',
+    );
+  });
+
   test('an edit from an older app, which sends no group, keeps whose the event is', async () => {
     const d = await withLead();
     const { event } = await calendarWrite(d, caller('staff'), {

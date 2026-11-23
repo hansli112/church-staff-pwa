@@ -550,6 +550,9 @@ class L10nZh extends L10n {
   String get colorName5 => '紫';
 
   @override
+  String get colorNameGrey => '灰';
+
+  @override
   String removed(String name) {
     return '已移除「$name」';
   }
@@ -2585,14 +2588,6 @@ class L10nZh extends L10n {
   }
 
   @override
-  String serviceEventColorTitle(String name) {
-    return '$name · 顏色';
-  }
-
-  @override
-  String get serviceEventColor => '顏色';
-
-  @override
   String get serviceSyncFutureRosters => '同步未來服事表';
 
   @override
@@ -4286,6 +4281,9 @@ class L10nZhHans extends L10nZh {
 
   @override
   String get colorName5 => '紫';
+
+  @override
+  String get colorNameGrey => '灰';
 
   @override
   String removed(String name) {
@@ -6321,14 +6319,6 @@ class L10nZhHans extends L10nZh {
   String serviceFutureSyncSaved(int count) {
     return '已同步 $count 份未来事奉表';
   }
-
-  @override
-  String serviceEventColorTitle(String name) {
-    return '$name · 颜色';
-  }
-
-  @override
-  String get serviceEventColor => '颜色';
 
   @override
   String get serviceSyncFutureRosters => '同步未来事奉表';

@@ -646,8 +646,8 @@ class _ImportScreenState extends ConsumerState<ImportScreen> {
         ListRow(
           title: old == null ? l10n.importAddEvent(event.name) : l10n.importChangeEvent(event.name),
           subtitle: old == null
-              ? _colorName(l10n, event.color)
-              : l10n.importChangedColor(_colorName(l10n, old.color), _colorName(l10n, event.color)),
+              ? eventColorName(l10n, event.color)
+              : l10n.importChangedColor(eventColorName(l10n, old.color), eventColorName(l10n, event.color)),
         ),
       );
     }
@@ -872,7 +872,7 @@ class _ImportEditorState extends State<_ImportEditor> {
                             decoration: InputDecoration(labelText: l10n.importColor),
                             items: [
                               for (var i = 0; i < EventColors.count; i++)
-                                DropdownMenuItem(value: i, child: Text(_colorName(l10n, i))),
+                                DropdownMenuItem(value: i, child: Text(eventColorName(l10n, i))),
                             ],
                             onChanged: (value) => setState(() => _color = value),
                           ),
@@ -919,15 +919,6 @@ String importIssueText(L10n l10n, ImportIssue issue) {
     ImportIssueCode.eventColor => l10n.importIssueEventColor(index()),
   };
 }
-
-String _colorName(L10n l10n, int i) => switch (i) {
-  0 => l10n.colorName0,
-  1 => l10n.colorName1,
-  2 => l10n.colorName2,
-  3 => l10n.colorName3,
-  4 => l10n.colorName4,
-  _ => l10n.colorName5,
-};
 
 /// Where on its day [issue] is said: its date, its n-th duty or event
 /// (one-based, as the issue counts them), or the day as a whole.

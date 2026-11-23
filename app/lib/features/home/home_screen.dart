@@ -236,7 +236,7 @@ class HomeScreen extends ConsumerWidget {
                       ListRow(
                         // One already under way is on today, without the time it
                         // started: that would read as today's.
-                        leading: dayBlock(underway ? today : event.day, today),
+                        leading: dayBlock(underway ? today : event.day, today, color: event.color),
                         title: event.title,
                         subtitle: [
                           dayBesideBlock(l10n, underway ? today : event.day, today),

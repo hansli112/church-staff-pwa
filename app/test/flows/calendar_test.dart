@@ -281,6 +281,52 @@ void main() {
     expect(back.duties.single.people, ['李美玉']);
   });
 
+  testWidgets("an event's color is one tap on its row of dots; a shade Google gave stays as Google has it", (
+    tester,
+  ) async {
+    final b = seededChurch(as: calendarEditor, extra: const [calendarEditor]);
+    b.connectCalendar('grace', calendarName: '教會行事曆');
+    b.calendarEvents['grace'] = [
+      CalendarEvent(id: 'a', title: '同工會', start: DateTime(2026, 10, 9, 19), end: DateTime(2026, 10, 9, 21)),
+      // 鼠尾草綠, made in Google.
+      CalendarEvent(
+        id: 'b',
+        title: '洗禮班',
+        start: DateTime(2026, 10, 17, 10),
+        end: DateTime(2026, 10, 17, 12),
+        colorId: '2',
+      ),
+    ];
+    await pumpApp(tester, b);
+    await go(tester, '/calendar');
+    CalendarEvent saved(String id) => b.calendarEvents['grace']!.firstWhere((e) => e.id == id);
+
+    await tapText(tester, '同工會');
+    expect(
+      tester.getSemantics(find.bySemanticsLabel('灰')).flagsCollection.isSelected,
+      Tristate.isTrue,
+      reason: 'none of its own',
+    );
+    await tester.tap(find.bySemanticsLabel('藍'));
+    await tester.pump();
+    await tapText(tester, '儲存');
+    expect(saved('a').colorId, '7', reason: "Google's 孔雀藍");
+    expect(saved('a').color, 4);
+
+    await tapText(tester, '洗禮班');
+    expect(tester.getSemantics(find.bySemanticsLabel('綠')).flagsCollection.isSelected, Tristate.isTrue);
+    await tester.enterText(find.byType(TextField).first, '洗禮課');
+    await tester.pump();
+    await tapText(tester, '儲存');
+    expect(saved('b').colorId, '2', reason: 'still 鼠尾草綠, not made 羅勒綠');
+
+    await tapText(tester, '洗禮課');
+    await tester.tap(find.bySemanticsLabel('灰'));
+    await tester.pump();
+    await tapText(tester, '儲存');
+    expect(saved('b').colorId, isNull);
+  });
+
   testWidgets('renaming a three-day event keeps its three days', (tester) async {
     final b = seededChurch(as: calendarEditor, extra: const [calendarEditor]);
     b.connectCalendar('grace', calendarName: '教會行事曆');

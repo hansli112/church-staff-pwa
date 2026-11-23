@@ -82,9 +82,11 @@ void main() {
     await pumpApp(tester, b);
     await go(tester, '/me/groups/service/sunday/events');
     await tapText(tester, '聖餐');
-    await tapText(tester, '顏色');
-    await tapText(tester, '藍');
+    expect(find.text('顏色'), findsNothing, reason: 'its colors are on the menu, no row to open them');
+    await tester.tap(find.bySemanticsLabel('藍'));
+    await settle(tester);
 
+    expect(find.text('移除'), findsNothing, reason: 'the menu shuts once picked');
     expect(b.services['grace']!.byId('sunday')!.events.single.color, 4);
     expect(savedDay(b, 4), arranged);
     await tapText(tester, '復原');
@@ -187,7 +189,9 @@ void main() {
     await pumpApp(tester, b);
     await go(tester, '/me/groups/service/sunday/events');
     await tapText(tester, '聖餐');
-    await tapText(tester, '改名');
+    expect(find.text('改名'), findsNothing, reason: 'its name, atop the menu, is tapped instead');
+    await tester.tap(find.bySemanticsLabel(RegExp('^聖餐')).last);
+    await settle(tester);
     await tester.enterText(find.byType(TextField), '聖餐主日');
     await tapText(tester, '儲存');
 
@@ -225,7 +229,7 @@ void main() {
       await swipe.moveBy(const Offset(-40, 0));
       await swipe.moveBy(const Offset(-80, 0));
       await tester.pump();
-      final swiped = find.ancestor(of: find.text(row).last, matching: find.byType(Dismissible));
+      final swiped = find.ancestor(of: find.text(row).last, matching: find.byType(SwipeAction));
       expect(
         find.descendant(of: swiped, matching: find.text('刪除')),
         findsOneWidget,

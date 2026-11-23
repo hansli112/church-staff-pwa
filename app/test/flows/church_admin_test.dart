@@ -737,6 +737,33 @@ void main() {
     });
   });
 
+  testWidgets('a short swipe stops with 刪除 showing, deleted only once it is tapped; a tap on the row shuts it', (
+    tester,
+  ) async {
+    final b = seededChurch();
+    await pumpApp(tester, b);
+    await go(tester, '/me/groups/service/sunday/duties');
+    await tester.drag(find.text('司琴').first, const Offset(-100, 0));
+    await settle(tester);
+    expect(find.text('刪除'), findsOneWidget, reason: 'it stays open');
+    expect(b.services['grace']!.byId('sunday')!.duties, ['司會', '司琴', '招待'], reason: 'nothing deleted yet');
+
+    // Its name is slid off the screen's edge: the rest of the row.
+    await tester.tapAt(Offset(200, tester.getCenter(find.text('司琴').first).dy));
+    await settle(tester);
+    expect(find.text('刪除'), findsNothing, reason: 'shut, not opened');
+    expect(find.text('司琴'), findsOneWidget);
+
+    await tester.drag(find.text('司琴').first, const Offset(-100, 0));
+    await settle(tester);
+    await tester.drag(find.text('招待').first, const Offset(-100, 0));
+    await settle(tester);
+    expect(find.text('刪除'), findsOneWidget, reason: 'one open at a time');
+    await tapText(tester, '刪除');
+    expect(b.services['grace']!.byId('sunday')!.duties, ['司會', '司琴']);
+    expect(find.text('已刪除「招待」'), findsOneWidget);
+  });
+
   group('operator', () {
     testWidgets('is hidden without the claim', (tester) async {
       await pumpApp(tester, seededChurch());

@@ -558,6 +558,9 @@ class L10nEn extends L10n {
   String get colorName5 => 'Purple';
 
   @override
+  String get colorNameGrey => 'Grey';
+
+  @override
   String removed(String name) {
     return 'Removed $name';
   }
@@ -2730,14 +2733,6 @@ class L10nEn extends L10n {
     );
     return '$_temp0';
   }
-
-  @override
-  String serviceEventColorTitle(String name) {
-    return '$name · Color';
-  }
-
-  @override
-  String get serviceEventColor => 'Color';
 
   @override
   String get serviceSyncFutureRosters => 'Sync future schedules';

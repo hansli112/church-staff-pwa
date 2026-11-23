@@ -138,9 +138,9 @@ MemoryBackend demoBackend({
     b.connectCalendar(cid, calendarName: calendar);
     b.calendarEvents[cid] = [
       CalendarEvent(id: 'meeting', title: meeting, start: at(10, 19, 30), end: at(10, 21)),
-      CalendarEvent(id: 'retreat', title: retreat, start: at(14, 9), end: at(16, 16)),
-      CalendarEvent(id: 'meal', title: meal, start: at(22, 12), end: at(22, 14)),
-      CalendarEvent(id: 'practice', title: practice, start: at(28, 15), end: at(28, 17)),
+      CalendarEvent(id: 'retreat', title: retreat, start: at(14, 9), end: at(16, 16), colorId: '10'),
+      CalendarEvent(id: 'meal', title: meal, start: at(22, 12), end: at(22, 14), colorId: '6'),
+      CalendarEvent(id: 'practice', title: practice, start: at(28, 15), end: at(28, 17), colorId: '3'),
     ];
   }
   // The website's church has arranged the next two weeks, the rest is

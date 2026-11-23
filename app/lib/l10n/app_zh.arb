@@ -375,6 +375,8 @@
   "colorName3": "綠",
   "colorName4": "藍",
   "colorName5": "紫",
+  "colorNameGrey": "灰",
+  "@colorNameGrey": {"description": "A 行事曆 活動 with no color of its own: the first of its color dots, as it looks with none"},
   "removed": "已移除「{name}」",
   "@removed": {
     "placeholders": {
@@ -1909,15 +1911,6 @@
       }
     }
   },
-  "serviceEventColorTitle": "{name} · 顏色",
-  "@serviceEventColorTitle": {
-    "placeholders": {
-      "name": {
-        "type": "String"
-      }
-    }
-  },
-  "serviceEventColor": "顏色",
   "serviceSyncFutureRosters": "同步未來服事表",
   "rosterFutureChangesNone": "沒有需要變更的未來服事表",
   "rosterFutureChangesFooter": "只變更明天起已儲存的服事表",

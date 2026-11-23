@@ -1,5 +1,4 @@
 import 'package:flutter/foundation.dart' show listEquals, setEquals;
-import 'package:flutter/rendering.dart' show CustomSemanticsAction;
 import 'package:flutter/material.dart';
 import 'package:material_symbols_icons/symbols.dart';
 
@@ -602,18 +601,11 @@ class _PeoplePickerState extends State<PeoplePicker> {
     final row = _row(name, c, l10n, onTap: () => _choose(name, guest: true));
     if (!widget.rights.dropsFutureGuests) return row;
     void remove() => Navigator.pop(context, PickerResult(people: widget.initial, removeFutureGuest: name));
-    return Semantics(
-      customSemanticsActions: {CustomSemanticsAction(label: l10n.rosterRemoveFutureGuest): remove},
-      child: Dismissible(
-        key: ValueKey('guest/$name'),
-        direction: DismissDirection.endToStart,
-        background: SwipeDeleteBackground(label: l10n.rosterRemoveFutureGuest),
-        confirmDismiss: (_) async {
-          remove();
-          return false;
-        },
-        child: row,
-      ),
+    return SwipeAction(
+      key: ValueKey('guest/$name'),
+      label: l10n.rosterRemoveFutureGuest,
+      onAction: remove,
+      child: row,
     );
   }
 
@@ -658,23 +650,13 @@ class _PeoplePickerState extends State<PeoplePicker> {
       ),
     );
     if (!swipesOff) return row;
-    // Still listed after it, on the day or picked: it springs back, off
-    // the list. Otherwise it goes.
-    bool stays() => _onDay.contains(name) || _selected.contains(name);
-    return Semantics(
-      customSemanticsActions: {CustomSemanticsAction(label: l10n.pickerTakeOff(name)): () => _takeOffList(name)},
-      child: Dismissible(
-        key: ValueKey('off/$name'),
-        direction: DismissDirection.endToStart,
-        background: SwipeDeleteBackground(label: l10n.pickerOffList),
-        confirmDismiss: (_) async {
-          if (!stays()) return true;
-          _takeOffList(name);
-          return false;
-        },
-        onDismissed: (_) => _takeOffList(name),
-        child: row,
-      ),
+    // Still listed after it, on the day or picked, it stays, off the list.
+    return SwipeAction(
+      key: ValueKey('off/$name'),
+      label: l10n.pickerOffList,
+      semanticLabel: l10n.pickerTakeOff(name),
+      onAction: () => _takeOffList(name),
+      child: row,
     );
   }
 }
