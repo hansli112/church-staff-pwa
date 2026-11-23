@@ -4,6 +4,9 @@ void hideSplash() {}
 /// Only a browser has a user agent.
 String userAgent() => '';
 
+/// A native app's memory is not reported with its errors.
+String? pageMemory() => null;
+
 /// Only a web page can be opened from the home screen.
 bool isStandalone() => false;
 

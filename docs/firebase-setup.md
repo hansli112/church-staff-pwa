@@ -152,10 +152,10 @@ Crashlytics 和 Error Reporting 只在出現**新種類**的錯誤時寄信（�
 
      ```sh
      gcloud logging read 'jsonPayload.serviceContext.service="web-client"' --project marthasit \
-       --format='table(timestamp, jsonPayload.screen, jsonPayload.during, jsonPayload.library, jsonPayload.fatal)' --limit 20
+       --format='table(timestamp, jsonPayload.screen, jsonPayload.during, jsonPayload.library, jsonPayload.fatal, jsonPayload.trail, jsonPayload.memory)' --limit 20
      ```
 
-     `screen` 是當時的頁面（路由樣板，同 GA4 的 `screen_view`），`during` 是 Flutter 當時在做什麼（例如 `while dispatching a pointer event`，在 widget 的參數之前截斷），`library` 是丟出錯誤的 Flutter 部分，`fatal` 是 `true` 時沒有任何地方接住它。舊版網頁沒送這些欄位，會是空的。
+     `screen` 是當時的頁面（路由樣板，同 GA4 的 `screen_view`），`during` 是 Flutter 當時在做什麼（例如 `while dispatching a pointer event`，在 widget 的參數之前截斷），`library` 是丟出錯誤的 Flutter 部分，`fatal` 是 `true` 時沒有任何地方接住它。`trail` 是出錯前最近五個頁面，各是出錯前幾秒出現的（`/rosters 41s → /rosters/event/:id 0.3s`）；`memory` 是當時網頁用的記憶體（`skwasm 64 MB, heap 120 MB`，wasm 引擎和 JavaScript heap，只有 Chrome 系會有）。沒登入時的錯誤也會記，`uid` 是空的。舊版網頁沒送這些欄位，會是空的。
    - Functions：Error Reporting 依 function 分組。log 用 function 名字的小寫查：
 
      ```sh
@@ -165,7 +165,7 @@ Crashlytics 和 Error Reporting 只在出現**新種類**的錯誤時寄信（�
 
    - 預設的 gcloud 帳號沒有 marthasit 的權限時，加 `--account <有權限的帳號>`。
 2. **找出當時的版本**：用錯誤的時間對 Hosting／Functions 的部署時間，找出那次部署的 commit。
-3. **網頁 wasm 版的堆疊**：`deploy.sh` 建出的 `main.dart.wasm` 去掉了函式名字，堆疊只有 `wasm-function[編號]`。要對回名字，就在那次部署的 commit，用 `deploy.sh` 的同一行 `flutter build web` 加上 `--no-strip-wasm` 另外建一份（`-o` 到別的資料夾，不要蓋掉 `app/build/web`）。先確認兩份 wasm 除了 custom section 以外完全相同，再從帶名字那份的 name section 查編號（例如 WABT 的 `wasm-objdump`）。部署時有沒 commit 的改動，就建不出相同的 wasm，編號對不準，所以 prod 只從乾淨的工作區部署。JS 版（Safari、iOS、Firefox）的堆疊不用這一步。
+3. **網頁 wasm 版的堆疊**：部署的 `main.dart.<hash>.wasm` 去掉了函式名字，堆疊只有 `wasm-function[編號]`。`deploy.sh` 把名字存在 `.firebase/wasm-names/<專案>/`（以 hash 命名，只在部署的這台電腦），把 log 的訊息丟進 `node scripts/wasm-names.mjs name .firebase/wasm-names/marthasit` 就換回名字。JS 版（Safari、iOS、Firefox）的堆疊不用這一步。
 4. **修**：用 `git worktree add -b <分支> <路徑>` 另開 worktree，先寫能重現的測試（`functions/test`、`app/test`），修好再跑全部測試。
 5. **上線**：`scripts/deploy.sh prod`；手機版急的用 Shorebird 推修補。合回主要分支並 push，刪掉修正用的分支。
 6. **一時找不到原因，或不馬上修的**：開 GitHub issue，寫下錯誤訊息、查詢指令、目前排除了什麼、還在懷疑什麼，不要只留在對話裡。

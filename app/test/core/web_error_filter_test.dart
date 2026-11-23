@@ -38,4 +38,27 @@ void main() {
     final sent = [for (var i = 0; i < 30; i++) f.admit(Exception('$i'))].nonNulls;
     expect(sent, hasLength(20));
   });
+
+  test('the last five pages, oldest first, by how long before the error each came up', () {
+    final t = ScreenTrail();
+    expect(t.describe(Duration.zero), isNull);
+    for (final (i, page) in ['/loading', '/home', '/rosters', '/me', '/me/members', '/me/members/:uid'].indexed) {
+      t.add(page, Duration(seconds: 10 * i));
+    }
+    expect(
+      t.describe(const Duration(seconds: 50, milliseconds: 300)),
+      '/home 40s → /rosters 30s → /me 20s → /me/members 10s → /me/members/:uid 0.3s',
+    );
+  });
+
+  test('a trail too long for the log keeps its latest pages', () {
+    final t = ScreenTrail();
+    for (var i = 0; i < 5; i++) {
+      t.add('/${'x' * 60}$i', Duration.zero);
+    }
+    final trail = t.describe(const Duration(seconds: 1))!;
+    expect(trail.length, lessThanOrEqualTo(200));
+    expect(trail, endsWith('${'x' * 60}4 1.0s'));
+    expect(trail, isNot(contains('${'x' * 60}0')));
+  });
 }

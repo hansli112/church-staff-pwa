@@ -1033,10 +1033,12 @@ abstract interface class CloudApi {
   /// [CloudErrorCode.notFound] when no such payment came in.
   Future<OnlinePayment> adminRefundOnlineSupport(String orderNo, {required bool refunded});
 
-  /// Reports an uncaught error. Never throws. [screen]: the page up, by its
-  /// route's pattern; [during] and [library]: where the framework caught it;
-  /// [fatal]: nothing caught it; [agent]: the browser's user agent, as an
-  /// error can be its engine's.
+  /// Reports an uncaught error, signed in or not. Never throws. [screen]:
+  /// the page up, by its route's pattern; [during] and [library]: where the
+  /// framework caught it; [fatal]: nothing caught it; [agent]: the browser's
+  /// user agent, as an error can be its engine's; [trail]: the last pages
+  /// up and how long before the error each came up; [memory]: how much
+  /// memory the page uses, as an engine can fail once it runs short.
   Future<void> logError({
     required String message,
     required String stack,
@@ -1046,6 +1048,8 @@ abstract interface class CloudApi {
     String? library,
     bool fatal = false,
     String? agent,
+    String? trail,
+    String? memory,
   });
 }
 

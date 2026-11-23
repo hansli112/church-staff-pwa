@@ -1,4 +1,5 @@
 import 'dart:js_interop';
+import 'dart:js_interop_unsafe';
 
 import 'package:web/web.dart' as web;
 
@@ -8,6 +9,29 @@ void hideSplash() => web.document.getElementById('splash')?.remove();
 
 /// The browser's user agent, which tells an app's built-in browser apart.
 String userAgent() => web.window.navigator.userAgent;
+
+/// How much memory the page uses, for an error report: the wasm renderer's
+/// (skwasm; Chrome, on computers and Android) and the JavaScript heap
+/// (Chrome's performance.memory, which has the app's own objects too):
+/// `skwasm 64 MB, heap 120 MB`. Null when the browser tells neither.
+String? pageMemory() {
+  final parts = <String>[];
+  try {
+    final skwasm = globalContext['_flutter_skwasmInstance'] as JSObject?;
+    final memory = skwasm?['wasmMemory'] as JSObject?;
+    final buffer = memory?['buffer'] as JSObject?;
+    final bytes = buffer?['byteLength'] as JSNumber?;
+    if (bytes != null) parts.add('skwasm ${_megabytes(bytes)} MB');
+  } catch (_) {}
+  try {
+    final memory = (web.window.performance as JSObject)['memory'] as JSObject?;
+    final used = memory?['usedJSHeapSize'] as JSNumber?;
+    if (used != null) parts.add('heap ${_megabytes(used)} MB');
+  } catch (_) {}
+  return parts.isEmpty ? null : parts.join(', ');
+}
+
+int _megabytes(JSNumber bytes) => (bytes.toDartDouble / (1024 * 1024)).round();
 
 /// Opened from the home screen: Android's display mode, or iOS's own flag.
 bool isStandalone() =>

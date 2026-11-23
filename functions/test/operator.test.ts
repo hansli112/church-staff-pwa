@@ -176,8 +176,8 @@ describe('daily stats', () => {
 });
 
 describe('client error log', () => {
-  test('requires sign-in and limits size', () => {
-    assert.throws(() => logClientError(null, { message: 'x', stack: '' }), /permissionDenied/);
+  test('limits size; signed out too, as an error can come before signing in', () => {
+    assert.deepEqual(logClientError(null, { message: 'x', stack: '' }), {});
     assert.throws(() => logClientError(caller('a'), { message: 'x'.repeat(1001), stack: '' }), /unknown/);
     assert.throws(() => logClientError(caller('a'), { message: 'x', stack: 'y'.repeat(8001) }), /unknown/);
     assert.deepEqual(logClientError(caller('a'), { message: 'boom', stack: 'at main.dart' }), {});
@@ -211,5 +211,22 @@ describe('client error log', () => {
     const agent = 'Mozilla/5.0 (Linux; Android 14) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Mobile Safari/537.36';
     assert.equal(logged({ agent }).agent, agent, 'which browser, for errors of its engine');
     assert.equal(logged({ agent: 'x'.repeat(301) }).agent, null);
+    const trail = '/rosters 41s → /rosters/event/:id 0.3s';
+    assert.equal(logged({ trail }).trail, trail, 'the pages before it');
+    assert.equal(logged({ trail: 'x'.repeat(201) }).trail, null);
+    assert.equal(logged({ memory: 'skwasm 64 MB, heap 120 MB' }).memory, 'skwasm 64 MB, heap 120 MB');
+    assert.equal(logged({ memory: 7 }).memory, null);
+  });
+
+  test('signed out, the entry has no user', (t) => {
+    const lines: string[] = [];
+    for (const out of [process.stdout, process.stderr]) {
+      t.mock.method(out, 'write', (s: unknown) => (lines.push(String(s)), true));
+    }
+    logClientError(null, { message: 'before sign-in', stack: '', screen: '/loading' });
+    const entry = JSON.parse(lines.find((l) => l.includes('before sign-in'))!) as Record<string, unknown>;
+    assert.equal(entry.uid, null);
+    assert.equal(entry.context, undefined);
+    assert.equal(entry.screen, '/loading');
   });
 });

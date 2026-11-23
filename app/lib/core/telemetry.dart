@@ -56,6 +56,42 @@ class WebErrorFilter {
   }
 }
 
+/// The last pages up before a web error, oldest first, each with how long
+/// before the error it came up: `/rosters 41s → /rosters/event/:id 0.3s`.
+/// Pages by their route's pattern ([Telemetry.logScreen]), so no IDs or
+/// names. What led to an error the stack cannot show: one of the engine's,
+/// a page left a moment ago.
+class ScreenTrail {
+  static const _kept = 5;
+  static const _max = 200;
+  final _pages = <({String name, Duration at})>[];
+
+  /// [name] came up at [at], from any fixed starting point.
+  void add(String name, Duration at) {
+    _pages.add((name: name, at: at));
+    if (_pages.length > _kept) _pages.removeAt(0);
+  }
+
+  /// The trail for an error at [now]; null before any page. Within the
+  /// log's 200 characters, the latest pages kept.
+  String? describe(Duration now) {
+    final steps = [
+      for (final p in _pages) '${p.name} ${_seconds(now - p.at)}',
+    ];
+    while (steps.length > 1 && steps.join(' → ').length > _max) {
+      steps.removeAt(0);
+    }
+    if (steps.isEmpty) return null;
+    final trail = steps.join(' → ');
+    return trail.length > _max ? trail.substring(trail.length - _max) : trail;
+  }
+
+  static String _seconds(Duration d) {
+    final s = d.inMilliseconds / 1000;
+    return '${s.toStringAsFixed(s < 10 ? 1 : 0)}s';
+  }
+}
+
 /// What the framework was doing when it caught [details]' error, in a few
 /// words: 「while dispatching a pointer event」, 「during performLayout()」,
 /// 「building Text」. Cut before the first `(` (but an empty `()`), `[`, `#`,
@@ -144,6 +180,8 @@ class FirebaseTelemetry implements Telemetry {
   String? _screen;
 
   final _webErrors = WebErrorFilter();
+  final _trail = ScreenTrail();
+  final _sinceStart = Stopwatch()..start();
 
   @override
   void recordError(Object error, StackTrace stack, {bool fatal = false, String? during, String? library}) {
@@ -159,6 +197,8 @@ class FirebaseTelemetry implements Telemetry {
         during: during,
         library: library,
         fatal: fatal,
+        trail: _trail.describe(_sinceStart.elapsed),
+        memory: pageMemory(),
       );
       return;
     }
@@ -198,6 +238,7 @@ class FirebaseTelemetry implements Telemetry {
   @override
   void logScreen(String name) {
     _screen = name;
+    _trail.add(name, _sinceStart.elapsed);
     _analytics?.logScreenView(screenName: name, screenClass: name);
   }
 

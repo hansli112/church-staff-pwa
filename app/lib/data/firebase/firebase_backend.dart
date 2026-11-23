@@ -2363,6 +2363,8 @@ class FirebaseCloudApi implements CloudApi {
     String? library,
     bool fatal = false,
     String? agent,
+    String? trail,
+    String? memory,
   }) => _calls.report({
     'message': message,
     'stack': stack,
@@ -2372,5 +2374,7 @@ class FirebaseCloudApi implements CloudApi {
     'library': ?library,
     'fatal': fatal,
     if (agent != null && agent.isNotEmpty) 'agent': agent,
+    'trail': ?trail,
+    'memory': ?memory,
   });
 }
