@@ -1252,6 +1252,66 @@ void contractTests(Future<ContractWorld> Function() open) {
     });
   });
 
+  group('家人', () {
+    test('one without an account is in at once; one with an account is asked, and answers', () async {
+      final g = await Grace.open(w);
+      const wait = Duration(seconds: 30);
+      await w.signIn(Grace.editorEmail);
+      final kid = await g.church.addByName('林小恩', 'sunday');
+      await w.signIn(Grace.meiEmail);
+      final addable = await g.church.family.addable();
+      expect(
+        {for (final p in addable) p.id: (p.name, p.account)},
+        {
+          g.pastor: ('王牧師', true),
+          g.editor: ('林同工', true),
+          kid: ('林小恩', false),
+        },
+      );
+      await expectLater(g.church.addFamily(g.mei), throwsA(isA<CloudException>()), reason: 'not herself');
+      await g.church.addFamily(kid);
+      await g.church.addFamily(g.editor);
+      final mine =
+          (await g.church.family.mine().firstWhere((h) => h.isNotEmpty && h.single.invited.isNotEmpty).timeout(wait))
+              .single;
+      expect(
+        [mine.people, mine.noAccount, mine.invited],
+        [
+          [g.mei, kid],
+          [kid],
+          [g.editor],
+        ],
+      );
+      expect(mine.names, {g.mei: '李美玉', kid: '林小恩', g.editor: '林同工'});
+
+      await w.signIn(Grace.pastorEmail);
+      expect(await g.church.family.mine().first, isEmpty, reason: 'not his family');
+      expect(await g.church.family.asking().first, isEmpty);
+
+      await w.signIn(Grace.editorEmail);
+      final asking = (await g.church.family.asking().firstWhere((h) => h.isNotEmpty).timeout(wait)).single;
+      expect(asking.askerOf(g.editor), '李美玉');
+      await g.church.answerFamily(asking.id, yes: true);
+      final joined = (await g.church.family.mine().firstWhere((h) => h.isNotEmpty).timeout(wait)).single;
+      expect(
+        [joined.people, joined.invited],
+        [
+          [g.mei, kid, g.editor],
+          const <String>[],
+        ],
+      );
+
+      await w.signIn(Grace.meiEmail);
+      await g.church.removeFamily(g.editor);
+      await g.church.removeFamily(kid);
+      expect(
+        await g.church.family.mine().firstWhere((h) => h.isEmpty).timeout(wait),
+        isEmpty,
+        reason: 'one alone is no family',
+      );
+    });
+  });
+
   group('備註', () {
     test('whoever arranges the day keeps its note and files; everyone reads it, nobody else writes', () async {
       final g = await Grace.open(w);

@@ -7,6 +7,7 @@ library;
 import 'package:cloud_firestore/cloud_firestore.dart';
 
 import '../../domain/day.dart';
+import '../../domain/family.dart';
 import '../../domain/limits.dart';
 import '../../domain/models.dart';
 import '../../domain/swap.dart';
@@ -394,6 +395,31 @@ ClaimAsk claimAskFromJson(String uid, Json data) => ClaimAsk(
   pendingId: data['pendingId'] as String? ?? '',
   pendingName: data['pendingName'] as String? ?? '',
 );
+
+/// A 家人 household as functions/src/family.ts keeps it.
+Household householdFromJson(String id, Json data) {
+  List<String> ids(Object? v) => [for (final x in v is List ? v : const []) ?(x is String ? x : null)];
+  Map<String, String> names(Object? v) => {
+    if (v is Map)
+      for (final e in v.entries)
+        if (e.key is String && e.value is String) e.key as String: e.value as String,
+  };
+  return Household(
+    id: id,
+    people: ids(data['people']),
+    noAccount: ids(data['noAccount']),
+    invited: ids(data['invited']),
+    invitedBy: names(data['invitedBy']),
+    names: names(data['names']),
+  );
+}
+
+/// Those functions/src/family.ts familyCandidates gives.
+List<FamilyCandidate> familyCandidatesFromJson(Object? people) => [
+  for (final p in people is List ? people : const [])
+    if (p is Map && p['id'] is String)
+      FamilyCandidate(id: p['id'] as String, name: p['name'] as String? ?? '', account: p['account'] == true),
+];
 
 /// A pending member's duties as functions/src/claim.ts servesOf gives them.
 List<ClaimServe> claimServesFromJson(Object? serves) => [

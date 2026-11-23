@@ -17,6 +17,7 @@ import 'dart:typed_data';
 
 import '../core/languages.dart';
 import '../domain/day.dart';
+import '../domain/family.dart';
 import '../domain/models.dart';
 import '../domain/staff_order.dart';
 import '../domain/swap.dart';
@@ -235,6 +236,9 @@ abstract interface class ChurchData {
 
   ClaimData get claims;
 
+  /// 家人 (functions/src/family.ts).
+  FamilyData get family;
+
   JoiningData get joining;
 
   /// Makes [call] (one of the callables, [ChurchCall]), answering what it
@@ -392,6 +396,20 @@ abstract interface class SwapData {
   /// Request [id], for who asked and whoever it asks; null when there is
   /// none.
   Stream<SwapRequest?> request(String id);
+}
+
+/// 家人 (functions/src/family.ts). Adding, answering and 移出 are
+/// [ChurchCall]s.
+abstract interface class FamilyData {
+  /// The families I am in: one, or several when one of them without an
+  /// account was in another's too before signing in.
+  Stream<List<Household>> mine();
+
+  /// The families asking me in, not answered yet.
+  Stream<List<Household>> asking();
+
+  /// Everyone in the church but me, to add.
+  Future<List<FamilyCandidate>> addable();
 }
 
 /// 認領 (claiming to be one of the pending members). Asking and answering

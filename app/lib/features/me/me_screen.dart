@@ -39,6 +39,7 @@ class SettingsScreen extends ConsumerWidget {
     final profile = ref.watch(profileProvider).value;
     final church = ref.watch(churchProvider).value;
     final me = ref.watch(meProvider).value;
+    final family = ref.watch(familyProvider);
     final isOperator = ref.watch(isOperatorProvider).value ?? false;
     final store = ref.watch(supportStoreProvider);
     final supporter = store.available && ref.watch(supporterProvider);
@@ -130,6 +131,12 @@ class SettingsScreen extends ConsumerWidget {
                 leading: const IconTile(Symbols.event_busy_rounded, color: TileColors.church),
                 title: l10n.unavailableTitle,
                 onTap: () => context.push('/me/unavailable'),
+              ),
+              ListRow(
+                leading: const IconTile(Symbols.family_restroom_rounded, color: TileColors.church),
+                title: l10n.family,
+                value: family.isEmpty ? null : l10n.familyCount(family.length),
+                onTap: () => context.push('/me/family'),
               ),
               // The church I am in; 切換教會 is on its page (2026-11-19: one
               // row about the church, not two).

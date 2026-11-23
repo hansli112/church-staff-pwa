@@ -8,6 +8,7 @@ import 'package:flutter/foundation.dart' show listEquals, mapEquals, setEquals;
 import '../../core/languages.dart';
 import '../../domain/day.dart';
 import '../../domain/event_roster.dart';
+import '../../domain/family.dart';
 import '../../domain/limits.dart';
 import '../../domain/models.dart';
 import '../../domain/service_changes.dart';
@@ -28,6 +29,7 @@ part 'group_members.dart';
 part 'invites.dart';
 part 'church.dart';
 part 'claim.dart';
+part 'family.dart';
 part 'auth.dart';
 part 'calendar.dart';
 part 'roster_notes.dart';
@@ -193,6 +195,10 @@ class MemoryBackend implements Backend {
 
   /// 認領申請 per church, by the uid of who asked.
   final claimAsks = <String, Map<String, ClaimAsk>>{};
+
+  /// 家人 per church, by ID (functions/src/family.ts).
+  final households = <String, Map<String, Household>>{};
+  var _familyIds = 0;
 
   /// How [uid]'s request to church [cid] stands now.
   JoinRequestState? joinRequestState(String cid, String uid) => joinRequests[cid]?[uid]?.stateAt(clock());
@@ -541,6 +547,7 @@ void _settlePending(MemoryBackend b, String cid, String pid, String uid) {
   b.pendingMembers[cid]!.remove(pid);
   b.pendingRosterIds[cid]?.remove(pid);
   b.claimAsks[cid]?.removeWhere((_, a) => a.pendingId == pid);
+  _repointFamily(b, cid, pid, uid, b.members[cid]?[uid]?.name ?? '');
   final rosters = b.rosters[cid]!;
   // The days the move recorded, and any they were put on since.
   for (final key in [...rosters.keys]) {

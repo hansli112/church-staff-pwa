@@ -3750,7 +3750,7 @@ class L10nEn extends L10n {
   String get notifSwap => 'Covers and swaps';
 
   @override
-  String get notifSwapSub => 'Covering, swapping, and days you can’t serve';
+  String get notifSwapSub => 'Covering, swapping, days you can’t serve, and family invites';
 
   @override
   String get swapMenu => 'Find a cover or swap';
@@ -3892,4 +3892,68 @@ class L10nEn extends L10n {
 
   @override
   String get swapOutSwap => 'Swap asked';
+
+  @override
+  String get family => 'Family';
+
+  @override
+  String familyCount(int count) {
+    return '$count';
+  }
+
+  @override
+  String get familyAdd => 'Add Family';
+
+  @override
+  String familyMe(String name) {
+    return '$name (You)';
+  }
+
+  @override
+  String get familyWaiting => 'Waiting for them to accept';
+
+  @override
+  String get familyFooter =>
+      'Your family\'s serving shows on your Home. When family without an account are scheduled, you\'re notified too.';
+
+  @override
+  String familyMoveOutLabel(String name) {
+    return 'Remove $name from family';
+  }
+
+  @override
+  String familyWithdrawLabel(String name) {
+    return 'Withdraw the invite to $name';
+  }
+
+  @override
+  String familyMovedOut(String name) {
+    return 'Removed $name from family';
+  }
+
+  @override
+  String familyMoveOutAsk(String name) {
+    return 'Remove $name from family?';
+  }
+
+  @override
+  String familyAsksYou(String name) {
+    return '$name wants to add you as family';
+  }
+
+  @override
+  String get familyDecline => 'Decline';
+
+  @override
+  String familyDeclineLabel(String name) {
+    return 'Decline $name\'s family invite';
+  }
+
+  @override
+  String familyAcceptLabel(String name) {
+    return 'Accept $name\'s family invite';
+  }
+
+  @override
+  String get myFamilyServicesTitle => 'Upcoming for You and Family';
 }

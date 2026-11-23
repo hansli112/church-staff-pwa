@@ -7,6 +7,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import '../data/backend.dart';
 import '../domain/church_link.dart';
 import '../domain/day.dart';
+import '../domain/family.dart';
 import '../domain/models.dart';
 import '../domain/schedule.dart';
 import '../domain/staff.dart';
@@ -339,6 +340,33 @@ final swapRequestsToMeProvider = StreamProvider<List<SwapRequest>>((ref) {
   return openChurch(ref).swaps.toMe();
 });
 
+/// The families I am in (家人).
+final myHouseholdsProvider = StreamProvider<List<Household>>((ref) {
+  if (ref.watch(uidProvider) == null) return Stream.value(const []);
+  return openChurch(ref).family.mine();
+});
+
+/// The families asking me in, not answered yet: on 首頁.
+final familyAskingProvider = StreamProvider<List<Household>>((ref) {
+  if (ref.watch(uidProvider) == null) return Stream.value(const []);
+  return openChurch(ref).family.asking();
+});
+
+/// My family, without me: those in it, then those asked.
+final familyProvider = Provider<List<FamilyPerson>>((ref) {
+  // Watched directly, as myServicesProvider does: switching church marks
+  // this stale at once, not first while a screen builds.
+  ref.watch(churchDataProvider);
+  final uid = ref.watch(uidProvider);
+  if (uid == null) return const [];
+  return familyOf(ref.watch(myHouseholdsProvider).value ?? const [], uid);
+});
+
+/// Everyone in the church but me, for 加入家人.
+final familyAddableProvider = FutureProvider.autoDispose<List<FamilyCandidate>>(
+  (ref) => openChurch(ref).family.addable(),
+);
+
 /// Request [id] (#92), for who asked and whoever it asks.
 final swapRequestProvider = StreamProvider.autoDispose.family<SwapRequest?, String>(
   (ref, id) => openChurch(ref).swaps.request(id),
@@ -457,6 +485,23 @@ final myServicesProvider = Provider<AsyncValue<List<MyService>>>((ref) {
   if (rosters == null || services == null || uid == null) return const AsyncLoading();
   // Not a deleted service's: its rosters stay saved, out of sight.
   return AsyncData(myServices(rosters.where((r) => r.isEvent || services.byId(r.type) != null), uid: uid));
+});
+
+/// [myServicesProvider]'s days with my family's (家人), soonest first.
+final servingWithFamilyProvider = Provider<AsyncValue<List<FamilyServing>>>((ref) {
+  ref.watch(churchDataProvider);
+  final saved = ref.watch(savedRostersProvider);
+  final settings = ref.watch(servicesProvider);
+  final uid = ref.watch(uidProvider);
+  final family = ref.watch(familyProvider);
+  if (saved.hasError) return AsyncError(saved.error!, saved.stackTrace!);
+  if (settings.hasError) return AsyncError(settings.error!, settings.stackTrace!);
+  final rosters = saved.value;
+  final services = settings.value;
+  if (rosters == null || services == null || uid == null) return const AsyncLoading();
+  return AsyncData(
+    servingWithFamily(rosters.where((r) => r.isEvent || services.byId(r.type) != null), me: uid, family: family),
+  );
 });
 
 /// Where the app is, which decides the screen the router shows.

@@ -10,7 +10,8 @@ class MemoryChurchData extends _MemoryChurchBase
         _MemoryGroupMembers,
         _MemoryInvites,
         _MemoryChurch,
-        _MemoryClaim {
+        _MemoryClaim,
+        _MemoryFamily {
   MemoryChurchData(super._b, super.churchId);
 
   /// Each call as its functions/src file makes it, in the part beside it.
@@ -46,6 +47,9 @@ class MemoryChurchData extends _MemoryChurchBase
       RenameMember(:final uid, :final name) => renameMember(uid, name),
       AskClaim(:final pendingId) => askClaim(pendingId),
       AnswerClaim(:final uid, :final allow) => answerClaim(uid, allow: allow),
+      AddFamily(:final id) => addFamily(id),
+      AnswerFamily(:final householdId, :final yes) => answerFamily(householdId, yes: yes),
+      RemoveFamily(:final id) => removeFamily(id),
     };
     return await answer as R;
   }
@@ -81,6 +85,9 @@ class MemoryChurchData extends _MemoryChurchBase
 
   @override
   ClaimData get claims => this;
+
+  @override
+  FamilyData get family => this;
 
   @override
   JoiningData get joining => this;

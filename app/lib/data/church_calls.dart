@@ -331,8 +331,53 @@ final class AnswerClaim extends _Write {
   Map<String, Object?> get data => {'uid': uid, 'allow': allow};
 }
 
+final class AddFamily extends _Write {
+  const AddFamily(this.id);
+  final String id;
+
+  @override
+  String get callable => 'addFamily';
+
+  @override
+  Map<String, Object?> get data => {'id': id};
+}
+
+final class AnswerFamily extends _Write {
+  const AnswerFamily(this.householdId, {required this.yes});
+  final String householdId;
+  final bool yes;
+
+  @override
+  String get callable => 'answerFamily';
+
+  @override
+  Map<String, Object?> get data => {'householdId': householdId, 'yes': yes};
+}
+
+final class RemoveFamily extends _Write {
+  const RemoveFamily(this.id);
+  final String id;
+
+  @override
+  String get callable => 'removeFamily';
+
+  @override
+  Map<String, Object?> get data => {'id': id};
+}
+
 /// Each [ChurchCall], by name, as the app asks for them.
 extension ChurchCalls on ChurchData {
+  /// 加入家人: [id], anyone else in the church, into my family. One without
+  /// an account is in at once; one with an account is asked, with a push.
+  Future<void> addFamily(String id) => run(AddFamily(id));
+
+  /// 接受 ([yes]) or 不要, by one asked into [householdId]: accepting
+  /// brings the family they had into it.
+  Future<void> answerFamily(String householdId, {required bool yes}) => run(AnswerFamily(householdId, yes: yes));
+
+  /// 移出, or 收回 for one asked: [id] out of my family.
+  Future<void> removeFamily(String id) => run(RemoveFamily(id));
+
   /// The caller says they are pending member [pendingId]; null takes it
   /// back. The admins are told.
   Future<void> askClaim(String? pendingId) => run(AskClaim(pendingId));

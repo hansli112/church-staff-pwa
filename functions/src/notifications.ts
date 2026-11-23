@@ -3,6 +3,8 @@ import type { DocumentSnapshot } from 'firebase-admin/firestore';
 
 import { isChurchOpen } from './access.js';
 import { DAY_MS } from './common.js';
+import { familiesOf } from './family.js';
+import type { Words } from './languages.js';
 import { notifyMembers, type PushDeps } from './push.js';
 import { rosterDay, rosterLink, serviceNames } from './rosters.js';
 import { dateKeyIn, timeZoneOf, timeZonesAt } from './timeZones.js';
@@ -30,7 +32,12 @@ interface DutyLine {
   roles: string[];
   /** The roster's page. */
   link: string;
+  /** Whose, of one's 家人 without an account; none for one's own. */
+  who?: string;
 }
+
+/** [line] of [item], with whose it is when it is a family member's. */
+const whose = (w: Words, item: DutyLine, line: string) => (item.who ? w.familyLine(item.who, line) : line);
 
 /** Where a reminder of [lines] opens: the roster if it is about one, else 首頁, which lists them. */
 const reminderLink = (lines: DutyLine[]) => (lines.length === 1 ? lines[0].link : '/home');
@@ -80,11 +87,26 @@ export async function sendReminders(deps: PushDeps & { now: () => Date }) {
       }
     }
     if (perUid.size === 0) continue;
-    const members = await deps.db.getAll(...[...perUid.keys()].map((uid) => deps.db.doc(`churches/${cid}/members/${uid}`)));
+    // 家人 (family.ts): those without an account are told to their families.
+    const ids = [...perUid.keys()];
+    const known = await deps.db.getAll(...ids.map((uid) => deps.db.doc(`churches/${cid}/members/${uid}`)));
+    const families = await familiesOf(deps, cid, known.filter((m) => !m.exists).map((m) => m.id));
+    const theirs = new Map<string, DutyLine[]>();
+    for (const [kid, { name, to }] of families) {
+      for (const uid of to) {
+        theirs.set(uid, [...(theirs.get(uid) ?? []), ...perUid.get(kid)!.map((i) => ({ ...i, who: name }))]);
+      }
+    }
+    const extra = [...theirs.keys()].filter((uid) => !perUid.has(uid));
+    const members = [
+      ...known,
+      ...(extra.length ? await deps.db.getAll(...extra.map((uid) => deps.db.doc(`churches/${cid}/members/${uid}`))) : []),
+    ];
     for (const member of members) {
       if (!member.exists) continue;
       const timing = reminderTiming(member);
-      const items = perUid.get(member.id)!;
+      // One's own first on a day, then the family's.
+      const items = [...(perUid.get(member.id) ?? []), ...(theirs.get(member.id) ?? [])];
       const name = (member.get('name') as string | undefined)?.trim() || null;
       // Monday's list has tomorrow in it, so those choosing both get one message.
       const weekly = isMonday && timing !== 'dayBefore';
@@ -92,7 +114,7 @@ export async function sendReminders(deps: PushDeps & { now: () => Date }) {
         const week = [...items].sort((a, b) => a.dateKey.localeCompare(b.dateKey));
         sent += await notifyMembers(deps, cid, [member.id], 'reminder', (w) => ({
           title: w.weekReminder(name),
-          body: week.map((i) => w.datedDutyLine(w.dateWithWeekday(i.dateKey), w.dutyLine(i.name, i.roles))).join(w.lineSeparator),
+          body: week.map((i) => whose(w, i, w.datedDutyLine(w.dateWithWeekday(i.dateKey), w.dutyLine(i.name, i.roles)))).join(w.lineSeparator),
           link: reminderLink(week),
         }));
       }
@@ -100,7 +122,7 @@ export async function sendReminders(deps: PushDeps & { now: () => Date }) {
       if (!weekly && timing !== 'weekly' && next.length > 0) {
         sent += await notifyMembers(deps, cid, [member.id], 'reminder', (w) => ({
           title: w.tomorrowReminder(name),
-          body: next.map((i) => w.dutyLine(i.name, i.roles)).join(w.lineSeparator),
+          body: next.map((i) => whose(w, i, w.dutyLine(i.name, i.roles))).join(w.lineSeparator),
           link: reminderLink(next),
         }));
       }

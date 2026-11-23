@@ -6199,7 +6199,7 @@ abstract class L10n {
   /// No description provided for @notifSwapSub.
   ///
   /// In zh, this message translates to:
-  /// **'找人代、交換、填不能服事的日子'**
+  /// **'找人代、交換、填不能服事的日子、加入家人'**
   String get notifSwapSub;
 
   /// On one's own name on a roster (#92)
@@ -6429,6 +6429,96 @@ abstract class L10n {
   /// In zh, this message translates to:
   /// **'已請交換'**
   String get swapOutSwap;
+
+  /// Settings row and page: people in this church who see each other's serving; those without an account are told about to the family
+  ///
+  /// In zh, this message translates to:
+  /// **'家人'**
+  String get family;
+
+  /// Settings row 家人: how many are in my family
+  ///
+  /// In zh, this message translates to:
+  /// **'{count} 位'**
+  String familyCount(int count);
+
+  /// Row on 家人, and the sheet's title: pick someone in the church to add
+  ///
+  /// In zh, this message translates to:
+  /// **'加入家人'**
+  String get familyAdd;
+
+  /// On 家人: my own row
+  ///
+  /// In zh, this message translates to:
+  /// **'{name}（你）'**
+  String familyMe(String name);
+
+  /// On 家人, under someone with an account asked and not answered yet
+  ///
+  /// In zh, this message translates to:
+  /// **'等對方接受'**
+  String get familyWaiting;
+
+  /// Under the list on 家人: what being family does
+  ///
+  /// In zh, this message translates to:
+  /// **'家人的服事會列在你的首頁。沒有帳號的家人被排到服事時，也通知你。'**
+  String get familyFooter;
+
+  /// Screen reader label of 移出 on 家人
+  ///
+  /// In zh, this message translates to:
+  /// **'把{name}移出家人'**
+  String familyMoveOutLabel(String name);
+
+  /// Screen reader label of 收回 on 家人
+  ///
+  /// In zh, this message translates to:
+  /// **'收回給{name}的邀請'**
+  String familyWithdrawLabel(String name);
+
+  /// Toast after 移出 on 家人, with 復原
+  ///
+  /// In zh, this message translates to:
+  /// **'已把{name}移出家人'**
+  String familyMovedOut(String name);
+
+  /// Asked before 移出 of someone with an account: to add them again they must accept again
+  ///
+  /// In zh, this message translates to:
+  /// **'把{name}移出家人？'**
+  String familyMoveOutAsk(String name);
+
+  /// 首頁 under 等你回覆: someone asked me into their family
+  ///
+  /// In zh, this message translates to:
+  /// **'{name}想加你為家人'**
+  String familyAsksYou(String name);
+
+  /// 首頁: saying no to being family
+  ///
+  /// In zh, this message translates to:
+  /// **'不要'**
+  String get familyDecline;
+
+  /// Screen reader label of 不要
+  ///
+  /// In zh, this message translates to:
+  /// **'不要和{name}成為家人'**
+  String familyDeclineLabel(String name);
+
+  /// Screen reader label of 接受
+  ///
+  /// In zh, this message translates to:
+  /// **'接受{name}的家人邀請'**
+  String familyAcceptLabel(String name);
+
+  /// 首頁 header over my days and my family's, once I have family
+  ///
+  /// In zh, this message translates to:
+  /// **'我和家人接下來的服事'**
+  String get myFamilyServicesTitle;
 }
 
 class _L10nDelegate extends LocalizationsDelegate<L10n> {

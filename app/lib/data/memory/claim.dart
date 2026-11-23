@@ -53,8 +53,10 @@ mixin _MemoryClaim on _MemoryChurchBase implements ClaimData {
     _b.notify();
   }
 
-  /// [id], once [old], is [named] now on the rosters and staff orders.
+  /// [id], once [old], is [named] now on the rosters and staff orders, and
+  /// in their families.
   void _renameOnRosters(String id, String old, String named) {
+    _renameInFamilies(_b, churchId, id, named);
     final staffOrders = _b.staffOrders[churchId] ?? {};
     for (final e in [...staffOrders.entries]) {
       staffOrders[e.key] = StaffOrder({

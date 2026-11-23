@@ -16,6 +16,7 @@ mixin _MemoryGroupMembers on _MemoryChurchBase {
       _b.pendingMembers[churchId]?.remove(id);
       _b.pendingRosterIds[churchId]?.remove(id);
       _b.claimAsks[churchId]?.removeWhere((_, a) => a.pendingId == id);
+      _leaveFamilies(_b, churchId, id);
     });
   }
 
@@ -186,12 +187,13 @@ mixin _MemoryGroupMembers on _MemoryChurchBase {
     if (!allowed) throw const CloudException(CloudErrorCode.permissionDenied);
     await _b.write(() {
       _b.members[churchId]!.remove(uid);
-      // As onMemberDeleted: the church's notifications go with them, and
-      // their 不能服事的日子.
+      // As onMemberDeleted: the church's notifications go with them, their
+      // 不能服事的日子, and their place in a family.
       _b.notifications[uid]?.removeWhere((n) => n.churchId == churchId);
       _b.unavailable[churchId]?.remove(uid);
       _b.unavailableAsked[churchId]?.remove(uid);
       _b.unavailableSentAt[churchId]?.remove(uid);
+      _leaveFamilies(_b, churchId, uid);
     });
   }
 

@@ -108,6 +108,16 @@ export interface Words {
    * line dutyLine's of a short date.
    */
   planned(service: string, on: string[], off: string[]): string;
+  /**
+   * 家人 (family.ts): [name] asked you into their family; and the pushes
+   * and reminders above, about [who] in your family without an account.
+   */
+  familyAsked(name: string): string;
+  familyPutOn(who: string, day: string, duties: string[]): string;
+  familyTakenOff(who: string, day: string, duties: string[]): string;
+  familyPlanned(who: string, service: string, on: string[], off: string[]): string;
+  /** A reminder's line ([line]) of [who]'s. */
+  familyLine(who: string, line: string): string;
 
   /** [count] people joined by invite (joinedPushes.ts), [names] those of them with one. */
   memberJoined(names: string[], count: number): string;
@@ -209,6 +219,11 @@ const zhHant: Words = {
   putOn: (day, duties) => `你被排進 ${day}：${duties.join('、')}`,
   takenOff: (day, duties) => `你被移出 ${day}：${duties.join('、')}`,
   planned: (service, on, off) => [`${service}的服事排好了`, ...on.map((l) => `排進 ${l}`), ...off.map((l) => `移出 ${l}`)].join('\n'),
+  familyAsked: (name) => `「${name}」想加你為家人`,
+  familyPutOn: (who, day, duties) => `「${who}」被排進 ${day}：${duties.join('、')}`,
+  familyTakenOff: (who, day, duties) => `「${who}」被移出 ${day}：${duties.join('、')}`,
+  familyPlanned: (who, service, on, off) => [`「${who}」的${service}服事排好了`, ...on.map((l) => `排進 ${l}`), ...off.map((l) => `移出 ${l}`)].join('\n'),
+  familyLine: (who, line) => `${who}：${line}`,
   memberJoined: (names, n) => {
     const named = names.map((x) => `「${x}」`).join('、');
     if (!names.length) return n > 1 ? `${n} 人加入了教會` : '有人加入了教會';
@@ -270,6 +285,11 @@ const zhHans: Words = {
   putOn: (day, duties) => `你被排入 ${day}：${duties.join('、')}`,
   takenOff: (day, duties) => `你被移出 ${day}：${duties.join('、')}`,
   planned: (service, on, off) => [`${service}的事奉排好了`, ...on.map((l) => `排入 ${l}`), ...off.map((l) => `移出 ${l}`)].join('\n'),
+  familyAsked: (name) => `“${name}”想加你为家人`,
+  familyPutOn: (who, day, duties) => `“${who}”被排入 ${day}：${duties.join('、')}`,
+  familyTakenOff: (who, day, duties) => `“${who}”被移出 ${day}：${duties.join('、')}`,
+  familyPlanned: (who, service, on, off) => [`“${who}”的${service}事奉排好了`, ...on.map((l) => `排入 ${l}`), ...off.map((l) => `移出 ${l}`)].join('\n'),
+  familyLine: (who, line) => `${who}：${line}`,
   memberJoined: (names, n) => {
     const named = names.map((x) => `“${x}”`).join('、');
     if (!names.length) return n > 1 ? `${n} 人加入了教会` : '有人加入了教会';
@@ -331,6 +351,11 @@ const en: Words = {
   putOn: (day, duties) => `You’re on ${day}: ${duties.join(', ')}`,
   takenOff: (day, duties) => `You’re no longer on ${day}: ${duties.join(', ')}`,
   planned: (service, on, off) => [`${service}: your serving is arranged`, ...on.map((l) => `On ${l}`), ...off.map((l) => `Off ${l}`)].join('\n'),
+  familyAsked: (name) => `${name} wants to add you as family`,
+  familyPutOn: (who, day, duties) => `${who} is on ${day}: ${duties.join(', ')}`,
+  familyTakenOff: (who, day, duties) => `${who} is no longer on ${day}: ${duties.join(', ')}`,
+  familyPlanned: (who, service, on, off) => [`${service}: ${who}’s serving is arranged`, ...on.map((l) => `On ${l}`), ...off.map((l) => `Off ${l}`)].join('\n'),
+  familyLine: (who, line) => `${who}: ${line}`,
   memberJoined: (names, n) => {
     const more = n - names.length;
     if (!names.length) return n > 1 ? `${n} people joined the church` : 'Someone joined the church';
@@ -396,6 +421,11 @@ const ja: Words = {
   putOn: (day, duties) => `${day}の担当になりました：${duties.join('、')}`,
   takenOff: (day, duties) => `${day}の担当から外れました：${duties.join('、')}`,
   planned: (service, on, off) => [`${service}の奉仕が決まりました`, ...on.map((l) => `担当 ${l}`), ...off.map((l) => `解除 ${l}`)].join('\n'),
+  familyAsked: (name) => `${name}さんが家族に追加したいと言っています`,
+  familyPutOn: (who, day, duties) => `${who}さんが${day}の担当になりました：${duties.join('、')}`,
+  familyTakenOff: (who, day, duties) => `${who}さんが${day}の担当から外れました：${duties.join('、')}`,
+  familyPlanned: (who, service, on, off) => [`${who}さんの${service}の奉仕が決まりました`, ...on.map((l) => `担当 ${l}`), ...off.map((l) => `解除 ${l}`)].join('\n'),
+  familyLine: (who, line) => `${who}：${line}`,
   memberJoined: (names, n) => {
     const more = n - names.length;
     if (!names.length) return n > 1 ? `${n}人が教会に参加しました` : 'メンバーが教会に参加しました';
@@ -456,6 +486,11 @@ const ko: Words = {
   putOn: (day, duties) => `${day} 봉사에 배정됐어요: ${duties.join(', ')}`,
   takenOff: (day, duties) => `${day} 봉사에서 빠졌어요: ${duties.join(', ')}`,
   planned: (service, on, off) => [`${service} 봉사가 정해졌어요`, ...on.map((l) => `배정 ${l}`), ...off.map((l) => `제외 ${l}`)].join('\n'),
+  familyAsked: (name) => `${name} 님이 가족으로 추가하려고 해요`,
+  familyPutOn: (who, day, duties) => `${who} 님이 ${day} 봉사에 배정됐어요: ${duties.join(', ')}`,
+  familyTakenOff: (who, day, duties) => `${who} 님이 ${day} 봉사에서 빠졌어요: ${duties.join(', ')}`,
+  familyPlanned: (who, service, on, off) => [`${who} 님의 ${service} 봉사가 정해졌어요`, ...on.map((l) => `배정 ${l}`), ...off.map((l) => `제외 ${l}`)].join('\n'),
+  familyLine: (who, line) => `${who}: ${line}`,
   memberJoined: (names, n) => {
     const more = n - names.length;
     const listed = names.map((x) => `${x} 님`).join(', ');

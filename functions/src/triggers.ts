@@ -4,6 +4,7 @@ import type { Storage } from 'firebase-admin/storage';
 import { CHURCH_ID, isChurchOpen } from './access.js';
 import { releaseCalendarIfConnector, type CalDeps } from './calendar.js';
 import { runEach, type Deps } from './common.js';
+import { leaveFamilies } from './family.js';
 import { identitiesOf, sameIdentity, type Identity } from './identities.js';
 import type { NamedIdentity } from './languages.js';
 import { ministriesOf } from './ministries.js';
@@ -24,8 +25,8 @@ export const editorOf = (auth: { authType: string; authId?: string }) =>
 /**
  * A member doc deleted: removed by an admin, left on their own, or their
  * account deleted. A calendar they connected goes with them, so do the
- * church's notifications in their 通知列表 and their 不能服事的日子 (#91),
- * and their leaving is told to the admins; one failing never stops the
+ * church's notifications in their 通知列表, their 不能服事的日子 (#91) and
+ * their place in a 家人 (family.ts), and their leaving is told to the admins; one failing never stops the
  * others.
  */
 export async function onMemberDeleted(
@@ -39,6 +40,7 @@ export async function onMemberDeleted(
     memberLeft: () => onMemberLeft(deps, cid, member, deletedBy),
     notifications: () => forgetNotificationsFrom(deps.db, member.id, cid),
     unavailable: () => deps.db.doc(`churches/${cid}/unavailable/${member.id}`).delete().then(() => true),
+    family: () => leaveFamilies(deps, cid, member.id).then(() => true),
   });
 }
 

@@ -7,6 +7,7 @@ import { personName, TEXT_LIMITS } from './limits.js';
 import { nameKey } from './text.js';
 import { renameInChurch, rewriteDutiesOf } from './renames.js';
 import { dateKeyIn, timeZoneOf } from './timeZones.js';
+import { repointFamily } from './family.js';
 import { callerKeys, dropPending, emailKey, waitingFor, waitsFor, type ClaimDeps } from './pendingMembers.js';
 import { claimedSmallGroups, smallGroupsByName } from './smallGroups.js';
 import { isEvent } from './eventRosters.js';
@@ -324,6 +325,7 @@ async function take(
   });
   if (!pending) return false;
   await repoint(deps, cid, pid, who.uid, (pending.get('rosterIds') as string[] | undefined) ?? []);
+  await repointFamily(deps, cid, pid, who.uid, await memberName(deps, cid, who.uid));
   await dropPending(deps, cid, pending);
   return true;
 }
@@ -364,5 +366,10 @@ export async function mergeInto(deps: Deps, cid: string, admin: string, pid: str
     return pending;
   });
   await repoint(deps, cid, pid, uid, (pending.get('rosterIds') as string[] | undefined) ?? []);
+  await repointFamily(deps, cid, pid, uid, await memberName(deps, cid, uid));
   await dropPending(deps, cid, pending);
 }
+
+/** Member [uid]'s name in church [cid]. */
+const memberName = async (deps: Deps, cid: string, uid: string) =>
+  String((await deps.db.doc(`churches/${cid}/members/${uid}`).get()).get('name') ?? '');

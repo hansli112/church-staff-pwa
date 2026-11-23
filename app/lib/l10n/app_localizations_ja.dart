@@ -3531,7 +3531,7 @@ class L10nJa extends L10n {
   String get notifSwap => '代わり・交換';
 
   @override
-  String get notifSwapSub => '代わり・交換・奉仕できない日の入力';
+  String get notifSwapSub => '代わり・交換・奉仕できない日の入力・家族の招待';
 
   @override
   String get swapMenu => '代わり・交換';
@@ -3666,4 +3666,67 @@ class L10nJa extends L10n {
 
   @override
   String get swapOutSwap => '交換を依頼中';
+
+  @override
+  String get family => '家族';
+
+  @override
+  String familyCount(int count) {
+    return '$count 人';
+  }
+
+  @override
+  String get familyAdd => '家族を追加';
+
+  @override
+  String familyMe(String name) {
+    return '$name（あなた）';
+  }
+
+  @override
+  String get familyWaiting => '相手の承認待ち';
+
+  @override
+  String get familyFooter => '家族の奉仕もホームに表示されます。アカウントのない家族が奉仕に入ったときも通知します。';
+
+  @override
+  String familyMoveOutLabel(String name) {
+    return '$nameを家族から外す';
+  }
+
+  @override
+  String familyWithdrawLabel(String name) {
+    return '$nameへの招待を取り消す';
+  }
+
+  @override
+  String familyMovedOut(String name) {
+    return '$nameを家族から外しました';
+  }
+
+  @override
+  String familyMoveOutAsk(String name) {
+    return '$nameを家族から外しますか？';
+  }
+
+  @override
+  String familyAsksYou(String name) {
+    return '$nameがあなたを家族に追加したいと言っています';
+  }
+
+  @override
+  String get familyDecline => '断る';
+
+  @override
+  String familyDeclineLabel(String name) {
+    return '$nameの家族の招待を断る';
+  }
+
+  @override
+  String familyAcceptLabel(String name) {
+    return '$nameの家族の招待を受ける';
+  }
+
+  @override
+  String get myFamilyServicesTitle => '自分と家族のこれからの奉仕';
 }

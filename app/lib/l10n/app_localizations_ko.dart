@@ -3529,7 +3529,7 @@ class L10nKo extends L10n {
   String get notifSwap => '대신 봉사·교환';
 
   @override
-  String get notifSwapSub => '대신 봉사, 교환, 봉사할 수 없는 날 입력';
+  String get notifSwapSub => '대신 봉사, 교환, 봉사할 수 없는 날 입력, 가족 초대';
 
   @override
   String get swapMenu => '대신 봉사·교환';
@@ -3664,4 +3664,67 @@ class L10nKo extends L10n {
 
   @override
   String get swapOutSwap => '교환 요청 중';
+
+  @override
+  String get family => '가족';
+
+  @override
+  String familyCount(int count) {
+    return '$count명';
+  }
+
+  @override
+  String get familyAdd => '가족 추가';
+
+  @override
+  String familyMe(String name) {
+    return '$name (나)';
+  }
+
+  @override
+  String get familyWaiting => '상대방 수락 대기 중';
+
+  @override
+  String get familyFooter => '가족의 봉사도 홈에 표시돼요. 계정이 없는 가족이 봉사에 배정되면 알려 드려요.';
+
+  @override
+  String familyMoveOutLabel(String name) {
+    return '$name 님을 가족에서 빼기';
+  }
+
+  @override
+  String familyWithdrawLabel(String name) {
+    return '$name 님에게 보낸 초대 취소';
+  }
+
+  @override
+  String familyMovedOut(String name) {
+    return '$name 님을 가족에서 뺐어요';
+  }
+
+  @override
+  String familyMoveOutAsk(String name) {
+    return '$name 님을 가족에서 뺄까요?';
+  }
+
+  @override
+  String familyAsksYou(String name) {
+    return '$name 님이 가족으로 추가하려고 해요';
+  }
+
+  @override
+  String get familyDecline => '거절';
+
+  @override
+  String familyDeclineLabel(String name) {
+    return '$name 님의 가족 초대 거절';
+  }
+
+  @override
+  String familyAcceptLabel(String name) {
+    return '$name 님의 가족 초대 수락';
+  }
+
+  @override
+  String get myFamilyServicesTitle => '나와 가족의 다가오는 봉사';
 }

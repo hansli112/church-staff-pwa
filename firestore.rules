@@ -561,6 +561,14 @@ service cloud.firestore {
             || resource.data.get('to', '') == request.auth.uid);
       }
 
+      // 家人 (functions/src/family.ts): those in a family, and those asked
+      // into it, read it; only the backend writes.
+      match /households/{id} {
+        allow read: if isMember(cid)
+          && (request.auth.uid in resource.data.get('people', [])
+            || request.auth.uid in resource.data.get('invited', []));
+      }
+
       match /unavailableAsks/{type} {
         allow read: if arrangesRosters(cid);
       }

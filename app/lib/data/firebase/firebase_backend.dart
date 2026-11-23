@@ -13,6 +13,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 import '../../core/languages.dart';
 import '../../domain/day.dart';
+import '../../domain/family.dart';
 import '../../domain/limits.dart';
 import '../../domain/models.dart';
 import '../../domain/staff_order.dart';
@@ -637,6 +638,9 @@ class FirestoreChurchData implements ChurchData {
   late final ClaimData claims = _FirestoreClaims(this);
 
   @override
+  late final FamilyData family = _FirestoreFamily(this);
+
+  @override
   late final JoiningData joining = _FirestoreJoining(this);
 
   @override
@@ -1195,6 +1199,34 @@ class _FirestoreClaims implements ClaimData {
           ),
     ];
   }
+}
+
+/// [FamilyData] of a [FirestoreChurchData].
+class _FirestoreFamily implements FamilyData {
+  _FirestoreFamily(this._c);
+
+  final FirestoreChurchData _c;
+
+  Stream<List<Household>> _where(String field) {
+    final uid = _c._calls._auth.currentUser?.uid;
+    if (uid == null) return Stream.value(const []);
+    return _c
+        ._col('households')
+        .where(field, arrayContains: uid)
+        .live()
+        .map((snap) => [for (final d in snap.docs) householdFromJson(d.id, d.data())])
+        .translated();
+  }
+
+  @override
+  Stream<List<Household>> mine() => _where('people');
+
+  @override
+  Stream<List<Household>> asking() => _where('invited');
+
+  @override
+  Future<List<FamilyCandidate>> addable() async =>
+      familyCandidatesFromJson((await _c._call('familyCandidates'))['people']);
 }
 
 /// [JoiningData] of a [FirestoreChurchData].

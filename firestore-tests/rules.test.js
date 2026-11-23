@@ -560,6 +560,24 @@ describe('找人代／交換 (swapRequests)', () => {
   });
 });
 
+describe('家人 (households)', () => {
+  it('家裡的人和被邀請的人讀得到，其他人讀不到；只有後端寫', async () => {
+    await seed(`churches/${A}/households/h1`, { people: [MEMBER_A, 'kid'], noAccount: ['kid'], invited: [EDITOR_A] });
+    const read = (uid) => getDoc(doc(as(uid), `churches/${A}/households/h1`));
+    await assertSucceeds(read(MEMBER_A));
+    await assertSucceeds(read(EDITOR_A));
+    await assertFails(read(OFFICE_A));
+    await assertFails(read(ADMIN_A));
+    const families = (uid) => collection(as(uid), `churches/${A}/households`);
+    await assertSucceeds(getDocs(query(families(MEMBER_A), where('people', 'array-contains', MEMBER_A))));
+    await assertSucceeds(getDocs(query(families(EDITOR_A), where('invited', 'array-contains', EDITOR_A))));
+    await assertFails(getDocs(families(MEMBER_A)));
+    await assertFails(getDocs(query(families(OFFICE_A), where('people', 'array-contains', MEMBER_A))));
+    await assertFails(setDoc(doc(as(MEMBER_A), `churches/${A}/households/h2`), { people: [MEMBER_A] }));
+    await assertFails(updateDoc(doc(as(MEMBER_A), `churches/${A}/households/h1`), { people: [MEMBER_A] }));
+  });
+});
+
 // 回報人數 (#85)：和 App、functions 共用 testdata/church_rules.json 的 attendanceAccess。
 describe('attendanceAccess (testdata/church_rules.json)', () => {
   const rows = JSON.parse(readFileSync(new URL('../testdata/church_rules.json', import.meta.url), 'utf8')).attendanceAccess;

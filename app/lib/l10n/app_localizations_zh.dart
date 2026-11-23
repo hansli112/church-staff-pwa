@@ -3526,7 +3526,7 @@ class L10nZh extends L10n {
   String get notifSwap => '找人代／交換';
 
   @override
-  String get notifSwapSub => '找人代、交換、填不能服事的日子';
+  String get notifSwapSub => '找人代、交換、填不能服事的日子、加入家人';
 
   @override
   String get swapMenu => '找人代／交換';
@@ -3661,6 +3661,69 @@ class L10nZh extends L10n {
 
   @override
   String get swapOutSwap => '已請交換';
+
+  @override
+  String get family => '家人';
+
+  @override
+  String familyCount(int count) {
+    return '$count 位';
+  }
+
+  @override
+  String get familyAdd => '加入家人';
+
+  @override
+  String familyMe(String name) {
+    return '$name（你）';
+  }
+
+  @override
+  String get familyWaiting => '等對方接受';
+
+  @override
+  String get familyFooter => '家人的服事會列在你的首頁。沒有帳號的家人被排到服事時，也通知你。';
+
+  @override
+  String familyMoveOutLabel(String name) {
+    return '把$name移出家人';
+  }
+
+  @override
+  String familyWithdrawLabel(String name) {
+    return '收回給$name的邀請';
+  }
+
+  @override
+  String familyMovedOut(String name) {
+    return '已把$name移出家人';
+  }
+
+  @override
+  String familyMoveOutAsk(String name) {
+    return '把$name移出家人？';
+  }
+
+  @override
+  String familyAsksYou(String name) {
+    return '$name想加你為家人';
+  }
+
+  @override
+  String get familyDecline => '不要';
+
+  @override
+  String familyDeclineLabel(String name) {
+    return '不要和$name成為家人';
+  }
+
+  @override
+  String familyAcceptLabel(String name) {
+    return '接受$name的家人邀請';
+  }
+
+  @override
+  String get myFamilyServicesTitle => '我和家人接下來的服事';
 }
 
 /// The translations for Chinese, using the Han script (`zh_Hans`).
@@ -7185,7 +7248,7 @@ class L10nZhHans extends L10nZh {
   String get notifSwap => '找人代／交换';
 
   @override
-  String get notifSwapSub => '找人代、交换、填不能事奉的日子';
+  String get notifSwapSub => '找人代、交换、填不能事奉的日子、加入家人';
 
   @override
   String get swapMenu => '找人代／交换';
@@ -7320,4 +7383,67 @@ class L10nZhHans extends L10nZh {
 
   @override
   String get swapOutSwap => '已请交换';
+
+  @override
+  String get family => '家人';
+
+  @override
+  String familyCount(int count) {
+    return '$count 位';
+  }
+
+  @override
+  String get familyAdd => '加入家人';
+
+  @override
+  String familyMe(String name) {
+    return '$name（你）';
+  }
+
+  @override
+  String get familyWaiting => '等对方接受';
+
+  @override
+  String get familyFooter => '家人的事奉会列在你的首页。没有账号的家人被排到事奉时，也通知你。';
+
+  @override
+  String familyMoveOutLabel(String name) {
+    return '把$name移出家人';
+  }
+
+  @override
+  String familyWithdrawLabel(String name) {
+    return '收回给$name的邀请';
+  }
+
+  @override
+  String familyMovedOut(String name) {
+    return '已把$name移出家人';
+  }
+
+  @override
+  String familyMoveOutAsk(String name) {
+    return '把$name移出家人？';
+  }
+
+  @override
+  String familyAsksYou(String name) {
+    return '$name想加你为家人';
+  }
+
+  @override
+  String get familyDecline => '不要';
+
+  @override
+  String familyDeclineLabel(String name) {
+    return '不要和$name成为家人';
+  }
+
+  @override
+  String familyAcceptLabel(String name) {
+    return '接受$name的家人邀请';
+  }
+
+  @override
+  String get myFamilyServicesTitle => '我和家人接下来的事奉';
 }

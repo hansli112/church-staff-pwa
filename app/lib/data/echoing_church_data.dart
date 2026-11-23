@@ -192,6 +192,9 @@ class EchoingChurchData implements ChurchData {
   ClaimData get claims => _inner.claims;
 
   @override
+  FamilyData get family => _inner.family;
+
+  @override
   JoiningData get joining => _inner.joining;
 
   /// The calls that change what is listed show it at once: who is in a

@@ -142,11 +142,21 @@ Widget? nearLimitCounter(
 /// read out instead of [label] when the label alone does not say whom it
 /// acts on.
 class RowButton extends StatelessWidget {
-  const RowButton({super.key, required this.label, required this.onPressed, this.semanticsLabel});
+  const RowButton({
+    super.key,
+    required this.label,
+    required this.onPressed,
+    this.semanticsLabel,
+    this.prominent = false,
+  });
 
   final String label;
   final VoidCallback? onPressed;
   final String? semanticsLabel;
+
+  /// In the accent color: the answer most give, beside one in gray (接受
+  /// beside 不要).
+  final bool prominent;
 
   @override
   Widget build(BuildContext context) {
@@ -154,8 +164,8 @@ class RowButton extends StatelessWidget {
     return TextButton(
       onPressed: onPressed,
       style: TextButton.styleFrom(
-        foregroundColor: c.label,
-        backgroundColor: c.fill,
+        foregroundColor: prominent ? c.onAccent : c.label,
+        backgroundColor: prominent ? c.accent : c.fill,
         shape: const StadiumBorder(),
         padding: const EdgeInsets.symmetric(horizontal: Space.m),
       ),

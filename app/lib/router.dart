@@ -32,6 +32,7 @@ import 'features/me/me_screen.dart';
 import 'features/me/member_editor_screen.dart';
 import 'features/me/members_screen.dart';
 import 'features/me/notifications_screen.dart';
+import 'features/me/family_screen.dart';
 import 'features/me/unavailable_screen.dart';
 import 'features/rosters/swap_asking.dart';
 import 'features/me/profile_screen.dart';
@@ -262,6 +263,7 @@ final routerProvider = Provider<GoRouter>((ref) {
                   ),
                   page('notifications', (_) => const NotificationsScreen()),
                   page('unavailable', (_) => const UnavailableScreen()),
+                  page('family', (_) => const FamilyScreen()),
                   page(
                     'attendance',
                     (_) => const WarmUpOnOpen(WarmUp.attendanceRemind, child: AttendanceOverviewScreen()),

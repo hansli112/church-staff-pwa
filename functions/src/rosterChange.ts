@@ -6,7 +6,8 @@ import { churchAccess, isChurchOpen } from './access.js';
 import { fail, record, runEach, type Caller, type Deps } from './common.js';
 import { isQuiet, movedBy } from './eventRosters.js';
 import type { Words } from './languages.js';
-import { notifyMembers, type PushDeps } from './push.js';
+import { familiesOf, notifyAbout } from './family.js';
+import type { PushDeps } from './push.js';
 import { duties, dutiesByUid, names, rosterDay, rosterLink, serviceNames, type RosterDay } from './rosters.js';
 import { queue } from './webhook.js';
 import { dateKeyIn, earliestDay, instantOf, nextDay, timeZoneOf, wallClock } from './timeZones.js';
@@ -185,17 +186,26 @@ function pushDay(church: DocumentSnapshot, day: Pick<RosterDay, 'dateKey' | 'ser
   };
 }
 
-async function tell(deps: PushDeps, day: PushDay, uid: string, news: News) {
-  const push = (body: (w: Words) => string) =>
-    notifyMembers(deps, day.cid, [uid], 'rosterChange', (w) => ({ title: day.title, body: body(w), link: day.link }));
+/**
+ * Tells [uid] their [news] of [day]; of one without an account, their
+ * 家人 (family.ts), but [except], who made the change.
+ */
+async function tell(deps: PushDeps, day: PushDay, uid: string, news: News, except?: string) {
+  const family = (await familiesOf(deps, day.cid, [uid])).get(uid) ?? null;
+  const push = (body: (w: Words, who: string | null) => string) =>
+    notifyAbout(deps, day.cid, uid, 'rosterChange', (w, who) => ({ title: day.title, body: body(w, who), link: day.link }), except, family);
   const label = (w: Words) => `${w.shortDate(day.dateKey)} ${day.name}`;
   let sent = 0;
   if (news.movedTo && day.event) {
     const { title } = day.event;
     sent += await push((w) => w.eventMoved(title, w.dateWithWeekday(news.movedTo!)));
   }
-  if (news.added.length) sent += await push((w) => w.putOn(label(w), news.added));
-  if (news.removed.length) sent += await push((w) => w.takenOff(label(w), news.removed));
+  if (news.added.length) {
+    sent += await push((w, who) => (who ? w.familyPutOn(who, label(w), news.added) : w.putOn(label(w), news.added)));
+  }
+  if (news.removed.length) {
+    sent += await push((w, who) => (who ? w.familyTakenOff(who, label(w), news.removed) : w.takenOff(label(w), news.removed)));
+  }
   return sent;
 }
 
@@ -297,10 +307,10 @@ export async function pushRosterChange(deps: PushDeps & Pick<Deps, 'now'>, c: Ro
   for (const [uid, n] of news) {
     const h = held.get(uid);
     if (!h) {
-      sent += await tell(deps, day, uid, n);
+      sent += await tell(deps, day, uid, n, c.editor?.uid);
       continue;
     }
-    sent += await tell(deps, day, uid, newsSince(h, c.holders.get(uid) ?? [], c.dateKey, c.event !== null));
+    sent += await tell(deps, day, uid, newsSince(h, c.holders.get(uid) ?? [], c.dateKey, c.event !== null), c.editor?.uid);
     await h.ref.delete();
   }
   return sent;
@@ -385,10 +395,13 @@ export async function sendHeldPushes(deps: PushDeps & Pick<Deps, 'now'>) {
  */
 async function planRosterChange(deps: PushDeps, c: RosterChange) {
   const uids = new Set([...c.added.keys(), ...c.removed.keys()]);
-  // One of the 同工 without an account yet has no member to tell.
+  // One of the 同工 without an account yet has no member to tell, but
+  // maybe a family.
   if (uids.size) {
     const them = await deps.db.getAll(...[...uids].map((uid) => deps.db.doc(`churches/${c.church.id}/members/${uid}`)));
-    for (const m of them) if (!m.exists) uids.delete(m.id);
+    const without = them.filter((m) => !m.exists).map((m) => m.id);
+    const families = without.length ? await familiesOf(deps, c.church.id, without) : new Map();
+    for (const id of without) if (!families.has(id)) uids.delete(id);
   }
   for (const [uid, h] of await waitingFor(deps, 'heldPushes', c)) if (uids.has(uid)) await absorb(h, c, uid);
   const planned = await waitingFor(deps, 'plannedPushes', c);
@@ -428,9 +441,11 @@ async function planRosterChange(deps: PushDeps, c: RosterChange) {
 /**
  * Tells everyone in [entries] (plannedPushes of [church]) what changed for
  * them since, one push each for all their days: those still ahead, as the
- * days are now. Deletes the entries. Returns how many people it told.
+ * days are now. Of one without an account, their 家人 hear, but [by], who
+ * pressed 通知同工 (or the entries' `by`, pressed in quiet hours). Deletes
+ * the entries. Returns how many people it told.
  */
-async function sendPlanned(deps: PushDeps & Pick<Deps, 'now'>, church: DocumentSnapshot, entries: DocumentSnapshot[]) {
+async function sendPlanned(deps: PushDeps & Pick<Deps, 'now'>, church: DocumentSnapshot, entries: DocumentSnapshot[], by?: string) {
   const cid = church.id;
   const today = dateKeyIn(timeZoneOf(church), deps.now());
   const services = await serviceNames(deps, cid);
@@ -464,11 +479,11 @@ async function sendPlanned(deps: PushDeps & Pick<Deps, 'now'>, church: DocumentS
       const lines = (w: Words, list: [string, string[]][]) =>
         list.sort(([a], [b]) => a.localeCompare(b)).map(([k, duties]) => w.dutyLine(w.shortDate(k), duties));
       try {
-        await notifyMembers(deps, cid, [uid], 'rosterChange', (w) => ({
+        await notifyAbout(deps, cid, uid, 'rosterChange', (w, who) => ({
           title: about.title,
-          body: w.planned(service, lines(w, on), lines(w, off)),
+          body: who ? w.familyPlanned(who, service, lines(w, on), lines(w, off)) : w.planned(service, lines(w, on), lines(w, off)),
           link: about.link,
-        }));
+        }), by ?? (mine.map((e) => e.get('by') as string | undefined).find(Boolean)));
         told++;
       } catch (e) {
         logger.error('Planned roster push failed', { cid, uid, error: loggable(e).message });
@@ -490,7 +505,7 @@ export async function notifyPlanned(deps: Deps & PushDeps, caller: Caller | null
   const serviceId = input.serviceId;
   if (typeof serviceId !== 'string' || !/^[A-Za-z0-9_-]{1,64}$/.test(serviceId)
       || Object.keys(input).some((k) => !['churchId', 'serviceId'].includes(k))) fail('invalid-argument', 'unknown');
-  const { cid, church } = await churchAccess(deps, caller, data, { arranges: serviceId });
+  const { cid, church, caller: c } = await churchAccess(deps, caller, data, { arranges: serviceId });
   const q = await deps.db
     .collection('plannedPushes')
     .where('cid', '==', cid)
@@ -499,10 +514,10 @@ export async function notifyPlanned(deps: Deps & PushDeps, caller: Caller | null
     .get();
   const until = quietUntil(timeZoneOf(church), deps.now());
   if (until) {
-    for (const d of q.docs) await d.ref.update({ sendAt: until });
+    for (const d of q.docs) await d.ref.update({ sendAt: until, by: c.uid });
     return { people: new Set(q.docs.map((d) => d.get('uid'))).size, later: true };
   }
-  return { people: await sendPlanned(deps, church, q.docs), later: false };
+  return { people: await sendPlanned(deps, church, q.docs, c.uid), later: false };
 }
 
 /**

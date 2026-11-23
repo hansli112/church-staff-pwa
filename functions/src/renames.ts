@@ -1,5 +1,6 @@
 import { churchAccess } from './access.js';
 import { fail, id, record, text, type Caller, type Deps } from './common.js';
+import { renameInFamilies } from './family.js';
 import { TEXT_LIMITS } from './limits.js';
 import { nameKey } from './text.js';
 
@@ -55,11 +56,12 @@ export function renamedDuty(d: DutyDoc, id: string, name: string): DutyDoc {
 /**
  * [id] (a member's uid, or a pending member's ID) of church [cid], once
  * [old], is [name] now: every roster naming them says [name], the days
- * [recorded] for them too, and every staff order ranking [old] ranks
- * [name] in its place. Safe to run again.
+ * [recorded] for them too, every staff order ranking [old] ranks [name] in
+ * its place, and their 家人 call them [name]. Safe to run again.
  */
 export async function renameInChurch(deps: Deps, cid: string, id: string, old: string, name: string, recorded: string[] = []) {
   await rewriteDutiesOf(deps, cid, id, recorded, (d) => renamedDuty(d, id, name));
+  if (old !== name) await renameInFamilies(deps, cid, id, name);
   if (!old || old === name) return;
   const orders = await deps.db.collection(`churches/${cid}/staff_orders`).get();
   await Promise.all(

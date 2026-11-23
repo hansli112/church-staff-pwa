@@ -28,6 +28,7 @@ import * as unavailable from './unavailable.js';
 import * as swaps from './swaps.js';
 import * as calendar from './calendar.js';
 import * as eventSync from './eventSync.js';
+import * as family from './family.js';
 import * as church from './church.js';
 import * as claim from './claim.js';
 import * as claimAsks from './claimAsks.js';
@@ -230,6 +231,11 @@ export const askUnavailable = callable(unavailable.askUnavailable, pushDeps);
 export const saveUnavailableDays = callable(unavailable.saveUnavailableDays);
 export const remindUnavailable = callable(unavailable.remindUnavailable, pushDeps);
 export const sendUnavailableDays = callable(unavailable.sendUnavailableDays);
+// 家人: families, who see each other's serving and hear of those without an account.
+export const addFamily = callable(family.addFamily, pushDeps);
+export const answerFamily = callable(family.answerFamily);
+export const removeFamily = callable(family.removeFamily);
+export const familyCandidates = callable(family.familyCandidates);
 // 備註 of a day's roster, and its files.
 export const saveRosterNote = callable(rosterNotes.saveRosterNote, () => ({ ...deps(), bucket: bucket() }));
 export const onRosterNoteWritten = onDocumentWritten(

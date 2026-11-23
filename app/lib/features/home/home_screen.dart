@@ -7,6 +7,7 @@ import 'package:go_router/go_router.dart';
 import '../../core/design/components.dart';
 import '../../core/perf.dart';
 import '../../core/design/tokens.dart';
+import '../../domain/family.dart';
 import '../../domain/getting_started.dart';
 import '../../domain/models.dart';
 import '../../domain/swap.dart';
@@ -53,7 +54,7 @@ class HomeScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final l10n = L10n.of(context);
     final church = ref.watch(churchProvider).value;
-    final mine = ref.watch(myServicesProvider);
+    final mine = ref.watch(servingWithFamilyProvider);
     final services = ref.watch(servicesProvider).value;
     final today = ref.watch(todayProvider);
     final link = ref.watch(shownChurchLinkProvider);
@@ -121,6 +122,9 @@ class HomeScreen extends ConsumerWidget {
             ref.watch(uidProvider),
             today,
           ).where((r) => services == null || services.byId(r.serviceId) != null).toList();
+          // 家人 asking me into their family.
+          final familyAsks = ref.watch(familyAskingProvider).value ?? const [];
+          final hasFamily = ref.watch(familyProvider).any((p) => !p.asked);
           // 通知同工填 (#91) asking me, until I send mine.
           final asked = ref.watch(unavailableAskedProvider).value;
           // Each a section of its own above my days, and the calendar's below.
@@ -134,10 +138,11 @@ class HomeScreen extends ConsumerWidget {
             if (addToHome) const AddToHomeCard(),
             if (notifications) const TurnOnNotificationsCard(),
             // 填寫人數 (#85): what a lead is asked, first among their own things.
-            if (asks.isNotEmpty)
+            if (asks.isNotEmpty || familyAsks.isNotEmpty)
               ListSection(
                 header: l10n.swapWaitingForYou,
                 children: [
+                  for (final h in familyAsks) _FamilyAskRow(h),
                   for (final r in asks)
                     ListRow(
                       leading: dayBlock(r.day, today),
@@ -190,27 +195,29 @@ class HomeScreen extends ConsumerWidget {
                 const _NoUpcoming()
               else
                 ListSection(
-                  header: l10n.myServicesTitle,
+                  header: hasFamily ? l10n.myFamilyServicesTitle : l10n.myServicesTitle,
                   children: [
-                    for (final s in list.take(20))
+                    for (final (:service, :who) in list.take(20))
                       ListRow(
-                        leading: dayBlock(s.roster.day, today),
-                        title: s.roster.forEvent?.title ?? services?.byId(s.roster.type)?.name ?? '',
+                        leading: dayBlock(service.roster.day, today),
+                        trailing: who == null ? null : _FamilyName(who.name),
+                        chevron: true,
+                        title: service.roster.forEvent?.title ?? services?.byId(service.roster.type)?.name ?? '',
                         subtitle: [
                           // An event over several days says both; the block shows the first.
-                          s.roster.isEvent && s.roster.lastDay != s.roster.day
-                              ? eventDaysLabel(l10n, s.roster, today)
-                              : dayBesideBlock(l10n, s.roster.day, today),
-                          s.duties.join(l10n.listSeparator),
+                          service.roster.isEvent && service.roster.lastDay != service.roster.day
+                              ? eventDaysLabel(l10n, service.roster, today)
+                              : dayBesideBlock(l10n, service.roster.day, today),
+                          service.duties.join(l10n.listSeparator),
                         ].where((t) => t.isNotEmpty).join(' · '),
                         onTap: () {
-                          if (s.roster.forEvent case final e?) {
+                          if (service.roster.forEvent case final e?) {
                             context.push('/rosters/event/${e.eventId}');
                             return;
                           }
-                          ref.read(selectedServiceProvider.notifier).select(s.roster.type);
+                          ref.read(selectedServiceProvider.notifier).select(service.roster.type);
                           context.push(
-                            '/rosters/${s.roster.type}/${s.roster.day.key}',
+                            '/rosters/${service.roster.type}/${service.roster.day.key}',
                           );
                         },
                       ),
@@ -257,6 +264,70 @@ class HomeScreen extends ConsumerWidget {
             ],
           );
         },
+      ),
+    );
+  }
+}
+
+/// One asking me into their family (家人), on 首頁 under 等你回覆: 不要 or
+/// 接受, at once.
+class _FamilyAskRow extends ConsumerWidget {
+  const _FamilyAskRow(this.household);
+
+  final Household household;
+
+  Future<void> _answer(BuildContext context, WidgetRef ref, {required bool yes}) async {
+    try {
+      await ref.churchData.answerFamily(household.id, yes: yes);
+      if (yes) Haptics.success();
+    } catch (e) {
+      if (context.mounted) showToast(context, errorText(L10n.of(context), e));
+    }
+  }
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final l10n = L10n.of(context);
+    final name = household.askerOf(ref.watch(uidProvider) ?? '');
+    return ListRow(
+      leading: const Icon(Symbols.family_restroom_rounded),
+      title: l10n.familyAsksYou(name),
+      trailing: Row(
+        mainAxisSize: MainAxisSize.min,
+        spacing: Space.s,
+        children: [
+          RowButton(
+            label: l10n.familyDecline,
+            semanticsLabel: l10n.familyDeclineLabel(name),
+            onPressed: () => _answer(context, ref, yes: false),
+          ),
+          RowButton(
+            label: l10n.swapAccept,
+            semanticsLabel: l10n.familyAcceptLabel(name),
+            prominent: true,
+            onPressed: () => _answer(context, ref, yes: true),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// Whose a day of my family's is, on 首頁: their name in a tinted pill.
+class _FamilyName extends StatelessWidget {
+  const _FamilyName(this.name);
+
+  final String name;
+
+  @override
+  Widget build(BuildContext context) {
+    final c = AppColors.of(context);
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: Space.s, vertical: 2),
+      decoration: BoxDecoration(color: c.accentSoft, borderRadius: BorderRadius.circular(Radii.m)),
+      child: Text(
+        name,
+        style: AppText.subheadline.copyWith(color: c.accent, fontWeight: FontWeight.w500),
       ),
     );
   }
