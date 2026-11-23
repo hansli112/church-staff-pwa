@@ -931,13 +931,13 @@ abstract class L10n {
   /// Tooltip of the minus button beside a person in the picker's 編輯
   ///
   /// In zh, this message translates to:
-  /// **'從名單移除{name}'**
+  /// **'把{name}移出名單'**
   String pickerTakeOff(String name);
 
   /// No description provided for @dutyListRemoved.
   ///
   /// In zh, this message translates to:
-  /// **'已從{duty}名單移除{names}'**
+  /// **'已把{names}移出{duty}名單'**
   String dutyListRemoved(String duty, String names);
 
   /// No description provided for @orderSaved.
@@ -1071,12 +1071,6 @@ abstract class L10n {
   /// In zh, this message translates to:
   /// **'灰'**
   String get colorNameGrey;
-
-  /// No description provided for @removed.
-  ///
-  /// In zh, this message translates to:
-  /// **'已移除「{name}」'**
-  String removed(String name);
 
   /// No description provided for @name.
   ///
@@ -3541,7 +3535,7 @@ abstract class L10n {
   /// No description provided for @webhookOffMessage.
   ///
   /// In zh, this message translates to:
-  /// **'網址和密鑰都會刪掉，之後要重新設定'**
+  /// **'網址和密鑰都會刪除，之後要重新設定'**
   String get webhookOffMessage;
 
   /// No description provided for @webhookOffAction.

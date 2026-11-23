@@ -561,11 +561,6 @@ class L10nEn extends L10n {
   String get colorNameGrey => 'Grey';
 
   @override
-  String removed(String name) {
-    return 'Removed $name';
-  }
-
-  @override
   String get name => 'Name';
 
   @override

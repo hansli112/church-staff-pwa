@@ -469,7 +469,7 @@ void main() {
       expect(b.members['grace']!['mei']!.serves('sunday', '司琴'), isTrue);
       expect(peopleOn(b, 11, '招待'), ['李美玉'], reason: 'this Sunday is as it was');
 
-      expect(find.text('已從招待名單移除李美玉'), findsOneWidget);
+      expect(find.text('已把李美玉移出招待名單'), findsOneWidget);
       await tapText(tester, '復原');
       expect(b.members['grace']!['mei']!.serves('sunday', '招待'), isTrue);
     });
@@ -821,8 +821,10 @@ void main() {
       final b = seededChurch();
       await pumpApp(tester, b);
       await go(tester, '/rosters/sunday/2026-10-04');
-      await tester.drag(find.text('司琴').first, const Offset(-500, 0));
+      // A short swipe shows 移除: the day loses the duty, the service keeps it.
+      await tester.drag(find.text('司琴').first, const Offset(-100, 0));
       await settle(tester);
+      await tapText(tester, '移除');
       expect(savedDay(b, 4).duties.map((d) => d.role), ['司會', '招待']);
       await tapText(tester, '復原');
       expect(savedDay(b, 4).duties.map((d) => d.role), ['司會', '司琴', '招待']);

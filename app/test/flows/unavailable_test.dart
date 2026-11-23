@@ -161,9 +161,10 @@ void main() {
     expect(meisDays(b)!.spans.single.note, '出國');
     expect(find.text('出國'), findsOneWidget);
 
-    await tester.tap(find.text('移除'));
+    await tester.tap(find.text('刪除'));
     await settle(tester);
     expect(meisDays(b)!.isEmpty, isTrue);
+    expect(findShown('已刪除「10月20日 – 10月23日」'), findsOneWidget);
     await tester.tap(find.text('復原'));
     await settle(tester);
     expect(meisDays(b)!.spans, [UnavailableSpan(_oct(20), _oct(23), note: '出國')]);

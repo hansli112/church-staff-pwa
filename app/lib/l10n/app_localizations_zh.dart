@@ -470,12 +470,12 @@ class L10nZh extends L10n {
 
   @override
   String pickerTakeOff(String name) {
-    return '從名單移除$name';
+    return '把$name移出名單';
   }
 
   @override
   String dutyListRemoved(String duty, String names) {
-    return '已從$duty名單移除$names';
+    return '已把$names移出$duty名單';
   }
 
   @override
@@ -551,11 +551,6 @@ class L10nZh extends L10n {
 
   @override
   String get colorNameGrey => '灰';
-
-  @override
-  String removed(String name) {
-    return '已移除「$name」';
-  }
 
   @override
   String get name => '名字';
@@ -1935,7 +1930,7 @@ class L10nZh extends L10n {
   String get webhookOffTitle => '停止串接？';
 
   @override
-  String get webhookOffMessage => '網址和密鑰都會刪掉，之後要重新設定';
+  String get webhookOffMessage => '網址和密鑰都會刪除，之後要重新設定';
 
   @override
   String get webhookOffAction => '停止';
@@ -4203,12 +4198,12 @@ class L10nZhHans extends L10nZh {
 
   @override
   String pickerTakeOff(String name) {
-    return '从名单移除$name';
+    return '把$name移出名单';
   }
 
   @override
   String dutyListRemoved(String duty, String names) {
-    return '已从$duty名单移除$names';
+    return '已把$names移出$duty名单';
   }
 
   @override
@@ -4284,11 +4279,6 @@ class L10nZhHans extends L10nZh {
 
   @override
   String get colorNameGrey => '灰';
-
-  @override
-  String removed(String name) {
-    return '已移除“$name”';
-  }
 
   @override
   String get name => '名字';

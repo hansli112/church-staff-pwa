@@ -151,7 +151,7 @@ class _UnavailableScreenState extends ConsumerState<UnavailableScreen> {
     final l10n = L10n.of(context);
     final before = _days;
     if (!await _save(before.remove(span)) || !mounted) return;
-    showToast(context, l10n.removed(_spanLabel(span, ref.read(todayProvider))), onUndo: () => _save(before));
+    showToast(context, l10n.deletedName(_spanLabel(span, ref.read(todayProvider))), onUndo: () => _save(before));
   }
 
   /// 「11月16日 週日」, or 「12月20日 – 12月27日」, with the year when it is
@@ -295,8 +295,8 @@ class _UnavailableScreenState extends ConsumerState<UnavailableScreen> {
                           subtitle: span.note.isEmpty ? null : span.note,
                           chevron: false,
                           trailing: RowButton(
-                            label: l10n.remove,
-                            semanticsLabel: '${l10n.remove} ${_spanLabel(span, today)}',
+                            label: l10n.delete,
+                            semanticsLabel: '${l10n.delete} ${_spanLabel(span, today)}',
                             onPressed: () => _remove(span),
                           ),
                           onTap: () => _note(span),

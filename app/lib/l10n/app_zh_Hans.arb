@@ -138,7 +138,7 @@
   "pickerOnce": "临时排“{name}”",
   "pickerNoResults": "找不到“{query}”",
   "pickerSearchHint": "搜索所有同工",
-  "pickerTakeOff": "从名单移除{name}",
+  "pickerTakeOff": "把{name}移出名单",
   "@pickerTakeOff": {
     "placeholders": {
       "name": {
@@ -146,7 +146,7 @@
       }
     }
   },
-  "dutyListRemoved": "已从{duty}名单移除{names}",
+  "dutyListRemoved": "已把{names}移出{duty}名单",
   "@dutyListRemoved": {
     "placeholders": {
       "duty": {
@@ -179,7 +179,6 @@
   "colorName4": "蓝",
   "colorName5": "紫",
   "colorNameGrey": "灰",
-  "removed": "已移除“{name}”",
   "name": "名字",
   "nameSaved": "已更新名字",
   "language": "语言",

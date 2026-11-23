@@ -105,6 +105,7 @@ class EditableRoster extends ConsumerWidget {
             for (final duty in shownDuties(ref, roster))
               SwipeAction(
                 key: ValueKey('${roster.id}/${duty.role}'),
+                label: l10n.remove,
                 enabled: ready && arranges.has(duty.role),
                 onAction: () => unawaited(
                   runWithUndo(

@@ -553,11 +553,6 @@ class L10nJa extends L10n {
   String get colorNameGrey => 'グレー';
 
   @override
-  String removed(String name) {
-    return '$nameを外しました';
-  }
-
-  @override
   String get name => '名前';
 
   @override

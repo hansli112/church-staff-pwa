@@ -66,7 +66,7 @@ void main() {
     await settle(tester);
     await tapText(tester, '完成');
     expect(b.members['grace']!['mei']!.zones.single.duties, ['招待']);
-    expect(find.text('已從司琴名單移除李美玉'), findsOneWidget);
+    expect(find.text('已把李美玉移出司琴名單'), findsOneWidget);
   });
 
   testWidgets('adds only the duties it leads, and does not tag the day', (tester) async {

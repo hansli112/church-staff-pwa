@@ -299,7 +299,7 @@
     }
   },
   "pickerSearchHint": "搜尋所有同工",
-  "pickerTakeOff": "從名單移除{name}",
+  "pickerTakeOff": "把{name}移出名單",
   "@pickerTakeOff": {
     "description": "Tooltip of the minus button beside a person in the picker's 編輯",
     "placeholders": {
@@ -308,7 +308,7 @@
       }
     }
   },
-  "dutyListRemoved": "已從{duty}名單移除{names}",
+  "dutyListRemoved": "已把{names}移出{duty}名單",
   "@dutyListRemoved": {
     "placeholders": {
       "duty": {
@@ -377,14 +377,6 @@
   "colorName5": "紫",
   "colorNameGrey": "灰",
   "@colorNameGrey": {"description": "A 行事曆 活動 with no color of its own: the first of its color dots, as it looks with none"},
-  "removed": "已移除「{name}」",
-  "@removed": {
-    "placeholders": {
-      "name": {
-        "type": "String"
-      }
-    }
-  },
   "name": "名字",
   "nameSaved": "已更新名字",
   "language": "語言",
@@ -1167,7 +1159,7 @@
   "webhookSecretChanged": "已換成新的密鑰",
   "webhookOff": "停止串接",
   "webhookOffTitle": "停止串接？",
-  "webhookOffMessage": "網址和密鑰都會刪掉，之後要重新設定",
+  "webhookOffMessage": "網址和密鑰都會刪除，之後要重新設定",
   "webhookOffAction": "停止",
   "exportData": "匯出資料",
   "exported": "已匯出",

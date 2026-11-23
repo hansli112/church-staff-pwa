@@ -554,11 +554,6 @@ class L10nKo extends L10n {
   String get colorNameGrey => '회색';
 
   @override
-  String removed(String name) {
-    return '‘$name’을(를) 뺐어요';
-  }
-
-  @override
   String get name => '이름';
 
   @override
