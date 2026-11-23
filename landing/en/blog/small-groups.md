@@ -9,7 +9,7 @@ Churches like to know how many came to each small group meeting. Often that mean
 ## An admin sets things up first
 
 1. In **Settings**, tap **Attendance**, then turn on the switch at the bottom.
-2. Go to **Settings** → **Services & ministries**, open the service the small group belongs to, tap **Add a small group**, and give it a name.
+2. Go to **Settings** → **Services & ministries**, open the service the small group belongs to, tap **Small groups**, then **Add a small group**, and give it a name.
 3. On the small group’s page, tap **Small group leader** and pick a team member.
 
 ## Small group leaders start with “Get started”

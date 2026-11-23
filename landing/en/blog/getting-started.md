@@ -26,9 +26,9 @@ At the top of Home, **Get started** lists what to do next, in order. The blue on
 
 ## 4. Set up services
 
-Tap **Set up services**, then Sunday Service, and check which day you meet each week and which roles need people, such as Host, Piano, and Sound. Swipe left to delete roles you don’t need.
+Tap **Set up services**, then Sunday Service, and check which day you meet each week. Then tap **Roles** and check which roles need people, such as Host, Piano, and Sound. Swipe left to delete roles you don’t need.
 
-![Sunday Service settings: the day and the roles](shot:start-service)
+![Sunday Service’s roles](shot:start-service)
 
 When you’re done, go back and tap **Next: Arrange the schedule** at the bottom. To change these later, go to **Settings** → **Services & ministries**.
 
@@ -68,5 +68,5 @@ On a phone, the invite link first offers the app: once it’s installed, they ta
 
 ## What’s next
 
-- Want your worship team and sound team leads to arrange their own serving? Give them a church role in **Settings** → **Team members**. See [Leads: add team members and arrange the serving you lead](/en/blog/for-leads/).
+- Want your worship team and sound team leads to arrange their own serving? In **Settings** → **Services & ministries**, open that ministry or role and tap **Assign a lead**. See [Leads: add team members and arrange the serving you lead](/en/blog/for-leads/).
 - Have small groups? Tap **Create small groups** in **Get started**, and small group leaders can add their own members and fill in attendance. See [Small group leaders: set when you meet and fill in attendance](/en/blog/small-groups/).

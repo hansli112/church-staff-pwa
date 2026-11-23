@@ -288,7 +288,7 @@ const CLIPS = {
       await s.still();
     },
   },
-  // 行事曆: the church's Google Calendar, its events and services in one month.
+  // 行事曆: the church's Google Calendar, its events in one month.
   calendar: {
     stills: true,
     route: '/calendar',
@@ -350,7 +350,12 @@ const CLIPS = {
       await s.wait(1200);
       await s.tap(s.page.getByRole('button').nth(1));
       await s.wait(1200);
+      // Its 服事項目, a page of their own (2026-11-23).
+      await s.tap(row(s.t('templateDuties')));
+      await s.wait(1200);
       await s.still('start-service');
+      await s.page.goBack();
+      await s.wait(1200);
       await s.page.goBack();
       await s.wait(1200);
       await s.tap(s.nodes(before('gettingStartedNext')).first());
@@ -391,6 +396,92 @@ const CLIPS = {
       await s.still();
     },
   },
+  // 同工: a day I serve on, opened from 首頁, with 我不行 beside my duty.
+  staffDay: {
+    stills: true,
+    route: '/home',
+    async play(s) {
+      await s.wait(1500);
+      // The buttons: the bell, 回報人數's reminder, then my days, nearest first.
+      await s.tap(s.nodes('').nth(2));
+      await s.wait(2500);
+      await s.still('staff-day');
+    },
+  },
+  // 同工: 不能服事的日子, a day I serve on and a few more marked.
+  staffUnavailable: {
+    stills: true,
+    route: '/me/unavailable',
+    async play(s) {
+      await s.wait(1500);
+      // The buttons: 返回, 上個月, 下個月, then this month's days from today.
+      const day = (n) => s.nodes('').nth(3 + n);
+      await s.tap(day(6));
+      await s.wait(800);
+      await s.drag(day(2), day(4), { hold: 150 });
+      await s.wait(1500);
+      await s.still('staff-unavailable');
+    },
+  },
+  // 行事曆: an event that has not ended, opened, with 安排服事 on it.
+  calendarEvent: {
+    stills: true,
+    route: '/calendar',
+    async play(s, { choirPractice }) {
+      await s.wait(2500);
+      // The list under the month; its day on the month bears the name too.
+      await s.tap(s.page.getByRole('button').filter({ hasText: choirPractice }).last());
+      await s.wait(1500);
+      await s.still('calendar-event');
+    },
+  },
+  // 身分: 新增身分 for someone with none, 管理員, 牧者 and 行政.
+  rolesAdd: {
+    stills: true,
+    route: '/me/members/m132',
+    async play(s) {
+      await s.wait(1500);
+      // 新增身分 is not in the web build's accessibility tree; it is the
+      // first row, under 身分.
+      await s.tap([196, 120]);
+      await s.wait(1200);
+      await s.still('roles-add');
+    },
+  },
+  // 身分: a duty's page, its 負責人 assigned there (2026-11-23).
+  rolesLead: {
+    stills: true,
+    route: ({ duties }) => `/me/groups/duty?service=sunday&name=${encodeURIComponent(duties[5])}`,
+    async play(s) {
+      await s.wait(1500);
+      await s.still('roles-duty-lead');
+    },
+  },
+  // 照片匯入: a table pasted under 進階 (the demo reads no photo), its names to confirm, then one of them.
+  importNames: {
+    stills: true,
+    route: '/rosters/import/sunday',
+    async play(s, { duties, importNames }) {
+      await s.wait(1500);
+      await s.tap(s.node(s.t('importAdvanced')));
+      await s.wait(1000);
+      // A Sunday after the demo's arranged weeks.
+      const day = new Date();
+      day.setDate(day.getDate() + 21 + ((7 - day.getDay()) % 7));
+      const date = `${day.getFullYear()}-${String(day.getMonth() + 1).padStart(2, '0')}-${String(day.getDate()).padStart(2, '0')}`;
+      const table = [{ date, duties: [{ role: duties[0], people: importNames }] }];
+      await s.tap(s.page.getByRole('textbox').last());
+      await s.page.keyboard.insertText(JSON.stringify(table));
+      await s.wait(500);
+      await s.tap(s.node(s.t('importPreview')));
+      await s.wait(2000);
+      if (process.env.RECORD_DEBUG) await s.dump();
+      await s.still('import-names');
+      await s.tap(s.nodes(importNames[0]).first());
+      await s.wait(1200);
+      await s.still('import-who');
+    },
+  },
 };
 
 const only = flag('only');
@@ -421,6 +512,12 @@ const START = {
   ko: { church: '엘림교회', admin: '임은혜', typed: '왕이삭' },
 };
 
+/** The demo's last calendar event, which has not ended (demo_data.dart's calendar). */
+const CHOIR = { 'zh-Hant': '聖誕詩歌練唱', 'zh-Hans': '圣诞诗歌练唱', en: 'Christmas Choir Practice', ja: 'クリスマス聖歌隊練習', ko: '성탄 찬양 연습' };
+
+/** Names on a pasted table: m1's name (demo_data.dart) one character off, then two nobody has. */
+const IMPORT_NAMES = { 'zh-Hant': ['林豪嘉', '小芳', 'Amy'], 'zh-Hans': ['林豪嘉', '小芳', 'Amy'], en: ['Daniel Chan', 'Becky', 'Tom'], ja: ['鈴木 大介', 'みき', 'Amy'], ko: ['이서영', '민지', 'Amy'] };
+
 let failed = false;
 for (const language of languages) {
   const words = JSON.parse(fs.readFileSync(path.join(arbDir, LANGUAGES[language].arb), 'utf8'));
@@ -432,7 +529,7 @@ for (const language of languages) {
       continue;
     }
     const base = served.base;
-    const given = { duties: DUTIES[language], otherChurch: OTHER_CHURCH[language], ...START[language] };
+    const given = { duties: DUTIES[language], otherChurch: OTHER_CHURCH[language], choirPractice: CHOIR[language], importNames: IMPORT_NAMES[language], ...START[language] };
     const context = await browser.newContext({
       viewport: { width: 393, height: 852 },
       deviceScaleFactor: 2,
@@ -453,12 +550,12 @@ for (const language of languages) {
     // Played once first, unrecorded, so the font files (Google Fonts) are
     // in the browser's cache for the reload, which the app warms up from
     // before the recording starts. The demo starts afresh on the reload.
-    await page.goto(`${base}${clip.route}`);
+    await page.goto(`${base}${typeof clip.route === 'function' ? clip.route(given) : clip.route}`);
     await page.waitForTimeout(4000);
     await clip.play(session(page, words), given).catch(() => {});
     // What the first play left on the device (a claim said no to, a step seen).
     await page.evaluate(() => localStorage.clear());
-    await page.goto(`${base}${clip.route}`);
+    await page.goto(`${base}${typeof clip.route === 'function' ? clip.route(given) : clip.route}`);
     await page.waitForTimeout(4000);
     const dir = path.join(outdir, language);
     fs.mkdirSync(dir, { recursive: true });

@@ -13,7 +13,7 @@ An admin assigns leads. There are two kinds:
 - **Service lead:** Arranges a service’s whole schedule, like the Youth Service lead.
 - **Ministry lead:** Arranges only the roles linked to their ministry. For example, the worship team lead schedules Worship Leader, Piano, and Drums. The other roles still show, but they can’t be changed.
 
-An admin can go to **Settings** → **Team members**, tap a team member, and add a lead role under **Church role**. Or go to **Settings** → **Services & ministries**, open a service or ministry, and tap **Assign a lead**. A service or ministry can have several leads, all with the same permissions.
+An admin goes to **Settings** → **Services & ministries**, opens a service or ministry, and taps **Assign a lead**. To have someone arrange just one role, such as Piano, open the service’s **Roles**, tap that role, then tap **Assign a lead**. A service or ministry can have several leads, all with the same permissions.
 
 ## Start with “Get started”
 
