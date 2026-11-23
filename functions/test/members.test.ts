@@ -11,6 +11,7 @@ import { previewInvite, redeemInvite } from '../src/invites.js';
 import { memoryGoogle } from '../src/memoryGoogle.js';
 import { withIdentities, type Identity } from '../src/identities.js';
 import { notifyMembers } from '../src/push.js';
+import { renameMember } from '../src/renames.js';
 import { seal } from '../src/sealing.js';
 import {
   editorOf,
@@ -446,5 +447,52 @@ describe('member triggers', () => {
     await alice.ref.delete();
     await assert.rejects(onMemberDeleted({ ...cal, messaging, appUrl }, 'C1', alice, 'alice'), /fcm unreachable/);
     assert.equal((await db.doc('calendarTokens/C1').get()).exists, false);
+  });
+});
+
+describe('改同工的名字 (renameMember)', () => {
+  test('an admin or 行政 renames someone in this church only, on its rosters too', async () => {
+    await seedChurch('C1', { lead: 'admin', office: 'staff', alice: 'staff', bob: 'staff' });
+    await seedChurch('C2', { alice: 'staff', carol: 'admin' });
+    await db.doc('churches/C1/members/office').update({ groups: ['roster-editors', 'calendar-editors'] });
+    await db.doc('churches/C1/rosters/2026-10-04_sunday').set({
+      type: 'sunday',
+      duties: [{ role: '司琴', people: ['alice', 'bob'], uids: { alice: 'alice', bob: 'bob' } }],
+    });
+    assert.deepEqual(await renameMember(deps, caller('lead'), { churchId: 'C1', uid: 'alice', name: ' 林愛麗 ' }), {});
+    assert.equal((await db.doc('churches/C1/members/alice').get()).get('name'), '林愛麗');
+    assert.equal((await db.doc('churches/C2/members/alice').get()).get('name'), 'alice', 'another church calls her as it does');
+    assert.deepEqual((await db.doc('churches/C1/rosters/2026-10-04_sunday').get()).get('duties'), [
+      { role: '司琴', people: ['林愛麗', 'bob'], uids: { 林愛麗: 'alice', bob: 'bob' } },
+    ]);
+    await renameMember(deps, caller('office'), { churchId: 'C1', uid: 'bob', name: '林小寶' });
+    assert.equal((await db.doc('churches/C1/members/bob').get()).get('name'), '林小寶');
+    await renameMember(deps, caller('lead'), { churchId: 'C1', uid: 'alice', name: '林愛麗' });
+    assert.equal((await db.doc('churches/C1/members/alice').get()).get('name'), '林愛麗', 'her own name again');
+  });
+
+  test('her own new account name is hers everywhere again', async () => {
+    await seedChurch('C1', { lead: 'admin', alice: 'staff' });
+    await renameMember(deps, caller('lead'), { churchId: 'C1', uid: 'alice', name: '林愛麗' });
+    const before = await db.doc('users/alice').get();
+    await db.doc('users/alice').set({ name: '愛麗絲' });
+    await syncProfileName(deps, 'alice', before, await db.doc('users/alice').get());
+    assert.equal((await db.doc('churches/C1/members/alice').get()).get('name'), '愛麗絲');
+  });
+
+  test('only an admin or 行政, of someone in the church, to a name', async () => {
+    await seedChurch('C1', { lead: 'admin', alice: 'staff', sundayLead: 'staff' });
+    await db.doc('churches/C1/members/sundayLead').update({ leadTypes: ['sunday'] });
+    await rejectsWith(renameMember(deps, caller('alice'), { churchId: 'C1', uid: 'lead', name: '壞人' }), 'permissionDenied');
+    await rejectsWith(renameMember(deps, caller('sundayLead'), { churchId: 'C1', uid: 'alice', name: '愛麗' }), 'permissionDenied');
+    await db.doc('churches/C1/members/alice').update({ groups: ['roster-editors', 'calendar-editors'] });
+    await rejectsWith(renameMember(deps, caller('alice'), { churchId: 'C1', uid: 'lead', name: '牧師' }), 'permissionDenied');
+    await rejectsWith(renameMember(deps, caller('lead'), { churchId: 'C1', uid: 'nobody', name: '愛麗' }), 'notFound');
+    await db.doc('churches/C1/pendingMembers/old-huang').set({ name: '黃鎮台' });
+    await rejectsWith(renameMember(deps, caller('lead'), { churchId: 'C1', uid: 'alice', name: '黃 鎮台' }), 'duplicateName');
+    await rejectsWith(renameMember(deps, caller('lead'), { churchId: 'C1', uid: 'alice', name: 'Lead' }), 'duplicateName');
+    await rejectsWith(renameMember(deps, caller('lead'), { churchId: 'C1', uid: 'alice', name: '  ' }), 'unknown');
+    await rejectsWith(renameMember(deps, caller('lead'), { churchId: 'C1', uid: 'alice', name: '愛麗', extra: 1 }), 'unknown');
+    assert.equal((await db.doc('churches/C1/members/lead').get()).get('name'), 'lead', 'not an admin, by 行政');
   });
 });

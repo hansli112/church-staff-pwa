@@ -129,14 +129,17 @@ extension MemberPowers on Member {
   };
 
   /// Whether this member may add [target] to [group] or take them out
-  /// (testdata/church_rules.json, groupMembership): an admin anyone; the
-  /// group's 負責人 (a 小組's service's too) only a plain 同工, since 身分
-  /// are the admin's to give.
-  bool mayMove(Member target, ChurchGroup group) => isAdmin || (managesGroup(group) && target.identities.isEmpty);
+  /// (testdata/church_rules.json, groupMembership): an admin anyone; 行政
+  /// anyone but an admin; the group's 負責人 (a 小組's service's too) only a
+  /// plain 同工, since 身分 are the admin's to give.
+  bool mayMove(Member target, ChurchGroup group) =>
+      isAdmin ||
+      (inGroup(Group.rosterEditors) && !target.isAdmin) ||
+      (managesGroup(group) && target.identities.isEmpty);
 
   /// Whether this member may add a plain 同工 to [group], someone new by
   /// name too (addByName): [mayMove] for one holding no 身分.
-  bool addsStaffTo(ChurchGroup group) => isAdmin || managesGroup(group);
+  bool addsStaffTo(ChurchGroup group) => inGroup(Group.rosterEditors) || managesGroup(group);
 
   /// Whether this member may put anyone on the list of [duty] in
   /// [serviceType], or take them off it (testdata/church_rules.json,

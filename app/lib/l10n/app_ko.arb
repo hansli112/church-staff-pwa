@@ -227,7 +227,7 @@
   "identityServiceLead": "예배 리더",
   "identityMinistryLead": "사역팀 리더",
   "canAdmin": "모든 것을 관리할 수 있어요",
-  "canOffice": "모든 봉사표와 일정을 편집할 수 있지만 멤버와 설정은 관리할 수 없어요",
+  "canOffice": "모든 봉사표, 일정, 멤버를 편집할 수 있지만 역할과 설정은 바꿀 수 없어요",
   "canServiceLead": "{service}의 봉사표를 편집하고 멤버를 추가하거나 뺄 수 있어요",
   "canMinistryLead": "{ministry}의 담당을 배정하고 멤버를 추가하거나 뺄 수 있어요",
   "addIdentity": "역할 추가",

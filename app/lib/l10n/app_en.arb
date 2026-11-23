@@ -227,7 +227,7 @@
   "identityServiceLead": "Service lead",
   "identityMinistryLead": "Ministry lead",
   "canAdmin": "Can manage everything",
-  "canOffice": "Arranges every schedule and edits every event, but not team members or settings",
+  "canOffice": "Arranges every schedule, edits every event and team member, but not church roles or settings",
   "canServiceLead": "Arranges {service}'s schedules and adds or removes its team members",
   "canMinistryLead": "Arranges {ministry}'s roles and adds or removes its team members",
   "addIdentity": "Add a church role",

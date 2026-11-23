@@ -712,7 +712,7 @@ class L10nKo extends L10n {
   String get canAdmin => '모든 것을 관리할 수 있어요';
 
   @override
-  String get canOffice => '모든 봉사표와 일정을 편집할 수 있지만 멤버와 설정은 관리할 수 없어요';
+  String get canOffice => '모든 봉사표, 일정, 멤버를 편집할 수 있지만 역할과 설정은 바꿀 수 없어요';
 
   @override
   String canServiceLead(String service) {

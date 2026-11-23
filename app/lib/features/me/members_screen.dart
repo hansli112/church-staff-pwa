@@ -79,6 +79,8 @@ class _MembersScreenState extends ConsumerState<MembersScreen> {
     final isAdmin = ref.watch(
       meProvider.select((m) => m.value?.isAdmin ?? false),
     );
+    // 行政 open anyone but an admin, to change their name and services.
+    final isOffice = ref.watch(meProvider.select((m) => m.value?.inGroup(Group.rosterEditors) ?? false));
     return Scaffold(
       appBar: AppBar(title: Text(l10n.members), actions: const [SavingIndicator()]),
       body: members.when(
@@ -230,7 +232,7 @@ class _MembersScreenState extends ConsumerState<MembersScreen> {
                                         semanticsLabel: l10n.mergeSuggestionLabel(m.name),
                                         onPressed: () => mergePendingInto(context, ref, samePending, m),
                                       ),
-                                onTap: isAdmin ? () => _open(m) : null,
+                                onTap: isAdmin || (isOffice && !m.isAdmin) ? () => _open(m) : null,
                               ),
                             );
                           }
@@ -257,7 +259,9 @@ class _MembersScreenState extends ConsumerState<MembersScreen> {
                                 ...smallGroupLabels(p),
                               ].join(l10n.dotSeparator).ifEmpty(null),
                               value: p.role == Role.admin ? l10n.roleAdmin : null,
-                              onTap: isAdmin ? () => context.push('/me/members/${p.id}') : null,
+                              onTap: isAdmin || (isOffice && p.role != Role.admin)
+                                  ? () => context.push('/me/members/${p.id}')
+                                  : null,
                             ),
                           );
                         },

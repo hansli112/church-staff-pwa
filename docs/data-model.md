@@ -21,7 +21,7 @@
 | `churches/{cid}/unavailableAsks/{聚會別}` | 通知同工填（#91）上次通知的：`at`、`by`、`from`、`to`（月份，`YYYY-MM`）、`told`（通知了誰，uid）。只有後端寫（`askUnavailable`），排服事表的人讀得到；`told` 裡 `sentAt` 不早於 `at` 的算填好了，選月份時最上面寫「12月到1月・5 位還沒填」。`remindUnavailable` 再推播給還沒填、還在教會的人。2026-11-23 前的沒有 `told`，不顯示 |
 | `churches/{cid}/rosterNotes/{rosterId}` | 服事表的備註，一天一則（`rosterId` 就是那天服事表的 id，活動的是 `ev_<活動 id>`）：`text`（最多 500 字）、`files`（最多 5 個，每個 `{id, name, type, size, url}`：什麼檔案都可以，20MB 以內，檔案在 Storage 的 `churches/{cid}/rosterNotes/{rosterId}/{id}`，`url` 是下載網址）、`dateKey`（服事表的最後一天）、`by`、`updatedAt`。同工都讀得到；只有後端寫（`saveRosterNote`）：排得到那天任何一項的人（管理員、行政、聚會負責人和牧者、連到那個聚會服事項目的事工負責人；活動的照 `Member.arrangesEvent`），活動的服事表要先存過。新的檔案要先上傳到那個路徑，`url` 要是 Storage 給那個檔案的下載網址，大小和類型由後端從 Storage 讀。最後一天在 UTC 已經過了一天以上的不能再改。拿掉的檔案由 `onRosterNoteWritten` 刪；`dateKey` 過了 30 天（活動改到更晚的，照服事表新的最後一天），每天的清理（`purgeDeletedChurches` 裡的 `forgetOldRosterNotes`）連檔案一起刪，上傳了沒存的檔案一天後也刪 |
 | `churches/{cid}/swapRequests/{id}` | 找人代／交換（#92），只有後端寫（`askCover`、`askSwap`、`answerSwap`、`undoSwap`、`withdrawSwap`，`functions/src/swaps.ts`）：`kind`（`cover` 請人代／`swap` 交換）、`serviceId`、`dateKey`、`rosterId`、`duty`、`from`、`fromName`（問的人和他在服事表上的名字）；請人代另有 `asked`（問了誰：名單上那天有空的人，`testdata/swaps.json` 的 `coverAsked`；空的是沒人可問，改告訴負責人和那天服事表上的人，`nudged` 一開始就是 `true`）、`passed`（說不方便的）、`nudged`（三天前告訴負責人了）；交換另有 `to`、`toName`、`toDateKey`、`toRosterId`。`status`：`open`、`taken`（`taker`、`takerName`、`answeredAt`）、`declined`、`withdrawn`、`voided`（服事表改了、日子過了）；`sendAt`（夜裡問的，7:00 送；送了是 `null`）、`createdAt`。問的人、`asked` 裡的人、`to` 讀得到。接手時後端改服事表，寫 `via: 'swap'` |
-| `churches/{cid}/pendingMembers/{舊 uid 或自動 id}` | 沒有帳號的同工（畫面上寫「沒有帳號」）：從舊版搬來的（id 是舊 uid），或聚會的同工頁打名字新增的（`addByName`，自動 id，沒有 email，另有 `addedBy`、`addedAt`；管理員或那個聚會的負責人，不能和教會裡任何人同名）。`name`、`email`、`emailHash`、`role`、`groups`、`zones`、`zoneTypes`、`smallGroups`（在這裡放進的小組 id；搬來時的小組是 `zones` 裡的名稱）、`notificationPrefs`、`rosterIds`（搬家時記下有他名字的服事表）。後端建立，管理員可以刪；服事項目、聚會、小組和同工一樣由 `setDuty`、`setGroupMember` 改（後端找不到同工就找這裡）；服事表可以排他，`uids` 連到這個 id，通知同工不算他。用它的 email（驗證過）經 `redeemInvite` 加入、或申請被 `answerJoinRequest` 允許時，直接認領（`takeWaiting`）。認領或合併時偏好與小組併入同工，所有連到這個 id 的服事表（`rosterIds` 和之後排的）都改連到新帳號 |
+| `churches/{cid}/pendingMembers/{舊 uid 或自動 id}` | 沒有帳號的同工（畫面上寫「沒有帳號」）：從舊版搬來的（id 是舊 uid），或聚會的同工頁打名字新增的（`addByName`，自動 id，沒有 email，另有 `addedBy`、`addedAt`；管理員、行政或那個聚會的負責人，不能和教會裡任何人同名）。`name`、`email`、`emailHash`、`role`、`groups`、`zones`、`zoneTypes`、`smallGroups`（在這裡放進的小組 id；搬來時的小組是 `zones` 裡的名稱）、`notificationPrefs`、`rosterIds`（搬家時記下有他名字的服事表）。後端建立，管理員可以刪；服事項目、聚會、小組和同工一樣由 `setDuty`、`setGroupMember` 改（後端找不到同工就找這裡）；服事表可以排他，`uids` 連到這個 id，通知同工不算他。用它的 email（驗證過）經 `redeemInvite` 加入、或申請被 `answerJoinRequest` 允許時，直接認領（`takeWaiting`）。認領或合併時偏好與小組併入同工，所有連到這個 id 的服事表（`rosterIds` 和之後排的）都改連到新帳號 |
 | `churches/{cid}/joinRequests/{uid}` | 申請加入（#88）：`uid`、`name`、`email`（申請時帳號的）、`note`（選填，最多 100 字）、`createdAt`、`rejectedAt`（管理員拒絕的時間）。只有後端寫（`requestToJoin`、`withdrawJoinRequest`、`answerJoinRequest`），只有 admin 讀得到；申請的人從 `churchPreview` 知道自己的申請怎麼了。`createdAt` 滿 30 天就算沒有，每天清掉 |
 | `churches/{cid}/joinRequestPushes/{uid}` | 只有後端讀寫：`uid`、`at`（上次為這個人的申請推播給管理員的時間）。同一個人一天內只推播一次，取消再申請也不會一直響；超過一天的每天清掉 |
 | `pendingIndex/{email 的 SHA-256}` | 只有後端讀寫：`churches`（教會 id → 待認領同工 id） |
@@ -49,7 +49,7 @@
 
 - 一個教會的所有資料都在 `churches/{cid}` 底下，可以整棵匯出。
 - 推播 token 放在 `users/{uid}`，只有本人和 Cloud Functions 讀得到。self-host 版的 roster editor 讀得到全部 token，這裡改掉了。
-- 教會內顯示的名字來自 member doc，不讀 `users/{uid}`。
+- 教會內顯示的名字來自 member doc，不讀 `users/{uid}`。本人改帳號名字時抄到每一間教會（`syncProfileName`）；管理員和行政可以只改自己教會的（`renameMember`，沒有帳號的同工是 `renamePending`），服事表上的名字一起改；不能改成教會裡別人的名字（服事表和選人都用名字分人，沒有帳號的同工還會被當成同一個人）。帳號名字本來就可能一樣，那是本人取的。之後本人再改帳號名字，照樣蓋過去。
 - 服事表上誰是誰只看 `duties[].uids`（名字 → uid）。名字沒有 uid 就是無帳號，即使和某位同工同名；提醒、異動通知、「我接下來的服事」、搬家都不以名字補 uid。舊資料要補 uid 時用 `functions/scripts/backfill-roster-uids.ts`：預設只預覽，只對沒有 `uids` 欄位的服事、名字和唯一一位同工完全相同時自動補；明確的空 `uids` 只能靠人工確認的對應檔補。
 - `zones[].smallGroups` 是舊的小組名稱，自架版和 #85 之前留下的；現在的小組在 `smallGroups`（同工所在的小組 ID）。`functions/scripts/migrate-small-groups.ts` 把名稱轉成小組一次，搬家和認領時也照名稱轉。
 - 每日內容來源只接受一種 JSON：`{"date":"YYYY-MM-DD","title":"…","body":"…","link":"https://…"}`，四個欄位都要有，`date` 必須是教會的今天（照教會的時區）。抓不到、格式不對或不是今天，都記成失敗，首頁說明原因，不改顯示舊內容或固定連結；管理員可以重抓目前設定的來源。
@@ -96,13 +96,13 @@ App 與 Functions 各寫一次的教會資料規則也一樣：新教會的預�
 | 管理員 | `{kind: 'admin'}`，`role: 'admin'` | 全部 |
 | 全教會 牧者 | `{kind: 'pastor'}`，`role: 'admin'` | 等於管理員 |
 | 某幾個聚會的 牧者（「主日崇拜、青年崇拜 牧者」） | `{kind: 'pastor', services: [...]}`，那幾個進 `leadTypes` | 等於那幾個聚會的負責人 |
-| 行政 | `{kind: 'office'}`，`groups` 是 `roster-editors` 和 `calendar-editors` | 排所有服事表（含活動的）、改所有活動、改每個服事項目的名單（2026-11-19 起）；不能管同工和設定 |
+| 行政 | `{kind: 'office'}`，`groups` 是 `roster-editors` 和 `calendar-editors` | 排所有服事表（含活動的）、改所有活動、改每個服事項目的名單（2026-11-19 起）；改管理員以外的同工的名字、聚會和小組（`renameMember`、`setGroupMember`，2026-11-23 起）；不能給身分、合併、移除同工，不能改設定 |
 | 聚會負責人 | `{kind: 'lead', service}`，進 `leadTypes` | 排那個聚會的服事表、加入和移出它的同工、改它每個服事項目的名單 |
 | 事工負責人 | `{kind: 'lead', ministry}`，進 `leadMinistries` | 在任何聚會和活動排那個事工連到的服事項目（經 `editLedDuties`）、改這些服事項目的名單（#94） |
 | 小組長 | `{kind: 'lead', smallGroup}`，進 `leadSmallGroups` | 管那個小組的活動、回報人數、設小組什麼時候聚會、加入和移出它的同工（#85） |
 
 - `identities` 是同工頁顯示和編輯的；規則讀不到裡面，所以 App 同時寫攤平的 `role`、`groups`、`leadTypes`、`leadMinistries`（`Member.withIdentities`），舊版 App 也照舊讀 `role` 和 `groups`。只有管理員能寫這些欄位。沒有 `identities` 的舊資料：`role: 'admin'` 算管理員，`roster-editors` 算行政。
-- 只有管理員（含全教會的牧者）能給身分。負責人只能加入、移出自己群組的一般同工（沒有身分、不是管理員、不在權限群組的；`setGroupMember`，規則在 `testdata/church_rules.json` 的 `groupMembership`），看得到全教會的同工名單。教會至少要有一位 `role: 'admin'`。
+- 只有管理員（含全教會的牧者）能給身分。行政可以加入、移出管理員以外的任何人；負責人只能加入、移出自己群組的一般同工（沒有身分、不是管理員、不在權限群組的；`setGroupMember`，規則在 `testdata/church_rules.json` 的 `groupMembership`），看得到全教會的同工名單。教會至少要有一位 `role: 'admin'`。
 - `role` 另外的 `leader`、`staff`、`member` 是舊的身分標示，不再顯示；`leader` 的同工在轉換時變成他那幾個小組的小組長。
 - 小組（#85）屬於一個聚會，由管理員或那個聚會的負責人、牧者開、改名、刪除，也由他們指派小組長，一個小組只有一位（經 `editSmallGroup`，規則在 `testdata/church_rules.json` 的 `smallGroupEditing`）；管理員也能在同工頁直接給小組長這個身分，只能選還沒有小組長的小組。小組長只能設小組什麼時候聚會（`smallGroupScheduling`）。改小組或換小組長時帶上畫面上看到的樣子，有人先改過就拒絕（衝突），復原也一樣，不會蓋掉別人的。開小組的人可以排那個聚會的小組順序（`editSmallGroup` 的 `order`，要列出那個聚會現在全部的小組，不然算衝突）；比對「畫面上看到的樣子」時不看順序，舊版 App 不會因為別人排過就被拒絕。小組的同工（`smallGroups`）由管理員、小組長和那個聚會的負責人加、移；沒有帳號的組員不記。刪除小組時小組長和同工都移出，填過的人數留著。
 - `zones`：同工屬於的聚會（程式裡叫 zone，畫面上只說「○○的同工」，#94），每個帶他在那裡的服事項目，可以是空的。服事項目的名單就是這些：誰的 `zones` 裡那個聚會有這項，誰就在名單上。聚會的同工從這裡來；安排服事表時選了不是這個聚會同工的人，只排這一次，不會加進來（#82）。服事表分頁顯示自己的牧區、負責的聚會和事工連到的聚會，admin 和行政看全部；這只是讓畫面清爽，規則照樣讓所有同工讀所有服事表。

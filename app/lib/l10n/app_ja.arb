@@ -227,7 +227,7 @@
   "identityServiceLead": "集会リーダー",
   "identityMinistryLead": "ミニストリーリーダー",
   "canAdmin": "すべて管理できる",
-  "canOffice": "すべての奉仕表と行事を編集できるが、メンバーと設定は管理できない",
+  "canOffice": "すべての奉仕表・行事・メンバーを編集できるが、役割と設定は変更できない",
   "canServiceLead": "{service}の奉仕表を編集し、メンバーを加えたり外したりできる",
   "canMinistryLead": "{ministry}の担当を割り当て、メンバーを加えたり外したりできる",
   "addIdentity": "役割を追加",

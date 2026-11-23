@@ -227,7 +227,7 @@
   "identityServiceLead": "聚会负责人",
   "identityMinistryLead": "事工负责人",
   "canAdmin": "什么都能管",
-  "canOffice": "排所有事奉表、改所有活动，不能管同工和设置",
+  "canOffice": "排所有事奉表、改所有活动和同工，不能给身份、改设置",
   "canServiceLead": "排{service}的事奉表、加入和移出它的同工",
   "canMinistryLead": "排{ministry}的事奉项目、加入和移出它的同工",
   "addIdentity": "新增身份",

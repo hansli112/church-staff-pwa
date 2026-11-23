@@ -38,7 +38,7 @@ void main() {
       expect(find.text('5 位同工'), findsOneWidget);
       await tapText(tester, '李美玉');
       await tapText(tester, '新增身分');
-      expect(findShown('排所有服事表、改所有活動，不能管同工和設定'), findsOneWidget, reason: 'how 行政 differs from 管理員');
+      expect(findShown('排所有服事表、改所有活動和同工，不能給身分、改設定'), findsOneWidget, reason: 'how 行政 differs from 管理員');
       expect(findShown('什麼都能管'), findsNothing, reason: '管理員 says it');
       await tapText(tester, '聚會負責人');
       await tapText(tester, '主日崇拜');
@@ -139,6 +139,49 @@ void main() {
       await tapText(tester, '主日崇拜');
       await go(tester, '/home');
       expect(find.textContaining('還沒加入任何聚會'), findsNothing, reason: 'everyone is in a 牧區 now');
+    });
+
+    testWidgets('an admin renames someone by tapping their name: here only, on the rosters too; 復原 takes it back', (
+      tester,
+    ) async {
+      final b = seededChurch();
+      b.addPending('grace', const PendingMember(id: 'old-huang', name: '黃鎮台'));
+      await pumpApp(tester, b);
+      await go(tester, '/me/members/mei');
+      await tester.tap(find.byIcon(Symbols.edit_rounded));
+      await settle(tester);
+      await tester.enterText(find.byType(TextField).last, '黃鎮台');
+      await tapText(tester, '儲存');
+      expect(find.text('教會裡已經有人叫「黃鎮台」'), findsOneWidget, reason: 'one without an account would be taken for her');
+
+      await tapText(tester, '李美玉');
+      await tester.enterText(find.byType(TextField).last, '美玉姐');
+      await tapText(tester, '儲存');
+      expect(b.members['grace']!['mei']!.name, '美玉姐');
+      expect(b.rosters['grace']![Roster.idFor('sunday', Day(2026, 10, 4))]!.duties[1].people, ['美玉姐']);
+      expect(find.text('美玉姐'), findsOneWidget, reason: 'the title');
+      await tapText(tester, '復原');
+      expect(b.members['grace']!['mei']!.name, '李美玉');
+    });
+
+    testWidgets('行政 open anyone but an admin: their name and services, no 身分, merging or removing', (tester) async {
+      final b = seededChurch(as: office, extra: [office]);
+      b.addPending('grace', const PendingMember(id: 'old-huang', name: '黃鎮台'));
+      await pumpApp(tester, b);
+      await go(tester, '/me/members');
+      await tapText(tester, '李美玉');
+      expect(find.byIcon(Symbols.edit_rounded), findsOneWidget);
+      expect(find.text('移出主日崇拜'), findsOneWidget);
+      expect(find.text('身分'), findsNothing);
+      expect(find.text('移除同工'), findsNothing);
+      expect(find.text('合併沒有帳號的同工'), findsNothing);
+      await tapText(tester, '加入聚會');
+      await tapText(tester, '青年崇拜');
+      expect(b.members['grace']!['mei']!.zoneTypes, ['sunday', 'youth']);
+
+      await go(tester, '/me/members/pastor');
+      expect(find.text('加入聚會'), findsNothing, reason: 'an admin is the admins\' to change');
+      expect(find.byIcon(Symbols.edit_rounded), findsNothing);
     });
 
     testWidgets('removing uses undo, and commits after the window', (tester) async {

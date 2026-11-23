@@ -711,7 +711,7 @@ class L10nZh extends L10n {
   String get canAdmin => '什麼都能管';
 
   @override
-  String get canOffice => '排所有服事表、改所有活動，不能管同工和設定';
+  String get canOffice => '排所有服事表、改所有活動和同工，不能給身分、改設定';
 
   @override
   String canServiceLead(String service) {
@@ -4370,7 +4370,7 @@ class L10nZhHans extends L10nZh {
   String get canAdmin => '什么都能管';
 
   @override
-  String get canOffice => '排所有事奉表、改所有活动，不能管同工和设置';
+  String get canOffice => '排所有事奉表、改所有活动和同工，不能给身份、改设置';
 
   @override
   String canServiceLead(String service) {

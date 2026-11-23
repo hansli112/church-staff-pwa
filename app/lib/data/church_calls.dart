@@ -296,6 +296,18 @@ final class RenamePending extends _Write {
   Map<String, Object?> get data => {'pendingId': id, 'name': name};
 }
 
+final class RenameMember extends _Write {
+  const RenameMember(this.uid, this.name);
+  final String uid;
+  final String name;
+
+  @override
+  String get callable => 'renameMember';
+
+  @override
+  Map<String, Object?> get data => {'uid': uid, 'name': name};
+}
+
 final class AskClaim extends _Write {
   const AskClaim(this.pendingId);
   final String? pendingId;
@@ -329,10 +341,16 @@ extension ChurchCalls on ChurchData {
   /// they named into them. Either way the ask goes.
   Future<void> answerClaim(String uid, {required bool allow}) => run(AnswerClaim(uid, allow: allow));
 
-  /// Renames pending member [id] (admins), on the rosters they are on too:
-  /// a typo fixed. [CloudErrorCode.duplicateName] for a name someone in the
-  /// church has.
+  /// Renames pending member [id] (admins and 行政), on the rosters they are
+  /// on too: a typo fixed. [CloudErrorCode.duplicateName] for a name
+  /// someone in the church has.
   Future<void> renamePending(String id, String name) => run(RenamePending(id, name));
+
+  /// 改同工的名字: admins and 行政 call member [uid] [name] in this church
+  /// only, on its rosters too; their own new account name is theirs
+  /// everywhere again. [CloudErrorCode.duplicateName] for a name someone in
+  /// the church has.
+  Future<void> renameMember(String uid, String name) => run(RenameMember(uid, name));
 
   /// Lets [uid] in, as an invite would (no 身分, no 牧區), or turns them
   /// down (admins). Letting in a request no longer waiting is

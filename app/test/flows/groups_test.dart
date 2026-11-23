@@ -430,14 +430,14 @@ void main() {
     expect(find.textContaining('按住拖曳排序'), findsNothing);
   });
 
-  testWidgets("行政 reads a service's 同工 on their page, and moves nobody; a search with no one says so", (tester) async {
+  testWidgets("行政 moves a service's 同工 on their page; a search with no one says so", (tester) async {
     await pumpApp(tester, seededChurch(as: office, extra: [office]));
     await go(tester, '/me/groups/service/sunday');
     await tester.scrollUntilVisible(find.text('3 人'), 200, scrollable: find.byType(Scrollable).last);
     await tapText(tester, '3 人');
     expect(find.text('李美玉'), findsOneWidget);
-    expect(find.text('移出'), findsNothing);
-    expect(find.text('加入同工'), findsNothing);
+    expect(find.text('移出'), findsNWidgets(3));
+    expect(find.text('加入同工'), findsOneWidget);
     await tester.enterText(find.byType(TextField), '沒有這個人');
     await settle(tester);
     expect(find.text('找不到這位同工'), findsOneWidget);

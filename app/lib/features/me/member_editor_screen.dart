@@ -16,9 +16,13 @@ import 'no_account_picker.dart';
 import 'service_staff.dart';
 import '../rosters/future_changes.dart';
 
-/// An admin editing one member: their 身分 (#82), and each service they
-/// are one of the 同工 of, with the duties they serve there and their
-/// 小組 in it (#94); 加入聚會 for another. Every change saves at once.
+/// An admin editing one member: their name here (tapped in the title),
+/// their 身分 (#82), and each service they are one of the 同工 of, with the
+/// duties they serve there and their 小組 in it (#94); 加入聚會 for
+/// another. Every change saves at once.
+///
+/// 行政 edit anyone but an admin the same, through the backend, but give no
+/// 身分, merge nobody and remove nobody (2026-11-23).
 ///
 /// An admin cannot demote or remove themself (the rules forbid it too), so
 /// those controls do not appear on their own page.
@@ -81,6 +85,29 @@ class MemberEditorScreen extends ConsumerWidget {
     await mergePendingInto(context, ref, picked, member);
   }
 
+  /// 改名: [member]'s name in this church, on the rosters too, with 復原.
+  Future<void> _rename(BuildContext context, WidgetRef ref, Member member) async {
+    final l10n = L10n.of(context);
+    final next = await promptText(
+      context,
+      title: l10n.rename,
+      label: l10n.name,
+      initial: member.name,
+      maxLength: TextLimits.profileName,
+    );
+    if (next == null || next == member.name || !context.mounted) return;
+    final data = ref.churchData;
+    try {
+      await data.renameMember(member.uid, next);
+      Haptics.success();
+      if (context.mounted) {
+        showToast(context, l10n.pendingRenamed, onUndo: () => data.renameMember(member.uid, member.name));
+      }
+    } catch (e) {
+      if (context.mounted) showToast(context, nameErrorText(l10n, e, next));
+    }
+  }
+
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final l10n = L10n.of(context);
@@ -95,6 +122,14 @@ class MemberEditorScreen extends ConsumerWidget {
     final self = ref.watch(uidProvider) == uid;
     if (member == null && pending.any((p) => p.id == uid)) return _NoAccountScreen(id: uid);
     if (member == null || services == null) return Scaffold(appBar: AppBar());
+    final me = ref.watch(meProvider).value;
+    final admin = me?.isAdmin ?? false;
+    if (!admin && !(me?.inGroup(Group.rosterEditors) ?? false) || member.isAdmin && !admin) {
+      return Scaffold(appBar: AppBar(title: Text(member.name)));
+    }
+    final writes = ref.read(churchWritesProvider);
+    // 行政's changes go through the backend, as a 負責人's do.
+    Future<bool> backend(ChurchWrite write) => savedOrSaid(context, write.done);
 
     final zoneTypes = member.zoneTypes.toSet();
     final joinable = [
@@ -102,11 +137,11 @@ class MemberEditorScreen extends ConsumerWidget {
         if (!zoneTypes.contains(s.id)) s,
     ];
     Future<bool> save(Member next) => _save(context, ref, member, next);
-    final mergeFirst = member.waitsForZone(services.services);
+    final mergeFirst = admin && member.waitsForZone(services.services);
     // Just joined, in no service: likely someone the rosters already have,
     // so first. In a service already, last (2026-11-19): nothing says who
     // was merged, but one put on a duty before being merged still can be.
-    final merge = pending.isEmpty
+    final merge = pending.isEmpty || !admin
         ? null
         : ListSection(
             footer: l10n.mergePendingFooter,
@@ -116,11 +151,14 @@ class MemberEditorScreen extends ConsumerWidget {
           );
 
     return Scaffold(
-      appBar: AppBar(title: Text(member.name), actions: const [SavingIndicator()]),
+      appBar: AppBar(
+        title: NameTitle(name: member.name, onTap: () => _rename(context, ref, member)),
+        actions: const [SavingIndicator()],
+      ),
       body: ListView(
         children: [
           if (mergeFirst) ?merge,
-          IdentitySection(member: member, self: self),
+          if (admin) IdentitySection(member: member, self: self),
           for (final s in services.services)
             if (zoneTypes.contains(s.id))
               ServiceStaffSection(
@@ -128,9 +166,22 @@ class MemberEditorScreen extends ConsumerWidget {
                 service: s,
                 header: s.name,
                 smallGroups: [...smallGroups.where((g) => g.service == s.id)],
-                onDuty: (duty, on) => save(on ? member.withDuty(s.id, duty) : member.withoutDuty(s.id, duty)),
-                onSmallGroup: (g, on) => save(member.inGroupAs(g.group, member: on)),
-                onLeave: () => _leaveZone(context, ref, member, s),
+                onDuty: (duty, on) => admin
+                    ? save(on ? member.withDuty(s.id, duty) : member.withoutDuty(s.id, duty))
+                    : savedOrSaid(
+                        context,
+                        (on ? ref.churchData.grantDuty : ref.churchData.revokeDuty)(uid, s.id, duty),
+                      ),
+                onSmallGroup: (g, on) => admin
+                    ? save(member.inGroupAs(g.group, member: on))
+                    : backend(writes.groupMember(member, g.group, member: on)),
+                onLeave: () => admin
+                    ? _leaveZone(context, ref, member, s)
+                    : runWithUndo(
+                        context,
+                        l10n.zoneLeft(s.name),
+                        () => writes.groupMember(member, ServiceGroup(s.id), member: false),
+                      ),
               ),
           if (joinable.isNotEmpty)
             ListSection(
@@ -140,19 +191,21 @@ class MemberEditorScreen extends ConsumerWidget {
                   leading: const Icon(Symbols.add_rounded),
                   options: joinable,
                   label: (s) => s.name,
-                  onPicked: (s) => save(
-                    member.copyWith(
-                      zones: [
-                        ...member.zones,
-                        Zone(serviceType: s.id),
-                      ],
-                    ),
-                  ),
+                  onPicked: (s) => admin
+                      ? save(
+                          member.copyWith(
+                            zones: [
+                              ...member.zones,
+                              Zone(serviceType: s.id),
+                            ],
+                          ),
+                        )
+                      : backend(writes.groupMember(member, ServiceGroup(s.id), member: true)),
                 ),
               ],
             ),
           if (!mergeFirst) ?merge,
-          if (!self)
+          if (admin && !self)
             ListSection(
               children: [
                 ListRow(
@@ -204,7 +257,8 @@ Future<bool> confirmMerge(BuildContext context, WidgetRef ref, PendingMember pen
 }
 
 /// One of the 同工 without an account yet (moved, or added by name), for
-/// an admin: as a member's page, but no 身分 (not using the app, they lead
+/// an admin or 行政 (who deletes nobody, and changes no admin): as a
+/// member's page, but no 身分 (not using the app, they lead
 /// nothing), each change through the backend, and 刪除 at the end.
 class _NoAccountScreen extends ConsumerWidget {
   const _NoAccountScreen({required this.id});
@@ -220,8 +274,11 @@ class _NoAccountScreen extends ConsumerWidget {
     final services = ref.watch(servicesProvider).value;
     final smallGroups = ref.watch(smallGroupsProvider).value ?? const <SmallGroupDetails>[];
     if (pending == null || services == null) return Scaffold(appBar: AppBar());
-    final person = pending.asMember(smallGroups);
     final name = pending.name.isEmpty ? pending.email : pending.name;
+    final admin = ref.watch(meProvider).value?.isAdmin ?? false;
+    // 行政 change anyone but an admin (one moved from self-host).
+    if (!admin && pending.role == Role.admin) return Scaffold(appBar: AppBar(title: Text(name)));
+    final person = pending.asMember(smallGroups);
     final writes = ref.read(churchWritesProvider);
     Future<bool> saved(Future<void> write) => savedOrSaid(context, write);
 
@@ -276,11 +333,12 @@ class _NoAccountScreen extends ConsumerWidget {
                 ),
               ],
             ),
-          ListSection(
-            children: [
-              ListRow(title: l10n.pendingDelete, destructive: true, onTap: () => _delete(context, ref, name)),
-            ],
-          ),
+          if (admin)
+            ListSection(
+              children: [
+                ListRow(title: l10n.pendingDelete, destructive: true, onTap: () => _delete(context, ref, name)),
+              ],
+            ),
           const SizedBox(height: 32),
         ],
       ),
@@ -326,5 +384,50 @@ class _NoAccountScreen extends ConsumerWidget {
     } catch (e) {
       if (context.mounted) showToast(context, errorText(l10n, e));
     }
+  }
+}
+
+/// A member's name as a page's title, tapped to rename them: a small pencil
+/// after it, which, where titles are centred, the name is centred without.
+class NameTitle extends StatelessWidget {
+  const NameTitle({super.key, required this.name, required this.onTap});
+
+  final String name;
+  final VoidCallback onTap;
+
+  static const _icon = 16.0;
+  static const _gap = 4.0;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final centred =
+        theme.appBarTheme.centerTitle ??
+        switch (theme.platform) {
+          TargetPlatform.iOS || TargetPlatform.macOS => true,
+          _ => false,
+        };
+    return Semantics(
+      button: true,
+      hint: L10n.of(context).rename,
+      child: GestureDetector(
+        behavior: HitTestBehavior.opaque,
+        onTap: onTap,
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(minHeight: 44),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              if (centred) const SizedBox(width: _icon + _gap),
+              Flexible(child: Text(name, maxLines: 1, overflow: TextOverflow.ellipsis)),
+              const SizedBox(width: _gap),
+              ExcludeSemantics(
+                child: Icon(Symbols.edit_rounded, size: _icon, color: AppColors.of(context).tertiaryLabel),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
   }
 }

@@ -144,8 +144,8 @@ const repoint = (deps: Deps, cid: string, pid: string, uid: string, recorded: st
       : d);
 
 /**
- * Renames pending member [pendingId] (admins): a typo fixed, on the
- * rosters they are on too. Refused for a name someone in the church has,
+ * Renames pending member [pendingId] (admins and 行政): a typo fixed, on
+ * the rosters they are on too. Refused for a name someone in the church has,
  * as adding one by name is.
  */
 export async function renamePending(deps: Deps, caller: Caller | null, data: unknown) {
@@ -153,12 +153,14 @@ export async function renamePending(deps: Deps, caller: Caller | null, data: unk
   if (Object.keys(input).some((k) => !['churchId', 'pendingId', 'name'].includes(k))) fail('invalid-argument', 'unknown');
   const pid = id(input.pendingId);
   const name = text(input.name, TEXT_LIMITS.profileName);
-  const { cid } = await churchAccess(deps, caller, data, 'admin');
+  const { cid, powers } = await churchAccess(deps, caller, data, { group: 'roster-editors' });
   const root = deps.db.doc(`churches/${cid}`);
   const pending = await deps.db.runTransaction(async (tx) => {
     const [church, pending] = await tx.getAll(root, root.collection('pendingMembers').doc(pid));
     if (!isChurchOpen(church)) churchClosed();
     if (!pending.exists) fail('not-found', 'notFound');
+    // 行政 change anyone but an admin (an admin moved from self-host here).
+    if (!powers.admin && pending.get('role') === 'admin') fail('permission-denied', 'permissionDenied');
     const [members, others] = await Promise.all([tx.get(root.collection('members')), tx.get(root.collection('pendingMembers'))]);
     const key = nameKey(name);
     if ([...members.docs, ...others.docs.filter((d) => d.id !== pid)].some((d) => nameKey(String(d.get('name') ?? '')) === key)) {

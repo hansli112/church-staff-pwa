@@ -4,11 +4,12 @@ part of 'memory_backend.dart';
 mixin _MemoryClaim on _MemoryChurchBase implements ClaimData {
   Future<void> renamePending(String id, String name) async {
     // As functions/src/claim.ts renamePending.
-    _functionAdmin();
+    final me = _b.functionAccess(churchId, allowed: (me) => me.inGroup(Group.rosterEditors))!;
     final named = _text(name, TextLimits.profileName);
     final pending = _b.pendingMembers[churchId] ?? {};
     final p = pending[id];
     if (p == null) throw const CloudException(CloudErrorCode.notFound);
+    if (!me.isAdmin && p.role == Role.admin) throw const CloudException(CloudErrorCode.permissionDenied);
     final key = nameKey(named);
     if ([
       ..._b.members[churchId]!.values.map((m) => m.name),
@@ -17,12 +18,7 @@ mixin _MemoryClaim on _MemoryChurchBase implements ClaimData {
     ].any((n) => nameKey(n) == key)) {
       throw const CloudException(CloudErrorCode.duplicateName);
     }
-    final staffOrders = _b.staffOrders[churchId] ?? {};
-    for (final e in [...staffOrders.entries]) {
-      staffOrders[e.key] = StaffOrder({
-        for (final r in e.value.rankingsByRole.entries) r.key: [for (final n in r.value) n == p.name ? named : n],
-      });
-    }
+    _renameOnRosters(id, p.name, named);
     pending[id] = PendingMember(
       id: p.id,
       name: named,
@@ -33,13 +29,44 @@ mixin _MemoryClaim on _MemoryChurchBase implements ClaimData {
       smallGroups: p.smallGroups,
       mutedNotifications: p.mutedNotifications,
     );
+    _b.notify();
+  }
+
+  Future<void> renameMember(String uid, String name) async {
+    // As functions/src/renames.ts renameMember.
+    final me = _b.functionAccess(churchId, allowed: (me) => me.inGroup(Group.rosterEditors))!;
+    final named = _text(name, TextLimits.profileName);
+    final members = _b.members[churchId]!;
+    final m = members[uid];
+    if (m == null) throw const CloudException(CloudErrorCode.notFound);
+    if (!me.isAdmin && m.isAdmin) throw const CloudException(CloudErrorCode.permissionDenied);
+    final key = nameKey(named);
+    if ([
+      for (final o in members.values)
+        if (o.uid != uid) o.name,
+      ...(_b.pendingMembers[churchId] ?? {}).values.map((p) => p.name),
+    ].any((n) => nameKey(n) == key)) {
+      throw const CloudException(CloudErrorCode.duplicateName);
+    }
+    _renameOnRosters(uid, m.name, named);
+    members[uid] = m.copyWith(name: named);
+    _b.notify();
+  }
+
+  /// [id], once [old], is [named] now on the rosters and staff orders.
+  void _renameOnRosters(String id, String old, String named) {
+    final staffOrders = _b.staffOrders[churchId] ?? {};
+    for (final e in [...staffOrders.entries]) {
+      staffOrders[e.key] = StaffOrder({
+        for (final r in e.value.rankingsByRole.entries) r.key: [for (final n in r.value) n == old ? named : n],
+      });
+    }
     final rosters = _b.rosters[churchId]!;
     for (final key in [...rosters.keys]) {
       final value = rosters[key]!;
       if (!value.duties.any((d) => d.uids.containsValue(id))) continue;
       rosters[key] = value.copyWith(duties: [for (final d in value.duties) d.renamed(id, named)]);
     }
-    _b.notify();
   }
 
   @override

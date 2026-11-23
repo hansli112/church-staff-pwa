@@ -417,7 +417,7 @@ describe('renaming', () => {
     assert.deepEqual((await db.doc(`churches/${cid}/staff_orders/sunday`).get()).get('roles'), { 司琴: ['陳志豪', '李美鈺'] });
   });
 
-  test("not to a name someone in the church has; only that church's admin", async () => {
+  test("not to a name someone in the church has; only that church's admin or 行政", async () => {
     const cid = await moved();
     await rejectsWith(renamePending(deps, caller('mover'), { churchId: cid, pendingId: 'old-mei', name: '陳 志豪' }), 'duplicateName');
     await db.doc(`churches/${cid}/members/staffer`).set({ uid: 'staffer', name: '同工', role: 'staff' });
@@ -425,5 +425,10 @@ describe('renaming', () => {
     await rejectsWith(renamePending(deps, caller('staffer'), { churchId: cid, pendingId: 'old-mei', name: '李美鈺' }), 'permissionDenied');
     await rejectsWith(renamePending(deps, caller('mover'), { churchId: cid, pendingId: 'nobody', name: '李美鈺' }), 'notFound');
     assert.equal((await db.doc(`churches/${cid}/pendingMembers/old-mei`).get()).get('name'), '李美玉');
+    await db.doc(`churches/${cid}/members/office`).set({ uid: 'office', name: '行政', role: 'staff', groups: ['roster-editors', 'calendar-editors'] });
+    await renamePending(deps, caller('office'), { churchId: cid, pendingId: 'old-mei', name: '李美鈺' });
+    assert.equal((await db.doc(`churches/${cid}/pendingMembers/old-mei`).get()).get('name'), '李美鈺');
+    await db.doc(`churches/${cid}/pendingMembers/old-mei`).update({ role: 'admin' });
+    await rejectsWith(renamePending(deps, caller('office'), { churchId: cid, pendingId: 'old-mei', name: '李美玉' }), 'permissionDenied');
   });
 });

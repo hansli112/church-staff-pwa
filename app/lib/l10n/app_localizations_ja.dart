@@ -711,7 +711,7 @@ class L10nJa extends L10n {
   String get canAdmin => 'すべて管理できる';
 
   @override
-  String get canOffice => 'すべての奉仕表と行事を編集できるが、メンバーと設定は管理できない';
+  String get canOffice => 'すべての奉仕表・行事・メンバーを編集できるが、役割と設定は変更できない';
 
   @override
   String canServiceLead(String service) {

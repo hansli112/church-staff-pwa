@@ -1,4 +1,7 @@
-import type { Deps } from './common.js';
+import { churchAccess } from './access.js';
+import { fail, id, record, text, type Caller, type Deps } from './common.js';
+import { TEXT_LIMITS } from './limits.js';
+import { nameKey } from './text.js';
 
 /**
  * Someone renamed: the rosters that name them, and the staff orders that
@@ -73,4 +76,35 @@ export async function renameInChurch(deps: Deps, cid: string, id: string, old: s
         }),
       ),
   );
+}
+
+/**
+ * 改同工的名字: an admin, or 行政 of anyone but an admin, calls [data.uid] [data.name] in this
+ * church only, on its rosters too. Not to a name someone in the church
+ * has, as renamePending: rosters and pickers tell people apart by name.
+ * Their own new account name later is theirs in every church again
+ * (syncProfileName).
+ */
+export async function renameMember(deps: Deps, caller: Caller | null, data: unknown) {
+  const input = record(data);
+  if (Object.keys(input).some((k) => !['churchId', 'uid', 'name'].includes(k))) fail('invalid-argument', 'unknown');
+  const uid = id(input.uid);
+  const name = text(input.name, TEXT_LIMITS.profileName);
+  const { cid, powers } = await churchAccess(deps, caller, data, { group: 'roster-editors' });
+  const [member, members, pending] = await Promise.all([
+    deps.db.doc(`churches/${cid}/members/${uid}`).get(),
+    deps.db.collection(`churches/${cid}/members`).get(),
+    deps.db.collection(`churches/${cid}/pendingMembers`).get(),
+  ]);
+  if (!member.exists) fail('not-found', 'notFound');
+  // 行政 change anyone but an admin, as they move them (groupMembership).
+  if (!powers.admin && member.get('role') === 'admin') fail('permission-denied', 'permissionDenied');
+  const key = nameKey(name);
+  if ([...members.docs.filter((m) => m.id !== uid), ...pending.docs].some((d) => nameKey(String(d.get('name') ?? '')) === key)) {
+    fail('already-exists', 'duplicateName');
+  }
+  // The rosters first: tried again, the old name is still there to find.
+  await renameInChurch(deps, cid, uid, String(member.get('name') ?? ''), name);
+  await member.ref.update({ name });
+  return {};
 }

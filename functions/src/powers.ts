@@ -143,11 +143,12 @@ export function powersOf(m: MemberFields) {
 
     /**
      * Whether they may add [target] to [group] or take them out
-     * (groupMembership): an admin anyone; the group's 負責人 (a 小組's, its
-     * service's too) only a plain 同工, since giving or taking a 身分 is the
-     * admin's.
+     * (groupMembership): an admin anyone; 行政 anyone but an admin; the
+     * group's 負責人 (a 小組's, its service's too) only a plain 同工, since
+     * giving or taking a 身分 is the admin's.
      */
-    mayMove: (target: MemberFields, group: ChurchGroup) => admin || (manages(group) && powersOf(target).plain),
+    mayMove: (target: MemberFields, group: ChurchGroup) =>
+      admin || (inGroup('roster-editors') && !powersOf(target).admin) || (manages(group) && powersOf(target).plain),
 
     /**
      * Whether they may put anyone on the list of [duty] in service

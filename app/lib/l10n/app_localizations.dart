@@ -1363,7 +1363,7 @@ abstract class L10n {
   /// What 行政 can do; one sentence
   ///
   /// In zh, this message translates to:
-  /// **'排所有服事表、改所有活動，不能管同工和設定'**
+  /// **'排所有服事表、改所有活動和同工，不能給身分、改設定'**
   String get canOffice;
 
   /// What a service's lead or pastor can do; one sentence
@@ -3814,7 +3814,7 @@ abstract class L10n {
   /// **'已刪除'**
   String get pendingDeleted;
 
-  /// Toast after an admin renames one of the 同工 without an account
+  /// Toast after an admin or 行政 renames one of the 同工, with or without an account
   ///
   /// In zh, this message translates to:
   /// **'已改名'**

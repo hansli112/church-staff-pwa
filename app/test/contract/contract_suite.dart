@@ -1873,6 +1873,40 @@ void contractTests(Future<ContractWorld> Function() open) {
       await expectLater(g.church.renamePending(pid, '陳美玉'), denied());
     });
 
+    test('an admin or 行政 renames a member, on their rosters too, to a name nobody has; nobody else', () async {
+      final g = await Grace.open(w);
+      await g.church.putRoster(
+        sundayOn(
+          4,
+          duties: [
+            Duty(role: '司琴', people: const ['李美玉'], uids: {'李美玉': g.mei}),
+          ],
+        ),
+      );
+      await g.church.renameMember(g.mei, ' 美玉姐 ');
+      expect((await g.church.member(g.mei).first)!.name, '美玉姐');
+      final duty = (await g.church.rosters(from: Day(2026, 10, 1)).first).single.duties.single;
+      expect(duty.people, ['美玉姐']);
+      expect(duty.uids, {'美玉姐': g.mei});
+      await expectLater(g.church.renameMember('nobody', '某人'), fails(CloudErrorCode.notFound));
+      await g.church.addByName('黃鎮台', 'sunday');
+      await expectLater(
+        g.church.renameMember(g.mei, '黃鎮台'),
+        fails(CloudErrorCode.duplicateName),
+        reason: 'nobody else has it',
+      );
+
+      await w.signIn(Grace.editorEmail);
+      await expectLater(g.church.renameMember(g.mei, '小美'), denied());
+      await w.signIn(Grace.pastorEmail);
+      await g.church.putMember((await g.church.member(g.mei).first)!.withIdentities(const [OfficeIdentity()]));
+      await w.signIn(Grace.meiEmail);
+      await expectLater(g.church.renameMember(g.editor, '王牧師'), fails(CloudErrorCode.duplicateName));
+      await g.church.renameMember(g.editor, '林弟兄');
+      expect((await g.church.member(g.editor).first)!.name, '林弟兄');
+      await expectLater(g.church.renameMember(g.pastor, '牧師'), denied(), reason: 'an admin, by 行政');
+    });
+
     test('one who joined says which of them they are; an admin says yes', () async {
       final g = await moved();
       final invite = await g.church.joining.createInvite(validFor: const Duration(days: 7));

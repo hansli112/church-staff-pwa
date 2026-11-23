@@ -43,6 +43,7 @@ class MemoryChurchData extends _MemoryChurchBase
       RestoreChurch() => restoreChurch(),
       MergePending(:final pendingId, :final uid) => mergePending(pendingId, uid),
       RenamePending(:final id, :final name) => renamePending(id, name),
+      RenameMember(:final uid, :final name) => renameMember(uid, name),
       AskClaim(:final pendingId) => askClaim(pendingId),
       AnswerClaim(:final uid, :final allow) => answerClaim(uid, allow: allow),
     };

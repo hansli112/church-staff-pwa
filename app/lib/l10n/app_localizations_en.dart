@@ -726,7 +726,8 @@ class L10nEn extends L10n {
   String get canAdmin => 'Can manage everything';
 
   @override
-  String get canOffice => 'Arranges every schedule and edits every event, but not team members or settings';
+  String get canOffice =>
+      'Arranges every schedule, edits every event and team member, but not church roles or settings';
 
   @override
   String canServiceLead(String service) {
