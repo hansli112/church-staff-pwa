@@ -102,11 +102,15 @@ class NoteDraft extends ChangeNotifier {
     _changed();
   }
 
-  /// Keeps the note: [text] and its files.
-  Future<void> save(String text) async {
-    await _notes.save(rosterId, RosterNote(text: text.trim(), files: [..._files]));
+  /// The note to keep: [text] and its files, which from now stay up, the
+  /// sheet closed or not, so a save that fails can be tried again.
+  RosterNote keep(String text) {
     _fresh.clear();
+    return RosterNote(text: text.trim(), files: [..._files]);
   }
+
+  /// Keeps the note: [text] and its files.
+  Future<void> save(String text) => _notes.save(rosterId, keep(text));
 
   /// The sheet closed: what went up and was not kept goes.
   void close() {

@@ -194,4 +194,20 @@ void main() {
     await expectLater(b.church('grace').renamePending('old-huang', '黃振台'), throwsA(isA<Object>()));
     expect(b.pendingMembers['grace']!['old-huang']!.name, '黃鎮台');
   });
+
+  testWidgets('刪除這筆資料 goes back at once, off 同工 while the backend deletes it', (tester) async {
+    final b = church();
+    await pumpApp(tester, b);
+    await go(tester, '/me/members');
+    await tapText(tester, '黃鎮台');
+    b.writeHeld = Completer();
+    await tapText(tester, '刪除這筆資料');
+    await tapText(tester, '刪除');
+    expect(find.text('刪除這筆資料'), findsNothing, reason: 'back at once');
+    expect(find.text('黃鎮台'), findsNothing, reason: 'off the list, though the server has not answered');
+    b.writeHeld!.complete();
+    await settle(tester);
+    expect(b.pendingMembers['grace'], isEmpty);
+    expect(find.text('已刪除'), findsOneWidget);
+  });
 }

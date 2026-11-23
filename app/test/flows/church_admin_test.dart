@@ -840,4 +840,64 @@ void main() {
       expect(b.churches['grace']!.status, ChurchStatus.suspended);
     });
   });
+
+  testWidgets('deleting a service, a duty or a 事工 goes back at once, off the list while the backend has it', (
+    tester,
+  ) async {
+    final b = seededChurch();
+    b.ministries['grace'] = const MinistrySettings(
+      ministries: [
+        Ministry(id: 'worship', name: '敬拜團', duties: [MinistryDuty('sunday', '司琴')]),
+      ],
+      ids: ['worship'],
+    );
+    await pumpApp(tester, b);
+
+    await go(tester, '/me/groups/service/youth');
+    b.writeHeld = Completer();
+    await scrollTo(tester, '刪除聚會');
+    await tapText(tester, '刪除聚會');
+    expect(find.text('聚會與事工'), findsOneWidget, reason: 'back on the list at once');
+    expect(find.text('青年崇拜'), findsNothing);
+    b.writeHeld!.complete();
+    await settle(tester);
+    expect(b.services['grace']!.byId('youth'), isNull);
+
+    await go(tester, '/me/groups/ministry/worship');
+    b.writeHeld = Completer();
+    await scrollTo(tester, '刪除事工');
+    await tapText(tester, '刪除事工');
+    expect(find.text('刪除事工'), findsNothing, reason: 'back at once');
+    expect(find.text('敬拜團'), findsNothing);
+    b.writeHeld!.complete();
+    await settle(tester);
+    expect(b.ministries['grace']!.ministries, isEmpty);
+
+    await go(tester, '/me/groups/service/sunday/duties');
+    await go(tester, '/me/groups/duty?service=sunday&name=招待');
+    b.writeHeld = Completer();
+    await scrollTo(tester, '刪除');
+    await tapText(tester, '刪除');
+    expect(find.text('刪除'), findsNothing, reason: 'back at once');
+    b.writeHeld!.complete();
+    await settle(tester);
+    expect(b.services['grace']!.byId('sunday')!.duties, isNot(contains('招待')));
+  });
+
+  testWidgets('my name saved closes at once, the new name shown while it is saved', (tester) async {
+    final b = seededChurch();
+    await pumpApp(tester, b);
+    await go(tester, '/me/profile');
+    await tapText(tester, '名字');
+    await tester.enterText(find.byType(TextField), '王大衛');
+    await tester.pump();
+    b.writeHeld = Completer();
+    await tapText(tester, '儲存');
+    expect(find.byType(TextField), findsNothing, reason: 'closed at once');
+    expect(find.text('王大衛'), findsOneWidget, reason: 'shown, though the server has not answered');
+    b.writeHeld!.complete();
+    await settle(tester);
+    expect(find.text('王大衛'), findsOneWidget);
+    expect(find.text('已更新名字'), findsOneWidget);
+  });
 }

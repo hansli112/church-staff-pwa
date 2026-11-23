@@ -17,6 +17,7 @@ import '../common/calendar_read_notice.dart';
 import '../common/time_zones.dart';
 import '../rosters/day_block.dart';
 import '../rosters/format.dart';
+import '../common/saving_indicator.dart';
 import 'event_sheet.dart';
 import 'month_grid.dart';
 
@@ -173,7 +174,7 @@ class CalendarScreen extends ConsumerWidget {
     return Scaffold(
       appBar: AppBar(
         title: Text(l10n.tabCalendar),
-        actions: [
+        actions: savingActions([
           if (settings?.ready ?? false)
             PopupMenuButton<String>(
               tooltip: l10n.calFilter,
@@ -208,7 +209,7 @@ class CalendarScreen extends ConsumerWidget {
               icon: const Icon(Symbols.add_rounded),
               onPressed: () => editEvent(context, ref, null, month: month, day: ref.read(calendarSelectedDayProvider)),
             ),
-        ],
+        ]),
       ),
       body: switch (settings) {
         null => const SizedBox.shrink(),

@@ -7,8 +7,11 @@ import '../domain/models.dart';
 import '../domain/staff_order.dart';
 import 'backend.dart';
 
-/// [ChurchData] that shows a change to rosters, members, services, staff
-/// orders or 小組 the moment it is made, while the backend still writes it.
+/// [ChurchData] that shows a change the moment it is made, while the
+/// backend still writes it: rosters, members, services, staff orders, 小組,
+/// the church's settings, 人數, 其他聚會, 備註 and the webhook. What has
+/// nothing to show early (a calendar event, 不能服事的日子, kept by their
+/// pages) still counts as [saving].
 ///
 /// Writes stay online compare-and-sets (docs/design.md): only what is shown
 /// changes early. They go one at a time, so a change made on top of one
@@ -63,13 +66,20 @@ class EchoingChurchData implements ChurchData {
     out.onCancel = sub.cancel;
   });
 
-  Future<void> _send(_Echo echo, Future<void> Function() write) {
+  /// Shows [echo] while [write] writes it, after the writes before it
+  /// unless [queued] is false (one that compares nothing, sent at once).
+  Future<void> _send(_Echo echo, Future<void> Function() write, {bool queued = true}) {
     final release = _beginWrite?.call();
     _dropExpired();
     _echoes.add(echo);
     _changed.add(null);
-    final done = _queue.then((_) => write());
-    _queue = done.then((_) {}, onError: (_) {});
+    final Future<void> done;
+    if (queued) {
+      done = _queue.then((_) => write());
+      _queue = done.then((_) {}, onError: (_) {});
+    } else {
+      done = Future.sync(write);
+    }
     done
         .then<void>(
           (_) {
@@ -160,30 +170,53 @@ class EchoingChurchData implements ChurchData {
     return true;
   }
 
+  /// [server] with each change at [at] not yet in it.
+  Stream<T> _echoedAt<T>(Stream<T> server, Object at) =>
+      _echoed(server, (server, arrived) => _changedAt(server, server, at, arrived));
+
+  /// [shown] with each change at [at] that [server] does not have yet.
+  T _changedAt<T>(T shown, T server, Object at, Set<Object> arrived) {
+    for (final echo in _echoes) {
+      final change = echo.at[at] as _Change<T>?;
+      if (change == null) continue;
+      if (!_shows(echo, at, change.arrivedIn(server), arrived)) continue;
+      shown = change.apply(shown);
+    }
+    return shown;
+  }
+
+  /// [write], counted as [saving] while on its way, with nothing to show
+  /// early: sent at once, as before, whatever else is on its way.
+  Future<T> _counted<T>(Future<T> Function() write) async {
+    late final T answer;
+    await _send(_Echo(), () async => answer = await write(), queued: false);
+    return answer;
+  }
+
+  @override
+  late final CalendarData calendar = _CountedCalendar(this);
+
+  @override
+  late final ChurchLinkData churchLink = _CountedChurchLink(this);
+
+  @override
+  late final WebhookData webhook = _EchoingWebhook(this);
+
   // Shown as the backend has them: none of these echo.
-  @override
-  CalendarData get calendar => _inner.calendar;
-
-  @override
-  ChurchLinkData get churchLink => _inner.churchLink;
-
-  @override
-  WebhookData get webhook => _inner.webhook;
-
   @override
   PhotoData get photos => _inner.photos;
 
   @override
-  AttendanceData get attendance => _inner.attendance;
+  late final AttendanceData attendance = _EchoingAttendance(this);
 
   @override
-  RosterNoteData get rosterNotes => _inner.rosterNotes;
+  late final RosterNoteData rosterNotes = _EchoingRosterNotes(this);
 
   @override
   ReadOnceData get readOnce => _inner.readOnce;
 
   @override
-  UnavailableData get unavailable => _inner.unavailable;
+  late final UnavailableData unavailable = _CountedUnavailable(this);
 
   @override
   SwapData get swaps => _inner.swaps;
@@ -195,7 +228,7 @@ class EchoingChurchData implements ChurchData {
   FamilyData get family => _inner.family;
 
   @override
-  JoiningData get joining => _inner.joining;
+  late final JoiningData joining = _EchoingJoining(this);
 
   /// The calls that change what is listed show it at once: who is in a
   /// group, on a duty's list, added by name, renamed (seconds on the
@@ -217,6 +250,19 @@ class EchoingChurchData implements ChurchData {
       // Seconds on the backend, shown on its way (儲存中…) with nothing to echo.
       MergePending() || AddFamily() || RemoveFamily() || RemoveFromHousehold() => _Echo(),
       DeleteSmallGroup(:final id) => _Echo(smallGroups: {id: null}),
+      OrderSmallGroups(:final ids) => _Echo(
+        at: {
+          _smallGroupsAt: _Change<List<SmallGroupDetails>>(
+            (list) => [for (final g in list) ids.contains(g.id) ? g.copyWith(order: () => ids.indexOf(g.id)) : g],
+            (list) => list.every((g) => !ids.contains(g.id) || g.order == ids.indexOf(g.id)),
+          ),
+        },
+      ),
+      SetTimeZone(:final timeZone) => _Echo(
+        at: {
+          _churchAt: _Change<Church?>((c) => c?.copyWith(timeZone: timeZone), (c) => c?.timeZone == timeZone),
+        },
+      ),
       _ => null,
     };
     if (echo == null) return _inner.run(call);
@@ -389,7 +435,7 @@ class EchoingChurchData implements ChurchData {
   String get churchId => _inner.churchId;
 
   @override
-  Stream<Church?> church() => _inner.church();
+  Stream<Church?> church() => _echoedAt(_inner.church(), _churchAt);
 
   @override
   Stream<List<PendingMember>> pendingMembers() => _echoed(_inner.pendingMembers(), (server, arrived) {
@@ -404,12 +450,19 @@ class EchoingChurchData implements ChurchData {
         if (!_shows(echo, ('pending', id), inServer, arrived)) continue;
         shown = current == null ? [...list, next] : [for (final p in list) p.id == id ? next : p];
       }
+      for (final id in echo.pendingGone) {
+        if (!_shows(echo, ('pending', id), !server.any((p) => p.id == id), arrived)) continue;
+        shown = [
+          for (final p in shown ?? server)
+            if (p.id != id) p,
+        ];
+      }
     }
     return shown ?? server;
   });
 
   @override
-  Future<void> deletePendingMember(String id) => _inner.deletePendingMember(id);
+  Future<void> deletePendingMember(String id) => _send(_Echo(pendingGone: {id}), () => _inner.deletePendingMember(id));
 
   @override
   Future<List<Roster>> pastRosters({required Day from, required Day before}) =>
@@ -437,7 +490,7 @@ class EchoingChurchData implements ChurchData {
         ];
       }
     }
-    return shown;
+    return _changedAt(shown, server, _smallGroupsAt, arrived);
   });
 
   /// A 小組 changed, and its new 小組長, show at once.
@@ -477,6 +530,8 @@ class _Echo {
     this.everyMember,
     this.smallGroups = const {},
     this.pending = const {},
+    this.pendingGone = const {},
+    this.at = const {},
   });
 
   /// Each roster written, null for one deleted.
@@ -502,8 +557,376 @@ class _Echo {
   /// them (null: not yet).
   final Map<String, PendingMember? Function(PendingMember?)> pending;
 
+  /// Each 同工 without an account deleted.
+  final Set<String> pendingGone;
+
+  /// The rest it changes, by where it shows: [_churchAt], [_smallGroupsAt]
+  /// (their order), [_gatheringsAt], [_notesAt], [_webhookAt], [_linkAt], or a
+  /// group's 人數 at `('attendance', key)`.
+  final Map<Object, _Change<Object?>> at;
+
   /// Null while being written; once written, until when it may still show.
   DateTime? until;
+}
+
+const _churchAt = 'church';
+const _smallGroupsAt = 'smallGroups';
+const _gatheringsAt = 'gatherings';
+const _notesAt = 'notes';
+const _webhookAt = 'webhook';
+const _linkAt = 'link';
+
+/// One change at an [_Echo.at]: what it makes of what is shown, and
+/// whether the backend's copy has it (by default, when it makes nothing
+/// new of it).
+class _Change<T> {
+  _Change(this._apply, [this._arrived]);
+
+  final T Function(T shown) _apply;
+  final bool Function(T server)? _arrived;
+
+  T apply(T shown) => _apply(shown);
+
+  bool arrivedIn(T server) => _arrived?.call(server) ?? apply(server) == server;
+}
+
+/// 人數 and 其他聚會, shown at once.
+class _EchoingAttendance implements AttendanceData {
+  _EchoingAttendance(this._d);
+
+  final EchoingChurchData _d;
+  AttendanceData get _inner => _d._inner.attendance;
+
+  static (String, String) _at(String key) => ('attendance', key);
+
+  static _Change<AttendanceRecord> _record(
+    AttendanceRecord Function(AttendanceRecord) apply,
+    bool Function(AttendanceRecord) arrived,
+  ) => _Change<AttendanceRecord>(apply, arrived);
+
+  static _Change<AttendanceRecord> _day(Day day, AttendanceDay? value) => _record(
+    (r) => r.copyWith(days: {...r.days, day: ?value}..removeWhere((d, _) => d == day && value == null)),
+    (r) => r.days[day] == value,
+  );
+
+  static _Change<List<Gathering>> _gatherings(
+    List<Gathering> Function(List<Gathering>) apply,
+    bool Function(List<Gathering>) arrived,
+  ) => _Change<List<Gathering>>((list) => apply(list)..sort((a, b) => byOrder(a.place, b.place)), arrived);
+
+  @override
+  Stream<AttendanceRecord> watch(String key) => _d._echoedAt(_inner.watch(key), _at(key));
+
+  @override
+  Stream<Set<String>> mine() => _inner.mine();
+
+  @override
+  Future<void> save(String key, Day day, AttendanceDay? value) =>
+      _d._send(_Echo(at: {_at(key): _day(day, value)}), () => _inner.save(key, day, value));
+
+  @override
+  Future<void> saveTogether(String key, Day day, AttendanceDay value) => _d._send(
+    _Echo(
+      at: {
+        _at(key): _day(day, value),
+        for (final other in value.together) _at(other): _day(day, AttendanceDay.joined(key)),
+      },
+    ),
+    () => _inner.saveTogether(key, day, value),
+  );
+
+  @override
+  Future<void> saveFillers(String key, List<String> fillers) => _d._send(
+    _Echo(at: {_at(key): _record((r) => r.copyWith(fillers: fillers), (r) => listEquals(r.fillers, fillers))}),
+    () => _inner.saveFillers(key, fillers),
+  );
+
+  @override
+  Future<void> saveTime(String key, MeetingTime? time) => _d._send(
+    _Echo(at: {_at(key): _record((r) => r.copyWith(time: () => time), (r) => r.time == time)}),
+    () => _inner.saveTime(key, time),
+  );
+
+  @override
+  Future<void> savePauses(String key, List<AttendancePause> pauses) => _d._send(
+    _Echo(at: {_at(key): _record((r) => r.copyWith(pauses: pauses), (r) => listEquals(r.pauses, pauses))}),
+    () => _inner.savePauses(key, pauses),
+  );
+
+  @override
+  Stream<List<Gathering>> gatherings() => _d._echoedAt(_inner.gatherings(), _gatheringsAt);
+
+  /// A new one shows once the backend gives it an ID; one changed, at once,
+  /// where it was.
+  @override
+  Future<String> saveGathering(Gathering gathering) async {
+    if (gathering.id.isEmpty) return _d._counted(() => _inner.saveGathering(gathering));
+    final name = gathering.name.trim();
+    late final String id;
+    await _d._send(
+      _Echo(
+        at: {
+          _gatheringsAt: _gatherings(
+            (list) => [for (final g in list) g.id == gathering.id ? g.copyWith(name: name, time: gathering.time) : g],
+            (list) => list.any((g) => g.id == gathering.id && g.name == name && g.time == gathering.time),
+          ),
+        },
+      ),
+      () async => id = await _inner.saveGathering(gathering),
+    );
+    return id;
+  }
+
+  @override
+  Future<void> orderGatherings(List<String> ids) => _d._send(
+    _Echo(
+      at: {
+        _gatheringsAt: _gatherings(
+          (list) => [for (final g in list) ids.contains(g.id) ? g.copyWith(order: () => ids.indexOf(g.id)) : g],
+          (list) => list.every((g) => !ids.contains(g.id) || g.order == ids.indexOf(g.id)),
+        ),
+      },
+    ),
+    () => _inner.orderGatherings(ids),
+  );
+
+  @override
+  Future<void> deleteGathering(String id) => _d._send(
+    _Echo(
+      at: {
+        _gatheringsAt: _gatherings(
+          (list) => [
+            for (final g in list)
+              if (g.id != id) g,
+          ],
+          (list) => !list.any((g) => g.id == id),
+        ),
+      },
+    ),
+    () => _inner.deleteGathering(id),
+  );
+
+  @override
+  Future<int> remind(String key, Day day) => _inner.remind(key, day);
+
+  @override
+  Future<void> saveSince(Day? since) => _d._send(
+    _Echo(
+      at: {
+        _churchAt: _Change<Church?>(
+          (c) => c?.copyWith(attendanceSince: () => since),
+          (c) => c?.attendanceSince == since,
+        ),
+      },
+    ),
+    () => _inner.saveSince(since),
+  );
+}
+
+/// 備註, shown at once; its files go up as they are picked.
+class _EchoingRosterNotes implements RosterNoteData {
+  _EchoingRosterNotes(this._d);
+
+  final EchoingChurchData _d;
+  RosterNoteData get _inner => _d._inner.rosterNotes;
+
+  @override
+  Stream<Map<String, RosterNote>> watch() => _d._echoedAt(_inner.watch(), _notesAt);
+
+  @override
+  Future<NoteFile> upload(
+    String rosterId, {
+    required String name,
+    required String type,
+    required Uint8List bytes,
+    void Function(double done)? onProgress,
+  }) => _inner.upload(rosterId, name: name, type: type, bytes: bytes, onProgress: onProgress);
+
+  @override
+  Future<void> discard(String rosterId, NoteFile file) => _inner.discard(rosterId, file);
+
+  @override
+  Future<void> save(String rosterId, RosterNote note) {
+    final kept = RosterNote(text: note.text.trim(), files: note.files);
+    return _d._send(
+      _Echo(
+        at: {
+          _notesAt: _Change<Map<String, RosterNote>>(
+            (notes) => {...notes, rosterId: kept}..removeWhere((id, n) => id == rosterId && n.isEmpty),
+            (notes) => notes[rosterId] == (kept.isEmpty ? null : kept),
+          ),
+        },
+      ),
+      () => _inner.save(rosterId, note),
+    );
+  }
+}
+
+/// The webhook's switches and turning it off, shown at once.
+class _EchoingWebhook implements WebhookData {
+  _EchoingWebhook(this._d);
+
+  final EchoingChurchData _d;
+  WebhookData get _inner => _d._inner.webhook;
+
+  @override
+  Stream<WebhookSettings?> watch() => _d._echoedAt(_inner.watch(), _webhookAt);
+
+  @override
+  Future<String?> save({required String? url, bool calendar = false, bool roster = false, String? secret}) {
+    Future<String?> write() => _inner.save(url: url, calendar: calendar, roster: roster, secret: secret);
+    bool same(WebhookSettings? w) =>
+        url == null ? w == null : w != null && w.url == url && w.calendar == calendar && w.roster == roster;
+    late final String? answer;
+    return _d
+        ._send(
+          _Echo(
+            at: {
+              _webhookAt: _Change<WebhookSettings?>(
+                // A first one shows once the backend has it: its secret is
+                // said then.
+                (w) => url == null || w == null
+                    ? (url == null ? null : w)
+                    : WebhookSettings(url: url, calendar: calendar, roster: roster, lastDelivery: w.lastDelivery),
+                same,
+              ),
+            },
+          ),
+          () async => answer = await write(),
+        )
+        .then((_) => answer);
+  }
+
+  @override
+  Future<String?> rotateSecret({String? secret}) => _d._counted(() => _inner.rotateSecret(secret: secret));
+
+  @override
+  Future<WebhookDelivery> test() => _inner.test();
+}
+
+/// Whether anyone may ask to join, shown at once.
+class _EchoingJoining implements JoiningData {
+  _EchoingJoining(this._d);
+
+  final EchoingChurchData _d;
+  JoiningData get _inner => _d._inner.joining;
+
+  @override
+  Stream<List<JoinRequest>> requests() => _inner.requests();
+
+  @override
+  Future<void> setTakesRequests(bool on) => _d._send(
+    _Echo(
+      at: {
+        _churchAt: _Change<Church?>((c) => c?.copyWith(takesJoinRequests: on), (c) => c?.takesJoinRequests == on),
+      },
+    ),
+    () => _inner.setTakesRequests(on),
+  );
+
+  @override
+  Stream<List<Invite>> invites() => _inner.invites();
+
+  @override
+  Future<Invite> createInvite({required Duration validFor, List<String> zoneTypes = const []}) =>
+      _inner.createInvite(validFor: validFor, zoneTypes: zoneTypes);
+
+  @override
+  Future<Invite> renewInvite(String code, {required Duration validFor}) => _inner.renewInvite(code, validFor: validFor);
+
+  @override
+  Future<void> revokeInvite(String code) => _d._counted(() => _inner.revokeInvite(code));
+}
+
+/// Calendar events, shown at once by the calendar's own months
+/// (CalendarMonths.write), counted here as [EchoingChurchData.saving].
+class _CountedCalendar implements CalendarData {
+  _CountedCalendar(this._d);
+
+  final EchoingChurchData _d;
+  CalendarData get _inner => _d._inner.calendar;
+
+  @override
+  Stream<CalendarSettings> settings() => _inner.settings();
+
+  @override
+  Future<Uri> authUrl() => _inner.authUrl();
+
+  @override
+  Future<List<CalendarChoice>> choices() => _inner.choices();
+
+  @override
+  Future<void> select(String calendarId, String calendarName) => _inner.select(calendarId, calendarName);
+
+  @override
+  Future<void> disconnect() => _inner.disconnect();
+
+  @override
+  Future<List<CalendarEvent>> events(String month) => _inner.events(month);
+
+  @override
+  Future<CalendarEvent> save(CalendarEvent event, {CalendarEvent? previous, String? restoreRosterOf}) =>
+      _d._counted(() => _inner.save(event, previous: previous, restoreRosterOf: restoreRosterOf));
+
+  @override
+  Future<void> delete(CalendarEvent event) => _d._counted(() => _inner.delete(event));
+}
+
+/// The church's 連結, counted as [EchoingChurchData.saving] while saved.
+class _CountedChurchLink implements ChurchLinkData {
+  _CountedChurchLink(this._d);
+
+  final EchoingChurchData _d;
+  ChurchLinkData get _inner => _d._inner.churchLink;
+
+  @override
+  Stream<ChurchLink?> watch() => _d._echoedAt(_inner.watch(), _linkAt);
+
+  /// One set shows once the backend has fetched it; one taken off goes at
+  /// once.
+  @override
+  Future<LinkSourceResult> save(ChurchLink? link) async {
+    if (link != null) return _d._counted(() => _inner.save(link));
+    late final LinkSourceResult result;
+    await _d._send(
+      _Echo(at: {_linkAt: _Change<ChurchLink?>((_) => null)}),
+      () async => result = await _inner.save(null),
+    );
+    return result;
+  }
+
+  @override
+  Future<LinkSourceResult> refresh() => _inner.refresh();
+
+  @override
+  Stream<LinkContent?> content() => _inner.content();
+}
+
+/// 不能服事的日子, shown at once by their page, counted here as
+/// [EchoingChurchData.saving].
+class _CountedUnavailable implements UnavailableData {
+  _CountedUnavailable(this._d);
+
+  final EchoingChurchData _d;
+  UnavailableData get _inner => _d._inner.unavailable;
+
+  @override
+  Stream<UnavailableDays> of(String uid) => _inner.of(uid);
+
+  @override
+  Stream<Map<String, UnavailableDays>> everyones() => _inner.everyones();
+
+  @override
+  Future<void> saveMine(UnavailableDays days) => _d._counted(() => _inner.saveMine(days));
+
+  @override
+  Future<void> send() => _inner.send();
+
+  @override
+  Stream<UnavailableAsked?> askedOfMe() => _inner.askedOfMe();
+
+  @override
+  Stream<UnavailableRound?> round(String serviceType) => _inner.round(serviceType);
 }
 
 ServiceSettings _withService(ServiceSettings settings, Service after) =>

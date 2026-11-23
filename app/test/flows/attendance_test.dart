@@ -981,6 +981,41 @@ void main() {
       expect(b.attendanceReminders['grace']!['gathering:meal']!.told, ['mei']);
     });
   });
+
+  testWidgets('回報人數 turned on is on at once, and off again if it cannot be', (tester) async {
+    final b = seededChurch();
+    await pumpApp(tester, b);
+    await go(tester, '/me');
+    await tester.scrollUntilVisible(find.text('回報人數'), 200, scrollable: find.byType(Scrollable).last);
+    await tapText(tester, '回報人數');
+    b.writeHeld = Completer();
+    await tester.tap(find.byType(Switch));
+    await settle(tester);
+    expect(tester.widget<Switch>(find.byType(Switch)).value, isTrue, reason: 'on at once');
+    expect(find.text('儲存中…'), findsOneWidget);
+
+    b.writeHeld!.completeError(const CloudException(CloudErrorCode.unavailable));
+    await settle(tester);
+    expect(tester.widget<Switch>(find.byType(Switch)).value, isFalse);
+    expect(b.churches['grace']!.attendanceSince, isNull);
+  });
+
+  testWidgets('刪除其他聚會 goes back at once, off the list while the backend deletes it', (tester) async {
+    final b = withAttendance(seededChurch());
+    b.gatherings['grace'] = {'meal': const Gathering(id: 'meal', name: '長者共餐')};
+    await pumpApp(tester, b);
+    await go(tester, '/me/attendance/gathering/meal');
+    b.writeHeld = Completer();
+    await tester.scrollUntilVisible(find.text('刪除其他聚會'), 200, scrollable: find.byType(Scrollable).last);
+    await tapText(tester, '刪除其他聚會');
+    expect(find.text('刪除其他聚會'), findsNothing, reason: 'back at once');
+    expect(find.text('長者共餐'), findsNothing, reason: 'off the list, though the server has not answered');
+
+    b.writeHeld!.complete();
+    await settle(tester);
+    expect(b.gatherings['grace'], isEmpty);
+    expect(find.text('已刪除「長者共餐」'), findsOneWidget);
+  });
 }
 
 /// The title's color in the row that shows [value].

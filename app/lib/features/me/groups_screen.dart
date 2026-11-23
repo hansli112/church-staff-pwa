@@ -271,7 +271,7 @@ class _GroupStaffScreenState extends ConsumerState<GroupStaffScreen> {
       return Scaffold(appBar: AppBar());
     }
     return Scaffold(
-      appBar: AppBar(title: Text(l10n.groupStaffTitle(name))),
+      appBar: AppBar(title: Text(l10n.groupStaffTitle(name)), actions: const [SavingIndicator()]),
       body: Column(
         children: [
           Padding(
@@ -507,7 +507,7 @@ class ServicePartScreen extends ConsumerWidget {
     return Scaffold(
       appBar: AppBar(
         title: Text(part.title(l10n)),
-        actions: me.isAdmin ? const [SavingIndicator()] : null,
+        actions: const [SavingIndicator()],
       ),
       body: CustomScrollView(
         slivers: [
@@ -793,11 +793,11 @@ class GroupScreen extends ConsumerWidget {
                     title: l10n.deleteService,
                     destructive: true,
                     chevron: false,
-                    onTap: () async {
-                      if (!await ServiceEdits(context, ref, service).delete() || !context.mounted) return;
-                      // Opened from a link, the page has nothing under it.
-                      context.canPop() ? context.pop() : context.go('/me/groups');
-                    },
+                    onTap: () => ServiceEdits(context, ref, service).delete(
+                      // Back once asked, off the list while the backend has
+                      // it; opened from a link, the page has nothing under it.
+                      leave: () => context.canPop() ? context.pop() : context.go('/me/groups'),
+                    ),
                   ),
                 ],
               ),
@@ -951,15 +951,18 @@ class GroupScreen extends ConsumerWidget {
   Future<void> _delete(BuildContext context, WidgetRef ref, Ministry ministry) async {
     final before = ref.read(ministriesProvider).value?.ministries;
     if (before == null) return;
-    final ok = await runWithUndo(
-      context,
-      L10n.of(context).ministryDeleted(ministry.name),
-      () => ref.read(churchWritesProvider).ministries(before, [
-        for (final m in before)
-          if (m.id != ministry.id) m,
-      ]),
+    // Back at once, off the list while the backend deletes it.
+    unawaited(
+      runWithUndo(
+        context,
+        L10n.of(context).ministryDeleted(ministry.name),
+        () => ref.read(churchWritesProvider).ministries(before, [
+          for (final m in before)
+            if (m.id != ministry.id) m,
+        ]),
+      ),
     );
-    if (ok && context.mounted) context.pop();
+    context.pop();
   }
 
   Future<void> _replace(BuildContext context, WidgetRef ref, Ministry was, Ministry next, String done) async {

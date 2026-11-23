@@ -420,13 +420,16 @@ class _NoAccountScreen extends ConsumerWidget {
       action: l10n.delete,
     );
     if (!ok || !context.mounted) return;
+    // Back at once, off the list while the backend deletes them; said on
+    // the page under this one.
+    final feedback = Navigator.of(context).context;
+    final data = ref.churchData;
+    Navigator.of(context).pop();
     try {
-      await ref.churchData.deletePendingMember(id);
-      if (!context.mounted) return;
-      showToast(context, l10n.pendingDeleted);
-      Navigator.of(context).pop();
+      await data.deletePendingMember(id);
+      if (feedback.mounted) showToast(feedback, l10n.pendingDeleted);
     } catch (e) {
-      if (context.mounted) showToast(context, errorText(l10n, e));
+      if (feedback.mounted) showToast(feedback, errorText(l10n, e));
     }
   }
 }

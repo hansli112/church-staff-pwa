@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'dart:math';
 
 import 'package:flutter/foundation.dart';
@@ -150,7 +152,7 @@ class ServiceEdits {
   /// 刪除聚會: off the church's list, with 復原; its rosters stay saved,
   /// out of sight. With days arranged from today on, asked first; none
   /// (one added to try it out), at once. True once deleted.
-  Future<bool> delete() async {
+  Future<bool> delete({required VoidCallback leave}) async {
     final l10n = _l10n;
     final before = ref.read(servicesProvider).value?.services;
     if (before == null) return false;
@@ -166,7 +168,7 @@ class ServiceEdits {
       );
       if (!ok || !context.mounted) return false;
     }
-    return runWithUndo(
+    final deleted = runWithUndo(
       context,
       l10n.deletedName(service.name),
       () => ref.read(churchWritesProvider).serviceList(before, [
@@ -174,6 +176,8 @@ class ServiceEdits {
           if (s.id != service.id) s,
       ]),
     );
+    leave();
+    return deleted;
   }
 
   /// 改名 for the service.
@@ -588,7 +592,7 @@ class _DutyScreenState extends ConsumerState<DutyScreen> {
     );
 
     return Scaffold(
-      appBar: AppBar(title: Text(duty), actions: admin ? const [SavingIndicator()] : null),
+      appBar: AppBar(title: Text(duty), actions: const [SavingIndicator()]),
       body: ListView(
         padding: const EdgeInsets.only(bottom: 32),
         children: [
@@ -651,8 +655,10 @@ class _DutyScreenState extends ConsumerState<DutyScreen> {
                   title: l10n.delete,
                   destructive: true,
                   chevron: false,
-                  onTap: () async {
-                    if (await serviceEdits.removeDuty(duty) && context.mounted) context.pop();
+                  // Back at once, off the list while the backend has it.
+                  onTap: () {
+                    unawaited(serviceEdits.removeDuty(duty));
+                    context.pop();
                   },
                 ),
               ],

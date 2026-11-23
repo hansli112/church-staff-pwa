@@ -20,6 +20,7 @@ import '../../state/meeting_times.dart';
 import '../../state/providers.dart';
 import '../common/errors.dart';
 import '../rosters/format.dart';
+import '../common/saving_indicator.dart';
 import 'attendance.dart';
 import 'groups_screen.dart' show attendancePage;
 
@@ -79,7 +80,7 @@ class _AttendanceOverviewScreenState extends ConsumerState<AttendanceOverviewScr
     return Scaffold(
       appBar: AppBar(
         title: Text(l10n.attendance),
-        actions: [
+        actions: savingActions([
           if (on && range != null)
             MediaQuery.withClampedTextScaling(
               maxScaleFactor: 1.5,
@@ -88,7 +89,7 @@ class _AttendanceOverviewScreenState extends ConsumerState<AttendanceOverviewScr
                 child: Text(l10n.attendanceExport),
               ),
             ),
-        ],
+        ]),
       ),
       body: church == null
           ? const SizedBox.shrink()
@@ -273,7 +274,7 @@ class GatheringsScreen extends ConsumerWidget {
     // them up to date while it builds, which riverpod refuses.
     ref.watch(attendanceGroupsProvider);
     return Scaffold(
-      appBar: AppBar(title: Text(l10n.gatherings)),
+      appBar: AppBar(title: Text(l10n.gatherings), actions: const [SavingIndicator()]),
       body: CustomScrollView(
         slivers: [
           ReorderableSection<Gathering>(

@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
@@ -121,5 +122,22 @@ void main() {
     await pumpApp(tester, seededChurch(as: editor));
     await go(tester, '/me/church');
     expect(find.text('串接其他系統'), findsNothing);
+  });
+
+  testWidgets('停止 goes back at once, the webhook off while the backend has it', (tester) async {
+    final b = seededChurch()
+      ..webhooks['grace'] = const WebhookSettings(url: hook)
+      ..webhookSecrets['grace'] = 'whsec_existing';
+    await pumpApp(tester, b);
+    await go(tester, '/me/church');
+    await tapText(tester, '串接其他系統');
+    b.writeHeld = Completer();
+    await tapText(tester, '停止串接');
+    await tapText(tester, '停止');
+    expect(find.text('停止串接'), findsNothing, reason: 'back at once');
+    expect(b.webhooks['grace'], isNotNull, reason: 'not written yet');
+    b.writeHeld!.complete();
+    await settle(tester);
+    expect(b.webhooks['grace'], isNull);
   });
 }

@@ -97,7 +97,7 @@ class _ImportScreenState extends ConsumerState<ImportScreen> {
     final l10n = L10n.of(context);
     final UserProfile? profile;
     try {
-      profile = await ref.read(profileProvider.future);
+      profile = await ref.read(savedProfileProvider.future);
     } catch (e) {
       if (mounted) showToast(context, errorText(l10n, e));
       return false;

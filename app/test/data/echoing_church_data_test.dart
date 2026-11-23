@@ -355,6 +355,128 @@ void main() {
     expect(order.last, ranking);
     await Future.wait([listDone, serviceDone, orderDone]);
   });
+
+  test("the church's 時區, 申請加入 and 回報人數 show at once, and go back if refused", () async {
+    final church = Seen(data.church());
+    await pumpEventQueue();
+    final zone = ChurchTimeZone.values.firstWhere((z) => z != church.last!.timeZone);
+
+    final zoned = data.setTimeZone(zone);
+    final asks = data.joining.setTakesRequests(!church.last!.takesJoinRequests);
+    final since = data.attendance.saveSince(Day(2026, 10, 1));
+    await pumpEventQueue();
+    expect(church.last!.timeZone, zone, reason: 'before the backend answers');
+    expect(church.last!.attendanceSince, Day(2026, 10, 1));
+    expect(data.saving, isTrue);
+    await Future.wait([zoned, asks, since]);
+    await pumpEventQueue();
+    expect(church.values.skip(1).map((c) => c!.timeZone), everyElement(zone), reason: 'never back');
+
+    b.failNextWrite = const CloudException(CloudErrorCode.unavailable);
+    final off = data.attendance.saveSince(null);
+    await pumpEventQueue();
+    expect(church.last!.attendanceSince, isNull);
+    await expectLater(off, throwsA(isA<CloudException>()));
+    await pumpEventQueue();
+    expect(church.last!.attendanceSince, Day(2026, 10, 1), reason: 'refused, back');
+  });
+
+  test('人數, and a 其他聚會 renamed, moved or deleted, show at once', () async {
+    b.writeDelay = Duration.zero;
+    b.churches['grace'] = b.churches['grace']!.copyWith(attendanceSince: () => Day(2026, 10, 1));
+    final a = await b.church('grace').attendance.saveGathering(const Gathering(id: '', name: '禱告會'));
+    final c = await b.church('grace').attendance.saveGathering(const Gathering(id: '', name: '查經'));
+    b.writeDelay = const Duration(milliseconds: 200);
+    final gatherings = Seen(data.attendance.gatherings());
+    final record = Seen(data.attendance.watch('gathering:$a'));
+    await pumpEventQueue();
+    expect(gatherings.last.map((g) => g.name), ['查經', '禱告會']);
+
+    final counted = data.attendance.save('gathering:$a', Day(2026, 10, 7), const AttendanceDay.count(12));
+    final renamed = data.attendance.saveGathering(gatherings.last.last.copyWith(name: '週三禱告會'));
+    final moved = data.attendance.orderGatherings([a, c]);
+    await pumpEventQueue();
+    expect(record.last.days[Day(2026, 10, 7)]?.count, 12, reason: 'before the backend answers');
+    expect(gatherings.last.map((g) => g.name), ['週三禱告會', '查經']);
+    await Future.wait([counted, renamed, moved]);
+    await pumpEventQueue();
+    expect(gatherings.last.map((g) => g.name), ['週三禱告會', '查經'], reason: "the backend's copy agrees");
+
+    final deleted = data.attendance.deleteGathering(c);
+    await pumpEventQueue();
+    expect(gatherings.last.map((g) => g.name), ['週三禱告會']);
+    await deleted;
+  });
+
+  test('a 備註 shows at once, an emptied one goes at once', () async {
+    final notes = Seen(data.rosterNotes.watch());
+    await pumpEventQueue();
+    final id = Roster.idFor('sunday', Day(2026, 10, 4));
+
+    final saved = data.rosterNotes.save(id, const RosterNote(text: ' 帶傘 '));
+    await pumpEventQueue();
+    expect(notes.last[id]?.text, '帶傘', reason: 'before the backend answers');
+    await saved;
+    final emptied = data.rosterNotes.save(id, const RosterNote(text: ''));
+    await pumpEventQueue();
+    expect(notes.last, isNot(contains(id)));
+    await emptied;
+  });
+
+  test("the webhook's switches show at once, and turned off it goes at once", () async {
+    b.webhooks['grace'] = const WebhookSettings(url: 'https://example.com/hook');
+    final hook = Seen(data.webhook.watch());
+    await pumpEventQueue();
+
+    final on = data.webhook.save(url: 'https://example.com/hook', calendar: true);
+    await pumpEventQueue();
+    expect(hook.last?.calendar, isTrue, reason: 'before the backend answers');
+    await on;
+    final off = data.webhook.save(url: null);
+    await pumpEventQueue();
+    expect(hook.last, isNull);
+    await off;
+  });
+
+  test('a 同工 without an account deleted goes at once', () async {
+    final id = await data.addByName('王小明', 'sunday');
+    final pending = Seen(data.pendingMembers());
+    await pumpEventQueue();
+    expect(pending.last.map((p) => p.id), [id]);
+
+    final deleted = data.deletePendingMember(id);
+    await pumpEventQueue();
+    expect(pending.last, isEmpty, reason: 'before the backend answers');
+    await deleted;
+    await pumpEventQueue();
+    expect(pending.last, isEmpty);
+  });
+
+  test('小組 moved show in their new places at once', () async {
+    b.writeDelay = Duration.zero;
+    final joy = await b.church('grace').saveSmallGroup(const SmallGroupDetails(id: '', name: '喜樂', service: 'sunday'));
+    final peace = await b
+        .church('grace')
+        .saveSmallGroup(const SmallGroupDetails(id: '', name: '平安', service: 'sunday'));
+    b.writeDelay = const Duration(milliseconds: 200);
+    final groups = Seen(data.smallGroups());
+    await pumpEventQueue();
+
+    final moved = data.orderSmallGroups('sunday', [peace, joy]);
+    await pumpEventQueue();
+    int? orderOf(String id) => groups.last.firstWhere((g) => g.id == id).order;
+    expect([orderOf(peace), orderOf(joy)], [0, 1], reason: 'before the backend answers');
+    await moved;
+  });
+
+  test('a calendar event or my 不能服事的日子 count as saving while on their way', () async {
+    final saving = data.unavailable.saveMine(UnavailableDays([UnavailableSpan(Day(2026, 10, 11), Day(2026, 10, 11))]));
+    await pumpEventQueue();
+    expect(data.saving, isTrue);
+    await saving;
+    await pumpEventQueue();
+    expect(data.saving, isFalse);
+  });
 }
 
 /// Church data whose rosters come back with 陳志豪 wherever 王牧師 was put.

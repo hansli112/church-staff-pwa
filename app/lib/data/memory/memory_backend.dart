@@ -270,6 +270,10 @@ class MemoryBackend implements Backend {
   /// with an error fails it.
   Completer<void>? smallGroupSaveHeld;
 
+  /// Scripted: while set, every write waits for this to complete, as on a
+  /// slow network. Completing it with an error fails them.
+  Completer<void>? writeHeld;
+
   /// Scripted: while set, adding or taking out 家人 waits for this to
   /// complete, as on a slow network or a cold start.
   Completer<void>? familyHeld;
@@ -368,6 +372,7 @@ class MemoryBackend implements Backend {
       requireNetwork();
       final uid = auth.currentUser?.uid;
       if (writeDelay > Duration.zero) await Future<void>.delayed(writeDelay);
+      await writeHeld?.future;
       requireNetwork();
       if (auth.currentUser?.uid != uid) throw const CloudException(CloudErrorCode.permissionDenied);
       final failure = failNextWrite;

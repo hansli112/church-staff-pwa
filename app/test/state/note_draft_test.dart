@@ -119,14 +119,15 @@ void main() {
     expect(draft.room, 1);
   });
 
-  test('a save that fails keeps what went up, to try again', () async {
+  test('a save that fails keeps what went up, the sheet closed, to try again', () async {
     final notes = _Notes()..saveFails = const CloudException(CloudErrorCode.unavailable);
     final draft = NoteDraft(notes, 'r', const RosterNote());
     final up = draft.upload('a.pdf', 'application/pdf', _bytes);
     notes.uploads.single.complete(_file('f1'));
     await up;
-    await expectLater(draft.save('x'), throwsA(isA<CloudException>()));
+    final saving = draft.save('x');
     draft.close();
-    expect(notes.discarded, ['f1']);
+    await expectLater(saving, throwsA(isA<CloudException>()));
+    expect(notes.discarded, isEmpty);
   });
 }

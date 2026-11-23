@@ -25,6 +25,7 @@ import '../rosters/format.dart';
 import '../rosters/future_changes.dart' show runWithUndo;
 import 'groups_screen.dart' show attendancePage;
 import '../../state/session.dart';
+import '../common/saving_indicator.dart';
 
 /// 人數 on a group's page (回報人數, #85), one row since #95: its latest
 /// meeting's, or when it next meets, opening its 人數 page. None with
@@ -91,7 +92,7 @@ class GroupAttendanceScreen extends ConsumerWidget {
     final time = ref.watch(meetingTimeProvider(group.group));
     final fillers = [...attendanceLeads(ref, group.group), ...attendanceFillerMembers(ref, record.fillers)];
     return Scaffold(
-      appBar: AppBar(title: Text(l10n.attendanceOf(group.name))),
+      appBar: AppBar(title: Text(l10n.attendanceOf(group.name)), actions: const [SavingIndicator()]),
       body: ListView(
         padding: const EdgeInsets.only(bottom: Space.xl),
         children: [
@@ -193,18 +194,28 @@ class GroupAttendanceScreen extends ConsumerWidget {
     await _save(context, () => attendance.saveGathering(gathering.copyWith(name: name)));
   }
 
-  /// Deletes it, with 復原: its 人數 and who fills them in stay.
-  Future<void> _deleteGathering(BuildContext context, WidgetRef ref, Gathering gathering) async {
+  /// Deletes it, with 復原: its 人數 and who fills them in stay. Back at
+  /// once, off the list while the backend deletes it.
+  void _deleteGathering(BuildContext context, WidgetRef ref, Gathering gathering) {
     final attendance = ref.churchData.attendance;
-    final ok = await runWithUndo(
-      context,
-      L10n.of(context).gatheringDeleted(gathering.name),
-      () => (
-        done: attendance.deleteGathering(gathering.id),
-        undo: () => attendance.saveGathering(gathering).then((_) {}),
-      ),
-    );
-    if (ok && context.mounted) context.pop();
+    final message = L10n.of(context).gatheringDeleted(gathering.name);
+    final navigator = Navigator.of(context).context;
+    context.pop();
+    // Once the page under this one shows again: it brings its 其他聚會 up
+    // to date as it does, which riverpod refuses while it builds.
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!navigator.mounted) return;
+      unawaited(
+        runWithUndo(
+          navigator,
+          message,
+          () => (
+            done: attendance.deleteGathering(gathering.id),
+            undo: () => attendance.saveGathering(gathering).then((_) {}),
+          ),
+        ),
+      );
+    });
   }
 
   Future<void> _save(BuildContext context, Future<void> Function() save) async {

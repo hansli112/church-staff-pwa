@@ -17,8 +17,7 @@ mixin _MemoryChurch on _MemoryChurchBase {
   /// they do not move with it.
   Future<void> setTimeZone(ChurchTimeZone timeZone) async {
     _functionAdmin();
-    _b.churches[churchId] = _b.churches[churchId]!.copyWith(timeZone: timeZone);
-    _b.notify();
+    await _b.write(() => _b.churches[churchId] = _b.churches[churchId]!.copyWith(timeZone: timeZone));
   }
 
   @override
@@ -205,9 +204,10 @@ class _MemoryWebhook implements WebhookData {
   }) async {
     _c._functionAdmin();
     if (url == null) {
-      _c._b.webhooks.remove(_c.churchId);
-      _c._b.webhookSecrets.remove(_c.churchId);
-      _c._b.notify();
+      await _c._b.write(() {
+        _c._b.webhooks.remove(_c.churchId);
+        _c._b.webhookSecrets.remove(_c.churchId);
+      });
       return null;
     }
     if (url.length > Limits.url || !ChurchLink.validUrl(url)) {
@@ -215,19 +215,20 @@ class _MemoryWebhook implements WebhookData {
     }
     _checkSecret(secret);
     String? generated;
-    if (secret != null) {
-      _c._b.webhookSecrets[_c.churchId] = secret;
-    } else if (!_c._b.webhookSecrets.containsKey(_c.churchId)) {
-      generated = _c._b.newWebhookSecret();
-      _c._b.webhookSecrets[_c.churchId] = generated;
-    }
-    _c._b.webhooks[_c.churchId] = WebhookSettings(
-      url: url.trim(),
-      calendar: calendar,
-      roster: roster,
-      lastDelivery: _c._b.webhooks[_c.churchId]?.lastDelivery,
-    );
-    _c._b.notify();
+    await _c._b.write(() {
+      if (secret != null) {
+        _c._b.webhookSecrets[_c.churchId] = secret;
+      } else if (!_c._b.webhookSecrets.containsKey(_c.churchId)) {
+        generated = _c._b.newWebhookSecret();
+        _c._b.webhookSecrets[_c.churchId] = generated!;
+      }
+      _c._b.webhooks[_c.churchId] = WebhookSettings(
+        url: url.trim(),
+        calendar: calendar,
+        roster: roster,
+        lastDelivery: _c._b.webhooks[_c.churchId]?.lastDelivery,
+      );
+    });
     return generated;
   }
 

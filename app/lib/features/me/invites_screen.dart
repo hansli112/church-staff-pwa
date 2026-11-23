@@ -11,6 +11,7 @@ import '../church/links.dart';
 import '../common/errors.dart';
 import '../common/time_zones.dart';
 import '../../state/session.dart';
+import '../common/saving_indicator.dart';
 
 final _invitesProvider = StreamProvider.autoDispose<List<Invite>>(
   (ref) => openChurch(ref).joining.invites(),
@@ -182,7 +183,7 @@ class _InvitesScreenState extends ConsumerState<InvitesScreen> {
     }
 
     return Scaffold(
-      appBar: AppBar(title: Text(l10n.invites)),
+      appBar: AppBar(title: Text(l10n.invites), actions: const [SavingIndicator()]),
       body: ListView(
         children: [
           // Any number of 牧區: an empty circle says it can be ticked.

@@ -13,6 +13,7 @@ import '../common/site_pages.dart';
 import '../common/errors.dart';
 import '../common/link_errors.dart';
 import '../common/time_zones.dart';
+import '../common/saving_indicator.dart';
 
 /// Admins set the church link shown at the top of everyone's home page,
 /// and optionally a content source fetched once a day at a time they pick.
@@ -123,15 +124,17 @@ class _ChurchLinkScreenState extends ConsumerState<ChurchLinkScreen> {
   Future<void> _remove(ChurchLink link) async {
     final l10n = L10n.of(context);
     final data = ref.churchData;
+    // Back at once, off while the backend has it; said on the page under
+    // this one.
+    final feedback = Navigator.of(context).context;
+    context.pop();
     try {
       await data.churchLink.save(null);
     } catch (_) {
-      if (mounted) showToast(context, l10n.saveFailed);
+      if (feedback.mounted) showToast(feedback, l10n.saveFailed);
       return;
     }
-    if (!mounted) return;
-    showToast(context, l10n.churchLinkRemoved, onUndo: () => data.churchLink.save(link));
-    context.pop();
+    if (feedback.mounted) showToast(feedback, l10n.churchLinkRemoved, onUndo: () => data.churchLink.save(link));
   }
 
   Future<void> _pickTime() async {
@@ -159,7 +162,7 @@ class _ChurchLinkScreenState extends ConsumerState<ChurchLinkScreen> {
         : l10n.linkSourceUpdated(ChurchClock.of(context, ref).moment(content.fetchedAt!));
     final fieldPadding = const EdgeInsets.symmetric(horizontal: Space.m);
     return Scaffold(
-      appBar: AppBar(title: Text(l10n.churchLink)),
+      appBar: AppBar(title: Text(l10n.churchLink), actions: const [SavingIndicator()]),
       body: ListView(
         padding: const EdgeInsets.symmetric(vertical: Space.m),
         children: [

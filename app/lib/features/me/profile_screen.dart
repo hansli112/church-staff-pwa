@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -78,7 +80,6 @@ class NameScreen extends ConsumerStatefulWidget {
 
 class _NameScreenState extends ConsumerState<NameScreen> {
   TextEditingController? _name;
-  bool _busy = false;
 
   @override
   void dispose() {
@@ -86,32 +87,24 @@ class _NameScreenState extends ConsumerState<NameScreen> {
     super.dispose();
   }
 
-  Future<void> _save(UserProfile profile) async {
+  /// Back at once, the new name shown while saved; one that does not
+  /// save is said on the page under this one, with 重試.
+  void _save(UserProfile profile) {
     final l10n = L10n.of(context);
     final name = _name!.text.trim();
     if (name.isEmpty || name == profile.name) return;
-    setState(() => _busy = true);
-    try {
-      await ref
-          .read(backendProvider)
-          .profiles
-          .save(
-            UserProfile(
-              uid: profile.uid,
-              name: name,
-              email: profile.email,
-              locale: profile.locale,
-            ),
-          );
-      if (mounted) {
-        showToast(context, l10n.nameSaved);
-        Navigator.of(context).pop();
+    final feedback = Navigator.of(context).context;
+    Future<void> save() async {
+      try {
+        await saveProfile(ref, profile, name: name);
+        if (feedback.mounted) showToast(feedback, l10n.nameSaved);
+      } catch (_) {
+        if (feedback.mounted) showToast(feedback, l10n.saveFailed, onRetry: save);
       }
-    } catch (_) {
-      if (mounted) showToast(context, l10n.saveFailed);
-    } finally {
-      if (mounted) setState(() => _busy = false);
     }
+
+    unawaited(save());
+    Navigator.of(context).pop();
   }
 
   @override
@@ -146,7 +139,6 @@ class _NameScreenState extends ConsumerState<NameScreen> {
           const SizedBox(height: Space.l),
           PrimaryButton(
             label: l10n.save,
-            busy: _busy,
             onPressed: _name!.text.trim().isEmpty || _name!.text.trim() == profile.name ? null : () => _save(profile),
           ),
         ],
@@ -167,18 +159,9 @@ class LanguageScreen extends ConsumerWidget {
     Future<void> pick(String? locale) async {
       if (profile == null) return;
       Haptics.selection();
+      // Ticked, and the app in it, at once; back if it does not save.
       try {
-        await ref
-            .read(backendProvider)
-            .profiles
-            .save(
-              UserProfile(
-                uid: profile.uid,
-                name: profile.name,
-                email: profile.email,
-                locale: locale,
-              ),
-            );
+        await saveProfile(ref, profile, locale: () => locale);
       } catch (_) {
         // No connection, most often: the language stays as it was.
         if (context.mounted) showToast(context, l10n.saveFailed);

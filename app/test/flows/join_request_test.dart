@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
@@ -365,5 +366,19 @@ void main() {
     await settle(tester);
     expect(find.text('這個申請已經取消或過期了'), findsOneWidget);
     expect(b.members['grace']!['new'], isNull);
+  });
+
+  testWidgets('開放申請加入 turns at once, 儲存中… while the backend has it', (tester) async {
+    final b = seededChurch();
+    await pumpApp(tester, b);
+    await go(tester, '/me/invites');
+    b.writeHeld = Completer();
+    await tapText(tester, '開放申請加入');
+    expect(tester.widget<Switch>(find.byType(Switch)).value, isFalse, reason: 'off at once');
+    expect(find.text('儲存中…'), findsOneWidget);
+    expect(b.churches['grace']!.takesJoinRequests, isTrue, reason: 'not written yet');
+    b.writeHeld!.complete();
+    await settle(tester);
+    expect(b.churches['grace']!.takesJoinRequests, isFalse);
   });
 }

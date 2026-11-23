@@ -6,6 +6,7 @@ import '../../domain/models.dart';
 import '../../l10n/app_localizations.dart';
 import '../../state/providers.dart';
 import '../common/errors.dart';
+import '../common/saving_indicator.dart';
 import '../common/time_zones.dart';
 
 /// 時區: the church's, picked by an admin from the zones the app knows,
@@ -18,10 +19,8 @@ class TimeZoneScreen extends ConsumerStatefulWidget {
 }
 
 class _TimeZoneScreenState extends ConsumerState<TimeZoneScreen> {
-  bool _saving = false;
-
   Future<void> _pick(ChurchTimeZone current, ChurchTimeZone timeZone) async {
-    if (timeZone == current || _saving) return;
+    if (timeZone == current) return;
     final l10n = L10n.of(context);
     final ok = await askChoice(
       context,
@@ -31,13 +30,11 @@ class _TimeZoneScreenState extends ConsumerState<TimeZoneScreen> {
       no: l10n.cancel,
     );
     if (ok != true || !mounted) return;
-    setState(() => _saving = true);
+    // Ticked at once, 儲存中… while the backend has it; back if refused.
     try {
       await ref.churchData.setTimeZone(timeZone);
     } catch (e) {
       if (mounted) showToast(context, errorText(l10n, e));
-    } finally {
-      if (mounted) setState(() => _saving = false);
     }
   }
 
@@ -46,7 +43,7 @@ class _TimeZoneScreenState extends ConsumerState<TimeZoneScreen> {
     final l10n = L10n.of(context);
     final current = ref.watch(churchTimeZoneProvider);
     return Scaffold(
-      appBar: AppBar(title: Text(l10n.timeZone)),
+      appBar: AppBar(title: Text(l10n.timeZone), actions: const [SavingIndicator()]),
       body: ListView(
         children: [
           ListSection(
@@ -55,7 +52,7 @@ class _TimeZoneScreenState extends ConsumerState<TimeZoneScreen> {
                 ListRow(
                   title: timeZoneCity(l10n, timeZone),
                   selected: timeZone == current,
-                  onTap: _saving ? null : () => _pick(current, timeZone),
+                  onTap: () => _pick(current, timeZone),
                 ),
             ],
           ),

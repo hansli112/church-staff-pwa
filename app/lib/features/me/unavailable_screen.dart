@@ -20,6 +20,7 @@ import '../rosters/format.dart';
 import '../rosters/rosters_screen.dart' show selectedServiceProvider;
 import '../rosters/swap_asking.dart';
 import '../../state/session.dart';
+import '../common/saving_indicator.dart';
 
 /// 不能服事的日子 (#91): the days I cannot serve, whole days in every
 /// service, a month at a time through next December (monthsThroughNextYear). A tap marks a day or
@@ -191,7 +192,7 @@ class _UnavailableScreenState extends ConsumerState<UnavailableScreen> {
     // What 找人代 says of a day already asked about (#92).
     ref.watch(myOpenSwapRequestsProvider);
     return Scaffold(
-      appBar: AppBar(title: Text(l10n.unavailableTitle)),
+      appBar: AppBar(title: Text(l10n.unavailableTitle), actions: const [SavingIndicator()]),
       bottomNavigationBar: switch (asked) {
         final a? when a.waitingOn(today) => SafeArea(
           child: Padding(

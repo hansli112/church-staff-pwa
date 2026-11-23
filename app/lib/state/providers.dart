@@ -14,6 +14,7 @@ import '../domain/staff.dart';
 import '../domain/staff_order.dart';
 import '../domain/swap.dart';
 import 'current_church.dart';
+import 'shown_changes.dart';
 
 // The calls ([ChurchCalls]) on [churchData] by name, wherever it is read.
 export '../data/backend.dart' show ChurchCalls;
@@ -60,11 +61,53 @@ final uidProvider = Provider<String?>(
   (ref) => ref.watch(authUserProvider.select((u) => u.value?.uid)),
 );
 
-final profileProvider = StreamProvider<UserProfile?>((ref) {
+/// My profile as users/{uid} has it.
+final savedProfileProvider = StreamProvider<UserProfile?>((ref) {
   final uid = ref.watch(uidProvider);
   if (uid == null) return Stream.value(null);
   return ref.watch(backendProvider).profiles.watch(uid);
 });
+
+/// My name and language as I last saved them ([saveProfile]), shown at
+/// once while users/{uid} does not have them yet.
+final _profileEditsProvider =
+    NotifierProvider<ShownChanges<({String name, String? locale})>, Map<String, ({String name, String? locale})>>(
+      ShownChanges.new,
+    );
+
+/// My profile, my name and language as I last saved them.
+final profileProvider = Provider<AsyncValue<UserProfile?>>((ref) {
+  final saved = ref.watch(savedProfileProvider);
+  final uid = ref.watch(uidProvider);
+  final edit = uid == null ? null : ref.watch(_profileEditsProvider)[uid];
+  final profile = saved.value;
+  if (edit == null || profile == null) return saved;
+  return AsyncData(
+    UserProfile(
+      uid: profile.uid,
+      name: edit.name,
+      email: profile.email,
+      locale: edit.locale,
+      appLocale: profile.appLocale,
+      photoAiConsent: profile.photoAiConsent,
+      notificationsSeen: profile.notificationsSeen,
+    ),
+  );
+});
+
+/// Saves [profile] with my [name] and [locale], shown at once; throws
+/// when refused, shown as it was again.
+Future<void> saveProfile(WidgetRef ref, UserProfile profile, {String? name, String? Function()? locale}) {
+  final edit = (name: name ?? profile.name, locale: locale == null ? profile.locale : locale());
+  final profiles = ref.read(backendProvider).profiles;
+  return ref
+      .read(_profileEditsProvider.notifier)
+      .show(
+        profile.uid,
+        edit,
+        () => profiles.save(UserProfile(uid: profile.uid, name: edit.name, email: profile.email, locale: edit.locale)),
+      );
+}
 
 /// The church name of an invite code; works signed out.
 final invitedChurchProvider = FutureProvider.autoDispose.family<String, String>(

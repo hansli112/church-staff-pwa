@@ -1,4 +1,5 @@
 import 'dart:typed_data';
+import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -8,6 +9,7 @@ import 'package:martha/domain/day.dart';
 import 'package:martha/domain/models.dart';
 import 'package:martha/features/rosters/roster_note.dart';
 import 'package:material_symbols_icons/symbols.dart';
+import 'package:martha/data/backend.dart';
 
 import '../support/harness.dart';
 import '../support/seed.dart';
@@ -315,5 +317,28 @@ void main() {
       expect(find.text('沿用其他活動'), findsOneWidget, reason: 'on its roster');
       expect(find.text('新增備註'), findsNothing);
     });
+  });
+
+  testWidgets('完成 closes at once, the note on the day while it is saved; one not saved says so, with 重試', (
+    tester,
+  ) async {
+    final b = seededChurch(as: editor);
+    await pumpApp(tester, b, overrides: [picker]);
+    await go(tester, '/rosters/sunday/2026-10-11');
+    await tapText(tester, '新增備註');
+    await tester.enterText(find.byType(TextField), '記得帶傘');
+    b.writeHeld = Completer();
+    await tapText(tester, '完成');
+    expect(find.byType(NoteSheet), findsNothing, reason: 'closed, though the server has not answered');
+    expect(find.text('記得帶傘'), findsOneWidget, reason: 'on the day at once');
+    expect(find.text('儲存中…'), findsOneWidget);
+
+    b.writeHeld!.completeError(const CloudException(CloudErrorCode.unavailable));
+    await settle(tester);
+    expect(find.text('記得帶傘'), findsNothing, reason: 'back as the server has it');
+    b.writeHeld = null;
+    await tapText(tester, '重試');
+    expect(b.rosterNotes['grace']![_id]!.text, '記得帶傘');
+    expect(find.text('記得帶傘'), findsOneWidget);
   });
 }

@@ -16,6 +16,7 @@ import '../church/add_to_home.dart';
 import '../church/church_switcher.dart';
 import '../common/errors.dart';
 import '../common/time_zones.dart';
+import '../common/saving_indicator.dart';
 import 'attendance.dart' show attendanceCsvWords;
 
 /// 教會資訊: the church's name and logo, its time zone, the admin tools,
@@ -130,7 +131,7 @@ class _ChurchInfoScreenState extends ConsumerState<ChurchInfoScreen> {
     final admin = me.isAdmin;
     final logo = church.logoUrl;
     return Scaffold(
-      appBar: AppBar(title: Text(l10n.churchInfo)),
+      appBar: AppBar(title: Text(l10n.churchInfo), actions: const [SavingIndicator()]),
       body: ListView(
         children: [
           Padding(

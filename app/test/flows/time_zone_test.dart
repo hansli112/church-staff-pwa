@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -6,6 +7,7 @@ import 'package:martha/data/memory/memory_backend.dart';
 import 'package:martha/domain/day.dart';
 import 'package:martha/domain/models.dart';
 import 'package:martha/state/providers.dart';
+import 'package:martha/core/design/components.dart' show ListRow;
 
 import '../support/harness.dart';
 import '../support/seed.dart';
@@ -98,5 +100,25 @@ void main() {
     b.connectCalendar('grace', calendarName: '青年行事曆', calendarId: 'cal-2');
     await settle(tester);
     expect(find.textContaining('這本日曆的時區是'), findsNothing, reason: "Hong Kong's clock is Taipei's");
+  });
+
+  testWidgets('the one picked is ticked at once, 儲存中… while the backend has it', (tester) async {
+    final b = seededChurch();
+    await pumpApp(tester, b);
+    await go(tester, '/me/church');
+    await tapText(tester, '時區');
+    await tester.ensureVisible(findShown('洛杉磯').last);
+    await settle(tester);
+    b.writeHeld = Completer();
+    await tapText(tester, '洛杉磯');
+    await tapText(tester, '改成洛杉磯時間');
+    expect(tester.widget<ListRow>(find.widgetWithText(ListRow, '洛杉磯')).selected, isTrue);
+    expect(find.text('儲存中…'), findsOneWidget);
+    expect(b.churches['grace']!.timeZone, ChurchTimeZone.taipei, reason: 'not written yet');
+
+    b.writeHeld!.complete();
+    await settle(tester);
+    expect(b.churches['grace']!.timeZone, ChurchTimeZone.losAngeles);
+    expect(find.text('儲存中…'), findsNothing);
   });
 }

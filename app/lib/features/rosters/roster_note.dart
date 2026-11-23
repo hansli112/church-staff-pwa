@@ -15,6 +15,7 @@ import '../../domain/models.dart';
 import '../../l10n/app_localizations.dart';
 import '../../state/note_draft.dart';
 import '../../state/providers.dart';
+import '../common/errors.dart';
 import '../../core/links.dart';
 
 /// A file picked for a 備註, before it is uploaded; no [bytes] when it is
@@ -447,7 +448,6 @@ class _NoteSheetState extends ConsumerState<NoteSheet> {
 
   /// Read once: an upload may end, and the sheet close, after this is gone.
   late final _draft = NoteDraft(ref.churchData.rosterNotes, widget.rosterId, widget.note)..addListener(_redraw);
-  var _saving = false;
 
   void _redraw() => setState(() {});
 
@@ -494,17 +494,23 @@ class _NoteSheetState extends ConsumerState<NoteSheet> {
     }
   }
 
-  Future<void> _done() async {
+  /// Closes at once, the note shown as it is kept; one that does not save
+  /// is said on the page under it, with 重試.
+  void _done() {
     final l10n = L10n.of(context);
-    setState(() => _saving = true);
-    try {
-      await _draft.save(_text.text);
-      if (mounted) Navigator.pop(context, true);
-    } on Object {
-      if (!mounted) return;
-      setState(() => _saving = false);
-      showToast(context, l10n.saveFailed);
+    final feedback = Navigator.of(context).context;
+    final notes = ref.churchData.rosterNotes;
+    final note = _draft.keep(_text.text);
+    Future<void> save() async {
+      try {
+        await notes.save(widget.rosterId, note);
+      } catch (e) {
+        if (feedback.mounted) showToast(feedback, saveErrorText(l10n, e), onRetry: save);
+      }
     }
+
+    unawaited(save());
+    Navigator.pop(context, true);
   }
 
   @override
@@ -523,7 +529,7 @@ class _NoteSheetState extends ConsumerState<NoteSheet> {
               SheetBar(
                 title: l10n.rosterNote,
                 actions: [
-                  SecondaryButton(label: l10n.done, onPressed: uploading || _saving ? null : _done),
+                  SecondaryButton(label: l10n.done, onPressed: uploading ? null : _done),
                 ],
               ),
               Flexible(

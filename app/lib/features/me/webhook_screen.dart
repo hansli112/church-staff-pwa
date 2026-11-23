@@ -12,6 +12,7 @@ import '../../state/providers.dart';
 import '../church/links.dart';
 import '../common/errors.dart';
 import '../common/time_zones.dart';
+import '../common/saving_indicator.dart';
 
 final webhookProvider = StreamProvider.autoDispose<WebhookSettings?>((ref) => openChurch(ref).webhook.watch());
 
@@ -26,7 +27,7 @@ class WebhookScreen extends ConsumerWidget {
     final l10n = L10n.of(context);
     final hook = ref.watch(webhookProvider);
     return Scaffold(
-      appBar: AppBar(title: Text(l10n.webhook)),
+      appBar: AppBar(title: Text(l10n.webhook), actions: const [SavingIndicator()]),
       body: switch (hook) {
         AsyncData(value: null) => const _Setup(),
         AsyncData(:final value?) => _Configured(hook: value),
@@ -275,11 +276,15 @@ class _ConfiguredState extends ConsumerState<_Configured> {
       action: l10n.webhookOffAction,
     );
     if (!ok || !mounted) return;
+    // Back at once, off while the backend has it; said on the page under
+    // this one should it not be.
+    final feedback = Navigator.of(context).context;
+    final church = _church;
+    context.pop();
     try {
-      await _church.webhook.save(url: null);
-      if (mounted) context.pop();
+      await church.webhook.save(url: null);
     } catch (e) {
-      if (mounted) showToast(context, errorText(l10n, e));
+      if (feedback.mounted) showToast(feedback, errorText(l10n, e));
     }
   }
 
