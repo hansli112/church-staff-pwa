@@ -638,10 +638,10 @@ class _PlanWeeksScreenState extends ConsumerState<PlanWeeksScreen> with SingleTi
 
   /// How wide each duty's column is at least, the same for all: the widest
   /// of their names, on two lines as the head draws them, and of the people
-  /// on [days], a line each with how many more after the second, as
-  /// [_People] draws them. Measured in the language shown, so short names
-  /// (李美玉) fit more columns than long ones (Christopher Lee); past
-  /// [_widest] they are cut short.
+  /// on [days] as [_People] draws them ([_twoOrCount]), leaving out the
+  /// longest tenth of those: they are cut short instead. Measured in the
+  /// language shown, so short names (李美玉) fit more columns than long ones
+  /// (Christopher Lee); no column is wider than [_widest].
   double _columnWidth(BuildContext context, List<String> duties, Iterable<Roster> days) {
     final base = DefaultTextStyle.of(context).style;
     final scaler = MediaQuery.textScalerOf(context);
@@ -681,15 +681,15 @@ class _PlanWeeksScreenState extends ConsumerState<PlanWeeksScreen> with SingleTi
       widest = math.max(widest, measure(duty, dutyStyle, 2));
     }
     final wanted = duties.toSet();
-    for (final day in days) {
-      for (final d in day.duties) {
-        if (!wanted.contains(d.role)) continue;
-        for (final (i, name) in d.people.take(2).indexed) {
-          final more = i == 1 && d.people.length > 2 ? measure(' +${d.people.length - 2}', nameStyle, 1) : 0.0;
-          widest = math.max(widest, measure(name, nameStyle, 1) + more);
-        }
-      }
-    }
+    final names = <double>[
+      for (final day in days)
+        for (final d in day.duties)
+          if (wanted.contains(d.role))
+            for (final name in _twoOrCount(d.people).shown) measure(name, nameStyle, 1),
+    ]..sort();
+    // As wide as most of them: the longest tenth are cut short rather than
+    // every column widened for them.
+    if (names.isNotEmpty) widest = math.max(widest, names[names.length - 1 - names.length ~/ 10]);
     painter.dispose();
     if (_measured.length > 2000) _measured.clear();
     // As the cells pad, with a pixel to spare.
@@ -709,8 +709,12 @@ class _PlanWeeksScreenState extends ConsumerState<PlanWeeksScreen> with SingleTi
     final scale = MediaQuery.textScalerOf(context);
     final platform = Theme.of(context).platform;
     final today = ref.watch(todayProvider);
-    // Two lines of names, two of a duty's name.
-    final rowHeight = math.max(Space.minTap(platform) + Space.s, scale.scale(15) * 1.3 * 2 + Space.m);
+    // Two lines of names; a day's number and two lines under it.
+    final rowHeight = [
+      Space.minTap(platform) + Space.s,
+      scale.scale(15) * 1.3 * 2 + Space.m,
+      _DateCell.heightAt(scale),
+    ].reduce(math.max);
     final monthHeight = scale.scale(17) * 1.3 + Space.m + Space.s;
     final line = BorderSide(color: c.separator, width: 0.5);
 
@@ -921,22 +925,28 @@ class _PlanWeeksScreenState extends ConsumerState<PlanWeeksScreen> with SingleTi
   }
 }
 
+/// Two lines of a cell: both of two, or past two the first and how many
+/// more on the second: a second name and a count do not fit one line of a
+/// narrow column.
+({List<T> shown, int more}) _twoOrCount<T>(List<T> all) =>
+    all.length <= 2 ? (shown: all, more: 0) : (shown: [all.first], more: all.length - 1);
+
 /// A day at the start of its row, as a calendar has it under its month:
-/// the day's number, then its weekday or its first 特別活動. Tapping it
-/// opens the day.
+/// the day's number, then its weekday or its 特別活動, each a line in its
+/// color, as many as [_twoOrCount] says. Tapping it opens the day, where
+/// they are in full.
 class _DateCell extends StatelessWidget {
   static const dayStyle = AppText.title3;
   static const weekdayStyle = AppText.caption;
   static final eventStyle = AppText.caption.copyWith(fontWeight: FontWeight.w600);
 
-  /// The 特別活動's dot and the room after it.
-  static const dot = 9.0;
+  /// Measured for how much of a 特別活動's name a line shows: most are
+  /// four characters or so, the rest are cut short.
+  static const eventRuler = '特別活動';
 
-  static String eventLabel(Roster roster) =>
-      roster.events.length == 1 ? roster.events.first.name : '${roster.events.first.name} +${roster.events.length - 1}';
-
-  /// As wide as the widest of [days], its weekday or its 特別活動 in full
-  /// (English ones run long), within reason: the rest is the duties'.
+  /// The same for every day, however long their 特別活動: the room is the
+  /// duties'. Wide enough for the day's number, the weekdays of [days] and
+  /// [eventRuler], up to 140 at the largest text.
   static double widthFor(BuildContext context, Iterable<Roster> days) {
     final base = DefaultTextStyle.of(context).style;
     final painter = TextPainter(
@@ -951,20 +961,26 @@ class _DateCell extends StatelessWidget {
       return painter.width;
     }
 
-    final labels = <(String, TextStyle, double)>{
-      ('30', dayStyle, 0),
-      for (final day in days)
-        day.events.isEmpty
-            ? (DateFormat.E().format(day.day.midnight), weekdayStyle, 0)
-            : (eventLabel(day), eventStyle, dot),
+    final labels = <(String, TextStyle)>{
+      ('30', dayStyle),
+      (eventRuler, eventStyle),
+      for (final day in days) (DateFormat.E().format(day.day.midnight), weekdayStyle),
     };
     var widest = 0.0;
-    for (final (text, style, before) in labels) {
-      widest = math.max(widest, before + widthOf(text, style));
+    for (final (text, style) in labels) {
+      widest = math.max(widest, widthOf(text, style));
     }
     painter.dispose();
-    return (Space.m + widest + Space.s).clamp(64.0, 140.0);
+    return math.min(140, (Space.m + widest + Space.xs).ceilToDouble());
   }
+
+  /// The day's number is set tighter than [dayStyle]'s own.
+  static const dayHeight = 1.1;
+
+  /// How tall the day's number and two lines under it are, at [scale], with
+  /// the row's line under them.
+  static double heightAt(TextScaler scale) =>
+      scale.scale(dayStyle.fontSize!) * dayHeight + scale.scale(eventStyle.fontSize!) * eventStyle.height! * 2 + 1;
 
   const _DateCell({
     required this.roster,
@@ -983,8 +999,13 @@ class _DateCell extends StatelessWidget {
     final l10n = L10n.of(context);
     final c = AppColors.of(context);
     final day = roster.day;
-    final event = roster.events.firstOrNull;
-    final eventColor = event == null ? null : EventColors.of(context, event.color).fg;
+    final events = roster.events;
+    Text event(EventTag tag, {int lines = 1}) => Text(
+      tag.name,
+      maxLines: lines,
+      overflow: TextOverflow.ellipsis,
+      style: eventStyle.copyWith(color: EventColors.of(context, tag.color).fg),
+    );
     return Semantics(
       button: true,
       label: l10n.planOpenDay(dayLabel(l10n, day, today)),
@@ -1002,33 +1023,19 @@ class _DateCell extends StatelessWidget {
               Text(
                 '${day.day}',
                 maxLines: 1,
-                style: dayStyle.copyWith(color: day == today ? c.accent : c.label, height: 1.1),
+                style: dayStyle.copyWith(color: day == today ? c.accent : c.label, height: dayHeight),
               ),
-              if (event == null)
+              if (events.isEmpty)
                 Text(
                   DateFormat.E().format(day.midnight),
                   maxLines: 1,
                   style: weekdayStyle.copyWith(color: c.secondaryLabel),
                 )
-              else
-                Row(
-                  children: [
-                    Container(
-                      width: dot - 3,
-                      height: dot - 3,
-                      margin: const EdgeInsetsDirectional.only(end: 3),
-                      decoration: BoxDecoration(color: eventColor, shape: BoxShape.circle),
-                    ),
-                    Flexible(
-                      child: Text(
-                        eventLabel(roster),
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: eventStyle.copyWith(color: eventColor),
-                      ),
-                    ),
-                  ],
-                ),
+              else if (_twoOrCount(events) case (:final shown, :final more)) ...[
+                // One alone may take both lines.
+                for (final tag in shown) event(tag, lines: shown.length == 1 ? 2 : 1),
+                if (more > 0) Text('+$more', maxLines: 1, style: eventStyle.copyWith(color: c.secondaryLabel)),
+              ],
             ],
           ),
         ),
@@ -1254,7 +1261,7 @@ class _Dashes extends CustomPainter {
 }
 
 /// A person a line, each cut short rather than wrapped onto the next;
-/// past two, how many more after the second.
+/// past two, as [_twoOrCount] says.
 class _People extends StatelessWidget {
   const _People(this.people, {this.unavailable = const {}, this.own = const {}});
 
@@ -1287,14 +1294,10 @@ class _People extends StatelessWidget {
       mainAxisSize: MainAxisSize.min,
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        line(people[0]),
-        if (people.length > 1)
-          Row(
-            children: [
-              Flexible(child: line(people[1])),
-              if (people.length > 2) Text(' +${people.length - 2}', style: style),
-            ],
-          ),
+        if (_twoOrCount(people) case (:final shown, :final more)) ...[
+          for (final name in shown) line(name),
+          if (more > 0) Text('+$more', maxLines: 1, style: style.copyWith(color: c.secondaryLabel)),
+        ],
       ],
     );
   }

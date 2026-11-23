@@ -329,6 +329,50 @@ void main() {
     expect(tester.getRect(cell('司會', 11)).width, greaterThan(narrow), reason: 'every column as wide as the widest');
   });
 
+  testWidgets('a column is as wide as most names: a long one now and then is cut short, not every column widened', (
+    tester,
+  ) async {
+    final b = seededChurch();
+    Roster sunday(int day, String pianist) => Roster(
+      type: 'sunday',
+      day: Day(2026, 10, day),
+      duties: [
+        const Duty(role: '司會', people: ['王牧師']),
+        Duty(role: '司琴', people: [pianist]),
+        const Duty(role: '招待', people: ['陳志豪', '李美玉']),
+      ],
+    );
+    for (final day in [18, 25]) {
+      b.rosters['grace']![Roster.idFor('sunday', Day(2026, 10, day))] = sunday(day, '李美玉');
+    }
+    await pumpApp(tester, b);
+    await go(tester, '/rosters/plan/sunday');
+    final narrow = tester.getRect(cell('司會', 11)).width;
+
+    final eleventh = Roster.idFor('sunday', Day(2026, 10, 11));
+    b.rosters['grace']![eleventh] = b.rosters['grace']![eleventh]!.copyWith(
+      duties: [
+        for (final d in b.rosters['grace']![eleventh]!.duties)
+          d.role == '司琴' ? const Duty(role: '司琴', people: ['Christopher Lee']) : d,
+      ],
+    );
+    b.notify();
+    await settle(tester);
+    expect(tester.getRect(cell('司會', 11)).width, narrow, reason: 'one name in nineteen');
+    expect(
+      tester.renderObject<RenderParagraph>(find.text('Christopher Lee')).didExceedMaxLines,
+      isTrue,
+      reason: 'cut short',
+    );
+
+    for (final day in [18, 25]) {
+      b.rosters['grace']![Roster.idFor('sunday', Day(2026, 10, day))] = sunday(day, 'Christopher Lee');
+    }
+    b.notify();
+    await settle(tester);
+    expect(tester.getRect(cell('司會', 11)).width, greaterThan(narrow), reason: 'three in nineteen');
+  });
+
   testWidgets('each duty’s name starts where the names and ＋ under it do, the cut column’s too', (tester) async {
     await pumpApp(tester, seededChurch());
     await go(tester, '/rosters/plan/sunday');
@@ -368,7 +412,7 @@ void main() {
     );
   });
 
-  testWidgets('three or more: the first two and how many more; a reader hears them all', (tester) async {
+  testWidgets('three or more: the first and how many more under it; a reader hears them all', (tester) async {
     final b = seededChurch();
     final id = Roster.idFor('sunday', Day(2026, 10, 4));
     final day = b.rosters['grace']![id]!;
@@ -379,9 +423,31 @@ void main() {
     );
     await pumpApp(tester, b);
     await go(tester, '/rosters/plan/sunday');
-    expect(find.descendant(of: cell('招待', 4), matching: find.textContaining('+1')), findsOneWidget);
-    expect(find.descendant(of: cell('招待', 4), matching: find.textContaining('王牧師')), findsNothing);
+    String said() => tester
+        .widgetList<Text>(find.descendant(of: cell('招待', 4), matching: find.byType(Text)))
+        .map((t) => t.data)
+        .join('|');
+    expect(said(), '陳志豪|+2', reason: 'a second name and a count do not fit one line of a narrow column');
     expect(tester.widget<Semantics>(cell('招待', 4)).properties.value, '陳志豪、李美玉、王牧師');
+  });
+
+  testWidgets('a name that three or more hide behind their count widens nothing', (tester) async {
+    final b = seededChurch();
+    await pumpApp(tester, b);
+    await go(tester, '/rosters/plan/sunday');
+    final narrow = tester.getRect(cell('司會', 11)).width;
+
+    final id = Roster.idFor('sunday', Day(2026, 10, 4));
+    final day = b.rosters['grace']![id]!;
+    b.rosters['grace']![id] = day.copyWith(
+      duties: [
+        for (final d in day.duties)
+          d.role == '招待' ? const Duty(role: '招待', people: ['陳志豪', 'Christopher Lee', '王牧師']) : d,
+      ],
+    );
+    b.notify();
+    await settle(tester);
+    expect(tester.getRect(cell('司會', 11)).width, narrow);
   });
 
   testWidgets('nobody yet is a ＋ to fill, not 待定 down the table; a reader still hears 待定', (tester) async {
@@ -584,17 +650,25 @@ void main() {
     expect(find.text('這一天沒有這項服事'), findsNothing);
   });
 
-  testWidgets('a date is its day’s number over its weekday, or its 特別活動 by name, the whole of a long one', (
+  testWidgets('a date is its day’s number over its weekday or its 特別活動, each a line, in a column as narrow as can be', (
     tester,
   ) async {
     final b = seededChurch();
-    for (final (day, events) in [
-      (18, const [EventTag(name: 'Communion', color: 1)]),
-      (25, const [EventTag(name: '聖餐', color: 0), EventTag(name: '洗禮', color: 3)]),
+    await pumpApp(tester, b);
+    await go(tester, '/rosters/plan/sunday');
+    final narrow = tester.getRect(date(11)).width;
+
+    for (final (on, events) in [
+      (Day(2026, 10, 18), const [EventTag(name: 'Thanksgiving Service', color: 1)]),
+      (Day(2026, 10, 25), const [EventTag(name: '聖餐', color: 0), EventTag(name: '洗禮', color: 3)]),
+      (
+        Day(2026, 11, 1),
+        const [EventTag(name: '聖餐', color: 0), EventTag(name: '洗禮', color: 3), EventTag(name: '感恩', color: 2)],
+      ),
     ]) {
-      b.rosters['grace']![Roster.idFor('sunday', Day(2026, 10, day))] = Roster(
+      b.rosters['grace']![Roster.idFor('sunday', on)] = Roster(
         type: 'sunday',
-        day: Day(2026, 10, day),
+        day: on,
         events: events,
         duties: const [
           Duty(role: '司會'),
@@ -603,20 +677,21 @@ void main() {
         ],
       );
     }
-    await pumpApp(tester, b);
-    await go(tester, '/rosters/plan/sunday');
-    String said(int day) => tester
-        .widgetList<Text>(find.descendant(of: date(day), matching: find.byType(Text)))
-        .map((t) => t.data)
-        .join('|');
-    expect(said(4), '4|聖餐');
-    expect(said(11), '11|週日');
-    expect(said(18), '18|Communion');
-    expect(said(25), '25|聖餐 +1', reason: 'the first, and how many more');
+    b.notify();
+    await settle(tester);
+    final november = find.byWidgetPredicate((w) => w is Semantics && w.properties.label == '打開 11月1日 週日');
+    String said(Finder date) =>
+        tester.widgetList<Text>(find.descendant(of: date, matching: find.byType(Text))).map((t) => t.data).join('|');
+    expect(said(date(4)), '4|聖餐');
+    expect(said(date(11)), '11|週日');
+    expect(said(date(18)), '18|Thanksgiving Service', reason: 'one, on two lines if it needs them');
+    expect(said(date(25)), '25|聖餐|洗禮', reason: 'each a line of its own');
+    expect(said(november), '1|聖餐|+2', reason: 'past two, the first and how many more');
+    expect(tester.getRect(date(18)).width, narrow, reason: 'a long one is cut short, the column not widened');
     final long = tester.renderObject<RenderParagraph>(
-      find.descendant(of: date(18), matching: find.text('Communion')),
+      find.descendant(of: date(18), matching: find.text('Thanksgiving Service')),
     );
-    expect(long.didExceedMaxLines, isFalse, reason: 'the date column is as wide as it');
+    expect(long.size.height, greaterThan(12 * 1.3 * 1.5), reason: 'on two lines');
   });
 
   testWidgets('a date opens its day', (tester) async {
