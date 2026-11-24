@@ -1051,7 +1051,6 @@
   "planAskRoundTitle": "{months}不能事奉的日子",
   "planAskRoundAt": "{date}通知",
   "planAskWaiting": "还没填・{count} 位",
-  "planAskFilled": "{count} 位填好了",
   "planAskFilledHeader": "填好了・{count} 位",
   "planAskRemind": "再通知这 {count} 位",
   "notifSwap": "找人代／交换",

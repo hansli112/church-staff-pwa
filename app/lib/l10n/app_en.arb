@@ -1051,7 +1051,6 @@
   "planAskRoundTitle": "Days they can't serve, {months}",
   "planAskRoundAt": "Asked {date}",
   "planAskWaiting": "Yet to reply · {count}",
-  "planAskFilled": "{count, plural, =1{1 replied} other{{count} replied}}",
   "planAskFilledHeader": "Replied · {count}",
   "planAskRemind": "{count, plural, =1{Remind 1 person} other{Remind these {count}}}",
   "notifSwap": "Covers and swaps",

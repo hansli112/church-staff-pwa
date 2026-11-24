@@ -2428,8 +2428,6 @@
   "@planAskRoundAt": {"placeholders": {"date": {"type": "String"}}},
   "planAskWaiting": "還沒填・{count} 位",
   "@planAskWaiting": {"placeholders": {"count": {"type": "int"}}},
-  "planAskFilled": "{count} 位填好了",
-  "@planAskFilled": {"placeholders": {"count": {"type": "int"}}},
   "planAskFilledHeader": "填好了・{count} 位",
   "@planAskFilledHeader": {"description": "Header over the names of those who have sent theirs, under planAskWaiting", "placeholders": {"count": {"type": "int"}}},
   "planAskRemind": "再通知這 {count} 位",

@@ -6262,12 +6262,6 @@ abstract class L10n {
   /// **'還沒填・{count} 位'**
   String planAskWaiting(int count);
 
-  /// No description provided for @planAskFilled.
-  ///
-  /// In zh, this message translates to:
-  /// **'{count} 位填好了'**
-  String planAskFilled(int count);
-
   /// Header over the names of those who have sent theirs, under planAskWaiting
   ///
   /// In zh, this message translates to:

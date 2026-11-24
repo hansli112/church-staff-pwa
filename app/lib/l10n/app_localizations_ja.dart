@@ -3572,11 +3572,6 @@ class L10nJa extends L10n {
   }
 
   @override
-  String planAskFilled(int count) {
-    return '$count人が入力済み';
-  }
-
-  @override
   String planAskFilledHeader(int count) {
     return '入力済み・$count人';
   }

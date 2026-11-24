@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
 import 'package:material_symbols_icons/symbols.dart';
+import 'package:martha/core/design/components.dart';
 import 'package:martha/core/design/tokens.dart';
 import 'package:martha/data/backend.dart';
 import 'package:martha/data/memory/memory_backend.dart';
@@ -443,50 +444,58 @@ void main() {
     expect(find.text('2026年10月'), findsOneWidget);
   });
 
-  testWidgets("asked again, the months' sheet says who has not sent, by name; 再通知 tells only them", (tester) async {
-    final b = seededChurch(as: editor);
-    final telemetry = RecordingTelemetry();
-    await pumpApp(tester, b, overrides: [telemetryProvider.overrideWithValue(telemetry)]);
-    await go(tester, '/rosters/plan/sunday');
-    Future<void> openMonths() async {
-      await tester.tap(find.byIcon(Symbols.more_horiz_rounded));
+  testWidgets(
+    "asked again, the months' sheet says who has not sent and who has, by name; 再通知 tells only those yet to",
+    (tester) async {
+      final b = seededChurch(as: editor);
+      final telemetry = RecordingTelemetry();
+      await pumpApp(tester, b, overrides: [telemetryProvider.overrideWithValue(telemetry)]);
+      await go(tester, '/rosters/plan/sunday');
+      Future<void> openMonths() async {
+        await tester.tap(find.byIcon(Symbols.more_horiz_rounded));
+        await settle(tester);
+        await tester.tap(find.text('請同工填不能服事日'));
+        await settle(tester);
+      }
+
+      await openMonths();
+      expect(find.textContaining('還沒填'), findsNothing, reason: 'never asked');
+      await tester.tap(find.bySemanticsLabel(RegExp('^2026年12月')).last);
       await settle(tester);
-      await tester.tap(find.text('請同工填不能服事日'));
+      await tester.tap(find.text('通知 10月到12月'));
       await settle(tester);
-    }
+      await tester.tap(find.text('通知'));
+      await settle(tester);
 
-    await openMonths();
-    expect(find.textContaining('還沒填'), findsNothing, reason: 'never asked');
-    await tester.tap(find.bySemanticsLabel(RegExp('^2026年12月')).last);
-    await settle(tester);
-    await tester.tap(find.text('通知 10月到12月'));
-    await settle(tester);
-    await tester.tap(find.text('通知'));
-    await settle(tester);
+      await openMonths();
+      expect(find.bySemanticsLabel(RegExp('^2027年12月')), findsOneWidget, reason: 'new months still to pick');
+      await tester.tap(find.text('10月到12月・2 位還沒填'));
+      await settle(tester);
+      expect(find.text('10月到12月不能服事的日子'), findsOneWidget);
+      expect(find.text('10月1日通知'), findsOneWidget);
+      expect(find.text('還沒填・2 位'), findsOneWidget);
 
-    await openMonths();
-    expect(find.bySemanticsLabel(RegExp('^2027年12月')), findsOneWidget, reason: 'new months still to pick');
-    await tester.tap(find.text('10月到12月・2 位還沒填'));
-    await settle(tester);
-    expect(find.text('10月到12月不能服事的日子'), findsOneWidget);
-    expect(find.text('10月1日通知'), findsOneWidget);
-    expect(find.text('還沒填・2 位'), findsOneWidget);
+      b.unavailableSentAt['grace'] = {'mei': testNow};
+      b.notify();
+      await settle(tester);
+      expect(find.text('還沒填・1 位'), findsOneWidget);
+      expect(find.text('填好了・1 位'), findsOneWidget);
+      expect(
+        find.descendant(of: find.widgetWithText(ListSection, '填好了・1 位'), matching: find.text('李美玉')),
+        findsOneWidget,
+        reason: 'who has filled theirs, by name',
+      );
+      await tester.tap(find.text('再通知這 1 位'));
+      await settle(tester);
+      expect(find.text('已通知 1 位同工'), findsOneWidget);
+      expect(telemetry.named('unavailable_remind'), [
+        {'people': 1},
+      ]);
 
-    b.unavailableSentAt['grace'] = {'mei': testNow};
-    b.notify();
-    await settle(tester);
-    expect(find.text('還沒填・1 位'), findsOneWidget);
-    expect(find.text('1 位填好了'), findsOneWidget);
-    await tester.tap(find.text('再通知這 1 位'));
-    await settle(tester);
-    expect(find.text('已通知 1 位同工'), findsOneWidget);
-    expect(telemetry.named('unavailable_remind'), [
-      {'people': 1},
-    ]);
-
-    await openMonths();
-    expect(find.text('10月到12月・1 位還沒填'), findsOneWidget);
-  });
+      await openMonths();
+      expect(find.text('10月到12月・1 位還沒填'), findsOneWidget);
+    },
+  );
 
   testWidgets('通知同工填 on its way: asked once; the menu greys it till it is done', (tester) async {
     final b = seededChurch(as: editor);

@@ -3779,17 +3779,6 @@ class L10nEn extends L10n {
   }
 
   @override
-  String planAskFilled(int count) {
-    String _temp0 = intl.Intl.pluralLogic(
-      count,
-      locale: localeName,
-      other: '$count replied',
-      one: '1 replied',
-    );
-    return '$_temp0';
-  }
-
-  @override
   String planAskFilledHeader(int count) {
     return 'Replied · $count';
   }

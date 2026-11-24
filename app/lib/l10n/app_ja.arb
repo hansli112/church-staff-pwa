@@ -1051,7 +1051,6 @@
   "planAskRoundTitle": "{months}の奉仕できない日",
   "planAskRoundAt": "{date}に依頼",
   "planAskWaiting": "未入力・{count}人",
-  "planAskFilled": "{count}人が入力済み",
   "planAskFilledHeader": "入力済み・{count}人",
   "planAskRemind": "この{count}人にもう一度依頼",
   "notifSwap": "代わり・交換",

@@ -3570,11 +3570,6 @@ class L10nKo extends L10n {
   }
 
   @override
-  String planAskFilled(int count) {
-    return '$count명 입력했어요';
-  }
-
-  @override
   String planAskFilledHeader(int count) {
     return '입력함 · $count명';
   }

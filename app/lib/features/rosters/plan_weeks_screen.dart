@@ -411,8 +411,8 @@ class _PlanWeeksScreenState extends ConsumerState<PlanWeeksScreen> with SingleTi
     return [for (final uid in uids) ?members[uid]];
   }
 
-  /// [type]'s last 通知同工填 (#91): who has not sent theirs, by name, and
-  /// how many have; 再通知 tells those again.
+  /// [type]'s last 通知同工填 (#91): who has not sent theirs and who has,
+  /// by name; 再通知 tells those yet to again.
   Future<void> _showRound(String type) async {
     final l10n = L10n.of(context);
     final remind = await showAppSheet<bool>(
@@ -424,49 +424,53 @@ class _PlanWeeksScreenState extends ConsumerState<PlanWeeksScreen> with SingleTi
           if (round == null) return const SizedBox.shrink();
           final here = {for (final m in members) m.uid: m};
           final waiting = [for (final uid in round.waiting) ?here[uid]];
-          final filled = round.sent.where(here.containsKey).length;
+          final filled = [for (final uid in round.sent) ?here[uid]];
           final c = AppColors.of(context);
           return SafeArea(
-            child: SingleChildScrollView(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  Text(
-                    l10n.planAskRoundTitle(monthsLabel(l10n, round.from, round.to)),
-                    style: AppText.headline,
-                    textAlign: TextAlign.center,
-                  ),
-                  Text(
-                    l10n.planAskRoundAt(DateFormat.MMMd().format(round.at)),
-                    style: AppText.footnote.copyWith(color: c.secondaryLabel),
-                    textAlign: TextAlign.center,
-                  ),
-                  const SizedBox(height: Space.s),
-                  if (waiting.isNotEmpty)
-                    ListSection(
-                      header: l10n.planAskWaiting(waiting.length),
-                      footer: filled == 0 ? null : l10n.planAskFilled(filled),
-                      children: [for (final m in waiting) ListRow(title: m.name, chevron: false)],
-                    )
-                  else
-                    Padding(
-                      padding: const EdgeInsets.all(Space.m),
-                      child: Text(
-                        l10n.planAskFilled(filled),
-                        style: AppText.footnote.copyWith(color: c.secondaryLabel),
-                        textAlign: TextAlign.center,
-                      ),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Flexible(
+                  child: SingleChildScrollView(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        Text(
+                          l10n.planAskRoundTitle(monthsLabel(l10n, round.from, round.to)),
+                          style: AppText.headline,
+                          textAlign: TextAlign.center,
+                        ),
+                        Text(
+                          l10n.planAskRoundAt(DateFormat.MMMd().format(round.at)),
+                          style: AppText.footnote.copyWith(color: c.secondaryLabel),
+                          textAlign: TextAlign.center,
+                        ),
+                        const SizedBox(height: Space.s),
+                        if (waiting.isNotEmpty)
+                          ListSection(
+                            header: l10n.planAskWaiting(waiting.length),
+                            children: [for (final m in waiting) ListRow(title: m.name, chevron: false)],
+                          ),
+                        if (filled.isNotEmpty)
+                          ListSection(
+                            header: l10n.planAskFilledHeader(filled.length),
+                            children: [for (final m in filled) ListRow(title: m.name, chevron: false)],
+                          ),
+                      ],
                     ),
-                  if (waiting.isNotEmpty)
-                    Padding(
-                      padding: const EdgeInsets.fromLTRB(Space.m, Space.s, Space.m, Space.m),
-                      child: PrimaryButton(
-                        label: l10n.planAskRemind(waiting.length),
-                        onPressed: () => Navigator.pop(context, true),
-                      ),
+                  ),
+                ),
+                // Always in reach, however many have filled theirs.
+                if (waiting.isNotEmpty)
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(Space.m, Space.s, Space.m, Space.m),
+                    child: PrimaryButton(
+                      label: l10n.planAskRemind(waiting.length),
+                      onPressed: () => Navigator.pop(context, true),
                     ),
-                ],
-              ),
+                  ),
+              ],
             ),
           );
         },

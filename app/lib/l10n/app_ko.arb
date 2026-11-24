@@ -1051,7 +1051,6 @@
   "planAskRoundTitle": "{months} 봉사할 수 없는 날",
   "planAskRoundAt": "{date} 요청",
   "planAskWaiting": "아직 안 함 · {count}명",
-  "planAskFilled": "{count}명 입력했어요",
   "planAskFilledHeader": "입력함 · {count}명",
   "planAskRemind": "이 {count}명에게 다시 요청",
   "notifSwap": "대신 봉사·교환",
