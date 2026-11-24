@@ -28,6 +28,31 @@ Future<void> openChurchSwitcher(WidgetTester tester) async {
   await tapText(tester, '切換教會');
 }
 
+/// Google's sign-in in a browser tab that answers only once [tab]
+/// completes, as when someone leaves the tab by the app switcher.
+class _GoogleTabBackend extends MemoryBackend {
+  _GoogleTabBackend() : super(clock: testClock);
+
+  final tab = Completer<void>();
+
+  late final _tabAuth = _GoogleTabAuth(tab)..googleAccount = 'alice@gmail.com';
+
+  @override
+  MemoryAuth get auth => _tabAuth;
+}
+
+class _GoogleTabAuth extends MemoryAuth {
+  _GoogleTabAuth(this.tab);
+
+  final Completer<void> tab;
+
+  @override
+  Future<void> signInWithGoogle() async {
+    await tab.future;
+    return super.signInWithGoogle();
+  }
+}
+
 void main() {
   testWidgets('Google sign-in, create a church, land on its home', (
     tester,
@@ -76,6 +101,57 @@ void main() {
     expect(find.text('開始使用'), findsOneWidget);
     await tapText(tester, '邀請同工');
     expect(find.text('建立邀請連結'), findsOneWidget);
+  });
+
+  testWidgets('back from a Google tab left open, sign-in can be tapped again; its answer still signs in', (
+    tester,
+  ) async {
+    final b = _GoogleTabBackend();
+    await pumpApp(tester, b);
+    await tapText(tester, '使用 Google 登入');
+    await tapText(tester, '用 email 登入');
+    expect(find.text('忘記密碼'), findsNothing, reason: 'waiting for Google');
+
+    // Away in the browser tab, then back by the app switcher.
+    for (final state in [
+      AppLifecycleState.inactive,
+      AppLifecycleState.hidden,
+      AppLifecycleState.paused,
+      AppLifecycleState.hidden,
+      AppLifecycleState.inactive,
+      AppLifecycleState.resumed,
+    ]) {
+      tester.binding.handleAppLifecycleStateChanged(state);
+    }
+    await tester.pump(const Duration(seconds: 2));
+    await settle(tester);
+    await tapText(tester, '用 email 登入');
+    expect(findShown('忘記密碼'), findsOneWidget, reason: 'the buttons let go');
+
+    b.tab.complete();
+    await settle(tester);
+    expect(find.text('加入你的教會'), findsOneWidget);
+  });
+
+  testWidgets('the keyboard’s 完成 while 建立 is on its way starts no second church', (tester) async {
+    final b = MemoryBackend(clock: testClock)..auth.googleAccount = 'alice@gmail.com';
+    await pumpApp(tester, b);
+    await tapText(tester, '使用 Google 登入');
+    await tapText(tester, '建立新教會');
+    await tester.enterText(find.widgetWithText(TextField, '教會名稱'), '恩典堂');
+    final name = find.widgetWithText(TextField, '你的名字');
+    await tester.enterText(name, '林愛麗');
+    await tester.pump();
+    b.writeHeld = Completer();
+    await tester.tap(find.widgetWithText(FilledButton, '建立'));
+    await tester.pump();
+    await tester.showKeyboard(name);
+    await tester.testTextInput.receiveAction(TextInputAction.done);
+    await tester.pump();
+    b.writeHeld!.complete();
+    b.writeHeld = null;
+    await settle(tester);
+    expect(b.churches, hasLength(1));
   });
 
   testWidgets('in no church yet, 登出 and 刪除帳號 are under 帳號, not on the welcome page', (tester) async {

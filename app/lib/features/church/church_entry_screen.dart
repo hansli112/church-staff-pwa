@@ -59,7 +59,12 @@ class ChurchEntryScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final memberships = ref.watch(membershipsProvider);
-    if (!memberships.hasValue && !memberships.hasError) return const Scaffold(body: SizedBox.expand());
+    if (!memberships.hasValue && !memberships.hasError) {
+      return Scaffold(
+        appBar: AppBar(),
+        body: const Center(child: CircularProgressIndicator.adaptive()),
+      );
+    }
     return _NotMember(churchId: churchId, hasChurch: (memberships.value ?? const []).isNotEmpty);
   }
 }
@@ -128,6 +133,7 @@ class _NotMemberState extends ConsumerState<_NotMember> {
   );
 
   Future<void> _run(Future<void> Function() action, {required String done}) async {
+    if (_busy) return;
     final l10n = L10n.of(context);
     setState(() => _busy = true);
     try {
@@ -170,7 +176,7 @@ class _NotMemberState extends ConsumerState<_NotMember> {
       appBar: AppBar(),
       body: SafeArea(
         child: preview.when(
-          loading: () => const SizedBox.shrink(),
+          loading: () => const Center(child: CircularProgressIndicator.adaptive()),
           error: (e, _) => EmptyState(
             message: e is CloudException && e.code == CloudErrorCode.notFound
                 ? l10n.churchNotFound
@@ -237,11 +243,17 @@ class _NotMemberState extends ConsumerState<_NotMember> {
                       const SizedBox(height: Space.s),
                       goHome(nothingToAsk: false),
                     ] else if (church.joinRequest == JoinRequestState.pending) ...[
-                      SecondaryButton(
-                        label: l10n.withdrawJoinRequest,
-                        expand: true,
-                        onPressed: _busy ? null : _withdraw,
-                      ),
+                      if (_busy)
+                        // Taking it back: a spinner where the button was.
+                        Semantics(
+                          label: l10n.withdrawJoinRequest,
+                          child: const SizedBox(
+                            height: 50,
+                            child: Center(child: CircularProgressIndicator.adaptive()),
+                          ),
+                        )
+                      else
+                        SecondaryButton(label: l10n.withdrawJoinRequest, expand: true, onPressed: _withdraw),
                       goHome(nothingToAsk: false),
                     ] else
                       goHome(nothingToAsk: true),

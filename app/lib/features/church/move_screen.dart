@@ -69,6 +69,7 @@ class _MoveScreenState extends ConsumerState<MoveScreen> {
       final cloud = ref.read(backendProvider).cloud;
       final path = await cloud.uploadMoveFile(bytes);
       final preview = await cloud.movePreview(path);
+      if (!mounted) return;
       final email = ref.read(authUserProvider).value?.email.trim().toLowerCase();
       setState(() {
         _path = path;

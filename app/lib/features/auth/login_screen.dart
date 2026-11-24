@@ -53,8 +53,40 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
   final _email = TextEditingController();
   final _password = TextEditingController();
 
+  /// Counts sign-ins, so one let go of ([_letGoOnReturn]) leaves the
+  /// buttons alone when it answers at last.
+  int _attempt = 0;
+
+  /// Google's or Apple's page in an Android browser tab, which never
+  /// answers when it is left by the app switcher: back in the app, the
+  /// buttons wait only a moment more for it. Its answer, if it comes, still
+  /// signs in.
+  bool _inBrowser = false;
+
+  static bool get _browserTabs => !kIsWeb && defaultTargetPlatform == TargetPlatform.android;
+  late final AppLifecycleListener _lifecycle;
+
+  @override
+  void initState() {
+    super.initState();
+    _lifecycle = AppLifecycleListener(onResume: _letGoOnReturn);
+  }
+
+  void _letGoOnReturn() {
+    if (!_busy || !_inBrowser) return;
+    final attempt = _attempt;
+    Future<void>.delayed(const Duration(seconds: 2), () {
+      if (!mounted || !_busy || attempt != _attempt) return;
+      setState(() {
+        _busy = false;
+        _attempt++;
+      });
+    });
+  }
+
   @override
   void dispose() {
+    _lifecycle.dispose();
     _name.dispose();
     _email.dispose();
     _password.dispose();
@@ -65,7 +97,16 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
 
   /// [event]: what to count (GA4 `login`, `sign_up`) once [action] has
   /// signed someone in, by [method]; not when they backed out of it.
-  Future<void> _run(Future<void> Function() action, {bool apple = false, String? event, String? method}) async {
+  Future<void> _run(
+    Future<void> Function() action, {
+    bool apple = false,
+    bool inBrowser = false,
+    String? event,
+    String? method,
+  }) async {
+    if (_busy) return;
+    final attempt = ++_attempt;
+    _inBrowser = inBrowser;
     setState(() {
       _busy = true;
       _appleRunning = apple;
@@ -79,18 +120,20 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
       await action();
       if (event != null && auth.currentUser != null) telemetry.logEvent(event, {'method': method!});
     } catch (e) {
-      if (!mounted) return;
+      // Let go of meanwhile: its error is no longer the page's.
+      if (!mounted || attempt != _attempt) return;
       final text = errorText(L10n.of(context), e);
       setState(() {
         _error = text.isEmpty ? null : text;
         _wrongPassword = e is AuthException && e.code == AuthErrorCode.invalidCredential;
       });
     } finally {
-      if (mounted) setState(() => _busy = false);
+      if (mounted && attempt == _attempt) setState(() => _busy = false);
     }
   }
 
   void _submit() {
+    if (_busy) return;
     // As the keyboard's 送出 does: what comes of it is not under the keyboard.
     FocusScope.of(context).unfocus();
     if (!_form.currentState!.validate()) return;
@@ -128,11 +171,14 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
           ? null
           : AppBar(
               leading: BackButton(
-                onPressed: () => setState(() {
-                  _mode = _Mode.choose;
-                  _error = null;
-                  _wrongPassword = false;
-                }),
+                // Signing in: stays on the form it is signing in from.
+                onPressed: _busy
+                    ? () {}
+                    : () => setState(() {
+                        _mode = _Mode.choose;
+                        _error = null;
+                        _wrongPassword = false;
+                      }),
               ),
             ),
       body: SafeArea(
@@ -201,7 +247,9 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
       mark: (size) => Image.asset('assets/icons/google_g.png', width: size, height: size, excludeFromSemantics: true),
       foreground: const Color(0xFF1F1F1F), // Google's text colour
       busy: _busy && !_appleRunning,
-      onPressed: _busy ? null : () => _run(_auth.signInWithGoogle, event: 'login', method: 'google'),
+      onPressed: _busy
+          ? null
+          : () => _run(_auth.signInWithGoogle, inBrowser: _browserTabs, event: 'login', method: 'google'),
     );
     if (!_auth.offersApple) return [google];
     final apple = _SignInButton(
@@ -210,7 +258,9 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
       mark: (size) => Icon(Icons.apple, size: size),
       foreground: Colors.black, // Apple allows only black or white
       busy: _busy && _appleRunning,
-      onPressed: _busy ? null : () => _run(_auth.signInWithApple, apple: true, event: 'login', method: 'apple'),
+      onPressed: _busy
+          ? null
+          : () => _run(_auth.signInWithApple, apple: true, inBrowser: _browserTabs, event: 'login', method: 'apple'),
     );
     final applePlatform =
         !kIsWeb && (defaultTargetPlatform == TargetPlatform.iOS || defaultTargetPlatform == TargetPlatform.macOS);
@@ -332,11 +382,13 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
             SecondaryButton(
               label: register ? l10n.haveAccount : l10n.createAccount,
               expand: true,
-              onPressed: () => setState(() {
-                _mode = register ? _Mode.signIn : _Mode.register;
-                _error = null;
-                _wrongPassword = false;
-              }),
+              onPressed: _busy
+                  ? null
+                  : () => setState(() {
+                      _mode = register ? _Mode.signIn : _Mode.register;
+                      _error = null;
+                      _wrongPassword = false;
+                    }),
             ),
             if (!register) ...[
               SecondaryButton(

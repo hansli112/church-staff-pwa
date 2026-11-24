@@ -193,7 +193,7 @@ class _VerifyEmailScreenState extends ConsumerState<VerifyEmailScreen> with _Ver
                 const SizedBox(height: Space.xs),
                 BalancedText(l10n.verifyEmailNoMail, style: AppText.footnote.copyWith(color: c.secondaryLabel)),
                 const SizedBox(height: Space.xl),
-                SecondaryButton(label: l10n.verifyResend, expand: true, onPressed: resend),
+                SecondaryButton(label: l10n.verifyResend, expand: true, onPressed: _resending ? null : resend),
               ],
             ),
           ),
@@ -237,7 +237,7 @@ class _VerifyEmailBannerState extends ConsumerState<VerifyEmailBanner> with _Ver
           const SizedBox(height: Space.s),
           Align(
             alignment: AlignmentDirectional.centerEnd,
-            child: SecondaryButton(label: l10n.verifyResend, onPressed: resend),
+            child: SecondaryButton(label: l10n.verifyResend, onPressed: _resending ? null : resend),
           ),
         ],
       ),
@@ -286,13 +286,20 @@ mixin _Verifying<T extends ConsumerStatefulWidget> on ConsumerState<T> {
     ref.read(backendProvider).auth.reload().catchError((_) {});
   }
 
+  /// While 重寄驗證信 is on its way: its button waits, not sending twice.
+  bool _resending = false;
+
   Future<void> resend() async {
+    if (_resending) return;
     final l10n = L10n.of(context);
+    setState(() => _resending = true);
     try {
       await ref.read(backendProvider).auth.sendEmailVerification(AppLanguage.shownIn(context));
       if (mounted) showToast(context, l10n.verifyResent);
     } catch (e) {
       if (mounted) showToast(context, errorText(l10n, e));
+    } finally {
+      if (mounted) setState(() => _resending = false);
     }
   }
 }
@@ -320,7 +327,7 @@ class _CreateChurchScreenState extends ConsumerState<CreateChurchScreen> {
   /// Starts the church, its first admin named [myName].
   Future<void> _create(String myName) async {
     final name = _churchName.text.trim();
-    if (name.isEmpty || myName.isEmpty) return;
+    if (_busy || name.isEmpty || myName.isEmpty) return;
     setState(() {
       _busy = true;
       _error = null;
@@ -374,7 +381,7 @@ class _CreateChurchScreenState extends ConsumerState<CreateChurchScreen> {
             typed: _typedName,
             enabled: verified,
             onChanged: (v) => setState(() => _typedName = v),
-            onSubmitted: ready ? () => _create(myName) : null,
+            onSubmitted: ready && !_busy ? () => _create(myName) : null,
           ),
           if (_error != null) ...[
             const SizedBox(height: Space.s),
