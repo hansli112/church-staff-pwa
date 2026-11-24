@@ -744,9 +744,9 @@ UnavailableAsked? unavailableAskedFromJson(Map<String, dynamic>? data) {
 }
 
 /// A service's last 通知同工填 from unavailableAsks/{type}, with when each
-/// answered ([sentAt], answeredAt) by
+/// last answered ([answeredAt]) by
 /// uid; null when never asked, or asked before whom it told was kept.
-UnavailableRound? unavailableRoundFromJson(Map<String, dynamic>? ask, Map<String, DateTime?> sentAt) {
+UnavailableRound? unavailableRoundFromJson(Map<String, dynamic>? ask, Map<String, DateTime?> answeredAt) {
   final told = ask?['told'];
   final (at, from, to) = ((ask?['at'] as Timestamp?)?.toDate(), _monthOf(ask?['from']), _monthOf(ask?['to']));
   if (told is! List || at == null || from == null || to == null) return null;
@@ -758,7 +758,7 @@ UnavailableRound? unavailableRoundFromJson(Map<String, dynamic>? ask, Map<String
     told: uids,
     sent: {
       for (final uid in uids)
-        if (sentSince(sentAt[uid], at)) uid,
+        if (sentSince(answeredAt[uid], at)) uid,
     },
   );
 }

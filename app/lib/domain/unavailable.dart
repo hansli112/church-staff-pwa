@@ -182,7 +182,8 @@ class UnavailableAsked {
 }
 
 /// A service's last 通知同工填 (#91) as it stands: the months [from] to [to],
-/// asked at [at] of [told] (uids); of them, [sent] have sent theirs since.
+/// asked at [at] of [told] (uids); of them, [sent] have answered since
+/// (answeredAt: sent, or changed their days).
 class UnavailableRound {
   const UnavailableRound({
     required this.at,
@@ -198,7 +199,7 @@ class UnavailableRound {
   final List<String> told;
   final Set<String> sent;
 
-  /// Who of [told] has not sent, in the order told.
+  /// Who of [told] has not answered, in the order told.
   List<String> get waiting => [
     for (final uid in told)
       if (!sent.contains(uid)) uid,

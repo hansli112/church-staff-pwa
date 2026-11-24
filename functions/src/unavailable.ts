@@ -96,10 +96,10 @@ function later(a: string, b: string) {
   return a > b ? a : b;
 }
 
-/** Whether [sentAt] is since [askedAt]: what was asked then is answered. */
-function sentSince(sentAt: unknown, askedAt: unknown) {
-  return sentAt instanceof Timestamp && askedAt instanceof Timestamp
-    && (sentAt.seconds > askedAt.seconds || (sentAt.seconds === askedAt.seconds && sentAt.nanoseconds >= askedAt.nanoseconds));
+/** Whether [at] (when sent, or when the days changed) is since [askedAt]. */
+function sentSince(at: unknown, askedAt: unknown) {
+  return at instanceof Timestamp && askedAt instanceof Timestamp
+    && (at.seconds > askedAt.seconds || (at.seconds === askedAt.seconds && at.nanoseconds >= askedAt.nanoseconds));
 }
 
 /**
