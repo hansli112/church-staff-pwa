@@ -10,7 +10,7 @@ import 'package:martha/data/backend.dart';
 import 'package:martha/data/memory/memory_backend.dart';
 import 'package:martha/domain/day.dart';
 import 'package:martha/domain/models.dart';
-import 'package:martha/domain/unavailable.dart';
+import 'package:martha/state/attendance.dart';
 import 'package:martha/state/providers.dart';
 import 'package:martha/state/session.dart';
 
@@ -389,6 +389,19 @@ void main() {
     await settle(tester);
     expect(find.text('我接下來的服事'), findsOneWidget);
     expect(find.text('填不能服事的日子'), findsOneWidget, reason: 'in the same frame as my days');
+  });
+
+  testWidgets('home waits for 人數 still to fill in too, then shows it with my days', (tester) async {
+    final b = seededChurch(as: staffMei);
+    final fills = StreamController<Set<String>>();
+    addTearDown(fills.close);
+    b.churches['grace'] = b.churches['grace']!.copyWith(attendanceSince: () => Day(2026, 9, 1));
+    await pumpApp(tester, b, overrides: [myFillsProvider.overrideWith((ref) => fills.stream)]);
+    await go(tester, '/home');
+    expect(find.text('我接下來的服事'), findsNothing, reason: 'waiting for what I fill in');
+    fills.add(const {});
+    await settle(tester);
+    expect(find.text('我接下來的服事'), findsOneWidget);
   });
 
   testWidgets('home shows my days when what was asked of me cannot be read', (tester) async {

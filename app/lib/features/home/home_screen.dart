@@ -12,6 +12,7 @@ import '../../domain/getting_started.dart';
 import '../../domain/models.dart';
 import '../../domain/swap.dart';
 import '../../l10n/app_localizations.dart';
+import '../../state/attendance.dart';
 import '../../state/calendar.dart';
 import '../../state/providers.dart';
 import '../church/add_to_home.dart';
@@ -41,6 +42,33 @@ final _waitingForZoneProvider = Provider.autoDispose<int>((ref) {
   final members = ref.watch(membersProvider).value ?? const [];
   final services = ref.watch(servicesProvider).value?.services ?? const [];
   return members.where((m) => m.waitsForZone(services)).length;
+});
+
+/// Whether what the rows above my days come from has been read, so 首頁
+/// shows them together with my days. Each started listening only once my
+/// days were shown, so on every open 填不能服事的日子 and the like came a
+/// moment later and pushed my days down. Read from this phone's copy, so
+/// not long to wait; one that cannot be read does not hold up the page.
+/// Not what is fetched over the network each time (首頁連結's text, 認領).
+final _homeReadProvider = Provider.autoDispose<bool>((ref) {
+  bool read(AsyncValue<Object?> v) => (v.hasValue || v.hasError) && !v.isReloading;
+  final me = ref.watch(meProvider).value;
+  final since = ref.watch(churchProvider.select((c) => c.value?.attendanceSince));
+  // Watched all at once, so they are read side by side.
+  final reads = [
+    ref.watch(swapRequestsToMeProvider),
+    ref.watch(familyAskingProvider),
+    ref.watch(unavailableAskedProvider),
+    ref.watch(servicesProvider),
+    ref.watch(churchLinkProvider),
+    if (me?.isAdmin ?? false) ref.watch(membersProvider),
+    if (since != null) ...[
+      ref.watch(myFillsProvider),
+      for (final key in {...?me?.remindedAttendance, ...?ref.watch(myFillsProvider).value})
+        ref.watch(attendanceProvider(key)),
+    ],
+  ];
+  return reads.every(read);
 });
 
 /// 首頁: the days I serve next. That is what most people open the app for.
@@ -94,11 +122,7 @@ class HomeScreen extends ConsumerWidget {
           onRetry: () => ref.invalidate(savedRostersProvider),
         ),
         data: (list) {
-          // What asks me something waits for the server (the cache's may
-          // be done already), and the page with it: rows showing up a
-          // moment later pushed my days down.
-          final toMe = [swapRequestsToMeProvider, familyAskingProvider, unavailableAskedProvider];
-          if (toMe.any((p) => !ref.watch(p).hasValue && !ref.watch(p).hasError)) return const SizedBox.shrink();
+          if (!ref.watch(_homeReadProvider)) return const SizedBox.shrink();
           perfMark('home-visible');
           final claims = ref.watch(pendingClaimsProvider).value ?? const [];
           final gettingStarted = ref.watch(gettingStartedProvider);

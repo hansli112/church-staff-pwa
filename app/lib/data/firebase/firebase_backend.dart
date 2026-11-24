@@ -26,7 +26,6 @@ import '../connectivity.dart';
 import 'codec.dart';
 import '../native_or_browser.dart';
 import '../retry_refused.dart';
-import '../server_first.dart';
 
 bool _refused(Object e) => e is FirebaseException && e.code == 'permission-denied';
 
@@ -46,26 +45,6 @@ extension on Query<Json> {
   Stream<QuerySnapshot<Json>> live() => _serverReads[firestore] == true
       ? retryRefused(() => snapshots(includeMetadataChanges: true), isRefused: _refused).where(_fromServer)
       : retryRefused(snapshots, isRefused: _refused);
-}
-
-/// [live], but what is mine to do on 首頁 waits for the server's answer
-/// rather than showing the cache's first ([serverFirst]).
-extension on DocumentReference<Json> {
-  Stream<DocumentSnapshot<Json>> fresh() => _serverReads[firestore] == true
-      ? live()
-      : serverFirst(
-          retryRefused(() => snapshots(includeMetadataChanges: true), isRefused: _refused),
-          fromCache: (s) => s.metadata.isFromCache,
-        );
-}
-
-extension on Query<Json> {
-  Stream<QuerySnapshot<Json>> fresh() => _serverReads[firestore] == true
-      ? live()
-      : serverFirst(
-          retryRefused(() => snapshots(includeMetadataChanges: true), isRefused: _refused),
-          fromCache: (s) => s.metadata.isFromCache,
-        );
 }
 
 bool _fromServer(Object snapshot) => switch (snapshot) {
@@ -1153,7 +1132,7 @@ class _FirestoreUnavailable implements UnavailableData {
   Stream<UnavailableAsked?> askedOfMe() {
     final uid = _c._calls._auth.currentUser?.uid;
     if (uid == null) return Stream.value(null);
-    return _c._col('unavailable').doc(uid).fresh().map((s) => unavailableAskedFromJson(s.data())).translated();
+    return _c._col('unavailable').doc(uid).live().map((s) => unavailableAskedFromJson(s.data())).translated();
   }
 
   @override
@@ -1189,8 +1168,8 @@ class _FirestoreSwaps implements SwapData {
     ];
     final open = _c._col('swapRequests').where('status', isEqualTo: 'open');
     return _latestOfBoth(
-      open.where('asked', arrayContains: uid).fresh().map(decode),
-      open.where('to', isEqualTo: uid).fresh().map(decode),
+      open.where('asked', arrayContains: uid).live().map(decode),
+      open.where('to', isEqualTo: uid).live().map(decode),
       // 找一位同工代 has its one person in both `asked` and `to`.
       (cover, swap) =>
           [...cover, ...swap.where((r) => r.kind == SwapKind.swap)]..sort((a, b) => a.day.compareTo(b.day)),
@@ -1249,9 +1228,10 @@ class _FirestoreFamily implements FamilyData {
   Stream<List<Household>> _where(String field, {String? person}) {
     final who = person ?? _c._calls._auth.currentUser?.uid;
     if (who == null) return Stream.value(const []);
-    final q = _c._col('households').where(field, arrayContains: who);
-    // Asking me in (首頁) waits for the server; the rest shows the cache.
-    return (field == 'invited' ? q.fresh() : q.live())
+    return _c
+        ._col('households')
+        .where(field, arrayContains: who)
+        .live()
         .map((snap) => [for (final d in snap.docs) householdFromJson(d.id, d.data())])
         .translated();
   }

@@ -71,6 +71,47 @@ void main() {
     expect(tester.getTopLeft(agendaEvent('活動20')).dy, lessThan(top + 60), reason: 'back to this month, today again');
   });
 
+  testWidgets("an event begun before today and still on is today's first row", (tester) async {
+    final b = seededChurch(as: staffMei, clock: () => testNow.add(const Duration(days: 19)));
+    b.connectCalendar('grace', calendarName: '教會行事曆');
+    b.calendarEvents['grace'] = [
+      for (var day = 1; day <= 30; day++)
+        CalendarEvent(
+          id: '$day',
+          title: '活動$day',
+          start: DateTime(2026, 10, day, 19),
+          end: DateTime(2026, 10, day, 20),
+        ),
+      CalendarEvent(id: '退修會', title: '退修會', start: DateTime(2026, 10, 19), end: DateTime(2026, 10, 22), allDay: true),
+    ];
+    await pumpApp(tester, b);
+    await openCalendar(tester);
+    expect(agendaEvent('退修會').hitTestable(), findsOneWidget);
+    expect(agendaEvent('活動18').hitTestable(), findsNothing);
+  });
+
+  testWidgets("today's row comes up under the notices, not over them", (tester) async {
+    final b = seededChurch(as: staffMei, clock: () => testNow.add(const Duration(days: 19)));
+    b.connectCalendar('grace', calendarName: '教會行事曆');
+    b.calendarEvents['grace'] = [
+      for (var day = 1; day <= 30; day++)
+        CalendarEvent(
+          id: '$day',
+          title: '活動$day',
+          start: DateTime(2026, 10, day, 19),
+          end: DateTime(2026, 10, day, 20),
+        ),
+    ];
+    // A phone away from the church: the page says whose time it shows.
+    await pumpApp(tester, b, phoneOffset: const Duration(hours: -7));
+    await openCalendar(tester);
+    final notice = find.text('教會當地時間（台北）');
+    expect(notice, findsOneWidget, reason: 'shown');
+    expect(notice.hitTestable(), findsOneWidget);
+    expect(agendaEvent('活動20').hitTestable(), findsOneWidget);
+    expect(agendaEvent('活動19').hitTestable(), findsNothing);
+  });
+
   testWidgets('a month other than this one opens on its first day', (tester) async {
     final b = seededChurch(as: staffMei, clock: () => testNow.add(const Duration(days: 19)));
     b.connectCalendar('grace', calendarName: '教會行事曆');

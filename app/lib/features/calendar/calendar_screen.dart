@@ -269,12 +269,12 @@ class _AgendaState extends ConsumerState<_Agenda> {
   /// The picked day's section, brought into view when the day is picked.
   final _pickedDay = GlobalKey();
 
-  /// This month's first row from today on, brought to the top when the
-  /// month opens.
-  final _fromToday = GlobalKey();
+  /// This month's first row of today or after (an event still on today,
+  /// begun before it, too), brought up when the month opens.
+  final _todayRow = GlobalKey();
 
-  /// Whether this month's rows were brought to today since it opened.
-  bool _atToday = false;
+  /// Whether this month was brought to [_todayRow] since it opened.
+  bool _scrolledToToday = false;
 
   /// The month whose neighbours were last read ahead.
   DateTime? _readAheadOf;
@@ -283,7 +283,7 @@ class _AgendaState extends ConsumerState<_Agenda> {
   void didUpdateWidget(_Agenda old) {
     super.didUpdateWidget(old);
     if (old.month != widget.month) {
-      _atToday = false;
+      _scrolledToToday = false;
       // After this build: a jump now tells the app bar mid-build.
       WidgetsBinding.instance.addPostFrameCallback((_) {
         if (mounted && _scroll.hasClients) _scroll.jumpTo(0);
@@ -291,13 +291,13 @@ class _AgendaState extends ConsumerState<_Agenda> {
     }
   }
 
-  /// The month this is opens on today's row: what is past is above it.
-  /// Once, when its events are first shown; not on a small screen, whose
-  /// grid scrolls with the rows and would go out of view.
-  void _bringTodayUp() {
-    _atToday = true;
+  /// This month opens on [_todayRow]: what is past is above, scrolled
+  /// away. Once, when its events are first shown; not on a small screen,
+  /// whose grid scrolls with the rows and would go out of view.
+  void _scrollToToday() {
+    _scrolledToToday = true;
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      final row = _fromToday.currentContext;
+      final row = _todayRow.currentContext;
       if (!mounted || row == null) return;
       Scrollable.ensureVisible(row);
     });
@@ -454,7 +454,9 @@ class _AgendaState extends ConsumerState<_Agenda> {
       // One list, the day beside its first event as on the 服事表 tab: a
       // heading and a card a day made a month of one-event days long.
       final days = byDay.keys.toList()..sort();
-      final firstFromToday = days.where((d) => !d.isBefore(today)).firstOrNull;
+      final todayRow = days
+          .where((d) => byDay[d]!.any((e) => e.daysWithin(today, shownMonth.lastOfMonth) != null))
+          .firstOrNull;
       agenda = [
         ListSection(
           children: [
@@ -462,7 +464,7 @@ class _AgendaState extends ConsumerState<_Agenda> {
               for (final (i, e) in byDay[d]!.indexed)
                 row(
                   e,
-                  key: i == 0 && d == firstFromToday ? _fromToday : null,
+                  key: i == 0 && d == todayRow ? _todayRow : null,
                   leading: i == 0 ? dayBlock(d, today, color: e.color) : const SizedBox(width: DateBlock.minWidth),
                 ),
           ],
@@ -482,6 +484,7 @@ class _AgendaState extends ConsumerState<_Agenda> {
       ),
       data: (_) => loaded.isEmpty && selected == null ? EmptyState(message: l10n.calNoEvents) : null,
     );
+    final notices = [CalendarReadNotice(status: readStatus), const ChurchClockNotice()];
     final divider = Divider(height: 0.5, thickness: 0.5, color: AppColors.of(context).separator);
 
     return LayoutBuilder(
@@ -491,15 +494,18 @@ class _AgendaState extends ConsumerState<_Agenda> {
             constraints.maxHeight - headerHeight - MonthGrid.tallest(context) >=
             MediaQuery.textScalerOf(context).scale(_agendaMinHeight);
         final thisMonth = month == DateTime(today.year, today.month);
-        if (!_atToday && pinned && thisMonth && selected == null && events.hasValue) _bringTodayUp();
+        if (!_scrolledToToday && pinned && thisMonth && selected == null && events.hasValue) _scrollToToday();
         return Column(
           children: [
             header,
-            if (pinned)
+            if (pinned) ...[
               _Folding(
                 shown: gridShown,
                 child: Column(children: [grid, divider]),
               ),
+              // Above the rows, not scrolled away with what is past.
+              ...notices,
+            ],
             Expanded(
               child: RefreshIndicator.adaptive(
                 onRefresh: () => ref.refresh(calendarEventsProvider(monthKey(month)).future),
@@ -507,8 +513,7 @@ class _AgendaState extends ConsumerState<_Agenda> {
                   controller: _scroll,
                   physics: const AlwaysScrollableScrollPhysics(),
                   slivers: [
-                    SliverToBoxAdapter(child: CalendarReadNotice(status: readStatus)),
-                    const SliverToBoxAdapter(child: ChurchClockNotice()),
+                    if (!pinned) ...notices.map((n) => SliverToBoxAdapter(child: n)),
                     if (!pinned)
                       SliverToBoxAdapter(
                         child: _Folding(shown: gridShown, child: grid),
