@@ -117,6 +117,18 @@ describe('再通知 (remindUnavailable)', () => {
     assert.deepEqual(sent.flatMap((p) => p.tokens.map((t) => [t, p.body])), [['tok-hao', '請填 12 月到 1 月不能服事的日子']]);
   });
 
+  test('who changed their days since counts as answered too, not who changed them before', async () => {
+    await church();
+    await saveUnavailableDays(deps, caller('hao'), { churchId: 'C1', spans: [] });
+    const first = fakePush();
+    await askUnavailable({ ...deps, messaging: first.messaging, appUrl }, caller('lead'), { churchId: 'C1', serviceId: 'sunday', from: '2026-12', to: '2027-01' });
+    await saveUnavailableDays(deps, caller('mei'), { churchId: 'C1', spans: [{ from: '2026-12-13', to: '2026-12-13' }] });
+    const { messaging, sent } = fakePush();
+    const r = await remindUnavailable({ ...deps, messaging, appUrl }, caller('lead'), { churchId: 'C1', serviceId: 'sunday' });
+    assert.deepEqual(r, { people: 1 });
+    assert.deepEqual(sent.flatMap((p) => p.tokens), ['tok-hao']);
+  });
+
   test('only who arranges the service, and only once asked', async () => {
     await church();
     const { messaging } = fakePush();

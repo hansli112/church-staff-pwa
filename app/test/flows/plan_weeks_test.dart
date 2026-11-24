@@ -145,6 +145,14 @@ void main() {
     await pumpApp(tester, b, overrides: [fileSaverProvider.overrideWithValue(saver)]);
     await go(tester, '/rosters/plan/sunday');
     expect(find.text('沒有聚會'), findsOneWidget);
+    // Its own line, level with its date; not the row's height with the
+    // words at its top.
+    final (words, date) = (
+      tester.getRect(find.text('沒有聚會')),
+      tester.getRect(find.bySemanticsLabel(RegExp('^打開.*10月11日'))),
+    );
+    expect(words.height, lessThan(date.height / 2));
+    expect(words.center.dy, moreOrLessEquals(date.center.dy, epsilon: 1));
     await tester.tap(find.text('沒有聚會'));
     await settle(tester);
     expect(find.text('恢復聚會'), findsOneWidget, reason: 'its day opens, where it is undone');

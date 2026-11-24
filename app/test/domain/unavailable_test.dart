@@ -77,6 +77,25 @@ void main() {
     expect(unavailableOn(retreat, everyone).keys, ['hao']);
   });
 
+  test("the days of a service's one cannot serve on, each with its reason; a day with no meeting left out", () {
+    final mei = const UnavailableDays().add(_nov(20), _nov(25), note: '出國').add(_nov(8), _nov(8));
+    final days = [
+      for (final d in [1, 8, 15, 22, 29]) Roster(type: 'sunday', day: _nov(d), noService: d == 15),
+    ];
+    expect(unavailableAmong(mei, days), [(day: _nov(8), note: ''), (day: _nov(22), note: '出國')]);
+    expect(unavailableAmong(const UnavailableDays().add(_nov(15), _nov(15)), days), isEmpty, reason: '沒有聚會');
+    expect(unavailableAmong(const UnavailableDays(), days), isEmpty);
+  });
+
+  test('an answer since the ask: sent, or the days changed, whichever is later', () {
+    final at = DateTime.utc(2026, 11, 20, 9);
+    expect(answeredAt(null, null), isNull);
+    expect(answeredAt(at, null), at);
+    expect(answeredAt(null, at), at);
+    expect(answeredAt(at, at.add(const Duration(hours: 1))), at.add(const Duration(hours: 1)));
+    expect(answeredAt(at.add(const Duration(hours: 1)), at), at.add(const Duration(hours: 1)));
+  });
+
   test('asked of me: sent only from the moment asked on; waiting until the last month asked is over', () {
     final at = DateTime.utc(2026, 11, 20, 9);
     final asked = UnavailableAsked(at: at, from: Day(2026, 12, 1), to: Day(2027, 1, 1));

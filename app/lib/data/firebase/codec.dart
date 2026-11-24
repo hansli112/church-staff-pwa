@@ -743,7 +743,8 @@ UnavailableAsked? unavailableAskedFromJson(Map<String, dynamic>? data) {
   return UnavailableAsked(at: at, from: from, to: to, sentAt: (data?['sentAt'] as Timestamp?)?.toDate());
 }
 
-/// A service's last 通知同工填 from unavailableAsks/{type}, with [sentAt] by
+/// A service's last 通知同工填 from unavailableAsks/{type}, with when each
+/// answered ([sentAt], answeredAt) by
 /// uid; null when never asked, or asked before whom it told was kept.
 UnavailableRound? unavailableRoundFromJson(Map<String, dynamic>? ask, Map<String, DateTime?> sentAt) {
   final told = ask?['told'];

@@ -6298,6 +6298,24 @@ abstract class L10n {
   /// **'填好了・{count} 位'**
   String planAskFilledHeader(int count);
 
+  /// Under a name on the round sheet (planAskRoundTitle): the days of the months asked this service meets on that they cannot serve, each a planAskDayNote or a date, joined by listSeparator
+  ///
+  /// In zh, this message translates to:
+  /// **'{days} 不行'**
+  String planAskDaysOff(String days);
+
+  /// A day in planAskDaysOff with the reason given for it
+  ///
+  /// In zh, this message translates to:
+  /// **'{day}（{note}）'**
+  String planAskDayNote(String day, String note);
+
+  /// Under a name in planAskFilledHeader: answered, and none of the days asked this service meets on marked
+  ///
+  /// In zh, this message translates to:
+  /// **'都可以'**
+  String get planAskAllFree;
+
   /// No description provided for @planAskRemind.
   ///
   /// In zh, this message translates to:

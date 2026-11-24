@@ -30,6 +30,7 @@ mixin _MemoryUnavailable on _MemoryChurchBase implements UnavailableData {
         throw const CloudException(CloudErrorCode.unknown);
       }
       (_b.unavailable[churchId] ??= {})[me.uid] = days;
+      (_b.unavailableChangedAt[churchId] ??= {})[me.uid] = _b.clock();
     });
   }
 
@@ -57,7 +58,7 @@ mixin _MemoryUnavailable on _MemoryChurchBase implements UnavailableData {
     _requireArrangesRosters();
     final ask = _b.unavailableAsks[churchId]?[serviceType];
     if (ask == null) return null;
-    final sentAt = _b.unavailableSentAt[churchId] ?? const <String, DateTime>{};
+    final answered = _answeredAt();
     return UnavailableRound(
       at: ask.at,
       from: ask.from,
@@ -65,10 +66,18 @@ mixin _MemoryUnavailable on _MemoryChurchBase implements UnavailableData {
       told: ask.told,
       sent: {
         for (final uid in ask.told)
-          if (sentSince(sentAt[uid], ask.at)) uid,
+          if (sentSince(answered(uid), ask.at)) uid,
       },
     );
   });
+
+  /// When each answered 通知同工填, as functions/src/unavailable.ts counts
+  /// it: sent, or their days changed (answeredAt).
+  DateTime? Function(String uid) _answeredAt() {
+    final sent = _b.unavailableSentAt[churchId] ?? const <String, DateTime>{};
+    final changed = _b.unavailableChangedAt[churchId] ?? const <String, DateTime>{};
+    return (uid) => answeredAt(sent[uid], changed[uid]);
+  }
 
   Future<int> askUnavailable(String serviceType, {required Day from, required Day to}) async {
     var told = 0;
@@ -121,10 +130,10 @@ mixin _MemoryUnavailable on _MemoryChurchBase implements UnavailableData {
       }
       final ask = _b.unavailableAsks[churchId]?[serviceType];
       if (ask == null) throw const CloudException(CloudErrorCode.unknown);
-      final sentAt = _b.unavailableSentAt[churchId] ?? const <String, DateTime>{};
+      final answered = _answeredAt();
       told = ask.told
           .where(
-            (uid) => _b.members[churchId]!.containsKey(uid) && !sentSince(sentAt[uid], ask.at),
+            (uid) => _b.members[churchId]!.containsKey(uid) && !sentSince(answered(uid), ask.at),
           )
           .length;
     });

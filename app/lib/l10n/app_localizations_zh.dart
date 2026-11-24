@@ -3588,6 +3588,19 @@ class L10nZh extends L10n {
   }
 
   @override
+  String planAskDaysOff(String days) {
+    return '$days 不行';
+  }
+
+  @override
+  String planAskDayNote(String day, String note) {
+    return '$day（$note）';
+  }
+
+  @override
+  String get planAskAllFree => '都可以';
+
+  @override
   String planAskRemind(int count) {
     return '再通知這 $count 位';
   }
@@ -7444,6 +7457,19 @@ class L10nZhHans extends L10nZh {
   String planAskFilledHeader(int count) {
     return '填好了・$count 位';
   }
+
+  @override
+  String planAskDaysOff(String days) {
+    return '$days 不行';
+  }
+
+  @override
+  String planAskDayNote(String day, String note) {
+    return '$day（$note）';
+  }
+
+  @override
+  String get planAskAllFree => '都可以';
 
   @override
   String planAskRemind(int count) {

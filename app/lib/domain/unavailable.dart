@@ -133,6 +133,21 @@ Map<String, UnavailableSpan> unavailableOn(Roster roster, Map<String, Unavailabl
   for (final MapEntry(key: uid, value: days) in everyone.entries) uid: ?days.during(roster.day, roster.lastDay),
 };
 
+/// Of [days], a service's as 安排服事 has them, those [mine] says one cannot
+/// serve on, each with its stretch's reason; a day with no meeting has
+/// nobody to arrange and is left out.
+List<({Day day, String note})> unavailableAmong(UnavailableDays mine, Iterable<Roster> days) => [
+  for (final r in days)
+    if (!r.noService)
+      if (mine.during(r.day, r.lastDay) case final s?) (day: r.day, note: s.note),
+];
+
+/// When someone last answered 通知同工填, as whoever asked sees it: 送出 or
+/// 都可以服事 ([sentAt]), or any change to their days ([changedAt]), as
+/// Planning Center counts its Last Set Blockouts. The later of the two.
+DateTime? answeredAt(DateTime? sentAt, DateTime? changedAt) =>
+    sentAt == null || (changedAt != null && changedAt.isAfter(sentAt)) ? changedAt : sentAt;
+
 /// Sent at [sentAt] answers an ask made at [askedAt]: not sent before it.
 bool sentSince(DateTime? sentAt, DateTime askedAt) => sentAt != null && !sentAt.isBefore(askedAt);
 

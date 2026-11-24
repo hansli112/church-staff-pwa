@@ -3798,6 +3798,19 @@ class L10nEn extends L10n {
   }
 
   @override
+  String planAskDaysOff(String days) {
+    return 'Can\'t serve $days';
+  }
+
+  @override
+  String planAskDayNote(String day, String note) {
+    return '$day ($note)';
+  }
+
+  @override
+  String get planAskAllFree => 'Free every day';
+
+  @override
   String planAskRemind(int count) {
     String _temp0 = intl.Intl.pluralLogic(
       count,

@@ -103,9 +103,18 @@ function sentSince(sentAt: unknown, askedAt: unknown) {
 }
 
 /**
+ * Whether [theirs] answered an ask made at [askedAt], as whoever asked sees
+ * it: sent (送出, 都可以服事) or their days changed since, as Planning
+ * Center counts its Last Set Blockouts (app: answeredAt).
+ */
+function answered(theirs: { get(field: string): unknown }, askedAt: unknown) {
+  return sentSince(theirs.get('sentAt'), askedAt) || sentSince(theirs.get('updatedAt'), askedAt);
+}
+
+/**
  * 再通知 (#91): by anyone who arranges service `data.serviceId`, one push
  * again to each its last 通知同工填 told who is still in the church and has
- * not sent theirs since. Returns how many people.
+ * not [answered] since. Returns how many people.
  */
 export async function remindUnavailable(deps: Deps & PushDeps, caller: Caller | null, data: unknown) {
   const input = record(data);
@@ -123,7 +132,7 @@ export async function remindUnavailable(deps: Deps & PushDeps, caller: Caller | 
         deps.db.getAll(...uids.map((uid) => deps.db.doc(`churches/${cid}/unavailable/${uid}`))),
       ])
     : [[], []];
-  const waiting = uids.filter((_, i) => members[i].exists && !sentSince(theirs[i].get('sentAt'), ask.get('at')));
+  const waiting = uids.filter((_, i) => members[i].exists && !answered(theirs[i], ask.get('at')));
   const [from, to] = [ask.get('from') as string, ask.get('to') as string];
   await notifyMembers(deps, cid, waiting, 'swap', (w) => ({
     title: church.get('name') as string,

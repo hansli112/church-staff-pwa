@@ -193,6 +193,7 @@ mixin _MemoryGroupMembers on _MemoryChurchBase {
       _b.unavailable[churchId]?.remove(uid);
       _b.unavailableAsked[churchId]?.remove(uid);
       _b.unavailableSentAt[churchId]?.remove(uid);
+      _b.unavailableChangedAt[churchId]?.remove(uid);
       _leaveFamilies(_b, churchId, uid);
     });
   }

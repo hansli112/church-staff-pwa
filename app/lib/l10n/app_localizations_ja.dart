@@ -3592,6 +3592,19 @@ class L10nJa extends L10n {
   }
 
   @override
+  String planAskDaysOff(String days) {
+    return '$days は不可';
+  }
+
+  @override
+  String planAskDayNote(String day, String note) {
+    return '$day（$note）';
+  }
+
+  @override
+  String get planAskAllFree => 'すべて可';
+
+  @override
   String planAskRemind(int count) {
     return 'この$count人にもう一度依頼';
   }

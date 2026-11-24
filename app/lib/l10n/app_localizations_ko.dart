@@ -3590,6 +3590,19 @@ class L10nKo extends L10n {
   }
 
   @override
+  String planAskDaysOff(String days) {
+    return '$days 불가';
+  }
+
+  @override
+  String planAskDayNote(String day, String note) {
+    return '$day ($note)';
+  }
+
+  @override
+  String get planAskAllFree => '모두 가능';
+
+  @override
   String planAskRemind(int count) {
     return '이 $count명에게 다시 요청';
   }

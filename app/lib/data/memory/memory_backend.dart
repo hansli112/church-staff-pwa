@@ -170,6 +170,9 @@ class MemoryBackend implements Backend {
   final unavailableAsked = <String, Map<String, ({DateTime at, Day from, Day to})>>{};
   final unavailableSentAt = <String, Map<String, DateTime>>{};
 
+  /// When each last changed their 不能服事的日子 (updatedAt), by church.
+  final unavailableChangedAt = <String, Map<String, DateTime>>{};
+
   /// 找人代／交換 (#92) per church, by id, and when each was taken.
   final swapRequests = <String, Map<String, SwapRequest>>{};
   final swapTakenAt = <String, DateTime>{};

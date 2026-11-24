@@ -411,8 +411,9 @@ class _PlanWeeksScreenState extends ConsumerState<PlanWeeksScreen> with SingleTi
     return [for (final uid in uids) ?members[uid]];
   }
 
-  /// [type]'s last 通知同工填 (#91): who has not sent theirs and who has,
-  /// by name; 再通知 tells those yet to again.
+  /// [type]'s last 通知同工填 (#91): who has not answered and who has, by
+  /// name, each with the days asked this service meets on they cannot
+  /// serve; 再通知 tells those yet to again.
   Future<void> _showRound(String type) async {
     final l10n = L10n.of(context);
     final remind = await showAppSheet<bool>(
@@ -426,6 +427,36 @@ class _PlanWeeksScreenState extends ConsumerState<PlanWeeksScreen> with SingleTi
           final waiting = [for (final uid in round.waiting) ?here[uid]];
           final filled = [for (final uid in round.sent) ?here[uid]];
           final c = AppColors.of(context);
+          // The days asked this service meets on, as the table has them.
+          final service = ref.watch(servicesProvider).value?.byId(type);
+          final days = service == null
+              ? const <Roster>[]
+              : [
+                  for (final m in planMonths(
+                    service: service,
+                    saved: ref.watch(savedRostersProvider).value ?? const <Roster>[],
+                    today: ref.watch(todayProvider),
+                    month: round.from,
+                    months: (round.to.year - round.from.year) * 12 + round.to.month - round.from.month + 1,
+                  ))
+                    ...m.days,
+                ];
+          final everyone = ref.watch(unavailableDaysProvider).value ?? const <String, UnavailableDays>{};
+          // Under each name, which of them they cannot serve on; 都可以 for
+          // one who answered with none.
+          String? daysOff(Member m, {required bool answered}) {
+            final off = unavailableAmong(everyone[m.uid] ?? const UnavailableDays(), days);
+            if (off.isEmpty) return answered ? l10n.planAskAllFree : null;
+            return l10n.planAskDaysOff(
+              off
+                  .map((d) {
+                    final day = DateFormat.Md().format(d.day.midnight);
+                    return d.note.isEmpty ? day : l10n.planAskDayNote(day, d.note);
+                  })
+                  .join(l10n.listSeparator),
+            );
+          }
+
           return SafeArea(
             child: Column(
               mainAxisSize: MainAxisSize.min,
@@ -450,12 +481,18 @@ class _PlanWeeksScreenState extends ConsumerState<PlanWeeksScreen> with SingleTi
                         if (waiting.isNotEmpty)
                           ListSection(
                             header: l10n.planAskWaiting(waiting.length),
-                            children: [for (final m in waiting) ListRow(title: m.name, chevron: false)],
+                            children: [
+                              for (final m in waiting)
+                                ListRow(title: m.name, subtitle: daysOff(m, answered: false), chevron: false),
+                            ],
                           ),
                         if (filled.isNotEmpty)
                           ListSection(
                             header: l10n.planAskFilledHeader(filled.length),
-                            children: [for (final m in filled) ListRow(title: m.name, chevron: false)],
+                            children: [
+                              for (final m in filled)
+                                ListRow(title: m.name, subtitle: daysOff(m, answered: true), chevron: false),
+                            ],
                           ),
                       ],
                     ),
@@ -886,26 +923,25 @@ class _PlanWeeksScreenState extends ConsumerState<PlanWeeksScreen> with SingleTi
             ),
           );
         case final Roster day when day.noService:
-          // 沒有聚會 across the row, from the first duty's cell; nothing to
-          // pick or drop on. Tapping opens the day, where it is undone.
+          // 沒有聚會 across the row, from the first duty's cell, on the
+          // table's own white: the cells after it paint nothing over it.
+          // Nothing to pick or drop on; tapping opens the day, where it is
+          // undone.
           return GestureDetector(
             behavior: HitTestBehavior.opaque,
             onTap: () => _openDay(day),
             child: DecoratedBox(
-              decoration: BoxDecoration(
-                color: c.background,
-                border: Border(bottom: line),
-              ),
+              decoration: BoxDecoration(border: Border(bottom: line)),
               child: role != duties.first
                   ? const SizedBox.expand()
-                  : OverflowBox(
-                      minWidth: 0,
-                      maxWidth: double.infinity,
+                  : Align(
                       alignment: AlignmentDirectional.centerStart,
                       child: Padding(
                         padding: const EdgeInsets.symmetric(horizontal: Space.s),
                         child: Text(
                           L10n.of(context).noService,
+                          softWrap: false,
+                          overflow: TextOverflow.visible,
                           style: AppText.subheadline.copyWith(color: c.secondaryLabel),
                         ),
                       ),

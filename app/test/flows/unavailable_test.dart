@@ -539,6 +539,51 @@ void main() {
     },
   );
 
+  testWidgets(
+    "the round's sheet says under each name the days asked they cannot serve; a change to them answers it too",
+    (tester) async {
+      final b = seededChurch(as: editor);
+      b.unavailableAsks['grace'] = {
+        'sunday': (at: testNow, from: Day(2026, 10, 1), to: Day(2026, 11, 1), told: const ['mei', 'hao']),
+      };
+      b.unavailableSentAt['grace'] = {'hao': testNow};
+      b.unavailable['grace'] = {
+        // 10/14 is a Wednesday, and 12/6 not a month asked: neither said.
+        'mei': const UnavailableDays()
+            .add(_oct(11), _oct(11), note: '出國')
+            .add(_oct(14), _oct(14))
+            .add(Day(2026, 11, 22), Day(2026, 11, 22))
+            .add(Day(2026, 12, 6), Day(2026, 12, 6)),
+      };
+      await pumpApp(tester, b);
+      await go(tester, '/rosters/plan/sunday');
+      await tester.tap(find.byIcon(Symbols.more_horiz_rounded));
+      await settle(tester);
+      await tester.tap(find.text('請同工填不能服事日'));
+      await settle(tester);
+      await tester.tap(find.text('10月到11月・1 位還沒填'));
+      await settle(tester);
+      expect(
+        find.descendant(of: find.widgetWithText(ListSection, '還沒填・1 位'), matching: findShown('10/11（出國）、11/22 不行')),
+        findsOneWidget,
+        reason: 'not answered, and still what they have marked',
+      );
+      expect(
+        find.descendant(of: find.widgetWithText(ListSection, '填好了・1 位'), matching: find.text('都可以')),
+        findsOneWidget,
+      );
+
+      // 李美玉 changes her days on her own page: that answers it.
+      b.unavailable['grace']!['mei'] = b.unavailable['grace']!['mei']!.add(Day(2026, 11, 8), Day(2026, 11, 8));
+      (b.unavailableChangedAt['grace'] ??= {})['mei'] = testNow.add(const Duration(hours: 1));
+      b.notify();
+      await settle(tester);
+      expect(find.text('填好了・2 位'), findsOneWidget);
+      expect(findShown('10/11（出國）、11/8、11/22 不行'), findsOneWidget);
+      expect(find.textContaining('再通知'), findsNothing, reason: 'nobody left to tell');
+    },
+  );
+
   testWidgets('通知同工填 on its way: asked once; the menu greys it till it is done', (tester) async {
     final b = seededChurch(as: editor);
     await pumpApp(tester, b);

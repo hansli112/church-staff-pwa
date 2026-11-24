@@ -1139,8 +1139,10 @@ class _FirestoreUnavailable implements UnavailableData {
   Stream<UnavailableRound?> round(String serviceType) => _latestOfBoth(
     _c._col('unavailableAsks').doc(serviceType).live(),
     _c._col('unavailable').live(),
+    // Answered: sent, or their days changed since (answeredAt).
     (ask, everyone) => unavailableRoundFromJson(ask.data(), {
-      for (final d in everyone.docs) d.id: (d.data()['sentAt'] as Timestamp?)?.toDate(),
+      for (final d in everyone.docs)
+        d.id: answeredAt((d.data()['sentAt'] as Timestamp?)?.toDate(), (d.data()['updatedAt'] as Timestamp?)?.toDate()),
     }),
   ).translated();
 }
