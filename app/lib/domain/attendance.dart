@@ -24,6 +24,7 @@ class Meets {
     this.every = 1,
     this.startsOn,
     this.monthWeeks = const [],
+    this.weeks,
   });
 
   final int? weekday;
@@ -37,6 +38,10 @@ class Meets {
   final int every;
   final Day? startsOn;
   final List<int> monthWeeks;
+
+  /// A service's that meets on fewer weeks than every one: those weeks
+  /// only, when not by its rosters.
+  final MeetingWeeks? weeks;
 }
 
 /// 聚會時間 (回報人數): on [weekday] (1 = Monday … 7 = Sunday) every
@@ -75,15 +80,23 @@ class MeetingTime {
 /// by its rosters before. Its [weekdays] either way.
 /// functions/src/attendance.ts serviceMeets is the same
 /// (testdata/church_rules.json, serviceMeets).
-Meets serviceMeets(List<int> weekdays, {required bool roster, MeetingTime? time}) => time == null
-    ? Meets(weekdays: weekdays, roster: roster)
-    : Meets(
-        weekdays: weekdays,
-        every: time.every,
-        startsOn: time.startsOn,
-        monthWeeks: time.monthWeeks,
-        roster: time.startsOn == null ? null : roster,
-      );
+///
+/// One that meets every other week or on some weeks of each month
+/// ([weeks], Service.weeks) is asked on those weeks only, as its own
+/// 聚會時間 says every time it meets, and on a day off them it still has a
+/// roster for (one saved before it changed).
+Meets serviceMeets(List<int> weekdays, {required bool roster, MeetingTime? time, MeetingWeeks? weeks}) {
+  final repeats = weeks != null && (weeks.every == 2 || weeks.monthWeeks.isNotEmpty);
+  if (time == null) return Meets(weekdays: weekdays, roster: roster);
+  return Meets(
+    weekdays: weekdays,
+    every: repeats ? 1 : time.every,
+    startsOn: time.startsOn,
+    monthWeeks: repeats ? const [] : time.monthWeeks,
+    roster: time.startsOn == null ? null : roster,
+    weeks: repeats && !roster ? weeks : null,
+  );
+}
 
 /// A 其他聚會 (churches/{cid}/gatherings/{id}): a group whose 人數 are
 /// asked for and nothing else, like 禱告會 or 長者共餐, by [time]; those
@@ -174,6 +187,7 @@ bool attendanceDue(
   // A service by its rosters, or, on a 聚會時間 of its own, before it began.
   if (meets.roster != null && (start == null || day.isBefore(start))) return meets.roster!;
   if (start != null && day.isBefore(start)) return false;
+  if (meets.weeks case final weeks? when !onMeetingWeeks(weeks, day)) return false;
   if (meets.monthWeeks.isNotEmpty) return meets.monthWeeks.contains(weekOfMonth(day));
   if (start == null) return meets.every != 2;
   return (start.daysUntil(day) ~/ 7) % (meets.every == 2 ? 2 : 1) == 0;

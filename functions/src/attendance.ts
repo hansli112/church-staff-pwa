@@ -41,6 +41,22 @@ export interface Meets {
   every?: number;
   startsOn?: string;
   monthWeeks?: number[];
+  /** A service's that meets on fewer weeks than every one: those weeks only, when not by its rosters. */
+  weeks?: Weeks;
+}
+
+/** Which weeks a service meets on its weekdays: every other (`every` 2) from `startsOn`, or `monthWeeks` of each month. */
+export interface Weeks {
+  every?: number;
+  startsOn?: string;
+  monthWeeks?: number[];
+}
+
+/** Whether [day], on its weekday, is one of [weeks]. */
+export function onWeeks(weeks: Weeks, day: string): boolean {
+  if (weeks.monthWeeks?.length) return weeks.monthWeeks.includes(weekOfMonth(day));
+  if (weeks.every === 2 && weeks.startsOn) return Math.round((dayMs(day) - dayMs(weeks.startsOn)) / WEEK_MS) % 2 === 0;
+  return true;
 }
 
 /** A pause: no meeting asked for from [from] until, not including, [until]. */
@@ -76,6 +92,7 @@ export function attendanceDue(meets: Meets, state: AttendanceState, day: string)
   // A service by its rosters, or, on a 聚會時間 of its own, before it began.
   if ('roster' in meets && (!meets.startsOn || day < meets.startsOn)) return meets.roster === true;
   if (meets.startsOn && day < meets.startsOn) return false;
+  if (meets.weeks && !onWeeks(meets.weeks, day)) return false;
   if (meets.monthWeeks?.length) return meets.monthWeeks.includes(weekOfMonth(day));
   const every = meets.every === 2 ? 2 : 1;
   if (!meets.startsOn) return every === 1;
@@ -168,7 +185,7 @@ export function pausesOf(d: DocumentSnapshot | undefined): Pause[] {
   );
 }
 
-type Service = { id: string; name?: string; weekday?: number; weekdays?: number[]; enabled?: boolean };
+type Service = { id: string; name?: string; weekday?: number; weekdays?: number[]; enabled?: boolean } & Weeks;
 
 /** The days service [s] meets: its `weekdays` when it meets on several, else its `weekday`. */
 const weekdaysOf = (s: Service): number[] =>
@@ -183,11 +200,15 @@ const weekdaysOf = (s: Service): number[] =>
  * domain/attendance.dart serviceMeets is the same (testdata/church_rules.json,
  * serviceMeets).
  */
-export function serviceMeets(weekdays: number[], roster: boolean, time: Record<string, unknown> | undefined): Meets {
+export function serviceMeets(weekdays: number[], roster: boolean, time: Record<string, unknown> | undefined, weeks?: Weeks): Meets {
   const own = meetsFrom(time);
   if (own.monthWeeks || own.every === 2 || time?.everyWeek === true) {
+    // A service every other week or on some weeks of each month: every time it meets, those weeks,
+    // and a day off them it still has a roster for (one saved before it changed).
+    const repeats = weeks && (weeks.every === 2 || (weeks.monthWeeks?.length ?? 0) > 0);
+    const kept = repeats ? { startsOn: own.startsOn, ...(roster ? {} : { weeks }) } : own;
     // Before it began, by its rosters as before.
-    return { ...own, weekdays, ...(own.startsOn ? { roster } : {}) };
+    return { ...kept, weekdays, ...(own.startsOn ? { roster } : {}) };
   }
   return { weekdays, roster };
 }
@@ -214,7 +235,7 @@ async function dueOn(deps: { db: PushDeps['db'] }, cid: string, day: string): Pr
       name: s.name ?? '',
       leads: { field: 'leadTypes' as const, id: s.id },
       // 沒有聚會 (noService): no 人數 to fill in.
-      meets: serviceMeets(weekdaysOf(s), rosters[i].exists && rosters[i].get('noService') !== true, states[i]?.data()),
+      meets: serviceMeets(weekdaysOf(s), rosters[i].exists && rosters[i].get('noService') !== true, states[i]?.data(), s),
     })),
     // A deleted service's 小組 went with it.
     ...smallGroups.docs.filter((g) => kept.some((s) => s.id === g.get('service'))).map((g) => ({

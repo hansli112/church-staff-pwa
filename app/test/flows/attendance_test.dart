@@ -733,6 +733,51 @@ void main() {
       expect(find.text('未填'), findsNothing, reason: 'the weeks before, without a roster, ask for nothing');
     });
 
+    testWidgets('聚會時間 of a service every other week: by its rosters, or every time it meets, those weeks', (
+      tester,
+    ) async {
+      final b = church(as: pastor);
+      b.setServices('grace', [
+        for (final s in b.services['grace']!.services)
+          s.id == 'youth' ? s.meetingOn(s.weekdays, every: 2, startsOn: Day(2026, 10, 24)) : s,
+      ]);
+      await pumpApp(tester, b);
+      await go(tester, '/me/groups/service/youth/attendance');
+      expect(inRow('聚會時間', '有服事表的隔週六'), findsOneWidget);
+      await tapText(tester, '聚會時間');
+      expect(find.text('每週'), findsNothing, reason: 'it meets every other week: every time it meets');
+      expect(find.text('每月'), findsNothing);
+      await tapText(tester, '隔週六');
+      await tapText(tester, '儲存');
+      expect(
+        b.attendance['grace']!['service:youth']!.time,
+        MeetingTime(startsOn: Day(2026, 10, 24)),
+        reason: 'from the first day it meets, not 10/17, the week it is off',
+      );
+      expect(inRow('聚會時間', '隔週六'), findsOneWidget);
+    });
+
+    testWidgets('聚會時間 of a service every other week set so before keeps the weeks it asked', (tester) async {
+      final b = church(as: pastor);
+      b.setServices('grace', [
+        for (final s in b.services['grace']!.services)
+          s.id == 'youth' ? s.meetingOn(s.weekdays, every: 2, startsOn: Day(2026, 10, 3)) : s,
+      ]);
+      b.attendance['grace']!['service:youth'] = AttendanceRecord(
+        time: MeetingTime(every: 2, startsOn: Day(2026, 10, 3)),
+      );
+      await pumpApp(tester, b);
+      await go(tester, '/me/groups/service/youth/attendance');
+      expect(inRow('聚會時間', '隔週六'), findsOneWidget);
+      await tapText(tester, '聚會時間');
+      await tapText(tester, '儲存');
+      expect(
+        b.attendance['grace']!['service:youth']!.time?.startsOn,
+        Day(2026, 10, 3),
+        reason: 'saved as it was: 10/03 still asks',
+      );
+    });
+
     testWidgets("a reminder's link opens that meeting's 填寫人數", (tester) async {
       final b = church(as: staffHao);
       await pumpApp(tester, b);

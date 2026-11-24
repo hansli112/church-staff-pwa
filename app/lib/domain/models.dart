@@ -486,13 +486,10 @@ class Service {
   final List<int> monthWeeks;
 
   /// Whether it meets on [day]: what its drafts are made for.
-  bool meetsOn(Day day) {
-    if (!weekdays.contains(day.weekday)) return false;
-    if (monthWeeks.isNotEmpty) return monthWeeks.contains(weekOfMonth(day));
-    final start = startsOn;
-    if (every == 2 && start != null) return (start.daysUntil(day) ~/ 7).isEven;
-    return true;
-  }
+  bool meetsOn(Day day) => weekdays.contains(day.weekday) && onMeetingWeeks(weeks, day);
+
+  /// Which weeks it meets on its weekdays.
+  MeetingWeeks get weeks => (every: every, startsOn: startsOn, monthWeeks: monthWeeks);
 
   /// Whether it meets on fewer weeks than every one: older apps, which
   /// know only its weekdays, would lose that.

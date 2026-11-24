@@ -163,7 +163,7 @@ describe('attendanceDue', () => {
 
 describe('serviceMeets', () => {
   for (const r of rows('serviceMeets')) {
-    test(r.why, () => assert.equal(attendanceDue(serviceMeets(r.weekdays, r.roster, r.time), { since: r.since, pauses: [] }, r.day), r.due));
+    test(r.why, () => assert.equal(attendanceDue(serviceMeets(r.weekdays, r.roster, r.time, r.service), { since: r.since, pauses: [] }, r.day), r.due));
   }
 });
 

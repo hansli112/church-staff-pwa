@@ -189,14 +189,12 @@ class _MemoryAttendance implements AttendanceData {
     final record = _all[key] ?? const AttendanceRecord();
     final meets = switch (_c._group(key)) {
       ServiceGroup(:final id) => switch (b.services[cid]!.byId(id)) {
-        final s? when record.time != null => Meets(
-          weekdays: s.weekdays,
-          every: record.time!.every,
-          startsOn: record.time!.startsOn,
-          monthWeeks: record.time!.monthWeeks,
-          roster: record.time!.startsOn == null ? null : b.rosters[cid]!.containsKey(Roster.idFor(id, day)),
+        final s? => serviceMeets(
+          s.weekdays,
+          roster: b.rosters[cid]![Roster.idFor(id, day)]?.noService == false,
+          time: record.time,
+          weeks: s.weeks,
         ),
-        final s? => Meets(weekdays: s.weekdays, roster: b.rosters[cid]!.containsKey(Roster.idFor(id, day))),
         null => null,
       },
       SmallGroup(:final id) => b.smallGroups[cid]?[id]?.meets,

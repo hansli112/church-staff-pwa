@@ -71,7 +71,7 @@ List<AttendanceGroup> attendanceGroupsOf({
         group: ServiceGroup(s.id),
         name: s.name,
         meetsOn: (Day day, {MeetingTime? time}) =>
-            serviceMeets(s.weekdays, roster: held.contains((s.id, day)), time: time),
+            serviceMeets(s.weekdays, roster: held.contains((s.id, day)), time: time, weeks: s.weeks),
       ),
     for (final g in smallGroups.inMeetingOrder([for (final s in services) s.id]))
       (group: g.group, name: g.name, meetsOn: (Day _, {MeetingTime? time}) => g.meets),

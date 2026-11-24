@@ -298,6 +298,18 @@ describe('人數總覽: asked again, 提醒, 每週都填人數 (#93)', () => {
     assert.deepEqual(sent.map((s) => s.tokens), [['tok-sundayLead']]);
   });
 
+  test('a service every other week, filled in every time, is not asked the week it is off', async () => {
+    await church();
+    await db.doc('churches/C1/settings/services').update({
+      services: [{ id: 'sunday', name: '主日崇拜', weekday: 7, every: 2, startsOn: '2026-10-11', duties: ['司琴'] }],
+    });
+    await db.doc('churches/C1/attendance/service:sunday').set({ pauses: [], everyWeek: true });
+    const { sent, messaging } = fakePush();
+    assert.equal(await sendAttendanceReminders({ db, messaging, now: sundayEvening, appUrl }), 0, '10/18: off');
+    assert.equal(await sendAttendanceReminders({ db, messaging, now: () => new Date('2026-10-25T21:00:00+08:00'), appUrl }), 1);
+    assert.deepEqual(sent.map((s) => s.tokens), [['tok-sundayLead']]);
+  });
+
   /** mei, 行政. */
   const office = () =>
     db.doc('churches/C1/members/mei').update({ groups: ['roster-editors', 'calendar-editors'], identities: [{ kind: 'office' }] });

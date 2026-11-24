@@ -90,3 +90,15 @@ int monthsThroughNextYear(Day month, {required Day today}) => (today.year + 1 - 
 
 /// Which weekday of its month [day] is: 1 for the first … 5 for a fifth.
 int weekOfMonth(Day day) => (day.day - 1) ~/ 7 + 1;
+
+/// Which weeks something meets on its weekday: every one (1), every other
+/// (2) from [startsOn], a day it meets; or [monthWeeks] of each month.
+typedef MeetingWeeks = ({int every, Day? startsOn, List<int> monthWeeks});
+
+/// Whether [day], on its weekday, is one of [weeks].
+bool onMeetingWeeks(MeetingWeeks weeks, Day day) {
+  if (weeks.monthWeeks.isNotEmpty) return weeks.monthWeeks.contains(weekOfMonth(day));
+  final start = weeks.startsOn;
+  if (weeks.every == 2 && start != null) return (start.daysUntil(day) ~/ 7).isEven;
+  return true;
+}

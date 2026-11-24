@@ -363,6 +363,14 @@ void main() {
           (r['weekdays'] as List).cast<int>(),
           roster: r['roster'] as bool,
           time: serviceTimeFromJson(r['time'] as Map<String, dynamic>?),
+          weeks: switch (r['service']) {
+            final Map<String, dynamic> w => (
+              every: w['every'] as int? ?? 1,
+              startsOn: Day.tryParse(w['startsOn'] as String?),
+              monthWeeks: (w['monthWeeks'] as List?)?.cast<int>() ?? const <int>[],
+            ),
+            _ => null,
+          },
         );
         expect(
           attendanceDue(meets, since: Day.parse(r['since'] as String), day: Day.parse(r['day'] as String)),
