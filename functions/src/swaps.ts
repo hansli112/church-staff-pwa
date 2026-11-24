@@ -6,7 +6,8 @@
  * who asked stays on the roster. Taken, the rosters change here (`via:
  * 'swap'`: the webhook hears, the two are told by these pushes), and the
  * service's leads hear who has it now (at 7:00, when it is night at the
- * church). app/lib/domain/swap.dart keeps the
+ * church). 找一位同工代 is a 請人代 of one person (`to`), ended by their
+ * 不方便 as 交換 is. app/lib/domain/swap.dart keeps the
  * same rules; both run testdata/swaps.json.
  */
 import { FieldValue, Timestamp, type DocumentSnapshot, type Transaction } from 'firebase-admin/firestore';
@@ -263,15 +264,52 @@ async function asker(deps: Deps, caller: Caller | null, data: unknown) {
  * at once or at 7:00 after a night. Returns how many; with none to ask,
  * the leads and the others serving that day hear the caller cannot
  * ([sendRequest]), and three days before nobody hears it again.
+ *
+ * With `data.to`, 找一位同工代: asks that one person alone, who must be one
+ * [coverAsked] would ask (detail `away` when they marked the day as one
+ * they cannot serve). Their 不方便 tells who asked and ends it, as 交換's.
  */
 export async function askCover(deps: Deps & PushDeps, caller: Caller | null, data: unknown) {
+  const a = await asker(deps, caller, data);
+  const to = a.input.to;
+  if (Object.keys(a.input).some((k) => !['churchId', 'serviceId', 'dateKey', 'duty', 'to'].includes(k))
+      || (to !== undefined && (typeof to !== 'string' || !ID.test(to)))) fail('invalid-argument', 'unknown');
+  const [members, unavailable] = await Promise.all([
+    deps.db.collection(`churches/${a.cid}/members`).get(),
+    deps.db.collection(`churches/${a.cid}/unavailable`).get(),
+  ]);
+  const listed = members.docs.map((m) => ({ ...(m.data() as Listed), uid: m.id }));
+  const away = Object.fromEntries(unavailable.docs.map((d) => [d.id, d.get('spans') as Spans | undefined ?? []]));
+  const free = coverAsked(listed, a.serviceId, a.dateKey, a.roster.get('duties'), a.duty, a.caller.uid, away);
+  if (typeof to === 'string') {
+    if (!free.includes(to)) {
+      const anyway = coverAsked(listed, a.serviceId, a.dateKey, a.roster.get('duties'), a.duty, a.caller.uid);
+      fail('failed-precondition', 'unknown', anyway.includes(to) ? 'away' : null);
+    }
+    const toName = (members.docs.find((m) => m.id === to)!.get('name') as string | undefined) ?? '';
+    const ref = await a.create({ kind: 'cover', asked: [to], passed: [], to, toName, nudged: false });
+    await sendOrHold(deps, a.church, ref);
+    return { id: ref.id, asked: 1 };
+  }
+  const ref = await a.create({ kind: 'cover', asked: free, passed: [], nudged: free.length === 0 });
+  await sendOrHold(deps, a.church, ref);
+  return { id: ref.id, asked: free.length };
+}
+
+/**
+ * 找一位同工代 (#92): whom the caller may ask to cover their duty on
+ * `data`'s day, as `{ people: [{ uid, name }] }`: those [coverAsked] would
+ * ask, in the members' order. The app cannot read the members or their
+ * 不能服事的日子 itself.
+ */
+export async function coverCandidates(deps: Deps, caller: Caller | null, data: unknown) {
   const a = await asker(deps, caller, data);
   if (Object.keys(a.input).some((k) => !['churchId', 'serviceId', 'dateKey', 'duty'].includes(k))) fail('invalid-argument', 'unknown');
   const [members, unavailable] = await Promise.all([
     deps.db.collection(`churches/${a.cid}/members`).get(),
     deps.db.collection(`churches/${a.cid}/unavailable`).get(),
   ]);
-  const asked = coverAsked(
+  const free = coverAsked(
     members.docs.map((m) => ({ ...(m.data() as Listed), uid: m.id })),
     a.serviceId,
     a.dateKey,
@@ -280,9 +318,8 @@ export async function askCover(deps: Deps & PushDeps, caller: Caller | null, dat
     a.caller.uid,
     Object.fromEntries(unavailable.docs.map((d) => [d.id, d.get('spans') as Spans | undefined ?? []])),
   );
-  const ref = await a.create({ kind: 'cover', asked, passed: [], nudged: asked.length === 0 });
-  await sendOrHold(deps, a.church, ref);
-  return { id: ref.id, asked: asked.length };
+  const named = new Map(members.docs.map((m) => [m.id, (m.get('name') as string | undefined) ?? '']));
+  return { people: free.map((uid) => ({ uid, name: named.get(uid) ?? '' })).filter((p) => p.name) };
 }
 
 /**
@@ -360,7 +397,8 @@ export async function answerSwap(deps: Deps & PushDeps, caller: Caller | null, d
     if (!asked) fail('permission-denied', 'permissionDenied');
     if (req.status !== 'open') fail('failed-precondition', 'unknown', 'swapClosed');
     if (!input.yes) {
-      tx.update(r.ref, req.kind === 'cover' ? { passed: FieldValue.arrayUnion(me) } : { status: 'declined', answeredAt: Timestamp.fromDate(deps.now()) });
+      // 請人代 leaves it to the others; one person asked (交換, 找一位同工代) ends it.
+      tx.update(r.ref, req.kind === 'cover' && !req.to ? { passed: FieldValue.arrayUnion(me) } : { status: 'declined', answeredAt: Timestamp.fromDate(deps.now()) });
       return { req, took: false, leadsNow: false, ref: r.ref };
     }
     const roster = await tx.get(rosterOf(deps, a.cid, req.rosterId));
@@ -406,10 +444,10 @@ export async function answerSwap(deps: Deps & PushDeps, caller: Caller | null, d
       link: `/rosters/${req.serviceId}/${req.kind === 'swap' ? req.toDateKey : req.dateKey}`,
     }));
     if (done.leadsNow) await tellLeads(deps, a.church, done.ref!, req);
-  } else if (req.kind === 'swap') {
+  } else if (req.kind === 'swap' || req.to) {
     await notifyMembers(deps, a.cid, [req.from], 'swap', (w) => ({
       title,
-      body: w.swapDeclined(req.toName, say(w).day, say(w).line),
+      body: req.kind === 'swap' ? w.swapDeclined(req.toName, say(w).day, say(w).line) : w.coverDeclined(req.toName, say(w).day, say(w).line),
       link: `/rosters/${req.serviceId}/${req.dateKey}`,
     }));
   }
@@ -444,7 +482,8 @@ export async function undoSwap(deps: Deps & PushDeps, caller: Caller | null, dat
     if (!asLeft) fail('failed-precondition', 'conflict');
     trade(tx, req.duty, roster, other, { uid: me, name: req.takerName }, { uid: req.from, name: req.fromName });
     const gone = { taker: FieldValue.delete(), takerName: FieldValue.delete(), leadsAt: FieldValue.delete(), leadsTold: FieldValue.delete() };
-    tx.update(r.ref, req.kind === 'cover'
+    // 請人代 opens again for the others; one person asked ends as if they had said 不方便.
+    tx.update(r.ref, req.kind === 'cover' && !req.to
       ? { ...gone, status: 'open', answeredAt: FieldValue.delete(), passed: FieldValue.arrayUnion(me) }
       : { ...gone, status: 'declined', answeredAt: Timestamp.fromDate(deps.now()) });
     return { req, ref: r.ref };
@@ -452,13 +491,15 @@ export async function undoSwap(deps: Deps & PushDeps, caller: Caller | null, dat
   const say = await readable(deps, a.cid, req);
   const title = a.church.get('name') as string;
   const back = (w: Words) =>
-    req.kind === 'cover' ? w.takenBack(req.takerName, say(w).day, say(w).line) : w.swapUndone(req.takerName, say(w).day, say(w).line);
+    req.kind === 'swap' ? w.swapUndone(req.takerName, say(w).day, say(w).line)
+    : req.to ? w.coverUndone(req.takerName, say(w).day, say(w).line)
+    : w.takenBack(req.takerName, say(w).day, say(w).line);
   await notifyMembers(deps, a.cid, [req.from], 'swap', (w) => ({ title, body: back(w), link: `/rosters/${req.serviceId}/${req.dateKey}` }));
   if (req.leadsTold) {
     const leads = (await leadsFor(deps, a.cid, req.serviceId, req.duty)).filter((u) => u !== req.from && u !== me);
     await notifyMembers(deps, a.cid, leads, 'swap', (w) => ({ title, body: back(w), link: `/rosters/${req.serviceId}/${req.dateKey}` }));
   }
-  if (req.kind === 'cover') await sendRequest(deps, a.church, await ref.get());
+  if (req.kind === 'cover' && !req.to) await sendRequest(deps, a.church, await ref.get());
   return {};
 }
 

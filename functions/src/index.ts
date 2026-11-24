@@ -255,6 +255,7 @@ export const onRosterNoteWritten = onDocumentWritten(
 export const remindAttendance = callable(attendance.remindAttendance, pushDeps);
 export const fillAttendanceTogether = callable(attendance.fillAttendanceTogether);
 export const askCover = callable(swaps.askCover, pushDeps);
+export const coverCandidates = callable(swaps.coverCandidates);
 export const askSwap = callable(swaps.askSwap, pushDeps);
 export const answerSwap = callable(swaps.answerSwap, pushDeps);
 export const undoSwap = callable(swaps.undoSwap, pushDeps);

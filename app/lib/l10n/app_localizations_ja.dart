@@ -3150,6 +3150,9 @@ class L10nJa extends L10n {
   String get errRemindedToday => '今日はすでに知らせました';
 
   @override
+  String get errCoverAway => 'その日は奉仕できない人です。ほかの人に頼んでください。';
+
+  @override
   String get errTogetherFilled => '選んだ小グループはその日の人数が記録済みです';
 
   @override
@@ -3612,6 +3615,33 @@ class L10nJa extends L10n {
 
   @override
   String get swapAskSwapSub => '日とその日の人を選び、相手が受けたら交換します';
+
+  @override
+  String get swapAskAnyone => '空いている人に頼む';
+
+  @override
+  String get swapAskOne => '一人に頼む';
+
+  @override
+  String get swapAskOneSub => 'その人だけに頼み、引き受けてもらえたら交代します';
+
+  @override
+  String swapPickCoverTitle(String day, String duty) {
+    return '$dayの$dutyを誰に頼みますか？';
+  }
+
+  @override
+  String get swapNoOne => 'リストにほかに頼める人がいません';
+
+  @override
+  String swapAskedOne(String name) {
+    return '$nameさんに頼みました。引き受けてもらえたら交代します。';
+  }
+
+  @override
+  String swapPendingOne(String name) {
+    return '$nameさんに代わりを頼んでいます。まだ返事はありません。';
+  }
 
   @override
   String swapAskedCover(int count) {

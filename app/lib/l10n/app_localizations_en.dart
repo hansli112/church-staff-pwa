@@ -3308,6 +3308,9 @@ class L10nEn extends L10n {
   String get errRemindedToday => 'Already reminded today';
 
   @override
+  String get errCoverAway => 'They can’t serve that day. Ask someone else.';
+
+  @override
   String get errTogetherFilled => 'A group you picked already has that day’s attendance';
 
   @override
@@ -3826,6 +3829,33 @@ class L10nEn extends L10n {
 
   @override
   String get swapAskSwapSub => 'Pick a day and the person on it; you swap once they accept';
+
+  @override
+  String get swapAskAnyone => 'Ask anyone free';
+
+  @override
+  String get swapAskOne => 'Ask one person';
+
+  @override
+  String get swapAskOneSub => 'Only they are asked; it’s theirs once they say I’ll do it';
+
+  @override
+  String swapPickCoverTitle(String day, String duty) {
+    return 'Who should cover $duty on $day?';
+  }
+
+  @override
+  String get swapNoOne => 'Nobody else on the list to ask';
+
+  @override
+  String swapAskedOne(String name) {
+    return 'Asked $name; it’s theirs once they say I’ll do it';
+  }
+
+  @override
+  String swapPendingOne(String name) {
+    return 'Asked $name to cover; no answer yet';
+  }
 
   @override
   String swapAskedCover(int count) {

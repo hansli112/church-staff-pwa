@@ -4,7 +4,7 @@ import { beforeEach, describe, test } from 'node:test';
 
 import { Timestamp } from 'firebase-admin/firestore';
 
-import { answerSwap, askCover, askSwap, coverAsked, sendSwapPushes, stillHolds, undoSwap, voidStaleSwaps, withdrawSwap } from '../src/swaps.js';
+import { answerSwap, askCover, askSwap, coverAsked, coverCandidates, sendSwapPushes, stillHolds, undoSwap, voidStaleSwaps, withdrawSwap } from '../src/swaps.js';
 import { caller, clearFirestore, db, deps, fakePush, rejectsWith, seedChurch, setNow, type SentPush } from './support.js';
 
 /** The rows app/test/domain/swaps_test.dart runs too: both sides must agree. */
@@ -243,6 +243,67 @@ describe('請人代 (askCover)', () => {
     setNow(new Date('2026-11-17T10:00:00+08:00'));
     await sendSwapPushes(d());
     assert.equal((await request(id)).status, 'voided');
+  });
+});
+
+const chosen = (to: string, uid = 'wang') =>
+  askCover(d(), caller(uid), { churchId: 'C1', serviceId: 'sunday', dateKey: '2026-11-15', duty: '司琴', to });
+
+describe('找一位同工代 (askCover with to)', () => {
+  test('asks that one person alone; 我來 takes it, and who asked and the lead hear', async () => {
+    await church();
+    const { id, asked } = await chosen('mei');
+    assert.equal(asked, 1);
+    assert.deepEqual(said(), [
+      ['tok-mei', '「王小明」想請你代 11/15（週日）主日崇拜 司琴', `/c/C1?to=%2Frosters%2Frequest%2F${id}`],
+    ]);
+    assert.deepEqual([(await request(id)).asked, (await request(id)).to, (await request(id)).toName], [['mei'], 'mei', '李美玉']);
+    await rejectsWith(answer(id, 'hao', true), 'permissionDenied');
+    pushed.length = 0;
+    await answer(id, 'mei', true);
+    assert.deepEqual(await pianists('2026-11-15'), duty('司琴', ['李美玉']));
+    assert.deepEqual(said().map(([t]) => t), ['tok-lead', 'tok-wang']);
+  });
+
+  test('不方便 tells who asked and closes it', async () => {
+    await church();
+    const { id } = await chosen('mei');
+    pushed.length = 0;
+    await answer(id, 'mei', false);
+    assert.equal((await request(id)).status, 'declined');
+    assert.deepEqual(said(), [['tok-wang', '「李美玉」不方便代 11/15（週日）主日崇拜 司琴', '/c/C1?to=%2Frosters%2Fsunday%2F2026-11-15']]);
+  });
+
+  test('whom to pick: those 請人代 would ask, by name; only for my own duty', async () => {
+    await church();
+    const ask = (uid: string) => coverCandidates(deps, caller(uid), { churchId: 'C1', serviceId: 'sunday', dateKey: '2026-11-15', duty: '司琴' });
+    assert.deepEqual(await ask('wang'), { people: [{ uid: 'hao', name: '陳志豪' }, { uid: 'mei', name: '李美玉' }] });
+    await db.doc('churches/C1/unavailable/mei').set({ spans: [{ from: '2026-11-15', to: '2026-11-15', note: '' }] });
+    assert.deepEqual(await ask('wang'), { people: [{ uid: 'hao', name: '陳志豪' }] });
+    await rejectsWith(ask('mei'), 'unknown');
+  });
+
+  test('only someone 請人代 would ask: on the list, not on it that day, and free', async () => {
+    await church();
+    await rejectsWith(chosen('lead'), 'unknown');
+    await rejectsWith(chosen('wang'), 'unknown');
+    await rejectsWith(chosen('nobody'), 'unknown');
+    await db.doc('churches/C1/unavailable/mei').set({ spans: [{ from: '2026-11-15', to: '2026-11-15', note: '' }] });
+    await assert.rejects(chosen('mei'), (e: { details?: { detail?: string } }) => e.details?.detail === 'away');
+    await rejectsWith(askCover(d(), caller('wang'), { churchId: 'C1', serviceId: 'sunday', dateKey: '2026-11-15', duty: '司琴', to: 5 }), 'unknown');
+    assert.equal((await db.collection('churches/C1/swapRequests').get()).size, 0);
+  });
+
+  test('復原 gives it back and ends it, and who asked hears it is theirs again', async () => {
+    await church();
+    const { id } = await chosen('mei');
+    await answer(id, 'mei', true);
+    pushed.length = 0;
+    await undoSwap(d(), caller('mei'), { churchId: 'C1', id });
+    assert.deepEqual(await pianists('2026-11-15'), duty('司琴', ['王小明']));
+    assert.equal((await request(id)).status, 'declined');
+    assert.ok(said().some(([t, body]) => t === 'tok-wang' && body === '「李美玉」取消了接手，11/15（週日）主日崇拜 司琴還是你'));
+    assert.ok(!said().some(([, body]) => body.includes('想請你代')), 'nobody else is asked');
   });
 });
 

@@ -1413,6 +1413,24 @@ void contractTests(Future<ContractWorld> Function() open) {
       return saved.duties.single.people;
     }
 
+    test('找一位同工代: whom it may ask, then the one picked alone; their 不方便 ends it', () async {
+      final (g, mine, _) = await pianists();
+      await w.signIn(Grace.meiEmail);
+      final people = await g.church.coverCandidates(mine, '司琴');
+      expect([for (final p in people) p.name], ['林同工']);
+      expect(await g.church.askCover(mine, '司琴', to: people.single.uid), 1);
+      final r = (await g.church.swaps.mineOpen().firstWhere((l) => l.isNotEmpty).timeout(wait)).single;
+      expect((r.chosen, r.toName), (true, '林同工'));
+      expect(r.asked, [people.single.uid]);
+
+      await w.signIn(Grace.editorEmail);
+      await g.church.answerSwap(r.id, yes: false);
+      expect(
+        (await g.church.swaps.request(r.id).firstWhere((x) => x!.status != SwapStatus.open).timeout(wait))!.status,
+        SwapStatus.declined,
+      );
+    });
+
     test('one asked takes a cover, and can give it back; who asked takes theirs back', () async {
       final (g, mine, _) = await pianists();
       await w.signIn(Grace.meiEmail);

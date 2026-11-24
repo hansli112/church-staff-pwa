@@ -69,6 +69,10 @@ class SwapRequest {
   String get rosterId => Roster.idFor(serviceId, day);
   String? get toRosterId => toDay == null ? null : Roster.idFor(serviceId, toDay!);
 
+  /// 找一位同工代: a 請人代 of one person, [to], whose 不方便 ends it as
+  /// 交換's does.
+  bool get chosen => kind == SwapKind.cover && to != null;
+
   /// Whether [uid] may answer it while it is open.
   bool canAnswer(String uid) => kind == SwapKind.cover ? asked.contains(uid) : to == uid;
 

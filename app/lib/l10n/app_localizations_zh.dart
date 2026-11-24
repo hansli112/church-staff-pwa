@@ -3145,6 +3145,9 @@ class L10nZh extends L10n {
   String get errRemindedToday => '今天已經提醒過了';
 
   @override
+  String get errCoverAway => '他那天不能服事，請找別人';
+
+  @override
   String get errTogetherFilled => '選的小組那天已經填了人數';
 
   @override
@@ -3608,6 +3611,33 @@ class L10nZh extends L10n {
 
   @override
   String get swapAskSwapSub => '挑一天和那天的人換，對方接受才換';
+
+  @override
+  String get swapAskAnyone => '請有空的人代';
+
+  @override
+  String get swapAskOne => '找一位同工代';
+
+  @override
+  String get swapAskOneSub => '只問他，他按「我來」才換';
+
+  @override
+  String swapPickCoverTitle(String day, String duty) {
+    return '$day的$duty請誰代？';
+  }
+
+  @override
+  String get swapNoOne => '名單上沒有別人可以問';
+
+  @override
+  String swapAskedOne(String name) {
+    return '已請「$name」代，他按「我來」才換';
+  }
+
+  @override
+  String swapPendingOne(String name) {
+    return '已請「$name」代，還沒有回應';
+  }
 
   @override
   String swapAskedCover(int count) {
@@ -6969,6 +6999,9 @@ class L10nZhHans extends L10nZh {
   String get errRemindedToday => '今天已经提醒过了';
 
   @override
+  String get errCoverAway => '他那天不能事奉，请找别人';
+
+  @override
   String get errTogetherFilled => '选的小组那天已经填了人数';
 
   @override
@@ -7432,6 +7465,33 @@ class L10nZhHans extends L10nZh {
 
   @override
   String get swapAskSwapSub => '挑一天和那天的人换，对方接受才换';
+
+  @override
+  String get swapAskAnyone => '请有空的人代';
+
+  @override
+  String get swapAskOne => '找一位同工代';
+
+  @override
+  String get swapAskOneSub => '只问他，他按“我来”才换';
+
+  @override
+  String swapPickCoverTitle(String day, String duty) {
+    return '$day的$duty请谁代？';
+  }
+
+  @override
+  String get swapNoOne => '名单上没有别人可以问';
+
+  @override
+  String swapAskedOne(String name) {
+    return '已请“$name”代，他按“我来”才换';
+  }
+
+  @override
+  String swapPendingOne(String name) {
+    return '已请“$name”代，还没有回应';
+  }
 
   @override
   String swapAskedCover(int count) {

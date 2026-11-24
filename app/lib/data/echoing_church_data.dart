@@ -267,6 +267,8 @@ class EchoingChurchData implements ChurchData {
       ),
       _ => null,
     };
+    // A read saves nothing.
+    if (call is CoverCandidates) return _inner.run(call);
     if (echo == null) return _counted(() => _inner.run(call));
     late final R answer;
     await _send(echo, () async {

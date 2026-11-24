@@ -5590,6 +5590,12 @@ abstract class L10n {
   /// **'今天已經提醒過了'**
   String get errRemindedToday;
 
+  /// 找一位同工代: the one picked marked that day as one they cannot serve
+  ///
+  /// In zh, this message translates to:
+  /// **'他那天不能服事，請找別人'**
+  String get errCoverAway;
+
   /// A 小組 picked in 和其他小組一起 already has that day's 人數
   ///
   /// In zh, this message translates to:
@@ -6333,6 +6339,48 @@ abstract class L10n {
   /// In zh, this message translates to:
   /// **'挑一天和那天的人換，對方接受才換'**
   String get swapAskSwapSub;
+
+  /// No description provided for @swapAskAnyone.
+  ///
+  /// In zh, this message translates to:
+  /// **'請有空的人代'**
+  String get swapAskAnyone;
+
+  /// 找一位同工代 (#92): a cover asked of one person alone
+  ///
+  /// In zh, this message translates to:
+  /// **'找一位同工代'**
+  String get swapAskOne;
+
+  /// No description provided for @swapAskOneSub.
+  ///
+  /// In zh, this message translates to:
+  /// **'只問他，他按「我來」才換'**
+  String get swapAskOneSub;
+
+  /// No description provided for @swapPickCoverTitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'{day}的{duty}請誰代？'**
+  String swapPickCoverTitle(String day, String duty);
+
+  /// No description provided for @swapNoOne.
+  ///
+  /// In zh, this message translates to:
+  /// **'名單上沒有別人可以問'**
+  String get swapNoOne;
+
+  /// No description provided for @swapAskedOne.
+  ///
+  /// In zh, this message translates to:
+  /// **'已請「{name}」代，他按「我來」才換'**
+  String swapAskedOne(String name);
+
+  /// No description provided for @swapPendingOne.
+  ///
+  /// In zh, this message translates to:
+  /// **'已請「{name}」代，還沒有回應'**
+  String swapPendingOne(String name);
 
   /// No description provided for @swapAskedCover.
   ///

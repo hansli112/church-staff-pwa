@@ -61,17 +61,41 @@ mixin _MemorySwaps on _MemoryChurchBase implements SwapData {
   String _nameOn(Roster roster, String duty, String uid) =>
       roster.duties.firstWhere((d) => d.role == duty).uids.entries.firstWhere((e) => e.value == uid).key;
 
-  Future<int> askCover(Roster roster, String duty) async {
+  Future<List<CoverCandidate>> coverCandidates(Roster roster, String duty) async {
+    _b.requireNetwork();
+    final (:me, :saved) = _asking(roster, duty);
+    final members = _b.members[churchId]!;
+    return [
+      for (final uid in coverAsked(
+        members.values,
+        saved,
+        duty,
+        me.uid,
+        unavailable: _b.unavailable[churchId] ?? const {},
+      ))
+        (uid: uid, name: members[uid]!.name),
+    ];
+  }
+
+  Future<int> askCover(Roster roster, String duty, {String? to}) async {
     var asked = 0;
     await _b.write(() {
       final (:me, :saved) = _asking(roster, duty);
-      final who = coverAsked(
+      var who = coverAsked(
         _b.members[churchId]!.values,
         saved,
         duty,
         me.uid,
         unavailable: _b.unavailable[churchId] ?? const {},
       );
+      // As functions/src/swaps.ts askCover: one 請人代 would ask.
+      if (to != null) {
+        if (!who.contains(to)) {
+          final anyway = coverAsked(_b.members[churchId]!.values, saved, duty, me.uid);
+          throw CloudException(CloudErrorCode.unknown, reason: anyway.contains(to) ? CloudReason.away : null);
+        }
+        who = [to];
+      }
       final id = 'swap${++_b._swapIds}';
       (_b.swapRequests[churchId] ??= {})[id] = SwapRequest(
         id: id,
@@ -82,6 +106,8 @@ mixin _MemorySwaps on _MemoryChurchBase implements SwapData {
         from: me.uid,
         fromName: _nameOn(saved, duty, me.uid),
         asked: who,
+        to: to,
+        toName: to == null ? null : _b.members[churchId]![to]!.name,
       );
       asked = who.length;
     });
@@ -134,7 +160,8 @@ mixin _MemorySwaps on _MemoryChurchBase implements SwapData {
       _openRequest(id);
       final requests = _b.swapRequests[churchId]!;
       if (!yes) {
-        requests[id] = r.kind == SwapKind.cover
+        // 請人代 leaves it to the others; one person asked ends it.
+        requests[id] = r.kind == SwapKind.cover && !r.chosen
             ? r.copyWith(passed: [...r.passed, me.uid])
             : r.copyWith(status: SwapStatus.declined);
         return;
@@ -180,9 +207,9 @@ mixin _MemorySwaps on _MemoryChurchBase implements SwapData {
       if (!swapAsTaken(r, roster, other)) throw const CloudException(CloudErrorCode.conflict);
       rosters[r.rosterId] = replacedOnDuty(roster!, r.duty, me.uid, r.from, r.fromName);
       if (other != null) rosters[other.id] = replacedOnDuty(other, r.duty, r.from, me.uid, r.toName!);
-      // 請人代 opens again, without who gave it back; 交換 ends as if they
-      // had said 不方便.
-      _b.swapRequests[churchId]![id] = r.kind == SwapKind.cover
+      // 請人代 opens again, without who gave it back; 交換 and 找一位同工代
+      // end as if they had said 不方便.
+      _b.swapRequests[churchId]![id] = r.kind == SwapKind.cover && !r.chosen
           ? r.reopened.copyWith(passed: [...r.passed, me.uid])
           : r.reopened.copyWith(status: SwapStatus.declined);
     });

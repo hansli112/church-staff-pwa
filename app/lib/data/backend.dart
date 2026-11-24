@@ -720,6 +720,10 @@ enum CloudReason {
 
   /// 聯合小組 (#93): a 小組 picked already has that day's 人數.
   togetherFilled,
+
+  /// 找一位同工代 (#92): the one asked marked that day as one they cannot
+  /// serve.
+  away,
 }
 
 class CloudException implements Exception {

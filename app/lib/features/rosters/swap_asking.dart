@@ -10,7 +10,7 @@ import 'package:material_symbols_icons/symbols.dart';
 
 import '../../core/design/components.dart';
 import '../../core/design/tokens.dart';
-import '../../data/backend.dart' show WarmUp;
+import '../../data/backend.dart' show CoverCandidate, WarmUp;
 import '../../domain/day.dart';
 import '../../domain/models.dart';
 import '../../domain/swap.dart';
@@ -35,6 +35,7 @@ SwapRequest? myOpenAsk(WidgetRef ref, Roster roster, String duty) =>
 /// the list to ask, the leads and those serving that day were told.
 String myOpenAskLabel(L10n l10n, SwapRequest r) => switch (r.kind) {
   SwapKind.cover when r.asked.isEmpty => l10n.swapToldCover,
+  SwapKind.cover when r.chosen => l10n.swapPendingOne(r.toName ?? ''),
   SwapKind.cover => l10n.swapPendingCover,
   SwapKind.swap => l10n.swapPendingSwap(r.toName ?? ''),
 };
@@ -114,8 +115,10 @@ Future<void> _asking(BuildContext context, WidgetRef ref, String key, Future<voi
   });
 }
 
-/// 找人代／交換 for my [duty] on [roster]: 請人代 or 和別週交換, or, with a
-/// request of mine still open, how it stands and 收回.
+/// 找人代／交換 for my [duty] on [roster]: 請有空的人代, 找一位同工代 or
+/// 和別週交換, or, with a request of mine still open, how it stands and
+/// 收回. The same for whoever arranges the roster: its row of mine there
+/// picks people instead.
 Future<void> showMyDutyMenu(BuildContext context, WidgetRef ref, Roster roster, String duty) async {
   // One on its way: this tap waits for it.
   if (ref.read(askingProvider).contains(_askKey(roster, duty))) return;
@@ -141,9 +144,15 @@ Future<void> showMyDutyMenu(BuildContext context, WidgetRef ref, Roster roster, 
             : [
                 ListRow(
                   leading: const Icon(Symbols.front_hand_rounded),
-                  title: l10n.swapAskCover,
+                  title: l10n.swapAskAnyone,
                   subtitle: l10n.swapAskCoverSub,
                   onTap: () => Navigator.pop(context, 'cover'),
+                ),
+                ListRow(
+                  leading: const Icon(Symbols.person_rounded),
+                  title: l10n.swapAskOne,
+                  subtitle: l10n.swapAskOneSub,
+                  onTap: () => Navigator.pop(context, 'one'),
                 ),
                 ListRow(
                   leading: const Icon(Symbols.swap_vert_rounded),
@@ -161,9 +170,47 @@ Future<void> showMyDutyMenu(BuildContext context, WidgetRef ref, Roster roster, 
       await withdrawAsk(context, ref, open!);
     case 'cover':
       await askForCover(context, ref, roster, duty);
+    case 'one':
+      await _askOne(context, ref, roster, duty);
     case 'swap':
       await _askSwap(context, ref, roster, duty);
   }
+}
+
+/// 找一位同工代: whom, among those [askCover] would ask (only the backend
+/// knows them: the list and who is away), then asked alone.
+Future<void> _askOne(BuildContext context, WidgetRef ref, Roster roster, String duty) async {
+  final l10n = L10n.of(context);
+  List<CoverCandidate>? people;
+  await _asking(context, ref, _askKey(roster, duty), () async {
+    people = await ref.churchData.coverCandidates(roster, duty);
+  });
+  final found = people;
+  if (found == null || !context.mounted) return;
+  final picked = await showAppSheet<CoverCandidate>(
+    context,
+    expand: found.length > 6,
+    builder: (context) => SafeArea(
+      child: found.isEmpty
+          ? SizedBox(height: 200, child: EmptyState(message: l10n.swapNoOne))
+          : ListView(
+              shrinkWrap: true,
+              children: [
+                ListSection(
+                  header: l10n.swapPickCoverTitle(DateFormat.MMMd().format(roster.day.midnight), duty),
+                  children: [for (final p in found) ListRow(title: p.name, onTap: () => Navigator.pop(context, p))],
+                ),
+              ],
+            ),
+    ),
+  );
+  if (picked == null || !context.mounted) return;
+  await _asking(context, ref, _askKey(roster, duty), () async {
+    await ref.churchData.askCover(roster, duty, to: picked.uid);
+    ref.read(telemetryProvider).logEvent('swap_ask', {'kind': 'one'});
+    Haptics.success();
+    if (context.mounted) showToast(context, l10n.swapAskedOne(picked.name));
+  });
 }
 
 /// 和別週交換: whom, among those on [duty] on the service's later days,
@@ -440,7 +487,7 @@ class _DayAsksState extends ConsumerState<DayAsks> {
                     title: duty,
                     chevron: false,
                     trailing: _action(l10n.swapAskCover, busy: askingFor(ref, roster, duty)),
-                    onTap: askingFor(ref, roster, duty) ? null : () => askForCover(context, ref, roster, duty),
+                    onTap: askingFor(ref, roster, duty) ? null : () => showMyDutyMenu(context, ref, roster, duty),
                   ),
             ],
           ),

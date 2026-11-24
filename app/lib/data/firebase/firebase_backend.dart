@@ -122,7 +122,7 @@ class FirebaseBackend implements Backend {
     WarmUp.dutyList => const ['setDuty'],
     WarmUp.planWeeks => const ['notifyPlanned'],
     WarmUp.ledDuties => const ['editLedDuties'],
-    WarmUp.swapAsk => const ['askCover', 'askSwap'],
+    WarmUp.swapAsk => const ['askCover', 'askSwap', 'coverCandidates'],
     WarmUp.swapAnswer => const ['answerSwap'],
     WarmUp.groupStaff => const ['setGroupMember', 'addByName'],
     WarmUp.joinAnswer => const ['answerJoinRequest'],
@@ -2056,6 +2056,7 @@ class _Callables {
   Future<Object?> call(String name, [Map<String, Object?>? data]) async {
     const reads = {
       'previewInvite',
+      'coverCandidates',
       'pendingClaims',
       'churchPreview',
       'movePreview',

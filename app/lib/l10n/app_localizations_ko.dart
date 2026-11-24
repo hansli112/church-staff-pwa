@@ -3148,6 +3148,9 @@ class L10nKo extends L10n {
   String get errRemindedToday => '오늘 이미 알렸어요';
 
   @override
+  String get errCoverAway => '그날 봉사할 수 없는 분이에요. 다른 사람에게 부탁하세요.';
+
+  @override
   String get errTogetherFilled => '선택한 소그룹은 그날 인원이 이미 기록됐어요';
 
   @override
@@ -3610,6 +3613,33 @@ class L10nKo extends L10n {
 
   @override
   String get swapAskSwapSub => '날짜와 그날의 사람을 고르면, 상대가 수락할 때 교환돼요';
+
+  @override
+  String get swapAskAnyone => '시간 되는 사람에게 부탁';
+
+  @override
+  String get swapAskOne => '한 사람에게 부탁';
+
+  @override
+  String get swapAskOneSub => '그 사람에게만 보내고, ‘제가 할게요’를 누르면 바뀌어요';
+
+  @override
+  String swapPickCoverTitle(String day, String duty) {
+    return '$day $duty을(를) 누구에게 부탁할까요?';
+  }
+
+  @override
+  String get swapNoOne => '명단에 부탁할 다른 사람이 없어요';
+
+  @override
+  String swapAskedOne(String name) {
+    return '$name 님에게 부탁했어요. ‘제가 할게요’를 누르면 바뀌어요.';
+  }
+
+  @override
+  String swapPendingOne(String name) {
+    return '$name 님에게 부탁했어요. 아직 답이 없어요.';
+  }
 
   @override
   String swapAskedCover(int count) {

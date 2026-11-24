@@ -82,18 +82,43 @@ final class NotifyPlanned extends ChurchCall<PlannedNotice> {
 }
 
 final class AskCover extends ChurchCall<int> {
-  const AskCover(this.roster, this.duty);
+  const AskCover(this.roster, this.duty, {this.to});
   final Roster roster;
   final String duty;
+
+  /// 找一位同工代: the one person asked.
+  final String? to;
 
   @override
   String get callable => 'askCover';
 
   @override
-  Map<String, Object?> get data => {'serviceId': roster.type, 'dateKey': roster.day.key, 'duty': duty};
+  Map<String, Object?> get data => {'serviceId': roster.type, 'dateKey': roster.day.key, 'duty': duty, 'to': ?to};
 
   @override
   int answer(Map<String, Object?> data) => _count(data['asked']);
+}
+
+/// One 找一位同工代 may ask: their ID and name.
+typedef CoverCandidate = ({String uid, String name});
+
+/// A read: whom 找一位同工代 may ask, which the app cannot work out itself.
+final class CoverCandidates extends ChurchCall<List<CoverCandidate>> {
+  const CoverCandidates(this.roster, this.duty);
+  final Roster roster;
+  final String duty;
+
+  @override
+  String get callable => 'coverCandidates';
+
+  @override
+  Map<String, Object?> get data => {'serviceId': roster.type, 'dateKey': roster.day.key, 'duty': duty};
+
+  @override
+  List<CoverCandidate> answer(Map<String, Object?> data) => [
+    for (final p in (data['people'] as List?) ?? const [])
+      if (p is Map && p['uid'] is String && p['name'] is String) (uid: p['uid'] as String, name: p['name'] as String),
+  ];
 }
 
 final class AskSwap extends _Write {
@@ -441,7 +466,15 @@ extension ChurchCalls on ChurchData {
   /// everyone on the duty's list free that day ([coverAsked]). How many it
   /// asked; with nobody, the leads and those serving that day are told
   /// instead and it is 0. One open request per duty and day.
-  Future<int> askCover(Roster roster, String duty) => run(AskCover(roster, duty));
+  ///
+  /// With [to], 找一位同工代: asks that one person alone, one [coverAsked]
+  /// would ask ([CloudReason.away] when they marked the day as one they
+  /// cannot serve); their 不方便 ends it.
+  Future<int> askCover(Roster roster, String duty, {String? to}) => run(AskCover(roster, duty, to: to));
+
+  /// Whom 找一位同工代 may ask for my [duty] on [roster]: those [askCover]
+  /// would ask, the ones away that day left out.
+  Future<List<CoverCandidate>> coverCandidates(Roster roster, String duty) => run(CoverCandidates(roster, duty));
 
   /// 和別週交換: my [duty] on [roster] for [uid]'s on [other], a day of the
   /// same service from tomorrow on. Asks them alone.

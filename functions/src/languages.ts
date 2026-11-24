@@ -154,6 +154,9 @@ export interface Words {
   takenBack(name: string, day: string, line: string): string;
   /** 交換 given back by [name]: [day] is who asked's again. */
   swapUndone(name: string, day: string, line: string): string;
+  /** 找一位同工代: the one asked, [name], said 不方便, or gave it back: [day] is who asked's again. */
+  coverDeclined(name: string, day: string, line: string): string;
+  coverUndone(name: string, day: string, line: string): string;
   /** To the leads: who took whose, and a cover nobody took three days before. */
   covered(day: string, line: string, from: string, taker: string): string;
   swapped(line: string, from: string, fromDay: string, to: string, toDay: string): string;
@@ -259,6 +262,8 @@ const zhHant: Words = {
   swapTaken: (name, yourDay, line) => `「${name}」和你交換了，你改成 ${yourDay}${line}`,
   takenBack: (name, day, line) => `「${name}」取消了接手 ${day}${line}，還在找人`,
   swapUndone: (name, day, line) => `「${name}」取消了交換，${day}${line}還是你`,
+  coverDeclined: (name, day, line) => `「${name}」不方便代 ${day}${line}`,
+  coverUndone: (name, day, line) => `「${name}」取消了接手，${day}${line}還是你`,
   covered: (day, line, from, taker) => `${day}${line}：「${from}」→「${taker}」`,
   swapped: (line, from, fromDay, to, toDay) => `${line}：「${from}」${fromDay}和「${to}」${toDay}交換了`,
   uncovered: (day, line) => `${day}${line}還沒人代`,
@@ -326,6 +331,8 @@ const zhHans: Words = {
   swapTaken: (name, yourDay, line) => `“${name}”和你交换了，你改成 ${yourDay}${line}`,
   takenBack: (name, day, line) => `“${name}”取消了接手 ${day}${line}，还在找人`,
   swapUndone: (name, day, line) => `“${name}”取消了交换，${day}${line}还是你`,
+  coverDeclined: (name, day, line) => `“${name}”不方便代 ${day}${line}`,
+  coverUndone: (name, day, line) => `“${name}”取消了接手，${day}${line}还是你`,
   covered: (day, line, from, taker) => `${day}${line}：“${from}”→“${taker}”`,
   swapped: (line, from, fromDay, to, toDay) => `${line}：“${from}”${fromDay}和“${to}”${toDay}交换了`,
   uncovered: (day, line) => `${day}${line}还没人代`,
@@ -396,6 +403,8 @@ const en: Words = {
   swapTaken: (name, yourDay, line) => `${name} swapped with you: you now have ${line} on ${yourDay}`,
   takenBack: (name, day, line) => `${name} can no longer cover ${line} on ${day}; still looking`,
   swapUndone: (name, day, line) => `${name} called off the swap; ${line} on ${day} is yours again`,
+  coverDeclined: (name, day, line) => `${name} can't cover ${line} on ${day}`,
+  coverUndone: (name, day, line) => `${name} can no longer cover ${line} on ${day}; it's yours again`,
   covered: (day, line, from, taker) => `${line} on ${day}: ${from} → ${taker}`,
   swapped: (line, from, fromDay, to, toDay) => `${line}: ${from} (${fromDay}) and ${to} (${toDay}) swapped`,
   uncovered: (day, line) => `Nobody has covered ${line} on ${day} yet`,
@@ -464,6 +473,8 @@ const ja: Words = {
   swapTaken: (name, yourDay, line) => `${name}さんと交換しました。あなたは${yourDay}の${line}になりました。`,
   takenBack: (name, day, line) => `${name}さんが${day}の${line}の代わりを取り消しました。引き続き探しています。`,
   swapUndone: (name, day, line) => `${name}さんが交換を取り消しました。${day}の${line}はあなたのままです。`,
+  coverDeclined: (name, day, line) => `${name}さんは${day}の${line}の代わりができません`,
+  coverUndone: (name, day, line) => `${name}さんが代わりを取り消しました。${day}の${line}はあなたのままです。`,
   covered: (day, line, from, taker) => `${day}の${line}：${from} → ${taker}`,
   swapped: (line, from, fromDay, to, toDay) => `${line}：${from}（${fromDay}）と${to}（${toDay}）が交換しました`,
   uncovered: (day, line) => `${day}の${line}はまだ代わりが見つかっていません`,
@@ -532,6 +543,8 @@ const ko: Words = {
   swapTaken: (name, yourDay, line) => `${name} 님과 교환했어요. 이제 ${yourDay} ${line}이에요.`,
   takenBack: (name, day, line) => `${name} 님이 ${day} ${line} 대신 봉사를 취소했어요. 다시 찾는 중이에요.`,
   swapUndone: (name, day, line) => `${name} 님이 교환을 취소했어요. ${day} ${line}은(는) 그대로 내 차례예요.`,
+  coverDeclined: (name, day, line) => `${name} 님은 ${day} ${line} 대신 봉사가 어려워요`,
+  coverUndone: (name, day, line) => `${name} 님이 대신 봉사를 취소했어요. ${day} ${line}은(는) 그대로 내 차례예요.`,
   covered: (day, line, from, taker) => `${day} ${line}: ${from} → ${taker}`,
   swapped: (line, from, fromDay, to, toDay) => `${line}: ${from}(${fromDay})와 ${to}(${toDay})가 교환했어요`,
   uncovered: (day, line) => `${day} ${line}은(는) 아직 대신할 사람이 없어요`,
