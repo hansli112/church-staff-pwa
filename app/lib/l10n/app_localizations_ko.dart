@@ -3781,4 +3781,28 @@ class L10nKo extends L10n {
 
   @override
   String get servicePartNone => '없음';
+
+  @override
+  String get noService => '모임 없음';
+
+  @override
+  String get noServiceDay => '이날은 모임 없음';
+
+  @override
+  String noServiceAsk(String day) {
+    return '$day에 모임이 없나요?';
+  }
+
+  @override
+  String noServiceTold(int count) {
+    return '배정된 $count명에게 알림이 갑니다';
+  }
+
+  @override
+  String noServiceDone(String day) {
+    return '$day 모임 없음';
+  }
+
+  @override
+  String get restoreService => '모임 되돌리기';
 }

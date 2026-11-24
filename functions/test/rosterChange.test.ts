@@ -44,11 +44,17 @@ async function write(
   cid: string,
   day: string,
   duties: ReturnType<typeof duty>[],
-  opts: { via?: string; editedBy?: string } = {},
+  opts: { via?: string; editedBy?: string; noService?: boolean } = {},
 ) {
   const ref = db.doc(`churches/${cid}/rosters/${day}_sunday`);
   const before = await ref.get();
-  await ref.set({ type: 'sunday', dateKey: day, duties, ...(opts.via ? { via: opts.via } : {}) });
+  await ref.set({
+    type: 'sunday',
+    dateKey: day,
+    duties,
+    ...(opts.via ? { via: opts.via } : {}),
+    ...(opts.noService ? { noService: true } : {}),
+  });
   return onRosterWritten(triggerDeps(), cid, before, await ref.get(), opts.editedBy ?? 'pastor', `ev${++n}`);
 }
 
@@ -154,6 +160,14 @@ describe('push', () => {
     await write('C1', '2026-10-04', [duty('司琴', ['美玉'])]);
     await write('C1', '2026-10-04', [duty('司琴', ['志豪'])]);
     assert.equal(pushed.at(-1)!.body, '你被移出 10/4 主日崇拜：司琴');
+  });
+
+  test('沒有聚會: everyone taken off hears the day has no meeting', async () => {
+    await church();
+    await write('C1', '2026-10-04', [duty('司琴', ['美玉']), duty('招待', ['志豪'])]);
+    pushed.length = 0;
+    await write('C1', '2026-10-04', [duty('司琴', []), duty('招待', [])], { noService: true });
+    assert.deepEqual(pushed.map((p) => p.body).sort(), ['10/4 主日崇拜 沒有聚會', '10/4 主日崇拜 沒有聚會']);
   });
 
   test("each in the language their app shows; the church's names as typed", async () => {

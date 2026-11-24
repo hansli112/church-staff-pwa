@@ -3783,4 +3783,28 @@ class L10nJa extends L10n {
 
   @override
   String get servicePartNone => 'なし';
+
+  @override
+  String get noService => '集会なし';
+
+  @override
+  String get noServiceDay => 'この日は集会なし';
+
+  @override
+  String noServiceAsk(String day) {
+    return '$dayは集会なし？';
+  }
+
+  @override
+  String noServiceTold(int count) {
+    return '割り当て済みの $count 人に通知されます';
+  }
+
+  @override
+  String noServiceDone(String day) {
+    return '$dayは集会なし';
+  }
+
+  @override
+  String get restoreService => '集会を戻す';
 }

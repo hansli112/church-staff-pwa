@@ -102,6 +102,8 @@ export interface Words {
   eventMoved(title: string, day: string): string;
   putOn(day: string, duties: string[]): string;
   takenOff(day: string, duties: string[]): string;
+  /** [day] (date and service) has no meeting: the people who were on it. */
+  noService(day: string): string;
   /**
    * 安排服事's 通知同工 (rosterChange.ts): one push to a person for every
    * day of [service] they were put on ([on]) or taken off ([off]), each
@@ -218,6 +220,7 @@ const zhHant: Words = {
   eventMoved: (title, day) => `「${title}」改到 ${day}`,
   putOn: (day, duties) => `你被排進 ${day}：${duties.join('、')}`,
   takenOff: (day, duties) => `你被移出 ${day}：${duties.join('、')}`,
+  noService: (day) => `${day} 沒有聚會`,
   planned: (service, on, off) => [`${service}的服事排好了`, ...on.map((l) => `排進 ${l}`), ...off.map((l) => `移出 ${l}`)].join('\n'),
   familyAsked: (name) => `「${name}」想加你為家人`,
   familyPutOn: (who, day, duties) => `「${who}」被排進 ${day}：${duties.join('、')}`,
@@ -284,6 +287,7 @@ const zhHans: Words = {
   eventMoved: (title, day) => `“${title}”改到 ${day}`,
   putOn: (day, duties) => `你被排入 ${day}：${duties.join('、')}`,
   takenOff: (day, duties) => `你被移出 ${day}：${duties.join('、')}`,
+  noService: (day) => `${day} 没有聚会`,
   planned: (service, on, off) => [`${service}的事奉排好了`, ...on.map((l) => `排入 ${l}`), ...off.map((l) => `移出 ${l}`)].join('\n'),
   familyAsked: (name) => `“${name}”想加你为家人`,
   familyPutOn: (who, day, duties) => `“${who}”被排入 ${day}：${duties.join('、')}`,
@@ -350,6 +354,7 @@ const en: Words = {
   eventMoved: (title, day) => `${title} moved to ${day}`,
   putOn: (day, duties) => `You’re on ${day}: ${duties.join(', ')}`,
   takenOff: (day, duties) => `You’re no longer on ${day}: ${duties.join(', ')}`,
+  noService: (day) => `No service on ${day}`,
   planned: (service, on, off) => [`${service}: your serving is arranged`, ...on.map((l) => `On ${l}`), ...off.map((l) => `Off ${l}`)].join('\n'),
   familyAsked: (name) => `${name} wants to add you as family`,
   familyPutOn: (who, day, duties) => `${who} is on ${day}: ${duties.join(', ')}`,
@@ -420,6 +425,7 @@ const ja: Words = {
   eventMoved: (title, day) => `${title}の日程が${day}に変更されました`,
   putOn: (day, duties) => `${day}の担当になりました：${duties.join('、')}`,
   takenOff: (day, duties) => `${day}の担当から外れました：${duties.join('、')}`,
+  noService: (day) => `${day}は集会なしになりました`,
   planned: (service, on, off) => [`${service}の奉仕が決まりました`, ...on.map((l) => `担当 ${l}`), ...off.map((l) => `解除 ${l}`)].join('\n'),
   familyAsked: (name) => `${name}さんが家族に追加したいと言っています`,
   familyPutOn: (who, day, duties) => `${who}さんが${day}の担当になりました：${duties.join('、')}`,
@@ -485,6 +491,7 @@ const ko: Words = {
   eventMoved: (title, day) => `${title} 일정 변경: ${day}`,
   putOn: (day, duties) => `${day} 봉사에 배정됐어요: ${duties.join(', ')}`,
   takenOff: (day, duties) => `${day} 봉사에서 빠졌어요: ${duties.join(', ')}`,
+  noService: (day) => `${day} 모임이 없어요`,
   planned: (service, on, off) => [`${service} 봉사가 정해졌어요`, ...on.map((l) => `배정 ${l}`), ...off.map((l) => `제외 ${l}`)].join('\n'),
   familyAsked: (name) => `${name} 님이 가족으로 추가하려고 해요`,
   familyPutOn: (who, day, duties) => `${who} 님이 ${day} 봉사에 배정됐어요: ${duties.join(', ')}`,

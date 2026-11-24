@@ -746,6 +746,7 @@ class Roster {
     this.events = const [],
     this.saved = true,
     this.forEvent,
+    this.noService = false,
   });
 
   /// Document ID: one roster per service per day.
@@ -774,6 +775,10 @@ class Roster {
   /// The calendar event this roster belongs to, for a 活動的服事表.
   final RosterEvent? forEvent;
 
+  /// 這天沒有聚會: a service's day with no meeting, its people taken off;
+  /// kept, greyed, rather than gone, so it does not look missed.
+  final bool noService;
+
   bool get isEvent => forEvent != null;
 
   /// The last day it is on: an event's last, a service's only.
@@ -785,6 +790,7 @@ class Roster {
     Day? day,
     bool? saved,
     RosterEvent? forEvent,
+    bool? noService,
   }) => Roster(
     type: type,
     day: day ?? this.day,
@@ -792,6 +798,7 @@ class Roster {
     events: events ?? this.events,
     saved: saved ?? this.saved,
     forEvent: forEvent ?? this.forEvent,
+    noService: noService ?? this.noService,
   );
 
   /// Duties explicitly bound to [uid]. Unbound names are guests, never a
@@ -810,6 +817,7 @@ class Roster {
       other.day == day &&
       other.saved == saved &&
       other.forEvent == forEvent &&
+      other.noService == noService &&
       listEquals(other.duties, duties) &&
       listEquals(other.events, events);
 
@@ -819,6 +827,7 @@ class Roster {
     day,
     saved,
     forEvent,
+    noService,
     Object.hashAll(duties),
     Object.hashAll(events),
   );

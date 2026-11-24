@@ -4016,4 +4016,34 @@ class L10nEn extends L10n {
 
   @override
   String get servicePartNone => 'None';
+
+  @override
+  String get noService => 'No service';
+
+  @override
+  String get noServiceDay => 'No service this day';
+
+  @override
+  String noServiceAsk(String day) {
+    return 'No service on $day?';
+  }
+
+  @override
+  String noServiceTold(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'The $count people on it will be notified',
+      one: 'The 1 person on it will be notified',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String noServiceDone(String day) {
+    return 'No service on $day';
+  }
+
+  @override
+  String get restoreService => 'Restore service';
 }

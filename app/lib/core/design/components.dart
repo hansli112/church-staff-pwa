@@ -1380,16 +1380,29 @@ class _AppSheetRoute<T> extends ModalBottomSheetRoute<T> {
 /// Asks before something that cannot be taken back but destroys nothing,
 /// such as sending a push to many (通知同工填, #91): on iPhone from below, as
 /// [_confirmDiscard] asks, elsewhere as a dialog. True to go ahead.
+/// [destructive]: [action] in red, as 沒有聚會, which takes everyone off.
 Future<bool> confirmAction(
   BuildContext context, {
   required String title,
+  String? message,
   required String action,
   required String cancel,
+  bool destructive = false,
 }) async {
   if (Theme.of(context).platform != TargetPlatform.iOS) {
-    return await askChoice(context, title: title, yes: action, no: cancel) ?? false;
+    if (destructive) {
+      return confirmDestructive(context, title: title, message: message, action: action, cancel: cancel);
+    }
+    return await askChoice(context, title: title, message: message, yes: action, no: cancel) ?? false;
   }
-  return _askFromBelow(context, title: title, action: action, cancel: cancel);
+  return _askFromBelow(
+    context,
+    title: title,
+    message: message,
+    action: action,
+    cancel: cancel,
+    destructive: destructive,
+  );
 }
 
 /// Asks whether to discard a sheet's unsaved changes: on iPhone from below,
@@ -1420,6 +1433,7 @@ Future<bool> _confirmDiscard(BuildContext context) async {
 Future<bool> _askFromBelow(
   BuildContext context, {
   required String title,
+  String? message,
   required String action,
   required String cancel,
   bool destructive = false,
@@ -1428,6 +1442,7 @@ Future<bool> _askFromBelow(
     context: context,
     builder: (context) => CupertinoActionSheet(
       title: Text(title),
+      message: message == null ? null : Text(message),
       actions: [
         CupertinoActionSheetAction(
           isDestructiveAction: destructive,

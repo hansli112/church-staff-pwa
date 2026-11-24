@@ -6603,6 +6603,42 @@ abstract class L10n {
   /// In zh, this message translates to:
   /// **'沒有'**
   String get servicePartNone;
+
+  /// No description provided for @noService.
+  ///
+  /// In zh, this message translates to:
+  /// **'沒有聚會'**
+  String get noService;
+
+  /// A day's page: the row at the bottom that marks the day as having no meeting
+  ///
+  /// In zh, this message translates to:
+  /// **'這天沒有聚會'**
+  String get noServiceDay;
+
+  /// No description provided for @noServiceAsk.
+  ///
+  /// In zh, this message translates to:
+  /// **'{day}沒有聚會？'**
+  String noServiceAsk(String day);
+
+  /// No description provided for @noServiceTold.
+  ///
+  /// In zh, this message translates to:
+  /// **'已經排的 {count} 位會收到通知'**
+  String noServiceTold(int count);
+
+  /// No description provided for @noServiceDone.
+  ///
+  /// In zh, this message translates to:
+  /// **'{day}沒有聚會'**
+  String noServiceDone(String day);
+
+  /// No description provided for @restoreService.
+  ///
+  /// In zh, this message translates to:
+  /// **'恢復聚會'**
+  String get restoreService;
 }
 
 class _L10nDelegate extends LocalizationsDelegate<L10n> {

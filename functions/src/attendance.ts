@@ -213,7 +213,8 @@ async function dueOn(deps: { db: PushDeps['db'] }, cid: string, day: string): Pr
       key: `service:${s.id}`,
       name: s.name ?? '',
       leads: { field: 'leadTypes' as const, id: s.id },
-      meets: serviceMeets(weekdaysOf(s), rosters[i].exists, states[i]?.data()),
+      // 沒有聚會 (noService): no 人數 to fill in.
+      meets: serviceMeets(weekdaysOf(s), rosters[i].exists && rosters[i].get('noService') !== true, states[i]?.data()),
     })),
     // A deleted service's 小組 went with it.
     ...smallGroups.docs.filter((g) => kept.some((s) => s.id === g.get('service'))).map((g) => ({

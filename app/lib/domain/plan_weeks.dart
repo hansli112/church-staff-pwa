@@ -54,6 +54,8 @@ List<({Day month, List<Roster> days})> planMonths({
 bool monthArranged(Iterable<Roster> days, Arranges arranges) {
   var any = false;
   for (final day in days) {
+    // 沒有聚會: nobody to arrange.
+    if (day.noService) continue;
     for (final d in day.duties) {
       if (!arranges.has(d.role)) continue;
       if (d.people.isEmpty) return false;

@@ -219,6 +219,57 @@ void main() {
     });
   });
 
+  group('沒有聚會', () {
+    testWidgets('a day marked as having no meeting asks first, takes everyone off, and comes back empty', (
+      tester,
+    ) async {
+      final b = seededChurch(as: pastor);
+      await pumpApp(tester, b);
+      await go(tester, '/rosters/sunday/2026-10-04');
+      await tester.scrollUntilVisible(find.text('這天沒有聚會'), 300);
+      await tapText(tester, '這天沒有聚會');
+      expect(find.text('10月4日沒有聚會？'), findsOneWidget);
+      expect(find.textContaining('位會收到通知'), findsOneWidget);
+      await tapText(tester, '取消');
+      expect(b.rosters['grace']!['2026-10-04_sunday']!.noService, isFalse);
+
+      await tapText(tester, '這天沒有聚會');
+      await tapText(tester, '沒有聚會');
+      final day = b.rosters['grace']!['2026-10-04_sunday']!;
+      expect(day.noService, isTrue);
+      expect(day.duties.every((d) => d.people.isEmpty), isTrue, reason: 'everyone taken off, and so told');
+      expect(find.text('10月4日沒有聚會'), findsOneWidget, reason: 'with 復原');
+      expect(find.text('新增服事項目'), findsNothing);
+      expect(find.text('恢復聚會'), findsOneWidget);
+
+      await tapText(tester, '恢復聚會');
+      expect(b.rosters['grace']!['2026-10-04_sunday']!.noService, isFalse);
+      expect(find.text('新增服事項目'), findsOneWidget);
+      expect(find.text('待定'), findsWidgets, reason: 'back with nobody on it');
+    });
+
+    testWidgets('a day with nobody on it is marked at once; the 服事表 tab and its table say 沒有聚會', (tester) async {
+      final b = seededChurch(as: pastor);
+      await pumpApp(tester, b);
+      await go(tester, '/rosters/sunday/2026-10-18');
+      await tester.scrollUntilVisible(find.text('這天沒有聚會'), 300);
+      await tapText(tester, '這天沒有聚會');
+      expect(find.textContaining('位會收到通知'), findsNothing);
+      expect(b.rosters['grace']!['2026-10-18_sunday']!.noService, isTrue);
+      expect(find.text('沒有聚會'), findsOneWidget);
+    });
+
+    testWidgets('staff see 沒有聚會 on the day, with nothing to change', (tester) async {
+      final b = seededChurch(as: staffMei);
+      b.rosters['grace']!['2026-10-04_sunday'] = Roster(type: 'sunday', day: Day(2026, 10, 4), noService: true);
+      await pumpApp(tester, b);
+      expect(findDay('10月4日'), findsNothing, reason: 'no longer one of my services');
+      await go(tester, '/rosters/sunday/2026-10-04');
+      expect(find.text('沒有聚會'), findsOneWidget);
+      expect(find.text('恢復聚會'), findsNothing);
+    });
+  });
+
   group('arranging', () {
     testWidgets('picker lists who is on the day first, then the rest who serve the duty', (tester) async {
       final b = seededChurch();

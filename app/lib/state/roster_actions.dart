@@ -293,6 +293,16 @@ class RosterActions {
     return _writes.rosters(RosterChange(before: {roster.id: _persisted(roster)}, after: {next.id: next}));
   }
 
+  /// 這天沒有聚會 ([off]), its people taken off (and told), or 恢復聚會:
+  /// its duties back, with nobody on them.
+  ChurchWrite setNoService(Roster roster, bool off) {
+    final next = roster.copyWith(
+      noService: off,
+      duties: off ? [for (final d in roster.duties) Duty(role: d.role, people: const [])] : null,
+    );
+    return _writes.rosters(RosterChange(before: {roster.id: _persisted(roster)}, after: {next.id: next}));
+  }
+
   /// Swaps two people in [role] in one batch; undo puts both days' [role]
   /// back, also in one batch.
   ChurchWrite swap(String role, SwapSide a, SwapSide b, {RosterVia via = RosterVia.app}) {

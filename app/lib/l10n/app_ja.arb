@@ -1107,5 +1107,11 @@
   "myFamilyServicesTitle": "自分と家族のこれからの奉仕",
   "serviceDutyCount": "{count}件",
   "serviceItemCount": "{count}件",
-  "servicePartNone": "なし"
+  "servicePartNone": "なし",
+  "noService": "集会なし",
+  "noServiceDay": "この日は集会なし",
+  "noServiceAsk": "{day}は集会なし？",
+  "noServiceTold": "割り当て済みの {count} 人に通知されます",
+  "noServiceDone": "{day}は集会なし",
+  "restoreService": "集会を戻す"
 }

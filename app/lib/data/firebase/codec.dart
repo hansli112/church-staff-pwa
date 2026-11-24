@@ -556,6 +556,7 @@ Roster? rosterFromJson(Json data) {
       if (data['events'] is List)
         for (final e in data['events'] as List<dynamic>) ?_event(e),
     ],
+    noService: data['noService'] == true,
   );
 }
 
@@ -588,6 +589,7 @@ Json rosterToJson(Roster r) => {
       },
   ],
   'events': [for (final e in r.events) _eventToJson(e)],
+  if (r.noService) 'noService': true,
 };
 
 Invite inviteFromJson(String code, Json data) => Invite(

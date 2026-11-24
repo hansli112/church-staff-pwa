@@ -93,6 +93,8 @@ export interface RosterChange extends DutyDiff {
   via: Via;
   /** Who made the change (a member); null for the backend itself. */
   editor: { uid: string; name: string | null } | null;
+  /** The day was just marked 沒有聚會: those taken off hear that instead. */
+  noService: boolean;
 }
 
 /**
@@ -140,6 +142,7 @@ export async function readRosterChange(
     // import removes days no push announced, so none announces their going.
     via: viaOf(doc?.get('via')),
     editor: editedBy ? { uid: editedBy, name: (editor?.get('name') as string | undefined) || null } : null,
+    noService: after?.get('noService') === true && before?.get('noService') !== true,
   };
 }
 
@@ -163,6 +166,8 @@ interface News {
   movedTo: string | null;
   added: string[];
   removed: string[];
+  /** Taken off as the day has no meeting (沒有聚會). */
+  noService?: boolean;
 }
 
 /** The roster day a push is about: its church, its link, how it reads. */
@@ -203,7 +208,9 @@ async function tell(deps: PushDeps, day: PushDay, uid: string, news: News, excep
   if (news.added.length) {
     sent += await push((w, who) => (who ? w.familyPutOn(who, label(w), news.added) : w.putOn(label(w), news.added)));
   }
-  if (news.removed.length) {
+  if (news.removed.length && news.noService) {
+    sent += await push((w) => w.noService(label(w)));
+  } else if (news.removed.length) {
     sent += await push((w, who) => (who ? w.familyTakenOff(who, label(w), news.removed) : w.takenOff(label(w), news.removed)));
   }
   return sent;
@@ -285,7 +292,10 @@ export async function pushRosterChange(deps: PushDeps & Pick<Deps, 'now'>, c: Ro
   };
   if (c.event && c.movedFrom) for (const uid of c.holders.keys()) of(uid).movedTo = c.dateKey;
   for (const [uid, roles] of c.added) of(uid).added = roles;
-  for (const [uid, roles] of c.removed) of(uid).removed = roles;
+  for (const [uid, roles] of c.removed) {
+    of(uid).removed = roles;
+    of(uid).noService = c.noService;
+  }
 
   // Told now, or the editor's own: what 通知同工 tells later leaves it out.
   for (const [uid, p] of await waitingFor(deps, 'plannedPushes', c)) {

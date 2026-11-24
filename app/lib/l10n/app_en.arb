@@ -1107,5 +1107,11 @@
   "myFamilyServicesTitle": "Upcoming for You and Family",
   "serviceDutyCount": "{count, plural, =1{1 role} other{{count} roles}}",
   "serviceItemCount": "{count}",
-  "servicePartNone": "None"
+  "servicePartNone": "None",
+  "noService": "No service",
+  "noServiceDay": "No service this day",
+  "noServiceAsk": "No service on {day}?",
+  "noServiceTold": "{count, plural, =1{The 1 person on it will be notified} other{The {count} people on it will be notified}}",
+  "noServiceDone": "No service on {day}",
+  "restoreService": "Restore service"
 }

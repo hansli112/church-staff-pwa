@@ -111,6 +111,34 @@ class _Saver implements FileSaver {
 }
 
 void main() {
+  testWidgets('a day with no meeting is 沒有聚會 across its row, nothing to pick, and left out of the picture', (
+    tester,
+  ) async {
+    final saver = _Saver();
+    final b = seededChurch();
+    b.rosters['grace']!['2026-10-11_sunday'] = Roster(
+      type: 'sunday',
+      day: Day(2026, 10, 11),
+      duties: const [Duty(role: '司琴')],
+      noService: true,
+    );
+    await pumpApp(tester, b, overrides: [fileSaverProvider.overrideWithValue(saver)]);
+    await go(tester, '/rosters/plan/sunday');
+    expect(find.text('沒有聚會'), findsOneWidget);
+    await tester.tap(find.text('沒有聚會'));
+    await settle(tester);
+    expect(find.text('恢復聚會'), findsOneWidget, reason: 'its day opens, where it is undone');
+    Navigator.of(tester.element(find.text('恢復聚會'))).pop();
+    await settle(tester);
+    await tester.tap(find.byIcon(Symbols.more_horiz_rounded));
+    await settle(tester);
+    await tester.tap(find.text('分享成圖片'));
+    await settle(tester);
+    final picture = find.byType(RosterImage);
+    expect(find.descendant(of: picture, matching: find.text('10月11日')), findsNothing);
+    expect(find.descendant(of: picture, matching: find.text('10月4日')), findsOneWidget);
+  });
+
   testWidgets('⋯ 分享成圖片: a month of the roster as a picture, the months around it a tap away', (tester) async {
     final saver = _Saver();
     await pumpApp(tester, seededChurch(), overrides: [fileSaverProvider.overrideWithValue(saver)]);

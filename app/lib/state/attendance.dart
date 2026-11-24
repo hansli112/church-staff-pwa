@@ -62,7 +62,8 @@ List<AttendanceGroup> attendanceGroupsOf({
 }) {
   final held = {
     for (final r in rosters)
-      if (!r.isEvent) (r.type, r.day),
+      // 沒有聚會: no 人數 to fill in.
+      if (!r.isEvent && !r.noService) (r.type, r.day),
   };
   return [
     for (final s in services)

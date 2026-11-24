@@ -2516,5 +2516,15 @@
   "serviceItemCount": "{count} 個",
   "@serviceItemCount": {"description": "On a service's page, beside 事工, 常用特別活動 or 小組: how many it has; the row opens them", "placeholders": {"count": {"type": "int"}}},
   "servicePartNone": "沒有",
-  "@servicePartNone": {"description": "On a service's page, beside 服事項目, 事工, 常用特別活動 or 小組 when it has none"}
+  "@servicePartNone": {"description": "On a service's page, beside 服事項目, 事工, 常用特別活動 or 小組 when it has none"},
+  "noService": "沒有聚會",
+  "noServiceDay": "這天沒有聚會",
+  "@noServiceDay": {"description": "A day's page: the row at the bottom that marks the day as having no meeting"},
+  "noServiceAsk": "{day}沒有聚會？",
+  "@noServiceAsk": {"placeholders": {"day": {"type": "String"}}},
+  "noServiceTold": "已經排的 {count} 位會收到通知",
+  "@noServiceTold": {"placeholders": {"count": {"type": "int"}}},
+  "noServiceDone": "{day}沒有聚會",
+  "@noServiceDone": {"placeholders": {"day": {"type": "String"}}},
+  "restoreService": "恢復聚會"
 }

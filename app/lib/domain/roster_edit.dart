@@ -164,7 +164,7 @@ List<SwapSide> swapTargets(
 /// Whether [role] on [from] can be traded with [to] (#90): another day
 /// that has the duty, with other people on it, or nobody.
 bool canSwapDuty(String role, Roster from, Roster to) {
-  if (from.day == to.day) return false;
+  if (from.day == to.day || from.noService || to.noService) return false;
   final a = from.duties.where((d) => d.role == role).firstOrNull;
   final b = to.duties.where((d) => d.role == role).firstOrNull;
   return a != null && b != null && !setEquals(a.people.toSet(), b.people.toSet());

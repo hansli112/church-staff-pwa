@@ -178,6 +178,9 @@ const _rosterKeys = {
   'emptySlot',
   'rosterNote',
   'addRosterNote',
+  'noService',
+  'noServiceDay',
+  'restoreService',
 };
 
 const _churchInfoKeys = {

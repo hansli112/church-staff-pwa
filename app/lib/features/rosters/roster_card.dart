@@ -202,54 +202,66 @@ class RosterDayView extends ConsumerWidget {
                   ],
                 ),
                 const SizedBox(height: Space.s),
-                for (final duty in shownDuties(ref, roster))
-                  _myDuty(
-                    context,
-                    duty,
-                    Padding(
-                      padding: const EdgeInsets.symmetric(vertical: 3),
-                      child: Row(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          SizedBox(
-                            width: 96,
-                            child: Text(
-                              duty.role,
-                              style: AppText.subheadline.copyWith(
-                                color: c.secondaryLabel,
+                if (roster.noService)
+                  Padding(
+                    padding: const EdgeInsets.symmetric(vertical: 3),
+                    child: Row(
+                      children: [
+                        Icon(Symbols.event_busy_rounded, size: 20, color: c.secondaryLabel),
+                        const SizedBox(width: Space.s),
+                        Text(l10n.noService, style: AppText.body.copyWith(color: c.secondaryLabel)),
+                      ],
+                    ),
+                  )
+                else
+                  for (final duty in shownDuties(ref, roster))
+                    _myDuty(
+                      context,
+                      duty,
+                      Padding(
+                        padding: const EdgeInsets.symmetric(vertical: 3),
+                        child: Row(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            SizedBox(
+                              width: 96,
+                              child: Text(
+                                duty.role,
+                                style: AppText.subheadline.copyWith(
+                                  color: c.secondaryLabel,
+                                ),
                               ),
                             ),
-                          ),
-                          const SizedBox(width: Space.s),
-                          Expanded(
-                            child: duty.people.isEmpty
-                                ? Text(
-                                    l10n.nobodyYet,
-                                    style: AppText.body.copyWith(
-                                      color: c.secondaryLabel,
-                                    ),
-                                  )
-                                : Text.rich(
-                                    TextSpan(
-                                      children: [
-                                        for (final (i, name) in duty.people.indexed) ...[
-                                          if (i > 0) TextSpan(text: l10n.listSeparator),
-                                          TextSpan(
-                                            text: name,
-                                            style: _isMe(duty, name)
-                                                ? const TextStyle(fontWeight: FontWeight.w700)
-                                                : null,
-                                          ),
+                            const SizedBox(width: Space.s),
+                            Expanded(
+                              child: duty.people.isEmpty
+                                  ? Text(
+                                      l10n.nobodyYet,
+                                      style: AppText.body.copyWith(
+                                        color: c.secondaryLabel,
+                                      ),
+                                    )
+                                  : Text.rich(
+                                      TextSpan(
+                                        children: [
+                                          for (final (i, name) in duty.people.indexed) ...[
+                                            if (i > 0) TextSpan(text: l10n.listSeparator),
+                                            TextSpan(
+                                              text: name,
+                                              style: _isMe(duty, name)
+                                                  ? const TextStyle(fontWeight: FontWeight.w700)
+                                                  : null,
+                                            ),
+                                          ],
                                         ],
-                                      ],
+                                      ),
+                                      style: AppText.body.copyWith(color: past ? c.secondaryLabel : null),
                                     ),
-                                    style: AppText.body.copyWith(color: past ? c.secondaryLabel : null),
-                                  ),
-                          ),
-                        ],
+                            ),
+                          ],
+                        ),
                       ),
                     ),
-                  ),
               ],
             ),
           ),

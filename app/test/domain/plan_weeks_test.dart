@@ -2,6 +2,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:martha/domain/day.dart';
 import 'package:martha/domain/models.dart';
 import 'package:martha/domain/plan_weeks.dart';
+import 'package:martha/domain/roster_edit.dart';
 import 'package:martha/domain/serving_around.dart';
 
 const sunday = Service(id: 'sunday', name: '主日崇拜', weekdays: [DateTime.sunday], duties: ['司會', '司琴', '招待']);
@@ -34,6 +35,16 @@ void main() {
       expect(monthArranged(gap, const Arranges.only({'招待'})), isTrue, reason: 'only the duties I arrange');
       expect(monthArranged(gap, const Arranges.only({'敬拜'})), isFalse, reason: 'none of mine: nothing arranged');
       expect(monthArranged(const [], const Arranges.all()), isFalse);
+      final off = [
+        ...full,
+        day(12, 20, const [Duty(role: '司琴')]).copyWith(noService: true),
+      ];
+      expect(monthArranged(off, const Arranges.all()), isTrue, reason: 'a day with no meeting has nobody to arrange');
+      expect(
+        canSwapDuty('司琴', full.first, off.last),
+        isFalse,
+        reason: 'nobody is moved onto a day with no meeting',
+      );
     });
 
     test('the days by month: every one on the weekday, and others saved, from today on', () {

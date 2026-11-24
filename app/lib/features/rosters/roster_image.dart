@@ -98,8 +98,9 @@ class _RosterImageSheetState extends ConsumerState<_RosterImageSheet> {
         for (final r
             in planMonths(service: service, saved: saved, today: _month, month: _month, months: 1).firstOrNull?.days ??
                 const <Roster>[])
-          // A day gone by that nobody arranged is no row of empty cells.
-          if (!r.day.isBefore(today) || savedIds.contains(r.id)) r,
+          // A day gone by that nobody arranged is no row of empty cells;
+          // a day with no meeting, none at all.
+          if (!r.noService && (!r.day.isBefore(today) || savedIds.contains(r.id))) r,
     ];
     final duties = service == null ? const <String>[] : planDuties(service, days, arranges);
     final title = l10n.rosterImageTitle(service?.name ?? '', monthName);

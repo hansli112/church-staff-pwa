@@ -1107,5 +1107,11 @@
   "myFamilyServicesTitle": "나와 가족의 다가오는 봉사",
   "serviceDutyCount": "{count}개",
   "serviceItemCount": "{count}개",
-  "servicePartNone": "없음"
+  "servicePartNone": "없음",
+  "noService": "모임 없음",
+  "noServiceDay": "이날은 모임 없음",
+  "noServiceAsk": "{day}에 모임이 없나요?",
+  "noServiceTold": "배정된 {count}명에게 알림이 갑니다",
+  "noServiceDone": "{day} 모임 없음",
+  "restoreService": "모임 되돌리기"
 }

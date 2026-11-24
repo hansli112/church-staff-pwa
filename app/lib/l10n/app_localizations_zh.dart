@@ -3778,6 +3778,30 @@ class L10nZh extends L10n {
 
   @override
   String get servicePartNone => '沒有';
+
+  @override
+  String get noService => '沒有聚會';
+
+  @override
+  String get noServiceDay => '這天沒有聚會';
+
+  @override
+  String noServiceAsk(String day) {
+    return '$day沒有聚會？';
+  }
+
+  @override
+  String noServiceTold(int count) {
+    return '已經排的 $count 位會收到通知';
+  }
+
+  @override
+  String noServiceDone(String day) {
+    return '$day沒有聚會';
+  }
+
+  @override
+  String get restoreService => '恢復聚會';
 }
 
 /// The translations for Chinese, using the Han script (`zh_Hans`).
@@ -7554,4 +7578,28 @@ class L10nZhHans extends L10nZh {
 
   @override
   String get servicePartNone => '没有';
+
+  @override
+  String get noService => '没有聚会';
+
+  @override
+  String get noServiceDay => '这天没有聚会';
+
+  @override
+  String noServiceAsk(String day) {
+    return '$day没有聚会？';
+  }
+
+  @override
+  String noServiceTold(int count) {
+    return '已经排的 $count 位会收到通知';
+  }
+
+  @override
+  String noServiceDone(String day) {
+    return '$day没有聚会';
+  }
+
+  @override
+  String get restoreService => '恢复聚会';
 }

@@ -3,6 +3,8 @@ import 'dart:async';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:intl/intl.dart';
+import 'package:material_symbols_icons/symbols.dart';
 
 import '../../core/design/components.dart';
 import '../../core/design/tokens.dart';
@@ -71,8 +73,24 @@ class RosterDayScreen extends ConsumerWidget {
       body: ListView(
         padding: const EdgeInsets.only(bottom: Space.xl),
         children: [
-          if (!past) DayAsks(roster: roster),
-          if (!canEdit)
+          if (!past && !roster.noService) DayAsks(roster: roster),
+          if (roster.noService) ...[
+            _NoService(title: title),
+            if (canEdit && wholeDay && !past)
+              ListSection(
+                children: [
+                  ListRow(
+                    title: l10n.restoreService,
+                    tinted: true,
+                    onTap: () => runWithUndo(
+                      context,
+                      l10n.restoreService,
+                      () => ref.read(rosterActionsProvider).setNoService(roster, false),
+                    ),
+                  ),
+                ],
+              ),
+          ] else if (!canEdit)
             RosterDayView(
               roster: roster,
               title: title,
@@ -96,9 +114,48 @@ class RosterDayScreen extends ConsumerWidget {
                   ? () => _addDuty(context, ref, roster, addable, any: wholeDay)
                   : null,
             ),
+          // Whoever changes the whole day says it has no meeting.
+          if (canEdit && wholeDay && !past && !roster.noService && !roster.isEvent)
+            ListSection(
+              children: [
+                ListRow(
+                  title: l10n.noServiceDay,
+                  destructive: true,
+                  onTap: () => _noService(context, ref, roster),
+                ),
+              ],
+            ),
           RosterNoteSection(rosterId: roster.id, canEdit: canEdit),
         ],
       ),
+    );
+  }
+
+  /// 這天沒有聚會: everyone on it taken off and told, asked first when
+  /// anyone is; 復原 puts them back.
+  Future<void> _noService(BuildContext context, WidgetRef ref, Roster roster) async {
+    final l10n = L10n.of(context);
+    final date = DateFormat.MMMd().format(roster.day.midnight);
+    final people = {
+      for (final d in roster.duties)
+        for (final p in d.people) p,
+    }.length;
+    if (people > 0 &&
+        !await confirmAction(
+          context,
+          title: l10n.noServiceAsk(date),
+          message: l10n.noServiceTold(people),
+          action: l10n.noService,
+          cancel: l10n.cancel,
+          destructive: true,
+        )) {
+      return;
+    }
+    if (!context.mounted) return;
+    await runWithUndo(
+      context,
+      l10n.noServiceDone(date),
+      () => ref.read(rosterActionsProvider).setNoService(roster, true),
     );
   }
 
@@ -146,6 +203,43 @@ class RosterDayScreen extends ConsumerWidget {
       context,
       l10n.eventsUpdated,
       () => ref.read(rosterActionsProvider).setEvents(roster, events),
+    );
+  }
+}
+
+/// A day with no meeting: its date, and 沒有聚會 where its duties were.
+class _NoService extends StatelessWidget {
+  const _NoService({required this.title});
+
+  final String title;
+
+  @override
+  Widget build(BuildContext context) {
+    final c = AppColors.of(context);
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Padding(
+          padding: const EdgeInsets.fromLTRB(Space.l, Space.s, Space.l, 0),
+          child: Text(title, style: AppText.title2),
+        ),
+        Padding(
+          padding: const EdgeInsets.all(Space.m),
+          child: DecoratedBox(
+            decoration: BoxDecoration(color: c.surface, borderRadius: BorderRadius.circular(Radii.m)),
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: Space.m, vertical: Space.l),
+              child: Column(
+                children: [
+                  Icon(Symbols.event_busy_rounded, size: 32, color: c.secondaryLabel),
+                  const SizedBox(height: 6),
+                  Text(L10n.of(context).noService, style: AppText.headline),
+                ],
+              ),
+            ),
+          ),
+        ),
+      ],
     );
   }
 }

@@ -774,6 +774,33 @@ class _PlanWeeksScreenState extends ConsumerState<PlanWeeksScreen> with SingleTi
               onTap: () => context.push('/rosters/${day.type}/${day.day.key}'),
             ),
           );
+        case final Roster day when day.noService:
+          // 沒有聚會 across the row, from the first duty's cell; nothing to
+          // pick or drop on. Tapping opens the day, where it is undone.
+          return GestureDetector(
+            behavior: HitTestBehavior.opaque,
+            onTap: () => context.push('/rosters/${day.type}/${day.day.key}'),
+            child: DecoratedBox(
+              decoration: BoxDecoration(
+                color: c.background,
+                border: Border(bottom: line),
+              ),
+              child: role != duties.first
+                  ? const SizedBox.expand()
+                  : OverflowBox(
+                      minWidth: 0,
+                      maxWidth: double.infinity,
+                      alignment: AlignmentDirectional.centerStart,
+                      child: Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: Space.s),
+                        child: Text(
+                          L10n.of(context).noService,
+                          style: AppText.subheadline.copyWith(color: c.secondaryLabel),
+                        ),
+                      ),
+                    ),
+            ),
+          );
         case final Roster day when widget.readOnly:
           return _ViewCell(roster: day, role: role!, today: today, border: line, me: me);
         case final Roster day:
@@ -1010,7 +1037,14 @@ class _DateCell extends StatelessWidget {
               Text(
                 '${day.day}',
                 maxLines: 1,
-                style: dayStyle.copyWith(color: day == today ? c.accent : c.label, height: dayHeight),
+                style: dayStyle.copyWith(
+                  color: roster.noService
+                      ? c.secondaryLabel
+                      : day == today
+                      ? c.accent
+                      : c.label,
+                  height: dayHeight,
+                ),
               ),
               if (events.isEmpty)
                 Text(
