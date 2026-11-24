@@ -488,6 +488,36 @@ void main() {
     expect(find.text('10月到12月・1 位還沒填'), findsOneWidget);
   });
 
+  testWidgets('通知同工填 on its way: asked once; the menu greys it till it is done', (tester) async {
+    final b = seededChurch(as: editor);
+    await pumpApp(tester, b);
+    await go(tester, '/rosters/plan/sunday');
+    Future<PopupMenuItem<String>> askItem() async {
+      await tester.tap(find.byIcon(Symbols.more_horiz_rounded));
+      await settle(tester);
+      final item = tester.widget<PopupMenuItem<String>>(find.widgetWithText(PopupMenuItem<String>, '請同工填不能服事日'));
+      return item;
+    }
+
+    expect((await askItem()).enabled, isTrue);
+    await tester.tap(find.text('請同工填不能服事日'));
+    await settle(tester);
+    await tester.tap(find.text('通知 10月'));
+    await settle(tester);
+    b.writeHeld = Completer<void>();
+    await tester.tap(find.text('通知'));
+    await settle(tester);
+    expect((await askItem()).enabled, isFalse, reason: 'one on its way');
+    await tester.tapAt(const Offset(10, 10));
+    await settle(tester);
+
+    b.writeHeld!.complete();
+    b.writeHeld = null;
+    await settle(tester);
+    expect(find.text('已通知 2 位同工'), findsOneWidget);
+    expect((await askItem()).enabled, isTrue);
+  });
+
   testWidgets('an ask whose months are gone by is not shown', (tester) async {
     final b = seededChurch(as: editor);
     b.unavailableAsks['grace'] = {

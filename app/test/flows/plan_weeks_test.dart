@@ -11,6 +11,8 @@ import 'package:martha/data/backend.dart';
 import 'package:martha/data/memory/memory_backend.dart';
 import 'package:martha/domain/day.dart';
 import 'package:martha/domain/models.dart';
+import 'package:martha/domain/staff_order.dart';
+import 'package:martha/state/providers.dart';
 import 'package:martha/features/rosters/roster_image.dart';
 import 'package:martha/state/export.dart';
 import 'package:martha/state/session.dart';
@@ -285,6 +287,28 @@ void main() {
     await settle(tester);
     expect(tester.takeException(), isNull);
     expect(find.text('李美玉'), findsWidgets);
+  });
+
+  testWidgets('what it reads fails: says so with 重試, not an empty table', (tester) async {
+    final b = seededChurch();
+    var fail = true;
+    await pumpApp(
+      tester,
+      b,
+      overrides: [
+        staffOrderProvider.overrideWith(
+          (ref, type) => fail
+              ? Stream.error(const CloudException(CloudErrorCode.unavailable))
+              : Stream.value(b.staffOrders['grace']?[type] ?? StaffOrder()),
+        ),
+      ],
+    );
+    await go(tester, '/rosters/plan/sunday');
+    expect(find.text('載入失敗，請檢查網路後再試一次'), findsOneWidget);
+    fail = false;
+    await tester.tap(find.text('重試'));
+    await settle(tester);
+    expect(find.text('2026年10月'), findsOneWidget);
   });
 
   testWidgets('完成 with nobody to tell just goes back', (tester) async {
@@ -852,6 +876,51 @@ void main() {
     await settle(tester);
     expect(find.text('已通知 1 位同工'), findsOneWidget);
     expect(waiting(b), isEmpty);
+  });
+
+  testWidgets('saving: 完成 greys until it is done; a date waits for it; back then leaves once saved, unasked', (
+    tester,
+  ) async {
+    final b = seededChurch();
+    await pumpApp(tester, b);
+    await go(tester, '/rosters/plan/sunday');
+    await pick(tester, '司琴', 11, '李美玉');
+    b.writeHeld = Completer<void>();
+    await tester.tap(find.text('完成'));
+    await settle(tester);
+    expect(path(tester), '/rosters/plan/sunday', reason: 'still saving');
+    expect(tester.widget<TextButton>(find.widgetWithText(TextButton, '完成')).onPressed, isNull);
+    await tester.tap(date(11));
+    await settle(tester);
+    expect(path(tester), '/rosters/plan/sunday', reason: 'a date waits for the save');
+    await tester.tap(find.byType(BackButton));
+    await settle(tester);
+    expect(find.text('放棄變更？'), findsNothing, reason: 'nothing to drop: it is being saved');
+
+    b.writeHeld!.complete();
+    b.writeHeld = null;
+    await settle(tester);
+    expect(peopleOn(b, 11, '司琴'), ['李美玉']);
+    expect(path(tester), '/rosters');
+  });
+
+  testWidgets('a date tapped while saving, then back: leaves once saved, and opens no day', (tester) async {
+    final b = seededChurch();
+    await pumpApp(tester, b);
+    await go(tester, '/rosters/plan/sunday');
+    await pick(tester, '司琴', 11, '李美玉');
+    b.writeHeld = Completer<void>();
+    await tester.tap(date(11));
+    await settle(tester);
+    expect(tester.widget<TextButton>(find.widgetWithText(TextButton, '完成')).onPressed, isNull);
+    await tester.tap(find.byType(BackButton));
+    await settle(tester);
+    expect(find.text('放棄變更？'), findsNothing);
+    b.writeHeld!.complete();
+    b.writeHeld = null;
+    await settle(tester);
+    expect(peopleOn(b, 11, '司琴'), ['李美玉']);
+    expect(path(tester), '/rosters');
   });
 
   testWidgets('完成 not saved stays, everything still on it, and says why; pressed again, it saves', (tester) async {

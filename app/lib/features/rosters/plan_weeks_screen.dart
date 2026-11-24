@@ -313,7 +313,7 @@ class _PlanWeeksScreenState extends ConsumerState<PlanWeeksScreen> with SingleTi
         _ => null,
       },
       itemBuilder: (_) => [
-        PopupMenuItem(value: 'ask', enabled: canAsk, child: Text(l10n.planAskUnavailable)),
+        PopupMenuItem(value: 'ask', enabled: canAsk && !_telling, child: Text(l10n.planAskUnavailable)),
         PopupMenuItem(value: 'photo', child: Text(l10n.photoImportAction)),
         PopupMenuItem(value: 'image', child: Text(l10n.rosterShareImage)),
         if (some) ...[
@@ -382,12 +382,26 @@ class _PlanWeeksScreenState extends ConsumerState<PlanWeeksScreen> with SingleTi
       cancel: l10n.cancel,
     );
     if (!ok || !mounted) return;
+    await _tell(() => ref.read(rosterActionsProvider).askUnavailable(type, from: start, to: to));
+  }
+
+  /// 通知同工填 or 再通知 on its way: greyed in the menu, so nobody gets
+  /// the push twice.
+  bool _telling = false;
+
+  /// Sends [tell], once, saying how many it told or why it failed.
+  Future<void> _tell(Future<int> Function() tell) async {
+    if (_telling) return;
+    final l10n = L10n.of(context);
     final toasts = _toasts;
+    setState(() => _telling = true);
     try {
-      final told = await ref.read(rosterActionsProvider).askUnavailable(type, from: start, to: to);
+      final told = await tell();
       if (toasts.mounted) showToast(toasts, l10n.planNotified(told));
     } catch (e) {
       if (toasts.mounted) showToast(toasts, errorText(l10n, e));
+    } finally {
+      if (mounted) setState(() => _telling = false);
     }
   }
 
@@ -459,13 +473,7 @@ class _PlanWeeksScreenState extends ConsumerState<PlanWeeksScreen> with SingleTi
       ),
     );
     if (remind != true || !mounted) return;
-    final toasts = _toasts;
-    try {
-      final told = await ref.read(rosterActionsProvider).remindUnavailable(type);
-      if (toasts.mounted) showToast(toasts, l10n.planNotified(told));
-    } catch (e) {
-      if (toasts.mounted) showToast(toasts, errorText(l10n, e));
-    }
+    await _tell(() => ref.read(rosterActionsProvider).remindUnavailable(type));
   }
 
   /// 完成: what was changed here saved, then back at once, telling
@@ -495,38 +503,56 @@ class _PlanWeeksScreenState extends ConsumerState<PlanWeeksScreen> with SingleTi
     context.pop();
   }
 
-  /// Saving what waited here: a second tap waits for it.
+  /// Saving what waited here: 完成 greys, and a second tap waits for it.
   bool _saving = false;
+
+  /// Back pressed while saving for a date or 照片匯入: gone once saved,
+  /// instead of opening it.
+  bool _leaveWhenSaved = false;
 
   /// [change], what waited here, saved; dropped from here once it is (it
   /// shows as saved), kept when not, which is said. Whether it was.
   Future<bool> _save(RosterChange change) async {
-    _saving = true;
+    setState(() => _saving = true);
     try {
       await ref.read(rosterActionsProvider).savePlanned(change);
       _draft?.discard();
       return true;
     } catch (e) {
+      _leaveWhenSaved = false;
       if (mounted) showToast(context, saveErrorText(L10n.of(context), e));
       return false;
     } finally {
-      _saving = false;
+      if (mounted) setState(() => _saving = false);
     }
   }
 
   /// Leaving with changes not saved: asked first, 放棄變更 drops them.
+  /// While they are being saved, nothing to drop: gone once they are
+  /// (完成 goes then anyway).
   Future<void> _askToLeave() async {
-    if (_saving || !await confirmDiscard(context) || !mounted) return;
+    if (_saving) {
+      _leaveWhenSaved = true;
+      return;
+    }
+    if (!await confirmDiscard(context) || !mounted) return;
     _draft?.discard();
     context.pop();
   }
 
   /// What was changed here saved now, nobody told yet: before the day's
-  /// own page or 照片匯入, which save at once, open on it.
+  /// own page or 照片匯入, which save at once, open on it. Back pressed
+  /// meanwhile, gone instead.
   Future<bool> _saveFirst() async {
     if (_saving) return false;
     final change = _draft?.change;
-    return (change == null || await _save(change)) && mounted;
+    final saved = (change == null || await _save(change)) && mounted;
+    if (saved && _leaveWhenSaved) {
+      _leaveWhenSaved = false;
+      context.pop();
+      return false;
+    }
+    return saved;
   }
 
   /// Left another way than 完成 while people wait (back, a swipe from the
@@ -584,9 +610,19 @@ class _PlanWeeksScreenState extends ConsumerState<PlanWeeksScreen> with SingleTi
     final news = _waiting.isNotEmpty;
     final unsaved = !view && ref.watch(planDraftProvider).isNotEmpty;
 
+    // A read failed with nothing to show: said, with 重試, not an empty table.
+    final failed = view
+        ? [ref.watch(servicesProvider), ref.watch(savedRostersProvider)].any((v) => v.hasError && !v.hasValue)
+        : ref.watch(rosterEditingErrorProvider(_type)) != null;
+
     Widget body;
     List<String> duties = const [];
-    if (service == null || saved == null || !ready || !arranges.any) {
+    if (failed) {
+      body = ErrorRetry(
+        message: l10n.loadFailed,
+        onRetry: () => readEditingAgain(ref, type: _type),
+      );
+    } else if (service == null || saved == null || !ready || !arranges.any) {
       body = const SizedBox.shrink();
     } else {
       final months = planMonths(service: service, saved: saved, today: today, month: thisMonth, months: _months);
@@ -638,7 +674,7 @@ class _PlanWeeksScreenState extends ConsumerState<PlanWeeksScreen> with SingleTi
                   MediaQuery.withClampedTextScaling(
                     maxScaleFactor: 1.5,
                     child: TextButton(
-                      onPressed: _finish,
+                      onPressed: _saving ? null : _finish,
                       child: Text(l10n.done),
                     ),
                   ),
