@@ -123,7 +123,10 @@ void main() {
     ]) {
       tester.binding.handleAppLifecycleStateChanged(state);
     }
-    await tester.pump(const Duration(seconds: 2));
+    await tester.pump(const Duration(seconds: 5));
+    await tapText(tester, '用 email 登入');
+    expect(find.text('忘記密碼'), findsNothing, reason: 'a sign-in that did answer has time to finish');
+    await tester.pump(const Duration(seconds: 5));
     await settle(tester);
     await tapText(tester, '用 email 登入');
     expect(findShown('忘記密碼'), findsOneWidget, reason: 'the buttons let go');

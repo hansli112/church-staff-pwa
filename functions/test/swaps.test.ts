@@ -303,6 +303,7 @@ describe('找一位同工代 (askCover with to)', () => {
     assert.deepEqual(await pianists('2026-11-15'), duty('司琴', ['王小明']));
     assert.equal((await request(id)).status, 'declined');
     assert.ok(said().some(([t, body]) => t === 'tok-wang' && body === '「李美玉」取消了接手，11/15（週日）主日崇拜 司琴還是你'));
+    assert.ok(said().some(([t, body]) => t === 'tok-lead' && body === '「李美玉」取消了接手，11/15（週日）主日崇拜 司琴還是「王小明」'), 'not 還是你 to the lead');
     assert.ok(!said().some(([, body]) => body.includes('想請你代')), 'nobody else is asked');
   });
 });

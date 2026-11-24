@@ -57,10 +57,14 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
   /// buttons alone when it answers at last.
   int _attempt = 0;
 
+  /// The sign-in let go of last: its error, if no other has started since,
+  /// is still the page's to say.
+  int? _letGoOf;
+
   /// Google's or Apple's page in an Android browser tab, which never
   /// answers when it is left by the app switcher: back in the app, the
-  /// buttons wait only a moment more for it. Its answer, if it comes, still
-  /// signs in.
+  /// buttons wait a while more for it: long enough for one that did answer
+  /// to sign in. Its answer, if it comes, still signs in.
   bool _inBrowser = false;
 
   static bool get _browserTabs => !kIsWeb && defaultTargetPlatform == TargetPlatform.android;
@@ -75,10 +79,11 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
   void _letGoOnReturn() {
     if (!_busy || !_inBrowser) return;
     final attempt = _attempt;
-    Future<void>.delayed(const Duration(seconds: 2), () {
+    Future<void>.delayed(const Duration(seconds: 10), () {
       if (!mounted || !_busy || attempt != _attempt) return;
       setState(() {
         _busy = false;
+        _letGoOf = attempt;
         _attempt++;
       });
     });
@@ -120,8 +125,9 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
       await action();
       if (event != null && auth.currentUser != null) telemetry.logEvent(event, {'method': method!});
     } catch (e) {
-      // Let go of meanwhile: its error is no longer the page's.
-      if (!mounted || attempt != _attempt) return;
+      // Let go of meanwhile: its error is the page's only while no other
+      // sign-in has started.
+      if (!mounted || (attempt != _attempt && (attempt != _letGoOf || _busy))) return;
       final text = errorText(L10n.of(context), e);
       setState(() {
         _error = text.isEmpty ? null : text;

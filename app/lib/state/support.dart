@@ -148,15 +148,17 @@ class StoreKitPlayStore implements SupportStore {
 
   @override
   Future<void> buy(SupportItem item) async {
+    // Not started, the store shows nothing and says nothing: the caller
+    // hears it, so the amount tapped does not wait for an answer.
     final details = _details[item.id];
-    if (details == null) return;
+    if (details == null) throw StateError('not offered: ${item.id}');
     final param = PurchaseParam(productDetails: details);
     if (item.subscription) {
       // Play: another plan replaces the paid one, the time left credited,
       // rather than being a second subscription. The App Store does the
       // same by itself within the subscription group.
       final old = await _paidPlayPlan(other: item.id);
-      await _iap.buyNonConsumable(
+      final sent = await _iap.buyNonConsumable(
         purchaseParam: old != null && old.productID != item.id
             ? GooglePlayPurchaseParam(
                 productDetails: details,
@@ -167,8 +169,9 @@ class StoreKitPlayStore implements SupportStore {
               )
             : param,
       );
+      if (!sent) throw StateError('not sent: ${item.id}');
     } else {
-      await _iap.buyConsumable(purchaseParam: param);
+      if (!await _iap.buyConsumable(purchaseParam: param)) throw StateError('not sent: ${item.id}');
     }
   }
 
@@ -177,9 +180,14 @@ class StoreKitPlayStore implements SupportStore {
 
   // Play's restore is silent and lists only subscriptions still paid.
   @override
+  // Never failing: it runs unawaited at start, offline as well.
   Future<void> refresh() async {
-    if (defaultTargetPlatform == TargetPlatform.android && await _iap.isAvailable().timeout(_storeWait)) {
-      await _iap.restorePurchases();
+    try {
+      if (defaultTargetPlatform == TargetPlatform.android && await _iap.isAvailable().timeout(_storeWait)) {
+        await _iap.restorePurchases();
+      }
+    } catch (_) {
+      // The next start reads it again.
     }
   }
 

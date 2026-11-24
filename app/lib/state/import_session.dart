@@ -96,6 +96,8 @@ class ImportSession extends Notifier<ImportDraft> {
   @override
   ImportDraft build() {
     ref.onCancel(_onLeft);
+    // Built again, the links made before are gone with it.
+    _kept = null;
     final scope = (ref.watch(currentChurchIdProvider), ref.watch(uidProvider));
     final changed = _scope != null && _scope != scope;
     _scope = scope;

@@ -503,8 +503,9 @@ class _Profiles implements ProfileRepository {
     if (_auth.currentUser?.uid != uid) throw const CloudException(CloudErrorCode.permissionDenied);
     // In the cache at once, which is all the photo needs: the server's
     // answer, offline, waits for a connection. Should it be refused, the
-    // next photo asks again.
-    _db.doc('users/$uid').update({'photoAiConsentAt': FieldValue.serverTimestamp()}).ignore();
+    // next photo asks again. The device's time: a server timestamp reads
+    // as null until the server has it, which would ask again meanwhile.
+    _db.doc('users/$uid').update({'photoAiConsentAt': Timestamp.now()}).ignore();
   }
 
   @override
@@ -1168,7 +1169,9 @@ class _FirestoreSwaps implements SwapData {
     return _latestOfBoth(
       open.where('asked', arrayContains: uid).live().map(decode),
       open.where('to', isEqualTo: uid).live().map(decode),
-      (cover, swap) => [...cover, ...swap]..sort((a, b) => a.day.compareTo(b.day)),
+      // 找一位同工代 has its one person in both `asked` and `to`.
+      (cover, swap) =>
+          [...cover, ...swap.where((r) => r.kind == SwapKind.swap)]..sort((a, b) => a.day.compareTo(b.day)),
     ).translated();
   }
 

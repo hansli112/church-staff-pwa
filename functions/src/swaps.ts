@@ -287,6 +287,8 @@ export async function askCover(deps: Deps & PushDeps, caller: Caller | null, dat
       fail('failed-precondition', 'unknown', anyway.includes(to) ? 'away' : null);
     }
     const toName = (members.docs.find((m) => m.id === to)!.get('name') as string | undefined) ?? '';
+    // As coverCandidates: someone with no name could not be said in a push.
+    if (!toName) fail('failed-precondition', 'unknown');
     const ref = await a.create({ kind: 'cover', asked: [to], passed: [], to, toName, nudged: false });
     await sendOrHold(deps, a.church, ref);
     return { id: ref.id, asked: 1 };
@@ -497,7 +499,9 @@ export async function undoSwap(deps: Deps & PushDeps, caller: Caller | null, dat
   await notifyMembers(deps, a.cid, [req.from], 'swap', (w) => ({ title, body: back(w), link: `/rosters/${req.serviceId}/${req.dateKey}` }));
   if (req.leadsTold) {
     const leads = (await leadsFor(deps, a.cid, req.serviceId, req.duty)).filter((u) => u !== req.from && u !== me);
-    await notifyMembers(deps, a.cid, leads, 'swap', (w) => ({ title, body: back(w), link: `/rosters/${req.serviceId}/${req.dateKey}` }));
+    // Not 「還是你」: the day is who asked's again, not the leads'.
+    const toLeads = (w: Words) => (req.kind === 'swap' || req.to ? w.backTo(req.takerName, say(w).day, say(w).line, req.fromName) : back(w));
+    await notifyMembers(deps, a.cid, leads, 'swap', (w) => ({ title, body: toLeads(w), link: `/rosters/${req.serviceId}/${req.dateKey}` }));
   }
   if (req.kind === 'cover' && !req.to) await sendRequest(deps, a.church, await ref.get());
   return {};
