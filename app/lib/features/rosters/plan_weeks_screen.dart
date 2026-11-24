@@ -11,6 +11,7 @@ import 'package:two_dimensional_scrollables/two_dimensional_scrollables.dart';
 
 import '../../core/design/components.dart';
 import '../../core/design/tokens.dart';
+import '../../data/backend.dart' show RosterChange;
 import '../../domain/day.dart';
 import '../../domain/models.dart';
 import '../../domain/plan_weeks.dart';
@@ -136,15 +137,13 @@ class _PlanWeeksScreenState extends ConsumerState<PlanWeeksScreen> with SingleTi
     _faded = Tween<double>(begin: 1, end: 0.4).animate(_fading);
     // What is changed here waits for 完成; only to look at, nothing does.
     if (!widget.readOnly) {
-      _draft = ref.read(planDraftProvider.notifier);
-      _holder = _draft!.hold();
+      final draft = ref.read(planDraftProvider.notifier)..hold();
+      _draft = draft;
     }
   }
 
-  /// Where what is changed here waits for 完成 (null only to look at), and
-  /// this page's hold on it.
+  /// Where what is changed here waits for 完成; null only to look at.
   PlanDraft? _draft;
-  int _holder = 0;
 
   @override
   void dispose() {
@@ -158,10 +157,7 @@ class _PlanWeeksScreenState extends ConsumerState<PlanWeeksScreen> with SingleTi
     _looks.dispose();
     _fading.dispose();
     // Not saved by 完成: dropped, once the tree is done changing.
-    if (_draft case final draft?) {
-      final holder = _holder;
-      Future.microtask(() => draft.release(holder));
-    }
+    if (_draft case final draft?) Future.microtask(draft.release);
     super.dispose();
   }
 
@@ -472,49 +468,55 @@ class _PlanWeeksScreenState extends ConsumerState<PlanWeeksScreen> with SingleTi
     }
   }
 
-  /// 完成: goes back at once, saving what was changed here and then
-  /// telling whoever was put on or taken off behind it; a failure says so
-  /// where it went, with 重試.
-  void _finish() {
+  /// 完成: what was changed here saved, then back at once, telling
+  /// whoever was put on or taken off behind it; a failure to tell says so
+  /// where it went, with 重試. Not saved (offline, or a day someone else
+  /// changed meanwhile), it stays, everything still on it, and says why.
+  Future<void> _finish() async {
     // A second tap while the page goes would go back from the one behind.
-    if (_leaving) return;
+    if (_leaving || _saving) return;
     final toasts = _toasts;
     final actions = ref.read(rosterActionsProvider);
     final change = _draft?.change;
-    final ids = <String, List<String>>{
-      for (final r in [...?change?.after.values, ...?change?.before.values])
-        if (r != null && !r.isEvent) r.type: [],
-    };
+    final ids = <String, List<String>>{};
     for (final r in [...?change?.after.values, ...?change?.before.values]) {
-      if (r != null && !r.isEvent && !ids[r.type]!.contains(r.id)) ids[r.type]!.add(r.id);
+      if (r == null || r.isEvent) continue;
+      final of = ids.putIfAbsent(r.type, () => []);
+      if (!of.contains(r.id)) of.add(r.id);
     }
     final types = {..._waiting, ...ids.keys};
-    var saved = change == null;
-    Future<void> run() async {
-      if (!saved) {
-        try {
-          await actions.savePlanned(change!);
-          saved = true;
-        } catch (e) {
-          if (toasts.mounted) showToast(toasts, saveErrorText(L10n.of(toasts), e), onRetry: run);
-          return;
-        }
-      }
-      if (toasts.mounted) await _tellPlanned(toasts, actions, types, rosterIds: ids, onRetry: run);
-    }
-
+    if (change != null && !await _save(change)) return;
+    if (!mounted) return;
+    void tell() => unawaited(_tellPlanned(toasts, actions, types, rosterIds: ids, onRetry: tell));
     // Being told: no toast offering 通知 on the way out, though the news
     // has not caught up yet.
     _leaving = true;
-    unawaited(run());
-    // Shown as sent from here on.
-    _draft?.discard();
+    tell();
     context.pop();
+  }
+
+  /// Saving what waited here: a second tap waits for it.
+  bool _saving = false;
+
+  /// [change], what waited here, saved; dropped from here once it is (it
+  /// shows as saved), kept when not, which is said. Whether it was.
+  Future<bool> _save(RosterChange change) async {
+    _saving = true;
+    try {
+      await ref.read(rosterActionsProvider).savePlanned(change);
+      _draft?.discard();
+      return true;
+    } catch (e) {
+      if (mounted) showToast(context, saveErrorText(L10n.of(context), e));
+      return false;
+    } finally {
+      _saving = false;
+    }
   }
 
   /// Leaving with changes not saved: asked first, 放棄變更 drops them.
   Future<void> _askToLeave() async {
-    if (!await confirmDiscard(context) || !mounted) return;
+    if (_saving || !await confirmDiscard(context) || !mounted) return;
     _draft?.discard();
     context.pop();
   }
@@ -522,17 +524,9 @@ class _PlanWeeksScreenState extends ConsumerState<PlanWeeksScreen> with SingleTi
   /// What was changed here saved now, nobody told yet: before the day's
   /// own page or 照片匯入, which save at once, open on it.
   Future<bool> _saveFirst() async {
+    if (_saving) return false;
     final change = _draft?.change;
-    if (change == null) return true;
-    final save = ref.read(rosterActionsProvider).savePlanned(change);
-    _draft?.discard();
-    try {
-      await save;
-      return mounted;
-    } catch (e) {
-      if (mounted) showToast(context, saveErrorText(L10n.of(context), e));
-      return false;
-    }
+    return (change == null || await _save(change)) && mounted;
   }
 
   /// Left another way than 完成 while people wait (back, a swipe from the
@@ -1567,13 +1561,12 @@ Future<void> _tellPlanned(
 }) async {
   final l10n = L10n.of(toasts);
   try {
-    var people = 0;
-    var later = false;
-    for (final type in types) {
-      final r = await actions.notifyPlanned(type, rosterIds: rosterIds[type] ?? const []);
-      people += r.people;
-      later |= r.later;
-    }
+    // Side by side: each may wait for the backend to read its days.
+    final told = await Future.wait([
+      for (final type in types) actions.notifyPlanned(type, rosterIds: rosterIds[type] ?? const []),
+    ]);
+    final people = told.fold(0, (n, r) => n + r.people);
+    final later = told.any((r) => r.later);
     if (toasts.mounted && people > 0) {
       showToast(toasts, later ? l10n.planNotifiedLater(people) : l10n.planNotified(people));
     }

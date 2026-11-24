@@ -28,18 +28,20 @@ class PlanDraft extends Notifier<Map<String, DraftDay>> {
   /// while it is open.
   bool holds(RosterChange change) => _holding && change.via == RosterVia.plan;
 
-  int _holder = 0;
+  int _holders = 0;
 
-  /// From now on, 安排服事's changes wait here; what [release] takes.
-  int hold() {
+  /// From now on, 安排服事's changes wait here, until [release]d by every
+  /// one that held them ([release] leaves none behind).
+  void hold() {
+    _holders++;
     _holding = true;
-    return ++_holder;
   }
 
-  /// Saved at once again, and whatever waited dropped; unless another
-  /// 安排服事 holds them since [holder].
-  void release(int holder) {
-    if (!ref.mounted || holder != _holder) return;
+  /// One 安排服事 gone: once none is left, saved at once again, and
+  /// whatever waited dropped.
+  void release() {
+    if (!ref.mounted || _holders == 0) return;
+    if (--_holders > 0) return;
     _holding = false;
     state = const {};
   }

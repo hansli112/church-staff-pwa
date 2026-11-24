@@ -514,28 +514,40 @@ const READ_WAIT_MS = 20_000;
  * up after [READ_WAIT_MS]: what is read later waits for the next time.
  */
 async function readThrough(deps: Pick<Deps, 'db'>, cid: string, ids: string[]) {
-  if (!ids.length) return;
   const until = Date.now() + READ_WAIT_MS;
-  for (;;) {
+  let unread = ids;
+  while (unread.length) {
     const [rosters, seen] = await Promise.all([
-      deps.db.getAll(...ids.map((id) => deps.db.doc(`churches/${cid}/rosters/${id}`))),
-      deps.db.getAll(...ids.map((id) => deps.db.doc(`plannedSeen/${cid}_${id}`))),
+      deps.db.getAll(...unread.map((id) => deps.db.doc(`churches/${cid}/rosters/${id}`))),
+      deps.db.getAll(...unread.map((id) => deps.db.doc(`plannedSeen/${cid}_${id}`))),
     ]);
-    const unread = rosters.some(
-      (r, i) => r.exists && viaOf(r.get('via')) === 'plan' && !sameTime(r.get('updatedAt'), seen[i].get('updatedAt')),
+    // Only those still to read are read again.
+    unread = unread.filter(
+      (_, i) => rosters[i].exists && viaOf(rosters[i].get('via')) === 'plan' && !readSince(seen[i].get('updatedAt'), rosters[i].get('updatedAt')),
     );
-    if (!unread || Date.now() > until) return;
+    if (!unread.length || Date.now() > until) return;
     await new Promise((r) => setTimeout(r, 300));
   }
 }
 
-const sameTime = (a: unknown, b: unknown) =>
-  (a == null && b == null) || (a instanceof Timestamp && b instanceof Timestamp && a.isEqual(b));
+/** Whether a day read as written at [seen] is read as of [written]: then, or later. */
+const readSince = (seen: unknown, written: unknown) =>
+  written == null || (seen instanceof Timestamp && written instanceof Timestamp && seen.toMillis() >= written.toMillis());
 
-/** Notes that the trigger has read [after], a day saved in 安排服事, for [readThrough]. */
+/**
+ * Notes that the trigger has read [after], a day saved in 安排服事, for
+ * [readThrough]: never back to an earlier write, as triggers come in any
+ * order.
+ */
 async function markRead(deps: Deps, cid: string, after: DocumentSnapshot | undefined) {
   if (!after?.exists || viaOf(after.get('via')) !== 'plan') return;
-  await deps.db.doc(`plannedSeen/${cid}_${after.id}`).set({ cid, updatedAt: after.get('updatedAt') ?? null, at: deps.now() });
+  const written = after.get('updatedAt') ?? null;
+  const ref = deps.db.doc(`plannedSeen/${cid}_${after.id}`);
+  await deps.db.runTransaction(async (tx) => {
+    const seen = await tx.get(ref);
+    if (seen.exists && readSince(seen.get('updatedAt'), written)) return;
+    tx.set(ref, { cid, updatedAt: written, at: deps.now() });
+  });
 }
 
 /**
@@ -628,11 +640,7 @@ export async function onRosterWritten(
   editedBy: string | undefined,
   eventId: string,
 ) {
-  try {
-    return await tellRosterWritten(deps, cid, before, after, editedBy, eventId);
-  } finally {
-    await markRead(deps, cid, after);
-  }
+  return tellRosterWritten(deps, cid, before, after, editedBy, eventId);
 }
 
 async function tellRosterWritten(
@@ -644,14 +652,22 @@ async function tellRosterWritten(
   eventId: string,
 ) {
   const change = await readRosterChange(deps, cid, before, after, editedBy);
-  if (!change) return null;
+  if (!change) {
+    await markRead(deps, cid, after);
+    return null;
+  }
   const { push, webhook } = await runEach(`roster change ${cid}/${change.event ? `ev_${change.event.id}` : `${change.dateKey}_${change.serviceId}`}`, {
     push: async () => {
       switch (tellsOf(change.via)) {
         case 'webhook':
           return absorbImport(deps, change);
-        case 'planned':
-          return planRosterChange(deps, change);
+        case 'planned': {
+          const n = await planRosterChange(deps, change);
+          // Read once what waits for 通知同工 is kept: one that failed is
+          // not, and 通知同工 waits for it.
+          await markRead(deps, cid, after);
+          return n;
+        }
         case 'now':
           return pushRosterChange(deps, change);
         case 'nobody':

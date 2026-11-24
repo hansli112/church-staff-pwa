@@ -327,6 +327,21 @@ describe('安排服事 (#90)', () => {
     assert.match(pushed.at(-1)!.body, /排進 10\/11 司琴/);
   });
 
+  test('a day read out of order still counts as read as of its last write', async () => {
+    await church();
+    const ref = db.doc('churches/C1/rosters/2026-10-11_sunday');
+    const none = await ref.get();
+    await ref.set({ type: 'sunday', dateKey: '2026-10-11', duties: [duty('司琴', ['美玉'])], via: 'plan', updatedAt: Timestamp.fromMillis(1000) });
+    const first = await ref.get();
+    await ref.set({ type: 'sunday', dateKey: '2026-10-11', duties: [duty('司琴', ['志豪'])], via: 'plan', updatedAt: Timestamp.fromMillis(2000) });
+    const second = await ref.get();
+    await onRosterWritten(triggerDeps(), 'C1', first, second, 'pastor', 'b');
+    await onRosterWritten(triggerDeps(), 'C1', none, first, 'pastor', 'a');
+    const started = Date.now();
+    await notifyPlanned(triggerDeps(), caller('pastor'), { churchId: 'C1', serviceId: 'sunday', rosterIds: ['2026-10-11_sunday'] });
+    assert.ok(Date.now() - started < 5000, 'not waiting on a write already read');
+  });
+
   test('one without an account is not counted among those told', async () => {
     await church();
     await plan('2026-10-11', [duty('司琴', ['美玉']), duty('招待', ['黃鎮台'])]);

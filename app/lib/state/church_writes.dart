@@ -91,8 +91,9 @@ class ChurchWrites {
     (data) async {
       await _sendRosters(data, change);
       // Counted once written (GA4), by where it was made; an import is
-      // counted by its session, which knows where its rows came from.
-      if (change.via != RosterVia.import) {
+      // counted by its session, which knows where its rows came from. A
+      // 服事順序 alone, saved ahead of 安排服事's days, is no roster edit.
+      if (change.via != RosterVia.import && change.after.isNotEmpty) {
         _ref.read(telemetryProvider).logEvent('roster_edit', {'via': change.via.name});
       }
     },

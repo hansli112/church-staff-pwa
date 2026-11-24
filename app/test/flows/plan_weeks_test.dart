@@ -61,6 +61,9 @@ class NotifyingBackend extends MemoryBackend {
   PlannedNotice notice = (people: 1, later: false);
   Object? error;
 
+  /// Saving the days fails with this.
+  Object? saveError;
+
   /// Holds 完成's telling until completed.
   Completer<void>? held;
 
@@ -72,6 +75,12 @@ class _NotifyingData extends MemoryChurchData {
   _NotifyingData(this.backend, String churchId) : super(backend, churchId);
 
   final NotifyingBackend backend;
+
+  @override
+  Future<void> compareAndSetRosters(RosterChange change) async {
+    if (backend.saveError case final e?) throw e;
+    return super.compareAndSetRosters(change);
+  }
 
   @override
   Future<PlannedNotice> notifyPlanned(String serviceType) async {
@@ -843,6 +852,22 @@ void main() {
     await settle(tester);
     expect(find.text('已通知 1 位同工'), findsOneWidget);
     expect(waiting(b), isEmpty);
+  });
+
+  testWidgets('完成 not saved stays, everything still on it, and says why; pressed again, it saves', (tester) async {
+    final backend = NotifyingBackend()..saveError = const CloudException(CloudErrorCode.unavailable);
+    final b = seededChurch(into: backend);
+    await pumpApp(tester, b);
+    await go(tester, '/rosters/plan/sunday');
+    await pick(tester, '司琴', 11, '李美玉');
+    await finish(tester);
+    expect(path(tester), '/rosters/plan/sunday');
+    expect(shownOn('司琴', 11, '李美玉'), findsOneWidget);
+    expect(find.textContaining('網路'), findsOneWidget, reason: 'says why');
+    backend.saveError = null;
+    await finish(tester);
+    expect(path(tester), '/rosters');
+    expect(peopleOn(b, 11, '司琴'), ['李美玉']);
   });
 
   testWidgets('a failed 完成 says so on the page behind; 重試 tells them', (tester) async {
