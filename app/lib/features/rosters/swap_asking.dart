@@ -46,6 +46,31 @@ String myOpenAskTag(L10n l10n, SwapRequest r) => switch (r.kind) {
   SwapKind.swap => l10n.swapOutSwap,
 };
 
+/// My duties with an ask or a 收回 on its way, as `rosterId/duty`: one
+/// tap asks once, from the day's 你的服事 or the roster's menu alike.
+final askingProvider = NotifierProvider<Asking, Set<String>>(Asking.new);
+
+class Asking extends Notifier<Set<String>> {
+  @override
+  Set<String> build() => const {};
+
+  /// Runs [call] for [key] unless one already is.
+  Future<void> run(String key, Future<void> Function() call) async {
+    if (state.contains(key)) return;
+    state = {...state, key};
+    try {
+      await call();
+    } finally {
+      if (ref.mounted) state = {...state}..remove(key);
+    }
+  }
+}
+
+String _askKey(Roster roster, String duty) => '${roster.id}/$duty';
+
+/// Whether an ask or a 收回 for my [duty] on [roster] is on its way.
+bool askingFor(WidgetRef ref, Roster roster, String duty) => ref.watch(askingProvider).contains(_askKey(roster, duty));
+
 /// 請人代 for my [duty] on [roster], once I say so: asks, and says how
 /// many were asked, or that the leads and those serving that day were told
 /// when nobody could be.
@@ -59,7 +84,7 @@ Future<void> askForCover(BuildContext context, WidgetRef ref, Roster roster, Str
     no: l10n.cancel,
   );
   if (ok != true || !context.mounted) return;
-  await _asking(context, () async {
+  await _asking(context, ref, _askKey(roster, duty), () async {
     final telemetry = ref.read(telemetryProvider);
     final asked = await ref.churchData.askCover(roster, duty);
     telemetry.logEvent('swap_ask', {'kind': 'cover'});
@@ -71,24 +96,29 @@ Future<void> askForCover(BuildContext context, WidgetRef ref, Roster roster, Str
 }
 
 /// 收回 my open request [r].
-Future<void> withdrawAsk(BuildContext context, WidgetRef ref, SwapRequest r) => _asking(context, () async {
-  await ref.churchData.withdrawSwap(r.id);
-  if (context.mounted) showToast(context, L10n.of(context).swapWithdrawn);
-});
+Future<void> withdrawAsk(BuildContext context, WidgetRef ref, SwapRequest r) =>
+    _asking(context, ref, '${r.rosterId}/${r.duty}', () async {
+      await ref.churchData.withdrawSwap(r.id);
+      if (context.mounted) showToast(context, L10n.of(context).swapWithdrawn);
+    });
 
-/// Runs [ask], saying why it failed.
-Future<void> _asking(BuildContext context, Future<void> Function() ask) async {
+/// Runs [ask] for [key] unless one already is, saying why it failed.
+Future<void> _asking(BuildContext context, WidgetRef ref, String key, Future<void> Function() ask) {
   final l10n = L10n.of(context);
-  try {
-    await ask();
-  } catch (e) {
-    if (context.mounted) showToast(context, errorText(l10n, e));
-  }
+  return ref.read(askingProvider.notifier).run(key, () async {
+    try {
+      await ask();
+    } catch (e) {
+      if (context.mounted) showToast(context, errorText(l10n, e));
+    }
+  });
 }
 
 /// 找人代／交換 for my [duty] on [roster]: 請人代 or 和別週交換, or, with a
 /// request of mine still open, how it stands and 收回.
 Future<void> showMyDutyMenu(BuildContext context, WidgetRef ref, Roster roster, String duty) async {
+  // One on its way: this tap waits for it.
+  if (ref.read(askingProvider).contains(_askKey(roster, duty))) return;
   final l10n = L10n.of(context);
   final today = ref.read(todayProvider);
   final service = ref.read(servicesProvider).value?.byId(roster.type)?.name ?? '';
@@ -132,7 +162,7 @@ Future<void> showMyDutyMenu(BuildContext context, WidgetRef ref, Roster roster, 
     case 'cover':
       await askForCover(context, ref, roster, duty);
     case 'swap':
-      await _asking(context, () => _askSwap(context, ref, roster, duty));
+      await _askSwap(context, ref, roster, duty);
   }
 }
 
@@ -175,10 +205,12 @@ Future<void> _askSwap(BuildContext context, WidgetRef ref, Roster roster, String
     ),
   );
   if (picked == null || !context.mounted) return;
-  await ref.churchData.askSwap(roster, duty, picked.day, picked.uid);
-  ref.read(telemetryProvider).logEvent('swap_ask', {'kind': 'swap'});
-  Haptics.success();
-  if (context.mounted) showToast(context, l10n.swapAskedSwap(picked.name));
+  await _asking(context, ref, _askKey(roster, duty), () async {
+    await ref.churchData.askSwap(roster, duty, picked.day, picked.uid);
+    ref.read(telemetryProvider).logEvent('swap_ask', {'kind': 'swap'});
+    Haptics.success();
+    if (context.mounted) showToast(context, l10n.swapAskedSwap(picked.name));
+  });
 }
 
 /// 我來／接受 ([yes]) or 不方便 for [r], asked of me. Taken, it goes to the
@@ -340,7 +372,8 @@ class DayAsks extends ConsumerStatefulWidget {
 }
 
 class _DayAsksState extends ConsumerState<DayAsks> {
-  /// Rows with a call on its way: one tap does it once.
+  /// Requests to me with an answer on its way: one tap does it once. My
+  /// own duties' asks are in [askingProvider].
   final _busy = <String>{};
   final _warm = <WarmUp>{};
 
@@ -358,9 +391,9 @@ class _DayAsksState extends ConsumerState<DayAsks> {
   }
 
   /// The row's action, said at its end; grey while it runs.
-  Widget _action(String label, String key) {
+  Widget _action(String label, {required bool busy}) {
     final c = AppColors.of(context);
-    return Text(label, style: AppText.body.copyWith(color: _busy.contains(key) ? c.tertiaryLabel : c.accent));
+    return Text(label, style: AppText.body.copyWith(color: busy ? c.tertiaryLabel : c.accent));
   }
 
   @override
@@ -399,17 +432,15 @@ class _DayAsksState extends ConsumerState<DayAsks> {
                     title: duty,
                     subtitle: myOpenAskLabel(l10n, r),
                     chevron: false,
-                    trailing: _action(l10n.swapWithdraw, duty),
-                    onTap: _busy.contains(duty) ? null : () => _run(duty, () => withdrawAsk(context, ref, r)),
+                    trailing: _action(l10n.swapWithdraw, busy: askingFor(ref, roster, duty)),
+                    onTap: askingFor(ref, roster, duty) ? null : () => withdrawAsk(context, ref, r),
                   )
                 else
                   ListRow(
                     title: duty,
                     chevron: false,
-                    trailing: _action(l10n.swapAskCover, duty),
-                    onTap: _busy.contains(duty)
-                        ? null
-                        : () => _run(duty, () => askForCover(context, ref, roster, duty)),
+                    trailing: _action(l10n.swapAskCover, busy: askingFor(ref, roster, duty)),
+                    onTap: askingFor(ref, roster, duty) ? null : () => askForCover(context, ref, roster, duty),
                   ),
             ],
           ),
@@ -423,7 +454,7 @@ class _DayAsksState extends ConsumerState<DayAsks> {
                     title: r.duty,
                     subtitle: l10n.swapCoverAsks(r.fromName),
                     chevron: false,
-                    trailing: _action(l10n.swapTake, r.id),
+                    trailing: _action(l10n.swapTake, busy: _busy.contains(r.id)),
                     onTap: _busy.contains(r.id) ? null : () => _run(r.id, () => answerAsk(context, ref, r, yes: true)),
                   )
                 else

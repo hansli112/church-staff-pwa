@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:martha/features/rosters/people_picker.dart';
@@ -99,6 +101,31 @@ void main() {
     expect(find.text('已收回'), findsOneWidget);
     expect(requests(b).single.status, SwapStatus.withdrawn);
     expect(onMine('司琴', '我不行'), findsOneWidget);
+  });
+
+  testWidgets('an ask on its way: the same duty is not asked again, from its row or the roster', (tester) async {
+    final b = church();
+    await pumpApp(tester, b);
+    await go(tester, '/rosters/sunday/2026-10-04');
+    b.writeHeld = Completer<void>();
+    await myRow(tester, '司琴');
+    await tester.tap(find.text('和別週交換'));
+    await settle(tester);
+    await tester.tap(find.text('張雅雨'));
+    await settle(tester);
+    expect(requests(b), isEmpty, reason: 'still on its way');
+
+    await tester.tap(onMine('司琴', '我不行'));
+    await settle(tester);
+    expect(find.text('10月4日的司琴要請人代嗎？'), findsNothing, reason: 'its row waits');
+    await myRow(tester, '司琴');
+    expect(find.text('和別週交換'), findsNothing, reason: 'nor does the roster open its menu');
+
+    b.writeHeld!.complete();
+    b.writeHeld = null;
+    await settle(tester);
+    expect(requests(b), hasLength(1));
+    expect(onMine('司琴', '收回'), findsOneWidget);
   });
 
   testWidgets('a day ahead I am not on, or one gone, has no 你的服事', (tester) async {
