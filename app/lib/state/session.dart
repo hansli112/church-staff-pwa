@@ -120,8 +120,23 @@ const signOutPushWait = Duration(seconds: 3);
 /// forgotten. With no connection, taking this device's token off the
 /// account waits for one, so signing out goes on after [signOutPushWait];
 /// the token is then deleted at the next sign-in or launch
-/// (FirebasePushService).
-Future<void> signOut(WidgetRef ref) async {
+/// (FirebasePushService). 登出 tapped again meanwhile waits on the same one.
+///
+/// The token comes off the account before signing out, not after: the
+/// account's own rules are what let it be taken off.
+Future<void> signOut(WidgetRef ref) {
+  final pending = ref.read(_signingOutProvider);
+  return pending.current ??= _signOut(ref).whenComplete(() => pending.current = null);
+}
+
+/// The sign-out under way, if any.
+final _signingOutProvider = Provider<_SigningOut>((ref) => _SigningOut());
+
+class _SigningOut {
+  Future<void>? current;
+}
+
+Future<void> _signOut(WidgetRef ref) async {
   // Read before waiting: the page that asked can be gone by then, and its
   // ref with it.
   final uid = ref.read(uidProvider);

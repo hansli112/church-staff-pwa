@@ -65,7 +65,13 @@ class FakePush implements PushService {
   Future<void> refresh(String uid) async {}
 
   @override
-  Future<void> unregister(String uid) async => forgetting?.future;
+  Future<void> unregister(String uid) async {
+    unregistered++;
+    await forgetting?.future;
+  }
+
+  /// How many times signing out began forgetting this device.
+  int unregistered = 0;
 
   @override
   Future<void> signedOut() async {}

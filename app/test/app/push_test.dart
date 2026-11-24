@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
+import 'package:martha/data/memory/memory_backend.dart';
 import 'package:martha/domain/models.dart';
 import 'package:martha/state/push.dart';
 import 'package:martha/state/session.dart';
@@ -157,6 +158,24 @@ void main() {
     await settle(tester);
 
     await tester.tap(find.text('登出'));
+    await tester.pump(signOutPushWait);
+    await settle(tester);
+    expect(b.auth.currentUser, isNull);
+  });
+
+  testWidgets('登出 tapped again while still signing out signs out once', (tester) async {
+    final push = FakePush(forgetting: Completer());
+    final b = MemoryBackend(clock: testClock)..auth.googleAccount = 'alice@gmail.com';
+    await pumpApp(tester, b, overrides: [pushServiceProvider.overrideWithValue(push)]);
+    await tester.tap(find.text('使用 Google 登入'));
+    await settle(tester);
+    for (var i = 0; i < 2; i++) {
+      await tester.tap(find.byTooltip('帳號'));
+      await settle(tester);
+      await tester.tap(find.text('登出'));
+      await settle(tester);
+    }
+    expect(push.unregistered, 1);
     await tester.pump(signOutPushWait);
     await settle(tester);
     expect(b.auth.currentUser, isNull);
