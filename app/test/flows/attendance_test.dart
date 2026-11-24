@@ -571,6 +571,22 @@ void main() {
       expect(find.text('今天已經提醒過了'), findsOneWidget);
     });
 
+    testWidgets('提醒 shows it is asking, and cannot be asked twice meanwhile', (tester) async {
+      final b = church();
+      await pumpApp(tester, b);
+      await go(tester, '/me/attendance');
+      b.writeHeld = Completer();
+      await tapText(tester, '提醒');
+      expect(find.byType(CircularProgressIndicator), findsOneWidget);
+      expect(find.text('提醒'), findsNothing, reason: 'not to be tapped again while it asks');
+      b.writeHeld!.complete();
+      b.writeHeld = null;
+      await settle(tester);
+      expect(find.text('今天已經提醒過了'), findsNothing);
+      expect(findShownContaining('已提醒'), findsOneWidget);
+      expect(find.text('提醒'), findsOneWidget);
+    });
+
     testWidgets('匯出 shares 聚會人數.csv: every meeting listed, from 回報人數 came on, past the weeks it turns', (
       tester,
     ) async {

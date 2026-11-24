@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:material_symbols_icons/symbols.dart';
@@ -20,10 +22,27 @@ final _familyShown = NotifierProvider<ShownChanges<FamilyPerson?>, Map<String, F
 /// one without an account can be undone; one with an account is asked
 /// first, as they would have to accept again. Each shows at once, the
 /// backend taking seconds (2026-11-23).
-class FamilyScreen extends ConsumerWidget {
+class FamilyScreen extends ConsumerStatefulWidget {
   const FamilyScreen({super.key});
 
+  @override
+  ConsumerState<FamilyScreen> createState() => _FamilyScreenState();
+}
+
+class _FamilyScreenState extends ConsumerState<FamilyScreen> {
+  /// From 加入家人 until its list closes: one list at a time.
+  bool _adding = false;
+
   Future<void> _add(BuildContext context, WidgetRef ref) async {
+    setState(() => _adding = true);
+    try {
+      await _pickAndAdd(context, ref);
+    } finally {
+      if (mounted) setState(() => _adding = false);
+    }
+  }
+
+  Future<void> _pickAndAdd(BuildContext context, WidgetRef ref) async {
     final l10n = L10n.of(context);
     final List<FamilyCandidate> people;
     try {
@@ -54,7 +73,8 @@ class FamilyScreen extends ConsumerWidget {
     );
     if (picked == null || !context.mounted) return;
     final shown = FamilyPerson(id: picked.id, name: picked.name, account: picked.account, asked: picked.account);
-    await _run(context, ref, picked.id, shown, () => ref.churchData.addFamily(picked.id));
+    // Shown at once: 加入家人 is free again before the backend answers.
+    unawaited(_run(context, ref, picked.id, shown, () => ref.churchData.addFamily(picked.id)));
   }
 
   Future<void> _remove(BuildContext context, WidgetRef ref, FamilyPerson p) async {
@@ -101,12 +121,12 @@ class FamilyScreen extends ConsumerWidget {
   }
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  Widget build(BuildContext context) {
     final l10n = L10n.of(context);
     final me = ref.watch(meProvider).value;
     // Asked for now, so 加入家人 opens its list at once rather than waiting
     // on the backend then.
-    ref.watch(familyAddableProvider);
+    final addable = ref.watch(familyAddableProvider);
     final changed = ref.watch(_familyShown);
     final had = ref.watch(familyProvider);
     final family = [
@@ -125,7 +145,10 @@ class FamilyScreen extends ConsumerWidget {
                 leading: const Icon(Symbols.add_rounded),
                 title: l10n.familyAdd,
                 chevron: false,
-                onTap: () => _add(context, ref),
+                trailing: _adding && addable.isLoading
+                    ? const SizedBox.square(dimension: 20, child: CircularProgressIndicator.adaptive(strokeWidth: 2))
+                    : null,
+                onTap: _adding ? null : () => _add(context, ref),
               ),
             ],
           ),

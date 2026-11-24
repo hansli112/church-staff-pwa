@@ -8,6 +8,7 @@ import 'package:martha/data/memory/memory_backend.dart';
 import 'package:martha/domain/day.dart';
 import 'package:martha/domain/family.dart';
 import 'package:martha/domain/models.dart';
+import 'package:martha/state/providers.dart';
 
 import '../support/harness.dart';
 import '../support/seed.dart';
@@ -50,6 +51,20 @@ Future<void> add(WidgetTester tester, String name) async {
 }
 
 void main() {
+  testWidgets('加入家人 waiting on the list shows so, and opens it once however often tapped', (tester) async {
+    final list = Completer<List<FamilyCandidate>>();
+    await pumpApp(tester, church(), overrides: [familyAddableProvider.overrideWith((ref) => list.future)]);
+    await go(tester, '/me');
+    await tapText(tester, '家人');
+    await tapText(tester, '加入家人');
+    expect(find.byType(CircularProgressIndicator), findsOneWidget);
+    await tapText(tester, '加入家人');
+    list.complete(const [FamilyCandidate(id: 'kid', name: '李小恩', account: false)]);
+    await settle(tester);
+    expect(find.text('李小恩'), findsOneWidget, reason: 'one list, not two stacked');
+    expect(find.byType(CircularProgressIndicator), findsNothing);
+  });
+
   testWidgets('one without an account is family at once, and their days are on 首頁 with their name', (tester) async {
     final b = church();
     await pumpApp(tester, b);

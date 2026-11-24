@@ -5,6 +5,7 @@ import 'package:material_symbols_icons/symbols.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
 import 'package:martha/domain/models.dart';
+import 'package:martha/state/providers.dart';
 
 import '../support/harness.dart';
 import '../support/seed.dart';
@@ -95,6 +96,27 @@ void main() {
     await go(tester, '/me/church');
     expect(find.text('首頁連結'), findsNothing);
     await expectLater(b.church('grace').churchLink.save(link), throwsA(anything));
+  });
+
+  testWidgets('the link that cannot be read says so on its page, and is read again', (tester) async {
+    var reads = 0;
+    await pumpApp(
+      tester,
+      seededChurch(),
+      overrides: [
+        churchLinkProvider.overrideWith(
+          (ref) => reads++ == 0
+              ? Stream.error(StateError('offline'))
+              : Stream.value(const ChurchLink(title: '教會官網', url: 'https://grace.example')),
+        ),
+      ],
+    );
+    await go(tester, '/me/link');
+    expect(find.text('載入失敗，請檢查網路後再試一次'), findsOneWidget);
+    await tester.tap(find.widgetWithText(TextButton, '重試'));
+    await settle(tester);
+    expect(find.text('載入失敗，請檢查網路後再試一次'), findsNothing);
+    expect(find.text('教會官網'), findsWidgets);
   });
 
   group('daily content source', () {

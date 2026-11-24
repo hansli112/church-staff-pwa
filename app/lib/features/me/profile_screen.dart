@@ -12,6 +12,8 @@ import '../../domain/models.dart';
 import '../../l10n/app_localizations.dart';
 import '../../state/providers.dart';
 import '../../state/session.dart';
+import '../common/saving_indicator.dart';
+import 'unread_page.dart';
 
 /// 帳號, behind my name at the top of 設定: my name, how I sign in, signing
 /// out and deleting the account, which are rarely needed.
@@ -24,7 +26,7 @@ class ProfileScreen extends ConsumerWidget {
     final profile = ref.watch(profileProvider).value;
     final me = ref.watch(meProvider).value;
     return Scaffold(
-      appBar: AppBar(title: Text(l10n.account)),
+      appBar: AppBar(title: Text(l10n.account), actions: const [SavingIndicator()]),
       body: ListView(
         children: [
           ListSection(
@@ -112,10 +114,10 @@ class _NameScreenState extends ConsumerState<NameScreen> {
     final l10n = L10n.of(context);
     final c = AppColors.of(context);
     final profile = ref.watch(profileProvider).value;
-    if (profile == null) return Scaffold(appBar: AppBar());
+    if (profile == null) return unreadPage(context, ref, [profileProvider]);
     _name ??= TextEditingController(text: profile.name);
     return Scaffold(
-      appBar: AppBar(title: Text(l10n.name)),
+      appBar: AppBar(title: Text(l10n.name), actions: const [SavingIndicator()]),
       body: ListView(
         padding: const EdgeInsets.all(Space.m),
         children: [
@@ -169,7 +171,7 @@ class LanguageScreen extends ConsumerWidget {
     }
 
     return Scaffold(
-      appBar: AppBar(title: Text(l10n.language)),
+      appBar: AppBar(title: Text(l10n.language), actions: const [SavingIndicator()]),
       body: ListView(
         children: [
           ListSection(

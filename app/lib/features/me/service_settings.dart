@@ -23,6 +23,7 @@ import '../common/errors.dart';
 import '../common/labels.dart';
 import '../common/saving_indicator.dart';
 import 'groups_screen.dart' show assignLead, leadRow, ministrySummary, newMinistryId, pickLead;
+import 'unread_page.dart';
 
 // A service's settings (#94), on its page in 聚會與事工: what used to be
 // 服事設定. IDs only ever grow: a deleted service's rosters stay saved
@@ -154,10 +155,30 @@ class ServiceEdits {
   /// out of sight. With days arranged from today on, asked first; none
   /// (one added to try it out), at once. True once deleted.
   Future<bool> delete({required VoidCallback leave}) async {
+    // Tapped again while the rosters are read: once is enough.
+    if (!_deleting.add(service.id)) return false;
+    try {
+      return await _delete(leave: leave);
+    } finally {
+      _deleting.remove(service.id);
+    }
+  }
+
+  /// The services whose 刪除聚會 is under way.
+  static final _deleting = <String>{};
+
+  Future<bool> _delete({required VoidCallback leave}) async {
     final l10n = _l10n;
     final before = ref.read(servicesProvider).value?.services;
     if (before == null) return false;
-    final rosters = await ref.read(savedRostersProvider.future);
+    final List<Roster> rosters;
+    try {
+      // Read already, nearly always: the 服事表 tab keeps them.
+      rosters = ref.read(savedRostersProvider).value ?? await ref.read(savedRostersProvider.future);
+    } catch (e) {
+      if (context.mounted) showToast(context, errorText(l10n, e));
+      return false;
+    }
     final arranged = rosters.where((r) => r.type == service.id && r.duties.any((d) => d.people.isNotEmpty)).length;
     if (!context.mounted) return false;
     if (arranged > 0) {
@@ -525,7 +546,7 @@ class _DutyScreenState extends ConsumerState<DutyScreen> {
     // Renamed back by 復原: the name it opened with again.
     final duty = service == null || service.duties.contains(_duty) ? _duty : widget.duty;
     if (me == null || service == null || members == null || !service.duties.contains(duty)) {
-      return Scaffold(appBar: AppBar());
+      return unreadPage(context, ref, [meProvider, servicesProvider, staffProvider]);
     }
     final admin = me.editsServiceSettings;
     // What 多人服事 shows until it is set.

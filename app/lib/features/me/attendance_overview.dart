@@ -23,6 +23,7 @@ import '../rosters/format.dart';
 import '../common/saving_indicator.dart';
 import 'attendance.dart';
 import 'groups_screen.dart' show attendancePage;
+import 'unread_page.dart';
 
 /// 回報人數, for admins and 行政, and a service's 負責人 and 牧者, theirs
 /// (#95). Once on, a week of 人數總覽 (#93), Sunday to Saturday, to copy
@@ -44,6 +45,9 @@ class _AttendanceOverviewScreenState extends ConsumerState<AttendanceOverviewScr
   Day? _sunday;
 
   bool _exporting = false;
+
+  /// While 提醒 asks: once is enough.
+  bool _reminding = false;
 
   /// 匯出: every meeting it lists, from 回報人數 came on, as 聚會人數.csv,
   /// to keep or send on (the share sheet, or a download on the web).
@@ -92,7 +96,10 @@ class _AttendanceOverviewScreenState extends ConsumerState<AttendanceOverviewScr
         ]),
       ),
       body: church == null
-          ? const SizedBox.shrink()
+          ? switch (failedRead(ref, [churchProvider])) {
+              final failed? => ErrorRetry(message: l10n.loadFailed, onRetry: () => ref.invalidate(failed)),
+              null => const SizedBox.shrink(),
+            }
           : ListView(
               padding: const EdgeInsets.only(bottom: Space.xl),
               children: [
@@ -118,7 +125,12 @@ class _AttendanceOverviewScreenState extends ConsumerState<AttendanceOverviewScr
                             style: AppText.footnote.copyWith(color: AppColors.of(context).secondaryLabel),
                           ),
                           if (week.missing > 0)
-                            RowButton(label: l10n.attendanceRemind, onPressed: () => _remind(context, week)),
+                            _reminding
+                                ? const SizedBox.square(
+                                    dimension: 20,
+                                    child: CircularProgressIndicator.adaptive(strokeWidth: 2),
+                                  )
+                                : RowButton(label: l10n.attendanceRemind, onPressed: () => _remind(context, week)),
                         ],
                       ),
                     ),
@@ -241,12 +253,18 @@ class _AttendanceOverviewScreenState extends ConsumerState<AttendanceOverviewScr
       }
     }
     // Each on its own: one already reminded today does not stop the rest.
-    final results = await Future.wait([
-      for (final MapEntry(:key, :value) in latest.entries)
-        attendance
-            .remind(key, value.day)
-            .then<Object>((told) => told > 0 ? true : value.name, onError: (Object e) => e),
-    ]);
+    setState(() => _reminding = true);
+    final List<Object> results;
+    try {
+      results = await Future.wait([
+        for (final MapEntry(:key, :value) in latest.entries)
+          attendance
+              .remind(key, value.day)
+              .then<Object>((told) => told > 0 ? true : value.name, onError: (Object e) => e),
+      ]);
+    } finally {
+      if (mounted) setState(() => _reminding = false);
+    }
     if (!context.mounted) return;
     final nobody = results.whereType<String>().toList();
     final failed = results.where((r) => r is! bool && r is! String).toList();

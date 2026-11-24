@@ -93,6 +93,7 @@ class SecondaryButton extends StatelessWidget {
     this.expand = false,
     this.destructive = false,
     this.icon,
+    this.busy = false,
   });
 
   final String label;
@@ -101,6 +102,9 @@ class SecondaryButton extends StatelessWidget {
   final bool destructive;
   final Widget? icon;
 
+  /// Shows a spinner and ignores taps while the action runs.
+  final bool busy;
+
   @override
   Widget build(BuildContext context) {
     final c = AppColors.of(context);
@@ -108,6 +112,22 @@ class SecondaryButton extends StatelessWidget {
       foregroundColor: destructive ? c.destructive : c.accent,
       minimumSize: Size(expand ? double.infinity : 48, 50),
     );
+    if (busy) {
+      // The name kept for screen readers, as PrimaryButton's.
+      return Semantics(
+        label: label,
+        excludeSemantics: true,
+        button: true,
+        child: TextButton(
+          onPressed: () {},
+          style: style,
+          child: SizedBox.square(
+            dimension: 20,
+            child: CircularProgressIndicator(strokeWidth: 2, color: destructive ? c.destructive : c.accent),
+          ),
+        ),
+      );
+    }
     return icon == null
         ? TextButton(
             onPressed: onPressed,

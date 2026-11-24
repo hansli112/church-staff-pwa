@@ -195,6 +195,7 @@ class _Configured extends ConsumerStatefulWidget {
 
 class _ConfiguredState extends ConsumerState<_Configured> {
   bool _testing = false;
+  bool _rotating = false;
 
   ChurchData get _church => ref.churchData;
 
@@ -254,16 +255,21 @@ class _ConfiguredState extends ConsumerState<_Configured> {
         return;
       }
     }
+    final String? secret;
+    setState(() => _rotating = true);
     try {
-      final secret = await _church.webhook.rotateSecret(secret: typed);
-      if (!mounted) return;
-      if (secret != null) {
-        await _showSecret(context, secret);
-      } else {
-        showToast(context, l10n.webhookSecretChanged);
-      }
+      secret = await _church.webhook.rotateSecret(secret: typed);
     } catch (e) {
       if (mounted) showToast(context, errorText(l10n, e));
+      return;
+    } finally {
+      if (mounted) setState(() => _rotating = false);
+    }
+    if (!mounted) return;
+    if (secret != null) {
+      await _showSecret(context, secret);
+    } else {
+      showToast(context, l10n.webhookSecretChanged);
     }
   }
 
@@ -333,7 +339,10 @@ class _ConfiguredState extends ConsumerState<_Configured> {
               // Not shown again after it is set: no row to read it.
               subtitle: l10n.webhookRotateSub,
               chevron: false,
-              onTap: _rotate,
+              trailing: _rotating
+                  ? const SizedBox.square(dimension: 20, child: CircularProgressIndicator(strokeWidth: 2))
+                  : null,
+              onTap: _rotating ? null : _rotate,
             ),
           ],
         ),

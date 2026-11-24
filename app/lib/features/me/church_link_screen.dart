@@ -14,6 +14,7 @@ import '../common/errors.dart';
 import '../common/link_errors.dart';
 import '../common/time_zones.dart';
 import '../common/saving_indicator.dart';
+import 'unread_page.dart';
 
 /// Admins set the church link shown at the top of everyone's home page,
 /// and optionally a content source fetched once a day at a time they pick.
@@ -146,7 +147,7 @@ class _ChurchLinkScreenState extends ConsumerState<ChurchLinkScreen> {
   Widget build(BuildContext context) {
     final l10n = L10n.of(context);
     final saved = ref.watch(churchLinkProvider);
-    if (!saved.hasValue) return Scaffold(appBar: AppBar(title: Text(l10n.churchLink)));
+    if (!saved.hasValue) return unreadPage(context, ref, [churchLinkProvider], title: Text(l10n.churchLink));
     final link = saved.value;
     _fill(link);
     final content = ref.watch(linkContentProvider).value;

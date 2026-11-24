@@ -18,6 +18,7 @@ import '../common/errors.dart';
 import '../common/time_zones.dart';
 import '../common/saving_indicator.dart';
 import 'attendance.dart' show attendanceCsvWords;
+import 'unread_page.dart';
 
 /// 教會資訊: the church's name and logo, its time zone, the admin tools,
 /// and at the very bottom, in red, leaving the church. How people join
@@ -34,6 +35,7 @@ class ChurchInfoScreen extends ConsumerStatefulWidget {
 class _ChurchInfoScreenState extends ConsumerState<ChurchInfoScreen> {
   bool _uploading = false;
   bool _exporting = false;
+  bool _deleting = false;
 
   Future<void> _export(Church church) async {
     final l10n = L10n.of(context);
@@ -96,13 +98,17 @@ class _ChurchInfoScreenState extends ConsumerState<ChurchInfoScreen> {
       action: l10n.leave,
     );
     if (!ok || !mounted) return;
+    // To 首頁 at once: this page has nothing to show once I am out of the
+    // church, and the backend takes a while to say so. What came of it is
+    // told there.
+    final toasts = Navigator.of(context, rootNavigator: true).context;
+    final leaving = ref.churchData.removeMember(me.uid);
+    context.go('/home');
     try {
-      await ref.churchData.removeMember(me.uid);
-      if (!mounted) return;
-      showToast(context, l10n.leftChurch(church.name));
-      context.go('/home');
+      await leaving;
+      if (toasts.mounted) showToast(toasts, l10n.leftChurch(church.name));
     } catch (e) {
-      if (mounted) showToast(context, errorText(l10n, e));
+      if (toasts.mounted) showToast(toasts, errorText(l10n, e));
     }
   }
 
@@ -115,10 +121,13 @@ class _ChurchInfoScreenState extends ConsumerState<ChurchInfoScreen> {
       action: l10n.deleteChurch,
     );
     if (!ok || !mounted) return;
+    setState(() => _deleting = true);
     try {
       await ref.churchData.deleteChurch();
     } catch (e) {
       if (mounted) showToast(context, errorText(l10n, e));
+    } finally {
+      if (mounted) setState(() => _deleting = false);
     }
   }
 
@@ -127,7 +136,7 @@ class _ChurchInfoScreenState extends ConsumerState<ChurchInfoScreen> {
     final l10n = L10n.of(context);
     final church = ref.watch(churchProvider).value;
     final me = ref.watch(meProvider).value;
-    if (church == null || me == null) return Scaffold(appBar: AppBar());
+    if (church == null || me == null) return unreadPage(context, ref, [churchProvider, meProvider]);
     final admin = me.isAdmin;
     final logo = church.logoUrl;
     return Scaffold(
@@ -241,7 +250,10 @@ class _ChurchInfoScreenState extends ConsumerState<ChurchInfoScreen> {
                 ListRow(
                   title: l10n.deleteChurch,
                   destructive: true,
-                  onTap: () => _deleteChurch(church),
+                  trailing: _deleting
+                      ? const SizedBox.square(dimension: 20, child: CircularProgressIndicator(strokeWidth: 2))
+                      : null,
+                  onTap: _deleting ? null : () => _deleteChurch(church),
                 ),
               ],
             )

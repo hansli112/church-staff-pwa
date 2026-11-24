@@ -25,6 +25,7 @@ import '../rosters/future_changes.dart';
 import 'attendance.dart';
 import 'service_settings.dart';
 import 'service_staff.dart';
+import 'unread_page.dart';
 
 /// What of a service has a page of its own, a row on the service's.
 enum ServicePart {
@@ -268,7 +269,7 @@ class _GroupStaffScreenState extends ConsumerState<GroupStaffScreen> {
     final me = ref.watch(meProvider).value;
     // 行政 reads them, as on the service's page.
     if (name == null || me == null || !(me.managesGroup(widget.group) || me.readsAttendance(widget.group))) {
-      return Scaffold(appBar: AppBar());
+      return unreadPage(context, ref, [meProvider, servicesProvider, ministriesProvider, smallGroupsProvider]);
     }
     return Scaffold(
       appBar: AppBar(title: Text(l10n.groupStaffTitle(name)), actions: const [SavingIndicator()]),
@@ -501,7 +502,7 @@ class ServicePartScreen extends ConsumerWidget {
     final group = ServiceGroup(serviceId);
     // Who sees the service's page, 行政 too (#93).
     if (me == null || service == null || members == null || !(me.managesGroup(group) || me.readsAttendance(group))) {
-      return Scaffold(appBar: AppBar());
+      return unreadPage(context, ref, [meProvider, servicesProvider, staffProvider]);
     }
     final editsSettings = me.editsServiceSettings;
     return Scaffold(
@@ -630,7 +631,13 @@ class GroupScreen extends ConsumerWidget {
     // 行政 sees its 人數 here too, from 人數總覽 (#93), and changes nothing else.
     final sees = me != null && (me.managesGroup(group) || me.readsAttendance(group));
     if (me == null || name == null || members == null || !sees) {
-      return Scaffold(appBar: AppBar());
+      return unreadPage(context, ref, [
+        meProvider,
+        servicesProvider,
+        ministriesProvider,
+        smallGroupsProvider,
+        staffProvider,
+      ]);
     }
     final admin = me.isAdmin;
     // A 小組's service's 負責人 open, change and close it, and name its 小組長.

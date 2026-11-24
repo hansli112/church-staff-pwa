@@ -332,6 +332,36 @@ void main() {
       expect(find.text('加入你的教會'), findsOneWidget);
     });
 
+    testWidgets('leaving goes to 首頁 at once, the church gone when the backend says', (tester) async {
+      final b = seededChurch(as: staffMei);
+      await pumpApp(tester, b);
+      await go(tester, '/me/church');
+      await tester.scrollUntilVisible(find.text('退出教會'), 300);
+      b.writeHeld = Completer();
+      await tapText(tester, '退出教會');
+      await tapText(tester, '退出教會');
+      expect(find.text('退出教會'), findsNothing, reason: 'not a blank page, nor tapped again');
+      expect(find.byType(NavigationBar), findsOneWidget);
+      b.writeHeld!.complete();
+      b.writeHeld = null;
+      await settle(tester);
+      expect(find.text('加入你的教會'), findsOneWidget);
+      expect(findShown('已退出〈恩典堂〉'), findsOneWidget);
+    });
+
+    testWidgets('leaving that fails says so on 首頁, still in the church', (tester) async {
+      final b = seededChurch(as: staffMei);
+      await pumpApp(tester, b);
+      await go(tester, '/me/church');
+      await tester.scrollUntilVisible(find.text('退出教會'), 300);
+      b.failNextWrite = const CloudException(CloudErrorCode.unavailable);
+      await tapText(tester, '退出教會');
+      await tapText(tester, '退出教會');
+      expect(b.members['grace']!.containsKey('mei'), isTrue);
+      expect(findShown('連不上網路，請檢查後再試一次'), findsOneWidget);
+      expect(find.byType(NavigationBar), findsOneWidget);
+    });
+
     testWidgets('an admin has no leave entry and is told to hand over', (tester) async {
       await pumpApp(tester, seededChurch());
       await go(tester, '/me/church');
@@ -428,6 +458,26 @@ void main() {
       expect(b.invites[code]!.revoked, isTrue);
       expect(find.text('已停用，這個連結不能再用來加入'), findsOneWidget);
       expect(find.text('10月31日 到期'), findsNothing);
+    });
+
+    testWidgets('停用 takes the link off the list at once; failing, it comes back and says so', (tester) async {
+      final b = seededChurch();
+      await pumpApp(tester, b);
+      captureOutbox(tester);
+      await go(tester, '/me/invites');
+      await tapText(tester, '建立邀請連結');
+      final code = b.invites.keys.single;
+      await tester.pump(const Duration(seconds: 5));
+      b.writeHeld = Completer();
+      await tapText(tester, '10月31日 到期');
+      await tapText(tester, '停用');
+      expect(find.text('10月31日 到期'), findsNothing, reason: 'not to be 停用 twice');
+      b.writeHeld!.completeError(const CloudException(CloudErrorCode.unavailable));
+      b.writeHeld = null;
+      await settle(tester);
+      expect(b.invites[code]!.revoked, isFalse);
+      expect(findShown('連不上網路，請檢查後再試一次'), findsOneWidget);
+      expect(find.text('10月31日 到期'), findsOneWidget);
     });
 
     testWidgets('an invite works for 30 days, with no length to choose', (tester) async {

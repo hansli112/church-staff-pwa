@@ -50,6 +50,9 @@ const _validFor = Duration(days: 30);
 class _InvitesScreenState extends ConsumerState<InvitesScreen> {
   bool _busy = false;
 
+  /// The invites being 停用, by code: no longer listed.
+  final _revoking = <String>{};
+
   /// The 牧區 the next invite joins, as service IDs, once the admin has
   /// ticked or unticked one; until then [_zonesOf] decides.
   Set<String>? _picked;
@@ -66,7 +69,10 @@ class _InvitesScreenState extends ConsumerState<InvitesScreen> {
       final services = ref.read(servicesProvider).value?.services ?? const <Service>[];
       final zones = _zonesOf(services);
       final ids = {for (final s in services) s.id};
-      final existing = ref.read(_liveInvitesProvider).where((i) => i.joinsJust(zones, ids)).firstOrNull;
+      final existing = ref
+          .read(_liveInvitesProvider)
+          .where((i) => !_revoking.contains(i.code) && i.joinsJust(zones, ids))
+          .firstOrNull;
       invite = existing != null
           ? await ref.churchData.joining.renewInvite(existing.code, validFor: _validFor)
           : await ref.churchData.joining.createInvite(
@@ -131,8 +137,16 @@ class _InvitesScreenState extends ConsumerState<InvitesScreen> {
         ref.read(telemetryProvider).logEvent('share', {'content_type': 'invite', 'method': 'copy'});
         await copyText(context, inviteLink(invite.churchId, invite.code), copied: l10n.inviteCopied);
       case 'revoke':
-        await ref.churchData.joining.revokeInvite(invite.code);
-        if (mounted) showToast(context, l10n.inviteRevoked);
+        // Off the list at once, not to be 停用 twice; back if it failed.
+        setState(() => _revoking.add(invite.code));
+        try {
+          await ref.churchData.joining.revokeInvite(invite.code);
+          if (mounted) showToast(context, l10n.inviteRevoked);
+        } catch (e) {
+          if (mounted) showToast(context, saveErrorText(l10n, e));
+        } finally {
+          if (mounted) setState(() => _revoking.remove(invite.code));
+        }
     }
   }
 
@@ -172,7 +186,11 @@ class _InvitesScreenState extends ConsumerState<InvitesScreen> {
     final l10n = L10n.of(context);
     final c = AppColors.of(context);
     final church = ref.watch(churchProvider).value;
-    final live = ref.watch(_liveInvitesProvider);
+    final live = [
+      for (final i in ref.watch(_liveInvitesProvider))
+        if (!_revoking.contains(i.code)) i,
+    ];
+    final invites = ref.watch(_invitesProvider);
     final services = ref.watch(servicesProvider).value;
     final all = services?.services ?? const <Service>[];
     final zones = _zonesOf(all);
@@ -215,11 +233,14 @@ class _InvitesScreenState extends ConsumerState<InvitesScreen> {
               label: l10n.inviteCreate,
               icon: const Icon(Symbols.link_rounded),
               // Waits for the links there are, to share one again.
-              busy: _busy || ref.watch(_invitesProvider).isLoading,
-              onPressed: _create,
+              busy: _busy || invites.isLoading,
+              // Not knowing the links there are, it would make another.
+              onPressed: invites.hasError && !invites.hasValue ? null : _create,
             ),
           ),
-          if (live.isNotEmpty)
+          if (invites.hasError && !invites.hasValue)
+            ErrorRetry(message: l10n.loadFailed, onRetry: () => ref.invalidate(_invitesProvider))
+          else if (live.isNotEmpty)
             ListSection(
               header: l10n.inviteLinks,
               children: [

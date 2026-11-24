@@ -26,6 +26,7 @@ import '../rosters/future_changes.dart' show runWithUndo;
 import 'groups_screen.dart' show attendancePage;
 import '../../state/session.dart';
 import '../common/saving_indicator.dart';
+import 'unread_page.dart';
 
 /// 人數 on a group's page (回報人數, #85), one row since #95: its latest
 /// meeting's, or when it next meets, opening its 人數 page. None with
@@ -75,7 +76,11 @@ class GroupAttendanceScreen extends ConsumerWidget {
         group == null ||
         record == null ||
         !me.readsAttendance(group.group, record.fillers)) {
-      return Scaffold(appBar: AppBar());
+      return unreadPage(context, ref, [
+        churchProvider,
+        meProvider,
+        if (group != null) attendanceProvider(group.group.key),
+      ]);
     }
     final writes = me.fillsAttendance(group.group, record.fillers);
     final manages = me.writesAttendance(group.group);

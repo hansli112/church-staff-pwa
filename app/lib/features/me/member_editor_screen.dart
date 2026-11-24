@@ -18,6 +18,7 @@ import 'identity_section.dart';
 import 'no_account_picker.dart';
 import 'service_staff.dart';
 import '../rosters/future_changes.dart';
+import 'unread_page.dart';
 
 /// An admin editing one member: their name here (tapped in the title),
 /// their 身分 (#82), and each service they are one of the 同工 of, with the
@@ -160,7 +161,7 @@ class MemberEditorScreen extends ConsumerWidget {
     final smallGroups = ref.watch(smallGroupsProvider).value ?? const <SmallGroupDetails>[];
     final self = ref.watch(uidProvider) == uid;
     if (member == null && pending.any((p) => p.id == uid)) return _NoAccountScreen(id: uid);
-    if (member == null || services == null) return Scaffold(appBar: AppBar());
+    if (member == null || services == null) return unreadPage(context, ref, [membersProvider, servicesProvider]);
     final me = ref.watch(meProvider).value;
     final admin = me?.isAdmin ?? false;
     if (!admin && !(me?.inGroup(Group.rosterEditors) ?? false) || member.isAdmin && !admin) {
@@ -314,7 +315,9 @@ class _NoAccountScreen extends ConsumerWidget {
     );
     final services = ref.watch(servicesProvider).value;
     final smallGroups = ref.watch(smallGroupsProvider).value ?? const <SmallGroupDetails>[];
-    if (pending == null || services == null) return Scaffold(appBar: AppBar());
+    if (pending == null || services == null) {
+      return unreadPage(context, ref, [pendingMembersProvider, servicesProvider]);
+    }
     final name = pending.name.isEmpty ? pending.email : pending.name;
     final admin = ref.watch(meProvider).value?.isAdmin ?? false;
     // 行政 change anyone but an admin (one moved from self-host).

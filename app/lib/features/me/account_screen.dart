@@ -138,6 +138,7 @@ class _AccountScreenState extends ConsumerState<AccountScreen> {
             expand: true,
             // Waits for the check, so the only admin never gets as far as
             // the confirmation to be refused.
+            busy: _busy,
             onPressed: _busy || check.isLoading || blocking.isNotEmpty ? null : _delete,
           ),
         ],
