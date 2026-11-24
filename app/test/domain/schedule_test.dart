@@ -153,4 +153,25 @@ void main() {
       expect(unbound, isEmpty);
     });
   });
+
+  test('a service every other week has a draft on its weeks only, counted from startsOn either way', () {
+    final prayer = Service(
+      id: 'prayer',
+      name: '禱告會',
+      weekdays: const [DateTime.wednesday],
+      every: 2,
+      startsOn: Day(2026, 10, 21),
+    );
+    final rosters = upcomingRosters(service: prayer, saved: const [], from: thursday, weeks: 6);
+    expect(rosters.map((r) => r.day.key), ['2026-10-07', '2026-10-21', '2026-11-04']);
+    expect(prayer.meetsOn(Day(2026, 10, 14)), isFalse);
+    expect(prayer.meetsOn(Day(2026, 10, 15)), isFalse, reason: 'not its weekday');
+    expect(prayer.meetsOn(Day(2026, 9, 23)), isTrue);
+  });
+
+  test('a service on some weeks of each month: 第 1、3 個週五', () {
+    const prayer = Service(id: 'prayer', name: '禱告會', weekdays: [DateTime.friday], monthWeeks: [1, 3]);
+    final rosters = upcomingRosters(service: prayer, saved: const [], from: thursday, weeks: 5);
+    expect(rosters.map((r) => r.day.key), ['2026-10-02', '2026-10-16']);
+  });
 }

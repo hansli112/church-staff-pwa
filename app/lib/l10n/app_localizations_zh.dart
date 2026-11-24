@@ -1181,7 +1181,7 @@ class L10nZh extends L10n {
   String get notifAskTitle => '被排到服事時通知你';
 
   @override
-  String get notifAskBody => '排進服事、服事表有變動時通知你，每週一晚上也會提醒這週的服事';
+  String get notifAskBody => '服事表有變動時也會通知，每週一晚上提醒這週的服事';
 
   @override
   String get notifAskLater => '稍後再說';
@@ -1275,7 +1275,7 @@ class L10nZh extends L10n {
   }
 
   @override
-  String get welcomeWaitBody => '管理員把你加進聚會後，就看得到服事表了。等不及的話，可以直接跟管理員說一聲。';
+  String get welcomeWaitBody => '管理員把你加進聚會後，就看得到服事表了。';
 
   @override
   String get waitsForZone => '還沒加入任何聚會';
@@ -2988,6 +2988,18 @@ class L10nZh extends L10n {
   }
 
   @override
+  String get serviceStartWeek => '從哪一週開始';
+
+  @override
+  String get thisWeek => '這週';
+
+  @override
+  String get nextWeek => '下週';
+
+  @override
+  String get weekAfterNext => '下下週';
+
+  @override
   String get nextMeeting => '下次聚會';
 
   @override
@@ -3145,7 +3157,7 @@ class L10nZh extends L10n {
   String get errRemindedToday => '今天已經提醒過了';
 
   @override
-  String get errCoverAway => '他那天不能服事，請找別人';
+  String get errCoverAway => '對方那天不能服事，請找別人';
 
   @override
   String get errTogetherFilled => '選的小組那天已經填了人數';
@@ -3456,7 +3468,7 @@ class L10nZh extends L10n {
   String get unavailableServing => '這幾天你已經被排到';
 
   @override
-  String get unavailableServingFooter => '負責人排的時候會看到你這天不行';
+  String get unavailableServingFooter => '排服事的人會看到你這天不行';
 
   @override
   String get pickerUnavailable => '這天不行';
@@ -3619,7 +3631,7 @@ class L10nZh extends L10n {
   String get swapAskOne => '找一位同工代';
 
   @override
-  String get swapAskOneSub => '只問他，他按「我來」才換';
+  String get swapAskOneSub => '挑一位來問，對方按「我來」才換';
 
   @override
   String swapPickCoverTitle(String day, String duty) {
@@ -3631,7 +3643,7 @@ class L10nZh extends L10n {
 
   @override
   String swapAskedOne(String name) {
-    return '已請「$name」代，他按「我來」才換';
+    return '已請「$name」代，對方按「我來」才換';
   }
 
   @override
@@ -5035,7 +5047,7 @@ class L10nZhHans extends L10nZh {
   String get notifAskTitle => '被排到事奉时通知你';
 
   @override
-  String get notifAskBody => '排入事奉、事奉表有变动时通知你，每周一晚上也会提醒这周的事奉';
+  String get notifAskBody => '事奉表有变动时也会通知，每周一晚上提醒这周的事奉';
 
   @override
   String get notifAskLater => '稍后再说';
@@ -5129,7 +5141,7 @@ class L10nZhHans extends L10nZh {
   }
 
   @override
-  String get welcomeWaitBody => '管理员把你加进聚会后，就能看到事奉表了。等不及的话，可以直接跟管理员说一声。';
+  String get welcomeWaitBody => '管理员把你加进聚会后，就能看到事奉表了。';
 
   @override
   String get waitsForZone => '还没设置所属聚会';
@@ -6842,6 +6854,18 @@ class L10nZhHans extends L10nZh {
   }
 
   @override
+  String get serviceStartWeek => '从哪一周开始';
+
+  @override
+  String get thisWeek => '这周';
+
+  @override
+  String get nextWeek => '下周';
+
+  @override
+  String get weekAfterNext => '下下周';
+
+  @override
   String get nextMeeting => '下次聚会';
 
   @override
@@ -6999,7 +7023,7 @@ class L10nZhHans extends L10nZh {
   String get errRemindedToday => '今天已经提醒过了';
 
   @override
-  String get errCoverAway => '他那天不能事奉，请找别人';
+  String get errCoverAway => '对方那天不能事奉，请找别人';
 
   @override
   String get errTogetherFilled => '选的小组那天已经填了人数';
@@ -7310,7 +7334,7 @@ class L10nZhHans extends L10nZh {
   String get unavailableServing => '这几天你已经被排到';
 
   @override
-  String get unavailableServingFooter => '负责人排的时候会看到你这天不行';
+  String get unavailableServingFooter => '排事奉的人会看到你这天不行';
 
   @override
   String get pickerUnavailable => '这天不行';
@@ -7473,7 +7497,7 @@ class L10nZhHans extends L10nZh {
   String get swapAskOne => '找一位同工代';
 
   @override
-  String get swapAskOneSub => '只问他，他按“我来”才换';
+  String get swapAskOneSub => '挑一位来问，对方按“我来”才换';
 
   @override
   String swapPickCoverTitle(String day, String duty) {
@@ -7485,7 +7509,7 @@ class L10nZhHans extends L10nZh {
 
   @override
   String swapAskedOne(String name) {
-    return '已请“$name”代，他按“我来”才换';
+    return '已请“$name”代，对方按“我来”才换';
   }
 
   @override

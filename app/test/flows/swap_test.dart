@@ -375,7 +375,7 @@ void main() {
     expect(find.text('10月4日的司琴請誰代？'), findsOneWidget);
     await tester.tap(find.text('張雅雨'));
     await settle(tester);
-    expect(find.text('已請「張雅雨」代，他按「我來」才換'), findsOneWidget);
+    expect(find.text('已請「張雅雨」代，對方按「我來」才換'), findsOneWidget);
     final r = requests(b).single;
     expect((r.kind, r.to, r.toName, r.chosen), (SwapKind.cover, 'yu', '張雅雨', true));
     expect(r.asked, ['yu']);
@@ -434,7 +434,7 @@ void main() {
     b.unavailable['grace'] = {'yu': const UnavailableDays().add(Day(2026, 10, 4), Day(2026, 10, 4))};
     await tester.tap(find.text('張雅雨'));
     await settle(tester);
-    expect(find.text('他那天不能服事，請找別人'), findsOneWidget);
+    expect(find.text('對方那天不能服事，請找別人'), findsOneWidget);
     expect(requests(b), isEmpty);
   });
 }

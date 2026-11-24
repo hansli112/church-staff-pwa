@@ -159,6 +159,8 @@ export interface Words {
   coverUndone(name: string, day: string, line: string): string;
   /** To the leads, either given back by [name]: [day] is [from]'s again. */
   backTo(name: string, day: string, line: string, from: string): string;
+  /** To the leads: [name] undid the swap with [from], both days as they were. */
+  swapBackTo(name: string, from: string): string;
   /** To the leads: who took whose, and a cover nobody took three days before. */
   covered(day: string, line: string, from: string, taker: string): string;
   swapped(line: string, from: string, fromDay: string, to: string, toDay: string): string;
@@ -267,6 +269,7 @@ const zhHant: Words = {
   coverDeclined: (name, day, line) => `「${name}」不方便代 ${day}${line}`,
   coverUndone: (name, day, line) => `「${name}」取消了接手，${day}${line}還是你`,
   backTo: (name, day, line, from) => `「${name}」取消了接手，${day}${line}還是「${from}」`,
+  swapBackTo: (name, from) => `「${name}」取消了和「${from}」的交換，兩天都換回原本的人`,
   covered: (day, line, from, taker) => `${day}${line}：「${from}」→「${taker}」`,
   swapped: (line, from, fromDay, to, toDay) => `${line}：「${from}」${fromDay}和「${to}」${toDay}交換了`,
   uncovered: (day, line) => `${day}${line}還沒人代`,
@@ -337,6 +340,7 @@ const zhHans: Words = {
   coverDeclined: (name, day, line) => `“${name}”不方便代 ${day}${line}`,
   coverUndone: (name, day, line) => `“${name}”取消了接手，${day}${line}还是你`,
   backTo: (name, day, line, from) => `“${name}”取消了接手，${day}${line}还是“${from}”`,
+  swapBackTo: (name, from) => `“${name}”取消了和“${from}”的交换，两天都换回原本的人`,
   covered: (day, line, from, taker) => `${day}${line}：“${from}”→“${taker}”`,
   swapped: (line, from, fromDay, to, toDay) => `${line}：“${from}”${fromDay}和“${to}”${toDay}交换了`,
   uncovered: (day, line) => `${day}${line}还没人代`,
@@ -410,6 +414,7 @@ const en: Words = {
   coverDeclined: (name, day, line) => `${name} can't cover ${line} on ${day}`,
   coverUndone: (name, day, line) => `${name} can no longer cover ${line} on ${day}; it's yours again`,
   backTo: (name, day, line, from) => `${name} called it off; ${line} on ${day} is ${from}'s again`,
+  swapBackTo: (name, from) => `${name} called off the swap with ${from}; both days are as they were`,
   covered: (day, line, from, taker) => `${line} on ${day}: ${from} → ${taker}`,
   swapped: (line, from, fromDay, to, toDay) => `${line}: ${from} (${fromDay}) and ${to} (${toDay}) swapped`,
   uncovered: (day, line) => `Nobody has covered ${line} on ${day} yet`,
@@ -481,6 +486,7 @@ const ja: Words = {
   coverDeclined: (name, day, line) => `${name}さんは${day}の${line}の代わりができません`,
   coverUndone: (name, day, line) => `${name}さんが代わりを取り消しました。${day}の${line}はあなたのままです。`,
   backTo: (name, day, line, from) => `${name}さんが取り消しました。${day}の${line}は${from}さんのままです。`,
+  swapBackTo: (name, from) => `${name}さんが${from}さんとの交換を取り消しました。どちらの日も元のままです。`,
   covered: (day, line, from, taker) => `${day}の${line}：${from} → ${taker}`,
   swapped: (line, from, fromDay, to, toDay) => `${line}：${from}（${fromDay}）と${to}（${toDay}）が交換しました`,
   uncovered: (day, line) => `${day}の${line}はまだ代わりが見つかっていません`,
@@ -552,6 +558,7 @@ const ko: Words = {
   coverDeclined: (name, day, line) => `${name} 님은 ${day} ${line} 대신 봉사가 어려워요`,
   coverUndone: (name, day, line) => `${name} 님이 대신 봉사를 취소했어요. ${day} ${line}은(는) 그대로 내 차례예요.`,
   backTo: (name, day, line, from) => `${name} 님이 취소했어요. ${day} ${line}은(는) 그대로 ${from} 님 차례예요.`,
+  swapBackTo: (name, from) => `${name} 님이 ${from} 님과의 교환을 취소했어요. 두 날 모두 원래대로예요.`,
   covered: (day, line, from, taker) => `${day} ${line}: ${from} → ${taker}`,
   swapped: (line, from, fromDay, to, toDay) => `${line}: ${from}(${fromDay})와 ${to}(${toDay})가 교환했어요`,
   uncovered: (day, line) => `${day} ${line}은(는) 아직 대신할 사람이 없어요`,

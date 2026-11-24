@@ -1187,6 +1187,20 @@ void contractTests(Future<ContractWorld> Function() open) {
       await w.signIn(Grace.meiEmail);
       await expectLater(g.church.putServices(const [sunday]), denied());
     });
+
+    test('a service every other week or on some weeks of each month is saved as read, and changed again', () async {
+      final g = await Grace.open(w);
+      final now = (await g.church.services().first).services.firstWhere((s) => s.id == 'youth');
+      final biweekly = now.meetingOn(const [DateTime.wednesday], every: 2, startsOn: Day(2026, 11, 25));
+      await g.church.compareAndSetService(before: now, after: biweekly);
+      expect((await g.church.services().first).byId('youth'), biweekly);
+      final monthly = biweekly.meetingOn(const [DateTime.friday], monthWeeks: const [1, 3]);
+      await g.church.compareAndSetService(before: biweekly, after: monthly);
+      expect((await g.church.services().first).byId('youth'), monthly);
+      final list = (await g.church.services().first).services;
+      await g.church.putServices([for (final s in list) s.id == 'youth' ? biweekly : s]);
+      expect((await g.church.services().first).byId('youth'), biweekly);
+    });
   });
 
   group('不能服事的日子 (#91)', () {

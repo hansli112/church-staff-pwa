@@ -1,5 +1,6 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:martha/data/firebase/codec.dart';
+import 'package:martha/domain/day.dart';
 
 void main() {
   test(
@@ -49,6 +50,40 @@ void main() {
       expect(serviceToJson(serviceFromJson(json).copyWith(weekdays: [7])), {...json, 'weekday': 7}..remove('weekdays'));
     },
   );
+
+  test('a service every other week or on some weeks of each month keeps it, as editService takes it', () {
+    final json = {
+      'id': 'prayer',
+      'name': '禱告會',
+      'weekday': 3,
+      'every': 2,
+      'startsOn': '2026-11-25',
+      'enabled': true,
+      'duties': ['帶領'],
+      'events': <Object>[],
+    };
+    final biweekly = serviceFromJson(json);
+    expect((biweekly.every, biweekly.startsOn), (2, Day(2026, 11, 25)));
+    expect(serviceToJson(biweekly), json);
+    final monthly =
+        {
+            ...json,
+            'monthWeeks': [1, 3],
+          }
+          ..remove('every')
+          ..remove('startsOn');
+    expect(serviceFromJson(monthly).monthWeeks, [1, 3]);
+    expect(serviceToJson(serviceFromJson(monthly)), monthly);
+    // A day off its weekday counts nothing: every week.
+    expect(serviceFromJson({...json, 'startsOn': '2026-11-26'}).every, 1);
+    expect(repeats([biweekly]), isTrue);
+    expect(
+      repeats([
+        serviceFromJson({...json}..remove('every')),
+      ]),
+      isFalse,
+    );
+  });
 
   test('a service turned off (停用) before 聚會 could be deleted reads as deleted; its ID stays taken', () {
     final settings = serviceSettingsFromJson({

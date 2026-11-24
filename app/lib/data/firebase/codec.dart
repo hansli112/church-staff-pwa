@@ -448,17 +448,23 @@ EventTag? _event(Object? raw) {
 
 Json _eventToJson(EventTag e) => {'name': e.name, 'color': e.color};
 
-Service serviceFromJson(Json data) => Service(
-  id: data['id'] as String,
-  name: data['name'] as String? ?? '',
-  weekdays: _weekdays(data),
-  duties: _strings(data['duties']),
-  events: [
-    if (data['events'] is List)
-      for (final e in data['events'] as List<dynamic>) ?_event(e),
-  ],
-  manyDuties: data['manyDuties'] is List ? _strings(data['manyDuties']) : null,
-);
+Service serviceFromJson(Json data) =>
+    Service(
+      id: data['id'] as String,
+      name: data['name'] as String? ?? '',
+      weekdays: const [],
+      duties: _strings(data['duties']),
+      events: [
+        if (data['events'] is List)
+          for (final e in data['events'] as List<dynamic>) ?_event(e),
+      ],
+      manyDuties: data['manyDuties'] is List ? _strings(data['manyDuties']) : null,
+    ).meetingOn(
+      _weekdays(data),
+      every: data['every'] == 2 ? 2 : 1,
+      startsOn: Day.tryParse(data['startsOn'] as String?),
+      monthWeeks: _monthWeeks(data['monthWeeks']),
+    );
 
 /// A service's days: `weekdays` when it meets on more than one, else
 /// `weekday` alone, as older apps wrote and still read (the first of them).
@@ -477,11 +483,21 @@ List<int> _weekdays(Json data) {
 /// write of the list, which would lose their `weekdays`.
 bool severalDays(List<Service> services) => services.any((s) => s.weekdays.length > 1);
 
+/// Whether any of [services] meets every other week or on some weeks of
+/// each month: settings/services says so (`repeats`), as [severalDays].
+bool repeats(List<Service> services) => services.any((s) => s.repeats);
+
 Json serviceToJson(Service s) => {
   'id': s.id,
   'name': s.name,
   'weekday': s.weekdays.first,
   if (s.weekdays.length > 1) 'weekdays': s.weekdays,
+  if (s.monthWeeks.isNotEmpty)
+    'monthWeeks': s.monthWeeks
+  else if (s.every == 2) ...{
+    'every': 2,
+    'startsOn': ?s.startsOn?.key,
+  },
   // Older apps and editService still read it: a service turned off
   // (停用) before 聚會 could be deleted.
   'enabled': true,

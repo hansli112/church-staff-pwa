@@ -500,7 +500,10 @@ export async function undoSwap(deps: Deps & PushDeps, caller: Caller | null, dat
   if (req.leadsTold) {
     const leads = (await leadsFor(deps, a.cid, req.serviceId, req.duty)).filter((u) => u !== req.from && u !== me);
     // Not 「還是你」: the day is who asked's again, not the leads'.
-    const toLeads = (w: Words) => (req.kind === 'swap' || req.to ? w.backTo(req.takerName, say(w).day, say(w).line, req.fromName) : back(w));
+    const toLeads = (w: Words) =>
+      req.kind === 'swap' ? w.swapBackTo(req.takerName, req.fromName)
+      : req.to ? w.backTo(req.takerName, say(w).day, say(w).line, req.fromName)
+      : back(w);
     await notifyMembers(deps, a.cid, leads, 'swap', (w) => ({ title, body: toLeads(w), link: `/rosters/${req.serviceId}/${req.dateKey}` }));
   }
   if (req.kind === 'cover' && !req.to) await sendRequest(deps, a.church, await ref.get());

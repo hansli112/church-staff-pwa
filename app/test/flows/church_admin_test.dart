@@ -725,7 +725,7 @@ void main() {
       final b = seededChurch();
       await pumpApp(tester, b);
       await go(tester, '/me/groups/service/youth');
-      await tapText(tester, '星期');
+      await tapText(tester, '聚會時間');
       for (final day in ['週一', '週二', '週三', '週四', '週五']) {
         await tapText(tester, day);
       }
@@ -739,7 +739,7 @@ void main() {
       expect(find.text('週二'), findsWidgets);
 
       await go(tester, '/me/groups/service/youth');
-      await tapText(tester, '星期');
+      await tapText(tester, '聚會時間');
       for (final day in ['週一', '週二', '週三', '週四', '週五']) {
         await tapText(tester, day);
       }
@@ -748,6 +748,46 @@ void main() {
 
       await go(tester, '/me/groups');
       expect(find.text('週五'), findsOneWidget);
+    });
+
+    testWidgets('a service every other week, from this week or the next, has rosters on its weeks only', (
+      tester,
+    ) async {
+      final b = seededChurch();
+      await pumpApp(tester, b);
+      await go(tester, '/me/groups/service/youth');
+      await tapText(tester, '聚會時間');
+      await tapText(tester, '隔週');
+      expect(find.text('從哪一週開始'), findsOneWidget);
+      expect(find.text('這週'), findsOneWidget, reason: 'Saturday 10/3');
+      await tapText(tester, '下週');
+      await tapText(tester, '完成');
+      final youth = b.services['grace']!.byId('youth')!;
+      expect((youth.every, youth.startsOn), (2, Day(2026, 10, 10)));
+      expect(find.text('隔週六'), findsOneWidget);
+
+      await go(tester, '/rosters');
+      await tapText(tester, '青年崇拜');
+      // Its days: 10月 10, 24; 11月 7, 21.
+      expect(find.text('10'), findsOneWidget);
+      expect(find.text('24'), findsOneWidget);
+      expect(find.text('3'), findsNothing, reason: 'the week it is off');
+      expect(find.text('17'), findsNothing);
+
+      await go(tester, '/me/groups/service/youth');
+      await tapText(tester, '聚會時間');
+      await tapText(tester, '每月');
+      expect(find.text('第 1 個週六'), findsOneWidget);
+      await tapText(tester, '第 3 個週六');
+      await tapText(tester, '完成');
+      expect(b.services['grace']!.byId('youth')!.monthWeeks, [1, 3]);
+      expect(find.text('每月第 1、3 個週六'), findsOneWidget);
+
+      await go(tester, '/me/groups/service/youth');
+      await tapText(tester, '聚會時間');
+      await tapText(tester, '每週');
+      await tapText(tester, '完成');
+      expect(b.services['grace']!.byId('youth'), youthService);
     });
 
     testWidgets('renaming a duty moves members\' zones and the staff order with it', (tester) async {

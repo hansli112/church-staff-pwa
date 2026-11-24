@@ -1027,6 +1027,7 @@ class FirestoreChurchData implements ChurchData {
         'services': [for (final s in next.services) serviceToJson(s)],
         'ids': next.ids,
         'severalDays': severalDays(next.services),
+        'repeats': repeats(next.services),
         'updatedAt': FieldValue.serverTimestamp(),
       });
     });

@@ -39,9 +39,6 @@ class Meets {
   final List<int> monthWeeks;
 }
 
-/// Which [weekday] of its month [day] is: 1 for the first … 5 for a fifth.
-int weekOfMonth(Day day) => (day.day - 1) ~/ 7 + 1;
-
 /// 聚會時間 (回報人數): on [weekday] (1 = Monday … 7 = Sunday) every
 /// [every] weeks (1 or 2) from [startsOn], a day it met; or, with
 /// [monthWeeks] (1–4), those weeks of each month (第 1、3 個週五) from

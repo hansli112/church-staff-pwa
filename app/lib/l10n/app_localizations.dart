@@ -2185,7 +2185,7 @@ abstract class L10n {
   /// No description provided for @notifAskBody.
   ///
   /// In zh, this message translates to:
-  /// **'排進服事、服事表有變動時通知你，每週一晚上也會提醒這週的服事'**
+  /// **'服事表有變動時也會通知，每週一晚上提醒這週的服事'**
   String get notifAskBody;
 
   /// No description provided for @notifAskLater.
@@ -2341,7 +2341,7 @@ abstract class L10n {
   /// No description provided for @welcomeWaitBody.
   ///
   /// In zh, this message translates to:
-  /// **'管理員把你加進聚會後，就看得到服事表了。等不及的話，可以直接跟管理員說一聲。'**
+  /// **'管理員把你加進聚會後，就看得到服事表了。'**
   String get welcomeWaitBody;
 
   /// No description provided for @waitsForZone.
@@ -5308,6 +5308,30 @@ abstract class L10n {
   /// **'第 {n} 個{weekday}'**
   String meetsWeekOfMonth(int n, String weekday);
 
+  /// Header in a service's 聚會時間 sheet, every other week: which of its next two days it starts from
+  ///
+  /// In zh, this message translates to:
+  /// **'從哪一週開始'**
+  String get serviceStartWeek;
+
+  /// Beside a day in this calendar week
+  ///
+  /// In zh, this message translates to:
+  /// **'這週'**
+  String get thisWeek;
+
+  /// Beside a day in next calendar week
+  ///
+  /// In zh, this message translates to:
+  /// **'下週'**
+  String get nextWeek;
+
+  /// Beside a day two calendar weeks ahead
+  ///
+  /// In zh, this message translates to:
+  /// **'下下週'**
+  String get weekAfterNext;
+
   /// Row for a 小組 meeting every other week: the next day it meets; tapping moves it a week
   ///
   /// In zh, this message translates to:
@@ -5593,7 +5617,7 @@ abstract class L10n {
   /// 找一位同工代: the one picked marked that day as one they cannot serve
   ///
   /// In zh, this message translates to:
-  /// **'他那天不能服事，請找別人'**
+  /// **'對方那天不能服事，請找別人'**
   String get errCoverAway;
 
   /// A 小組 picked in 和其他小組一起 already has that day's 人數
@@ -6103,7 +6127,7 @@ abstract class L10n {
   /// No description provided for @unavailableServingFooter.
   ///
   /// In zh, this message translates to:
-  /// **'負責人排的時候會看到你這天不行'**
+  /// **'排服事的人會看到你這天不行'**
   String get unavailableServingFooter;
 
   /// Under a name in the picker, and read out on 安排服事: they marked the day as one they can't serve
@@ -6355,7 +6379,7 @@ abstract class L10n {
   /// No description provided for @swapAskOneSub.
   ///
   /// In zh, this message translates to:
-  /// **'只問他，他按「我來」才換'**
+  /// **'挑一位來問，對方按「我來」才換'**
   String get swapAskOneSub;
 
   /// No description provided for @swapPickCoverTitle.
@@ -6373,7 +6397,7 @@ abstract class L10n {
   /// No description provided for @swapAskedOne.
   ///
   /// In zh, this message translates to:
-  /// **'已請「{name}」代，他按「我來」才換'**
+  /// **'已請「{name}」代，對方按「我來」才換'**
   String swapAskedOne(String name);
 
   /// No description provided for @swapPendingOne.

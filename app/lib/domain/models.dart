@@ -10,6 +10,7 @@ import 'package:flutter/foundation.dart';
 import 'church_time.dart';
 import 'day.dart';
 import 'identities.dart';
+import 'limits.dart';
 
 export 'church_time.dart' show ChurchTimeZone;
 export 'attendance.dart';
@@ -460,6 +461,9 @@ class Service {
     required this.id,
     required this.name,
     required this.weekdays,
+    this.every = 1,
+    this.startsOn,
+    this.monthWeeks = const [],
     this.duties = const [],
     this.events = const [],
     this.manyDuties,
@@ -472,6 +476,27 @@ class Service {
   /// The days it meets, 1 = Monday … 7 = Sunday: at least one, in that
   /// order. Each has its own roster (晨更 週一到週五).
   final List<int> weekdays;
+
+  /// On its one weekday: every week (1), or every other (2), counted from
+  /// [startsOn], a day it meets; or, with [monthWeeks] (1–4), those weeks
+  /// of each month (第 1、3 個週五). One on several weekdays meets every
+  /// week. Its 聚會時間, as a 小組's (MeetingTime).
+  final int every;
+  final Day? startsOn;
+  final List<int> monthWeeks;
+
+  /// Whether it meets on [day]: what its drafts are made for.
+  bool meetsOn(Day day) {
+    if (!weekdays.contains(day.weekday)) return false;
+    if (monthWeeks.isNotEmpty) return monthWeeks.contains(weekOfMonth(day));
+    final start = startsOn;
+    if (every == 2 && start != null) return (start.daysUntil(day) ~/ 7).isEven;
+    return true;
+  }
+
+  /// Whether it meets on fewer weeks than every one: older apps, which
+  /// know only its weekdays, would lose that.
+  bool get repeats => monthWeeks.isNotEmpty || every == 2;
 
   /// The roster template: duties a new roster starts with, in order.
   final List<String> duties;
@@ -495,11 +520,34 @@ class Service {
   }) => Service(
     id: id,
     name: name ?? this.name,
-    weekdays: weekdays ?? this.weekdays,
+    weekdays: const [],
     duties: duties ?? this.duties,
     events: events ?? this.events,
     manyDuties: manyDuties ?? this.manyDuties,
-  );
+  ).meetingOn(weekdays ?? this.weekdays, every: every, startsOn: startsOn, monthWeeks: monthWeeks);
+
+  /// It meeting on [weekdays], every [every] weeks from [startsOn] or on
+  /// [monthWeeks] of each month; several weekdays, every week.
+  /// What does not fit is let go: [startsOn] off its weekday, say.
+  Service meetingOn(List<int> weekdays, {int every = 1, Day? startsOn, List<int> monthWeeks = const []}) {
+    final one = weekdays.length == 1;
+    // In order, each once, the first to the fourth.
+    final weeks = one
+        ? ({...monthWeeks}.where((w) => w >= 1 && w <= Limits.monthWeeks).toList()..sort())
+        : const <int>[];
+    final biweekly = one && weeks.isEmpty && every == 2 && startsOn?.weekday == weekdays.single;
+    return Service(
+      id: id,
+      name: name,
+      weekdays: weekdays,
+      every: biweekly ? 2 : 1,
+      startsOn: biweekly ? startsOn : null,
+      monthWeeks: weeks,
+      duties: duties,
+      events: events,
+      manyDuties: manyDuties,
+    );
+  }
 
   @override
   bool operator ==(Object other) =>
@@ -507,6 +555,9 @@ class Service {
       other.id == id &&
       other.name == name &&
       listEquals(other.weekdays, weekdays) &&
+      other.every == every &&
+      other.startsOn == startsOn &&
+      listEquals(other.monthWeeks, monthWeeks) &&
       listEquals(other.duties, duties) &&
       listEquals(other.events, events) &&
       listEquals(other.manyDuties, manyDuties);
@@ -516,6 +567,9 @@ class Service {
     id,
     name,
     Object.hashAll(weekdays),
+    every,
+    startsOn,
+    Object.hashAll(monthWeeks),
     Object.hashAll(duties),
     Object.hashAll(events),
     manyDuties == null ? null : Object.hashAll(manyDuties!),

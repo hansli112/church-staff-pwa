@@ -73,7 +73,8 @@ mixin _MemorySwaps on _MemoryChurchBase implements SwapData {
         me.uid,
         unavailable: _b.unavailable[churchId] ?? const {},
       ))
-        (uid: uid, name: members[uid]!.name),
+        // As functions/src/swaps.ts: one with no name is never picked.
+        if (members[uid]!.name.isNotEmpty) (uid: uid, name: members[uid]!.name),
     ];
   }
 
@@ -94,6 +95,7 @@ mixin _MemorySwaps on _MemoryChurchBase implements SwapData {
           final anyway = coverAsked(_b.members[churchId]!.values, saved, duty, me.uid);
           throw CloudException(CloudErrorCode.unknown, reason: anyway.contains(to) ? CloudReason.away : null);
         }
+        if (_b.members[churchId]![to]!.name.isEmpty) throw const CloudException(CloudErrorCode.unknown);
         who = [to];
       }
       final id = 'swap${++_b._swapIds}';

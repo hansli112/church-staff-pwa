@@ -871,6 +871,15 @@ describe('設定 (settings)', () => {
     await assertSucceeds(setDoc(ref, all));
   });
 
+  it('有隔週或每月的聚會（repeats）之後，沒寫 repeats 的舊版 App 不能整份覆蓋掉', async () => {
+    const ref = doc(as(ADMIN_A), `churches/${A}/settings/services`);
+    const all = services(['sunday', 'youth', 'prayer']);
+    await assertSucceeds(setDoc(ref, { ...all, severalDays: false, repeats: true }));
+    await assertFails(setDoc(ref, { ...all, severalDays: false }));
+    await assertSucceeds(setDoc(ref, { ...all, severalDays: false, repeats: false }));
+    await assertSucceeds(setDoc(ref, { ...all, severalDays: false }));
+  });
+
   it('services 不能夾帶其他欄位', async () => {
     await assertFails(
       setDoc(doc(as(ADMIN_A), `churches/${A}/settings/services`), {

@@ -5,7 +5,7 @@ import 'models.dart';
 ///
 /// Roster documents are only written when someone edits a day. Every other
 /// day shows a draft built from the service template on each of the
-/// service's weekdays, so nothing has to be pre-generated (self-host
+/// service's weekdays (on its weeks: Service.meetsOn), so nothing has to be pre-generated (self-host
 /// backfilled a quarter of documents from the editor's device, which needed
 /// a transaction over every day of each week to avoid duplicates).
 ///
@@ -33,7 +33,7 @@ List<Roster> upcomingRosters({
     final taken = byWeek[start] ?? const <Day>[];
     final free = [
       for (final w in service.weekdays)
-        if (start.nextOnOrAfter(w) case final day when !taken.contains(day)) day,
+        if (start.nextOnOrAfter(w) case final day when !taken.contains(day) && service.meetsOn(day)) day,
     ];
     if (service.weekdays.length == 1 && taken.isNotEmpty) free.clear();
     result.addAll([

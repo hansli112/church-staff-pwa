@@ -13,7 +13,7 @@ import { ledChangeAllowed } from '../src/ledDuties.js';
 import { LANGUAGES, words } from '../src/languages.js';
 import { attendanceGroupOf, groupOf, powersOf, type ChurchGroup } from '../src/powers.js';
 import { dutiesByUid } from '../src/rosters.js';
-import { validDutyRename, validServiceShape } from '../src/serviceSettings.js';
+import { validDutyRename, validServiceShape, validServiceTime } from '../src/serviceSettings.js';
 import { askedToFill } from '../src/unavailable.js';
 import { caller, db, deps, seedChurch } from './support.js';
 
@@ -33,6 +33,12 @@ test("a new church starts with the default services, in its maker's language", (
 describe('serviceShape', () => {
   for (const r of rows('serviceShape')) {
     test(r.why, () => assert.equal(validServiceShape(r.duties, r.events, r.manyDuties), r.ok));
+  }
+});
+
+describe('serviceTime', () => {
+  for (const r of rows('serviceTime')) {
+    test(r.why, () => assert.equal(validServiceTime(r.weekdays, r.every, r.startsOn, r.monthWeeks), r.ok));
   }
 });
 

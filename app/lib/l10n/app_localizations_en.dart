@@ -1219,7 +1219,7 @@ class L10nEn extends L10n {
 
   @override
   String get notifAskBody =>
-      'Get notified when you’re scheduled or the schedule changes, plus a reminder of the week’s serving every Monday evening';
+      'You’ll also hear when the schedule changes, plus a reminder of the week’s serving every Monday evening';
 
   @override
   String get notifAskLater => 'Not now';
@@ -1325,8 +1325,7 @@ class L10nEn extends L10n {
   }
 
   @override
-  String get welcomeWaitBody =>
-      'Once an admin adds you to a service, you’ll see the schedule here. In a hurry? Just let an admin know.';
+  String get welcomeWaitBody => 'Once an admin adds you to a service, you’ll see the schedule here.';
 
   @override
   String get waitsForZone => 'No services yet';
@@ -3145,6 +3144,18 @@ class L10nEn extends L10n {
   }
 
   @override
+  String get serviceStartWeek => 'Starting';
+
+  @override
+  String get thisWeek => 'This week';
+
+  @override
+  String get nextWeek => 'Next week';
+
+  @override
+  String get weekAfterNext => 'Week after next';
+
+  @override
   String get nextMeeting => 'Next meeting';
 
   @override
@@ -3837,7 +3848,7 @@ class L10nEn extends L10n {
   String get swapAskOne => 'Ask one person';
 
   @override
-  String get swapAskOneSub => 'Only they are asked; it’s theirs once they say I’ll do it';
+  String get swapAskOneSub => 'Pick one person to ask; it’s theirs once they say I’ll do it';
 
   @override
   String swapPickCoverTitle(String day, String duty) {

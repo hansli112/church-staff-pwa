@@ -76,6 +76,37 @@ void main() {
       expect([for (final d in months.single.days) d.day.day], [20, 22, 27, 29]);
     });
 
+    test('a service every other week has its weeks only, a day saved off them kept', () {
+      final prayer = Service(
+        id: 'prayer',
+        name: '禱告會',
+        weekdays: const [DateTime.wednesday],
+        every: 2,
+        startsOn: Day(2026, 9, 30),
+      );
+      final months = planMonths(
+        service: prayer,
+        saved: [Roster(type: 'prayer', day: Day(2026, 11, 4))],
+        today: Day(2026, 10, 1),
+        month: Day(2026, 10, 1),
+        months: 2,
+      );
+      expect([for (final d in months.first.days) d.day.day], [14, 28]);
+      expect([for (final d in months.last.days) d.day.day], [4, 11, 25]);
+    });
+
+    test('a service on some weeks of each month has those only', () {
+      const prayer = Service(id: 'prayer', name: '禱告會', weekdays: [DateTime.friday], monthWeeks: [1, 3]);
+      final months = planMonths(
+        service: prayer,
+        saved: const [],
+        today: Day(2026, 10, 1),
+        month: Day(2026, 10, 1),
+        months: 1,
+      );
+      expect([for (final d in months.single.days) d.day.day], [2, 16]);
+    });
+
     test('across a year, and a month with no day left out', () {
       final months = planMonths(
         service: sunday,

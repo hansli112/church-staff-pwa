@@ -127,14 +127,17 @@ service cloud.firestore {
     function validServiceSettings() {
       let data = request.resource.data;
       let before = resource == null ? [] : resource.data.get('ids', []);
-      return data.keys().hasOnly(['services', 'ids', 'severalDays', 'updatedAt'])
+      return data.keys().hasOnly(['services', 'ids', 'severalDays', 'repeats', 'updatedAt'])
         && data.services is list && data.services.size() <= 20
         && data.ids is list && data.ids.size() <= 100
         && data.ids.hasAll(before)
         // A service on several days (its `weekdays`) is lost on an older
         // app's write, which knows nothing of them: one that writes
         // severalDays knows.
-        && (resource == null || !resource.data.get('severalDays', false) || 'severalDays' in data);
+        && (resource == null || !resource.data.get('severalDays', false) || 'severalDays' in data)
+        // As is one every other week or on some weeks of each month: one
+        // that writes repeats knows.
+        && (resource == null || !resource.data.get('repeats', false) || 'repeats' in data);
     }
 
     // Every 事工 ID this church has ever had: like serviceTypes, ids only

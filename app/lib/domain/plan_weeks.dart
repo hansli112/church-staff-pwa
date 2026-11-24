@@ -19,7 +19,7 @@ List<String> planDuties(Service service, Iterable<Roster> days, Arranges arrange
 Day addMonths(Day month, int months) => Day(month.year, month.month + months, 1);
 
 /// [service]'s days in the [months] months from [month] (its first day),
-/// from [today] on: every one on its weekdays, saved or a draft, and any
+/// from [today] on: every one it meets on (Service.meetsOn), saved or a draft, and any
 /// other saved. Unlike the 服事表 tab (upcomingRosters), a day saved off
 /// the weekday does not take its week's place: a table has a row for it.
 /// Months with none are left out.
@@ -38,7 +38,7 @@ List<({Day month, List<Roster> days})> planMonths({
   };
   for (final w in service.weekdays) {
     for (var d = start.nextOnOrAfter(w); d.isBefore(end); d = d.addDays(7)) {
-      days.putIfAbsent(d, () => draftRoster(service, d));
+      if (service.meetsOn(d)) days.putIfAbsent(d, () => draftRoster(service, d));
     }
   }
   final byMonth = <Day, List<Roster>>{};

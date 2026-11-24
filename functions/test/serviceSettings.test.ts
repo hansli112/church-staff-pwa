@@ -201,6 +201,35 @@ test('a service may meet on several weekdays, the first of them its weekday, as 
   assert.equal((await db.doc('churches/C1/settings/services').get()).get('severalDays'), false);
 });
 
+test('a service may meet every other week or on some weeks of each month, and older apps are kept off the list', async () => {
+  await church();
+  const biweekly = { ...sunday, weekday: 3, every: 2, startsOn: '2026-11-25' };
+  await editService(deps, caller('admin'), { churchId: 'C1', before: sunday, after: biweekly });
+  let settings = await db.doc('churches/C1/settings/services').get();
+  assert.deepEqual(settings.get('services'), [biweekly, youth]);
+  assert.equal(settings.get('repeats'), true, 'firestore.rules keeps older apps off the list');
+  // An older app, without them, sees a newer setting.
+  await rejectsWith(editService(deps, caller('admin'), {
+    churchId: 'C1', before: { ...sunday, weekday: 3 }, after: { ...sunday, weekday: 3, name: '禱告會' },
+  }), 'conflict');
+  for (const after of [
+    { ...sunday, weekday: 3, every: 2, startsOn: '2026-11-26' },
+    { ...sunday, weekday: 3, every: 2 },
+    { ...sunday, weekday: 3, every: 1 },
+    { ...sunday, weekday: 3, monthWeeks: [] },
+    { ...sunday, weekday: 3, weekdays: [3, 7], monthWeeks: [1] },
+  ]) {
+    await assert.rejects(editService(deps, caller('admin'), { churchId: 'C1', before: biweekly, after }), { code: 'invalid-argument' });
+  }
+  const monthly = { ...sunday, weekday: 5, monthWeeks: [1, 3] };
+  await editService(deps, caller('admin'), { churchId: 'C1', before: biweekly, after: monthly });
+  settings = await db.doc('churches/C1/settings/services').get();
+  assert.deepEqual(settings.get('services'), [monthly, youth]);
+  assert.equal(settings.get('repeats'), true);
+  await editService(deps, caller('admin'), { churchId: 'C1', before: monthly, after: sunday });
+  assert.equal((await db.doc('churches/C1/settings/services').get()).get('repeats'), false);
+});
+
 test('an admin edits only the compared service, keeping unrelated services, history and existing assignments', async () => {
   await church();
   const assigned = { type: 'sunday', dateKey: '2026-10-04', duties: [{ role: '司琴', people: ['同工'], uids: { 同工: 'staff' } }], events: [{ name: '聖餐', color: 0 }] };

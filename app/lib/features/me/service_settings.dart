@@ -2,7 +2,6 @@ import 'dart:async';
 
 import 'dart:math';
 
-import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:material_symbols_icons/symbols.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -11,6 +10,7 @@ import 'package:go_router/go_router.dart';
 import '../../core/design/components.dart';
 import '../../core/design/tokens.dart';
 import '../../domain/day.dart';
+import '../../domain/limits.dart';
 import '../../domain/models.dart';
 import '../../domain/service_changes.dart';
 import '../../domain/staff_order.dart';
@@ -18,6 +18,7 @@ import '../../l10n/app_localizations.dart';
 import '../../state/church_writes.dart';
 import '../../state/providers.dart';
 import '../../state/roster_actions.dart';
+import '../rosters/format.dart';
 import '../rosters/future_changes.dart';
 import '../common/errors.dart';
 import '../common/labels.dart';
@@ -67,7 +68,7 @@ class ServiceListSection extends ConsumerWidget {
       onReorder: save,
       row: (s) => ListRow(
         title: s.name,
-        subtitle: weekdaysLabel(l10n, s.weekdays),
+        subtitle: serviceTimeLabel(l10n, s),
         chevron: true,
         onTap: () => context.push('/me/groups/service/${s.id}'),
       ),
@@ -208,50 +209,20 @@ class ServiceEdits {
     if (name != null) await save(service.copyWith(name: name));
   }
 
-  /// The weekdays it meets, ticked in a sheet and saved once as it closes
-  /// (not each tick, as MultiSelectRow does: ticks quicker than a save
-  /// would each compare with a service already changed); the last one
-  /// ticked stays.
-  Future<void> pickWeekdays() async {
-    final l10n = _l10n;
-    final ticked = {...service.weekdays};
+  /// Its 聚會時間, picked in a sheet and saved once as it closes (not each
+  /// tap, as MultiSelectRow does: taps quicker than a save would each
+  /// compare with a service already changed).
+  Future<void> pickTime() async {
+    var picked = service;
     await showAppSheet<void>(
       context,
-      builder: (context) => StatefulBuilder(
-        builder: (context, setState) => SafeArea(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              SheetBar(
-                title: l10n.weekday,
-                cancel: false,
-                actions: [SecondaryButton(label: l10n.done, onPressed: () => Navigator.pop(context))],
-              ),
-              Flexible(
-                child: SingleChildScrollView(
-                  child: ListSection(
-                    children: [
-                      for (var d = 1; d <= 7; d++)
-                        ListRow(
-                          title: weekdayLabel(l10n, d),
-                          selected: ticked.contains(d),
-                          onTap: () => setState(() {
-                            Haptics.selection();
-                            if (!ticked.remove(d)) ticked.add(d);
-                            if (ticked.isEmpty) ticked.add(d);
-                          }),
-                        ),
-                    ],
-                  ),
-                ),
-              ),
-            ],
-          ),
-        ),
+      builder: (_) => _ServiceTimeSheet(
+        service: service,
+        today: ref.read(todayProvider),
+        onChanged: (next) => picked = next,
       ),
     );
-    final weekdays = ticked.toList()..sort();
-    if (!listEquals(weekdays, service.weekdays)) await save(service.copyWith(weekdays: weekdays));
+    if (picked != service) await save(picked);
   }
 
   /// 新增服事項目: named, last on the list; its name once on it, or null.
@@ -398,7 +369,7 @@ class ServiceEdits {
   }
 }
 
-/// The top of a service's page: its name and weekdays; an admin changes
+/// The top of a service's page: its name and 聚會時間; an admin changes
 /// them, anyone else reads them.
 Widget serviceBasicsSection(BuildContext context, WidgetRef ref, Service service, {required bool admin}) {
   final l10n = L10n.of(context);
@@ -412,10 +383,10 @@ Widget serviceBasicsSection(BuildContext context, WidgetRef ref, Service service
         onTap: admin ? edits.rename : null,
       ),
       ListRow(
-        title: l10n.weekday,
-        value: weekdaysLabel(l10n, service.weekdays),
+        title: l10n.smallGroupMeets,
+        value: serviceTimeLabel(l10n, service),
         chevron: admin,
-        onTap: admin ? edits.pickWeekdays : null,
+        onTap: admin ? edits.pickTime : null,
       ),
     ],
   );
@@ -782,5 +753,175 @@ class _DutyScreenState extends ConsumerState<DutyScreen> {
     ];
     if (next.every((m) => before.contains(m))) return;
     await runWithUndo(context, l10n.saved, () => ref.read(churchWritesProvider).ministries(before, next));
+  }
+}
+
+/// A service's 聚會時間 as its page says it: 週日, 週一到週五, 隔週三, 每月第
+/// 1、3 個週五.
+String serviceTimeLabel(L10n l10n, Service s) {
+  final w = weekdaysLabel(l10n, s.weekdays);
+  if (s.monthWeeks.isNotEmpty) return l10n.meetsMonthly(s.monthWeeks.join(l10n.listSeparator), w);
+  if (s.every == 2) return l10n.meetsBiweekly(w);
+  return w;
+}
+
+/// How a service's 聚會時間 repeats, as [_ServiceTimeSheet] picks it.
+enum _Repeat { weekly, biweekly, monthly }
+
+/// 聚會時間 of [service]: every week on the weekdays ticked; or on one,
+/// every other week, from this week or the next; or on some weeks of each
+/// month. Each tap is [onChanged], the last one ticked staying.
+class _ServiceTimeSheet extends StatefulWidget {
+  const _ServiceTimeSheet({required this.service, required this.today, required this.onChanged});
+
+  final Service service;
+  final Day today;
+  final ValueChanged<Service> onChanged;
+
+  @override
+  State<_ServiceTimeSheet> createState() => _ServiceTimeSheetState();
+}
+
+class _ServiceTimeSheetState extends State<_ServiceTimeSheet> {
+  late var _repeat = switch (widget.service) {
+    Service(:final monthWeeks) when monthWeeks.isNotEmpty => _Repeat.monthly,
+    Service(every: 2) => _Repeat.biweekly,
+    _ => _Repeat.weekly,
+  };
+  late final _ticked = {...widget.service.weekdays};
+
+  /// Every other week: whether from the later of its next two days.
+  late var _later = widget.service.every == 2 && !widget.service.meetsOn(_first(widget.service.weekdays.first));
+  late final _weeks = {...widget.service.monthWeeks};
+
+  /// The one weekday it meets on every other week or each month.
+  int get _weekday => (_ticked.toList()..sort()).first;
+
+  /// The next day from today on that is [weekday].
+  Day _first(int weekday) => widget.today.nextOnOrAfter(weekday);
+
+  /// The service as picked.
+  Service get _picked {
+    final s = widget.service;
+    switch (_repeat) {
+      case _Repeat.weekly:
+        return s.meetingOn(_ticked.toList()..sort());
+      case _Repeat.monthly:
+        return s.meetingOn([_weekday], monthWeeks: _weeks.toList()..sort());
+      case _Repeat.biweekly:
+        final day = _first(_weekday).addDays(_later ? 7 : 0);
+        final next = s.meetingOn([_weekday], every: 2, startsOn: day);
+        // On the weeks it met on: counted from where it was.
+        final kept = s.meetingOn([_weekday], every: 2, startsOn: s.startsOn);
+        return kept.every == 2 && kept.meetsOn(day) ? kept : next;
+    }
+  }
+
+  void _change(VoidCallback fn) {
+    Haptics.selection();
+    setState(fn);
+    widget.onChanged(_picked);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = L10n.of(context);
+    final single = _repeat != _Repeat.weekly;
+    final weekday = _weekday;
+    final first = _first(weekday);
+    String whichWeek(Day day) => switch (widget.today.weekStart.daysUntil(day.weekStart) ~/ 7) {
+      0 => l10n.thisWeek,
+      1 => l10n.nextWeek,
+      _ => l10n.weekAfterNext,
+    };
+    return SafeArea(
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          SheetBar(
+            title: l10n.smallGroupMeets,
+            cancel: false,
+            actions: [SecondaryButton(label: l10n.done, onPressed: () => Navigator.pop(context))],
+          ),
+          Flexible(
+            child: SingleChildScrollView(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  Padding(
+                    padding: const EdgeInsets.all(Space.m),
+                    child: SegmentedButton<_Repeat>(
+                      showSelectedIcon: false,
+                      segments: [
+                        ButtonSegment(value: _Repeat.weekly, label: Text(l10n.meetsEveryWeek)),
+                        ButtonSegment(value: _Repeat.biweekly, label: Text(l10n.meetsEveryOtherWeek)),
+                        ButtonSegment(value: _Repeat.monthly, label: Text(l10n.meetsEveryMonth)),
+                      ],
+                      selected: {_repeat},
+                      onSelectionChanged: (v) => _change(() {
+                        _repeat = v.first;
+                        if (_repeat == _Repeat.weekly) return;
+                        // On one day: the first of those ticked.
+                        _ticked.retainAll({weekday});
+                        if (_repeat == _Repeat.monthly && _weeks.isEmpty) {
+                          _weeks.add(min(weekOfMonth(first), Limits.monthWeeks));
+                        }
+                      }),
+                    ),
+                  ),
+                  ListSection(
+                    children: [
+                      for (var d = 1; d <= 7; d++)
+                        ListRow(
+                          title: weekdayLabel(l10n, d),
+                          selected: _ticked.contains(d),
+                          onTap: () => _change(() {
+                            if (single) {
+                              _ticked
+                                ..clear()
+                                ..add(d);
+                            } else if (!_ticked.remove(d) || _ticked.isEmpty) {
+                              _ticked.add(d);
+                            }
+                          }),
+                        ),
+                    ],
+                  ),
+                  if (_repeat == _Repeat.biweekly)
+                    ListSection(
+                      header: l10n.serviceStartWeek,
+                      children: [
+                        for (final later in [false, true])
+                          if (first.addDays(later ? 7 : 0) case final day)
+                            ListRow(
+                              title: dayLabel(l10n, day, widget.today),
+                              value: whichWeek(day),
+                              selected: _later == later,
+                              onTap: () => _change(() => _later = later),
+                            ),
+                      ],
+                    ),
+                  if (_repeat == _Repeat.monthly)
+                    ListSection(
+                      children: [
+                        for (var n = 1; n <= Limits.monthWeeks; n++)
+                          ListRow(
+                            title: l10n.meetsWeekOfMonth(n, weekdayLabel(l10n, weekday)),
+                            selected: _weeks.contains(n),
+                            onTap: () => _change(() {
+                              if (!_weeks.remove(n) || _weeks.isEmpty) _weeks.add(n);
+                            }),
+                          ),
+                      ],
+                    ),
+                ],
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
   }
 }

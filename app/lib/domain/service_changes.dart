@@ -1,3 +1,4 @@
+import 'limits.dart';
 import 'models.dart';
 
 /// The changes an admin makes to a service's duties and 特別活動
@@ -79,4 +80,21 @@ bool validServiceShape(Service service) {
       names.toSet().length == names.length &&
       service.events.every((e) => e.color >= 0 && e.color <= 5) &&
       (many == null || (many.toSet().length == many.length && many.every(duties.contains)));
+}
+
+/// Whether [service]'s 聚會時間 may be saved (testdata/church_rules.json,
+/// serviceTime; functions/src/serviceSettings.ts validServiceTime): every
+/// week on its weekdays; or on one weekday, every other week from a day
+/// on it, or on some weeks (1–4, in order) of each month.
+bool validServiceTime(Service service) {
+  final Service(:weekdays, :every, :startsOn, :monthWeeks) = service;
+  if (every != 1 && every != 2) return false;
+  if ((every == 2) != (startsOn != null)) return false;
+  if (startsOn != null && (weekdays.length != 1 || startsOn.weekday != weekdays.single)) return false;
+  if (monthWeeks.isEmpty) return true;
+  return weekdays.length == 1 &&
+      every == 1 &&
+      monthWeeks.indexed.every(
+        (e) => e.$2 >= 1 && e.$2 <= Limits.monthWeeks && (e.$1 == 0 || e.$2 > monthWeeks[e.$1 - 1]),
+      );
 }

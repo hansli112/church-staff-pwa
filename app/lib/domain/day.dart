@@ -87,3 +87,6 @@ class Day implements Comparable<Day> {
 /// year after [today]'s: how far ahead 安排服事, 不能服事的日子 and asking
 /// for them go, so that late in the year all of next year is there.
 int monthsThroughNextYear(Day month, {required Day today}) => (today.year + 1 - month.year) * 12 + 12 - month.month + 1;
+
+/// Which weekday of its month [day] is: 1 for the first … 5 for a fifth.
+int weekOfMonth(Day day) => (day.day - 1) ~/ 7 + 1;

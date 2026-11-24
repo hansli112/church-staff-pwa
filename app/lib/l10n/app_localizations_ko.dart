@@ -1182,7 +1182,7 @@ class L10nKo extends L10n {
   String get notifAskTitle => '봉사에 배정되면 알려 드려요';
 
   @override
-  String get notifAskBody => '봉사에 배정되거나 봉사표가 바뀌면 알려 드리고, 매주 월요일 저녁에 이번 주 봉사도 알려 드려요';
+  String get notifAskBody => '봉사표가 바뀌어도 알려 드리고, 매주 월요일 저녁에 이번 주 봉사를 알려 드려요';
 
   @override
   String get notifAskLater => '나중에';
@@ -1276,7 +1276,7 @@ class L10nKo extends L10n {
   }
 
   @override
-  String get welcomeWaitBody => '관리자가 예배에 추가하면 봉사표를 볼 수 있어요. 급하면 관리자에게 직접 말해 주세요.';
+  String get welcomeWaitBody => '관리자가 예배에 추가하면 봉사표를 볼 수 있어요.';
 
   @override
   String get waitsForZone => '소속 예배 미설정';
@@ -2991,6 +2991,18 @@ class L10nKo extends L10n {
   }
 
   @override
+  String get serviceStartWeek => '시작하는 주';
+
+  @override
+  String get thisWeek => '이번 주';
+
+  @override
+  String get nextWeek => '다음 주';
+
+  @override
+  String get weekAfterNext => '다다음 주';
+
+  @override
   String get nextMeeting => '다음 모임';
 
   @override
@@ -3459,7 +3471,7 @@ class L10nKo extends L10n {
   String get unavailableServing => '이날은 이미 봉사가 있어요';
 
   @override
-  String get unavailableServingFooter => '배정하는 리더에게 이날은 안 된다고 보여요';
+  String get unavailableServingFooter => '봉사를 배정하는 사람에게 이날은 안 된다고 보여요';
 
   @override
   String get pickerUnavailable => '이날은 안 돼요';
@@ -3621,7 +3633,7 @@ class L10nKo extends L10n {
   String get swapAskOne => '한 사람에게 부탁';
 
   @override
-  String get swapAskOneSub => '그 사람에게만 보내고, ‘제가 할게요’를 누르면 바뀌어요';
+  String get swapAskOneSub => '한 사람을 골라 부탁하고, ‘제가 할게요’를 누르면 바뀌어요';
 
   @override
   String swapPickCoverTitle(String day, String duty) {

@@ -1,6 +1,7 @@
 import { isDeepStrictEqual } from 'node:util';
 
 import { churchAccess, churchClosed, isChurchOpen } from './access.js';
+import { weekdayOf } from './attendance.js';
 import { fail, id, record, serverTime, type Caller, type Deps } from './common.js';
 import { LIMITS } from './limits.js';
 
@@ -11,6 +12,11 @@ interface Service {
   weekday: number;
   /** The days it meets, in order, when more than one; absent for one day. */
   weekdays?: number[];
+  /** On its one day every other week (2) from [startsOn], a day it meets; absent for every week. */
+  every?: 2;
+  startsOn?: string;
+  /** On its one day, those weeks of each month (1–4, in order); absent for every week. */
+  monthWeeks?: number[];
   enabled: boolean;
   duties: string[];
   events: { name: string; color: number }[];
@@ -33,8 +39,7 @@ function service(value: unknown): Service {
   const s = record(value);
   exactKeys(s, [
     'id', 'name', 'weekday', 'enabled', 'duties', 'events',
-    ...(Object.hasOwn(s, 'weekdays') ? ['weekdays'] : []),
-    ...(Object.hasOwn(s, 'manyDuties') ? ['manyDuties'] : []),
+    ...['weekdays', 'every', 'startsOn', 'monthWeeks', 'manyDuties'].filter((k) => Object.hasOwn(s, k)),
   ]);
   const serviceId = id(s.id);
   const name = label(s.name);
@@ -50,6 +55,12 @@ function service(value: unknown): Service {
     }
     weekdays = s.weekdays as number[];
   }
+  if (!validServiceTime(weekdays ?? [s.weekday as number], s.every, s.startsOn, s.monthWeeks)
+      || (Object.hasOwn(s, 'every') && s.every !== 2)) fail('invalid-argument', 'unknown');
+  const time = {
+    ...(s.every === 2 && { every: 2 as const, startsOn: s.startsOn as string }),
+    ...(Object.hasOwn(s, 'monthWeeks') && { monthWeeks: s.monthWeeks as number[] }),
+  };
   if (!Array.isArray(s.duties) || !Array.isArray(s.events)) fail('invalid-argument', 'unknown');
   const duties = s.duties.map(label);
   const events = s.events.map((value) => {
@@ -65,7 +76,7 @@ function service(value: unknown): Service {
   }
   if (!validServiceShape(duties, events, manyDuties)) fail('invalid-argument', 'unknown');
   return {
-    id: serviceId, name, weekday: s.weekday as number, ...(weekdays && { weekdays }),
+    id: serviceId, name, weekday: s.weekday as number, ...(weekdays && { weekdays }), ...time,
     enabled: s.enabled, duties, events, ...(manyDuties && { manyDuties }),
   };
 }
@@ -94,6 +105,28 @@ export function validServiceShape(duties: string[], events: { name: string; colo
     && events.every((e) => e.color >= 0 && e.color <= 5)
     && (manyDuties === undefined || (new Set(manyDuties).size === manyDuties.length && manyDuties.every((d) => duties.includes(d))));
 }
+
+/**
+ * Whether a service's 聚會時間 may be saved: every week on its [weekdays];
+ * or on one weekday, every other week ([every] 2) from [startsOn], a day
+ * on it, or on [monthWeeks] (1–4, in order) of each month
+ * (testdata/church_rules.json, serviceTime).
+ */
+export function validServiceTime(weekdays: number[], every: unknown, startsOn: unknown, monthWeeks: unknown) {
+  const often = every ?? 1;
+  if (often !== 1 && often !== 2) return false;
+  if ((often === 2) !== (startsOn !== undefined)) return false;
+  if (startsOn !== undefined
+      && (typeof startsOn !== 'string' || !DAY.test(startsOn) || new Date(`${startsOn}T00:00:00Z`).toISOString().slice(0, 10) !== startsOn
+        || weekdays.length !== 1 || weekdayOf(startsOn) !== weekdays[0])) {
+    return false;
+  }
+  if (monthWeeks === undefined) return true;
+  return Array.isArray(monthWeeks) && monthWeeks.length > 0 && weekdays.length === 1 && often === 1
+    && monthWeeks.every((w, i) => Number.isInteger(w) && w >= 1 && w <= LIMITS.monthWeeks && (i === 0 || w > monthWeeks[i - 1]));
+}
+
+const DAY = /^\d{4}-(0[1-9]|1[0-2])-(0[1-9]|[12]\d|3[01])$/;
 
 /**
  * Whether [after] is [before] with duty [from] renamed [to] in place and
@@ -175,6 +208,8 @@ export async function editService(deps: Deps, caller: Caller | null, data: unkno
       services: next,
       // An older app's write of the list would lose `weekdays`: firestore.rules turns it away.
       severalDays: next.some((s) => Array.isArray(s.weekdays)),
+      // So is a service's every other week or some weeks of each month.
+      repeats: next.some((s) => s.every === 2 || Array.isArray(s.monthWeeks)),
       updatedAt: serverTime(),
     });
   });

@@ -1181,7 +1181,7 @@ class L10nJa extends L10n {
   String get notifAskTitle => '奉仕に入ったらお知らせします';
 
   @override
-  String get notifAskBody => '奉仕に入ったときや奉仕表が変わったときにお知らせします。毎週月曜の夜には、その週の奉仕もお知らせします。';
+  String get notifAskBody => '奉仕表が変わったときもお知らせし、毎週月曜の夜にはその週の奉仕をお知らせします。';
 
   @override
   String get notifAskLater => 'あとで';
@@ -1275,7 +1275,7 @@ class L10nJa extends L10n {
   }
 
   @override
-  String get welcomeWaitBody => '管理者が集会に加えると、奉仕表が見られるようになります。急ぐ場合は、管理者に直接声をかけてください。';
+  String get welcomeWaitBody => '管理者が集会に加えると、奉仕表が見られるようになります。';
 
   @override
   String get waitsForZone => '所属集会が未設定';
@@ -2993,6 +2993,18 @@ class L10nJa extends L10n {
   }
 
   @override
+  String get serviceStartWeek => '始まる週';
+
+  @override
+  String get thisWeek => '今週';
+
+  @override
+  String get nextWeek => '来週';
+
+  @override
+  String get weekAfterNext => '再来週';
+
+  @override
   String get nextMeeting => '次の集まり';
 
   @override
@@ -3461,7 +3473,7 @@ class L10nJa extends L10n {
   String get unavailableServing => 'この日はすでに奉仕が入っています';
 
   @override
-  String get unavailableServingFooter => 'リーダーには、この日は奉仕できないと表示されます';
+  String get unavailableServingFooter => '奉仕を割り当てる人には、この日は奉仕できないと表示されます';
 
   @override
   String get pickerUnavailable => 'この日は不可';
@@ -3623,7 +3635,7 @@ class L10nJa extends L10n {
   String get swapAskOne => '一人に頼む';
 
   @override
-  String get swapAskOneSub => 'その人だけに頼み、引き受けてもらえたら交代します';
+  String get swapAskOneSub => '一人を選んで頼み、引き受けてもらえたら交代します';
 
   @override
   String swapPickCoverTitle(String day, String duty) {

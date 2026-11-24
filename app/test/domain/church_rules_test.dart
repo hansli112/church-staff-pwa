@@ -340,6 +340,22 @@ void main() {
     }
   });
 
+  group('serviceTime', () {
+    for (final r in _rows('serviceTime')) {
+      test(r['why'] as String, () {
+        final service = Service(
+          id: 's',
+          name: '聚會',
+          weekdays: (r['weekdays'] as List).cast<int>(),
+          every: r['every'] as int? ?? 1,
+          startsOn: Day.tryParse(r['startsOn'] as String?),
+          monthWeeks: (r['monthWeeks'] as List?)?.cast<int>() ?? const [],
+        );
+        expect(validServiceTime(service), r['ok']);
+      });
+    }
+  });
+
   group('serviceMeets', () {
     for (final r in _rows('serviceMeets')) {
       test(r['why'] as String, () {

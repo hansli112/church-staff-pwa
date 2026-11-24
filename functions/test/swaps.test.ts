@@ -335,6 +335,7 @@ describe('和別週交換 (askSwap)', () => {
     assert.deepEqual(await pianists('2026-11-22'), duty('司琴', ['陳志豪']));
     assert.equal((await request(id)).status, 'declined', 'as if they had said 不方便');
     assert.ok(said().some(([t, body]) => t === 'tok-wang' && body === '「陳志豪」取消了交換，11/15（週日）主日崇拜 司琴還是你'));
+    assert.ok(said().some(([t, body]) => t === 'tok-lead' && body === '「陳志豪」取消了和「王小明」的交換，兩天都換回原本的人'), 'both days, to the lead');
 
     // Not once a roster has moved on since.
     const again = (await swap()).id;

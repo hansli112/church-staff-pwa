@@ -110,6 +110,12 @@ Map<String, Object?> exportJson(ChurchSnapshot s, DateTime exportedAt) => {
           'name': svc.name,
           'weekday': svc.weekdays.first,
           if (svc.weekdays.length > 1) 'weekdays': svc.weekdays,
+          if (svc.monthWeeks.isNotEmpty)
+            'monthWeeks': svc.monthWeeks
+          else if (svc.every == 2) ...{
+            'every': 2,
+            'startsOn': ?svc.startsOn?.key,
+          },
           'duties': svc.duties,
           'events': [
             for (final e in svc.events) {'name': e.name, 'color': e.color},
