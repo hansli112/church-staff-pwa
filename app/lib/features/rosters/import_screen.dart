@@ -69,7 +69,21 @@ class _ImportScreenState extends ConsumerState<ImportScreen> {
 
   Future<void> _photos(ImageSource source) => _during(() => _readPhotos(source));
 
+  /// Choosing photos and reading them, before recognizing: 拍照 and 選照片
+  /// wait for it.
+  bool _choosing = false;
+
   Future<void> _readPhotos(ImageSource source) async {
+    if (_choosing) return;
+    setState(() => _choosing = true);
+    try {
+      await _choosePhotos(source);
+    } finally {
+      if (mounted) setState(() => _choosing = false);
+    }
+  }
+
+  Future<void> _choosePhotos(ImageSource source) async {
     final key = _session.draftKey;
     if (!await _agreedToPhotoAi()) return;
     try {
@@ -332,16 +346,23 @@ class _ImportScreenState extends ConsumerState<ImportScreen> {
     }
   }
 
+  /// Asking the backend for the prompt: one tap, once.
+  bool _copying = false;
+
   /// The backend's photo prompt, for the editor's own AI; its JSON comes
   /// back through 貼上 JSON.
   Future<void> _copyPrompt() async {
+    if (_copying) return;
     final l10n = L10n.of(context);
+    setState(() => _copying = true);
     try {
       final prompt = await ref.churchData.photos.prompt(widget.serviceType);
       await Clipboard.setData(ClipboardData(text: prompt));
       if (mounted) showToast(context, l10n.importPromptCopied);
     } catch (e) {
       if (mounted) showToast(context, errorText(l10n, e));
+    } finally {
+      if (mounted) setState(() => _copying = false);
     }
   }
 
@@ -402,7 +423,7 @@ class _ImportScreenState extends ConsumerState<ImportScreen> {
 
   Widget _start(ImportDraft draft, L10n l10n, AppColors c) {
     final quota = ref.watch(_quotaProvider).value;
-    final blocked = !_ready || (quota != null && (!quota.platformOpen || quota.remaining <= 0));
+    final blocked = !_ready || _choosing || (quota != null && (!quota.platformOpen || quota.remaining <= 0));
     return ListView(
       padding: const EdgeInsets.all(Space.m),
       children: [
@@ -476,7 +497,7 @@ class _ImportScreenState extends ConsumerState<ImportScreen> {
                           SecondaryButton(
                             label: l10n.importCopyPrompt,
                             expand: true,
-                            onPressed: _ready ? _copyPrompt : null,
+                            onPressed: _ready && !_copying ? _copyPrompt : null,
                           ),
                           const SizedBox(height: Space.s),
                           // The reply pasted straight in: no button to open a field.

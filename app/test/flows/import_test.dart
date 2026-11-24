@@ -127,6 +127,58 @@ void main() {
     expect(b.photosUsed['other'] ?? 0, 0);
   });
 
+  testWidgets('while the picker is open, 拍照 and 選照片 wait for it', (tester) async {
+    final selection = Completer<List<XFile>>();
+    final oldPicker = ImagePickerPlatform.instance;
+    ImagePickerPlatform.instance = _PhotoPicker(pending: selection.future);
+    addTearDown(() {
+      ImagePickerPlatform.instance = oldPicker;
+      if (!selection.isCompleted) selection.complete([]);
+    });
+    await pumpApp(tester, agreedChurch());
+    await go(tester, '/rosters/import/sunday');
+    await tapText(tester, '選照片');
+    expect(tester.widget<SecondaryButton>(find.widgetWithText(SecondaryButton, '選照片')).onPressed, isNull);
+    expect(tester.widget<PrimaryButton>(find.widgetWithText(PrimaryButton, '拍照')).onPressed, isNull);
+    selection.complete([]);
+    await settle(tester);
+    expect(tester.widget<SecondaryButton>(find.widgetWithText(SecondaryButton, '選照片')).onPressed, isNotNull);
+  });
+
+  testWidgets('left while photos are read, the rows are there on coming back', (tester) async {
+    final oldPicker = ImagePickerPlatform.instance;
+    ImagePickerPlatform.instance = _PhotoPicker();
+    addTearDown(() => ImagePickerPlatform.instance = oldPicker);
+    final b = agreedChurch();
+    final reading = Completer<void>();
+    b.recognizing = reading.future;
+    b.recognized = [
+      {
+        'date': '2026-10-18',
+        'duties': [
+          {
+            'role': '司琴',
+            'people': ['李美玉'],
+          },
+        ],
+      },
+    ];
+    await pumpApp(tester, b);
+    await go(tester, '/rosters');
+    await tester.pumpAndSettle();
+    GoRouter.of(tester.element(find.byType(Scaffold).first)).push('/rosters/import/sunday');
+    await settle(tester);
+    await tapText(tester, '選照片');
+    GoRouter.of(tester.element(find.byType(Scaffold).last)).pop();
+    await settle(tester);
+    reading.complete();
+    await settle(tester);
+    GoRouter.of(tester.element(find.byType(Scaffold).first)).push('/rosters/import/sunday');
+    await settle(tester);
+    expect(find.text('預覽'), findsOneWidget);
+    expect(b.photosUsed['grace'], 1);
+  });
+
   testWidgets("進階 copies the photo prompt, the church's own, for an AI of the editor's choosing", (tester) async {
     final out = captureOutbox(tester);
     final b = agreedChurch();

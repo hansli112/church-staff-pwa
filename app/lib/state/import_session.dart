@@ -3,6 +3,7 @@ import 'dart:convert';
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_riverpod/misc.dart' show KeepAliveLink;
 
 import '../data/backend.dart';
 import '../domain/day.dart';
@@ -94,6 +95,7 @@ class ImportSession extends Notifier<ImportDraft> {
 
   @override
   ImportDraft build() {
+    ref.onCancel(_onLeft);
     final scope = (ref.watch(currentChurchIdProvider), ref.watch(uidProvider));
     final changed = _scope != null && _scope != scope;
     _scope = scope;
@@ -111,9 +113,13 @@ class ImportSession extends Notifier<ImportDraft> {
   /// draft is dropped.
   bool _isCurrent(Object draft) => ref.mounted && identical(draft, _draft);
 
-  /// Reads [images] into rows, replacing the draft's.
+  /// Reads [images] into rows, replacing the draft's. Kept while it reads,
+  /// and its rows until the page is next left: the photos were counted,
+  /// and the page left meanwhile shows them when opened again.
   Future<void> recognize(List<PhotoInput> images) async {
     final draft = _draft;
+    _kept ??= ref.keepAlive();
+    _reading++;
     state = state.copyWith(busy: true, clearError: true);
     try {
       final rows = await ref.churchData.photos.recognize(serviceType, images);
@@ -121,8 +127,21 @@ class ImportSession extends Notifier<ImportDraft> {
     } catch (e) {
       if (_isCurrent(draft)) fail(e);
     } finally {
+      _reading--;
       if (_isCurrent(draft)) state = state.copyWith(busy: false);
     }
+  }
+
+  /// Photos being read, and what keeps this alive for them.
+  int _reading = 0;
+  KeepAliveLink? _kept;
+
+  /// The page left: let go, unless photos are still being read; then once
+  /// it is opened on their rows and left again.
+  void _onLeft() {
+    if (_reading > 0) return;
+    _kept?.close();
+    _kept = null;
   }
 
   /// No rows came, because of [error].
