@@ -21,6 +21,7 @@ import '../calendar/event_sheet.dart';
 import '../me/attendance.dart';
 import '../me/no_account_picker.dart';
 import '../common/errors.dart';
+import '../common/saving_indicator.dart';
 import '../me/turn_on_notifications.dart';
 import '../common/calendar_read_notice.dart';
 import 'church_link_card.dart';
@@ -83,7 +84,7 @@ class HomeScreen extends ConsumerWidget {
         centerTitle: false,
         titleSpacing: Space.m,
         title: church == null ? null : ChurchTitle(church: church),
-        actions: [if (church != null) const NotificationBell()],
+        actions: savingActions([if (church != null) const NotificationBell()]),
       ),
       body: mine.when(
         skipLoadingOnReload: true,
@@ -270,23 +271,36 @@ class HomeScreen extends ConsumerWidget {
 }
 
 /// One asking me into their family (家人), on 首頁 under 等你回覆: 不要 or
-/// 接受, at once.
-class _FamilyAskRow extends ConsumerWidget {
+/// 接受, at once. Both wait while the answer is on its way.
+class _FamilyAskRow extends ConsumerStatefulWidget {
   const _FamilyAskRow(this.household);
 
   final Household household;
 
-  Future<void> _answer(BuildContext context, WidgetRef ref, {required bool yes}) async {
+  @override
+  ConsumerState<_FamilyAskRow> createState() => _FamilyAskRowState();
+}
+
+class _FamilyAskRowState extends ConsumerState<_FamilyAskRow> {
+  bool _busy = false;
+
+  Household get household => widget.household;
+
+  Future<void> _answer({required bool yes}) async {
+    if (_busy) return;
+    setState(() => _busy = true);
     try {
       await ref.churchData.answerFamily(household.id, yes: yes);
       if (yes) Haptics.success();
     } catch (e) {
-      if (context.mounted) showToast(context, errorText(L10n.of(context), e));
+      if (mounted) showToast(context, errorText(L10n.of(context), e));
+    } finally {
+      if (mounted) setState(() => _busy = false);
     }
   }
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  Widget build(BuildContext context) {
     final l10n = L10n.of(context);
     final name = household.askerOf(ref.watch(uidProvider) ?? '');
     return ListRow(
@@ -299,13 +313,13 @@ class _FamilyAskRow extends ConsumerWidget {
           RowButton(
             label: l10n.familyDecline,
             semanticsLabel: l10n.familyDeclineLabel(name),
-            onPressed: () => _answer(context, ref, yes: false),
+            onPressed: _busy ? null : () => _answer(yes: false),
           ),
           RowButton(
             label: l10n.swapAccept,
             semanticsLabel: l10n.familyAcceptLabel(name),
             prominent: true,
-            onPressed: () => _answer(context, ref, yes: true),
+            onPressed: _busy ? null : () => _answer(yes: true),
           ),
         ],
       ),
@@ -350,12 +364,22 @@ class _NoUpcoming extends StatelessWidget {
 /// in one, and they may ask for it. Under it, 服事表上已經有你了嗎？ to say
 /// which of the 同工 without an account they are, or, said, that an admin
 /// is to confirm it.
-class WelcomeWaitCard extends ConsumerWidget {
+class WelcomeWaitCard extends ConsumerStatefulWidget {
   const WelcomeWaitCard({super.key, required this.churchName});
 
   final String churchName;
 
-  Future<void> _ask(BuildContext context, WidgetRef ref, List<ClaimCandidate> candidates) async {
+  @override
+  ConsumerState<WelcomeWaitCard> createState() => _WelcomeWaitCardState();
+}
+
+class _WelcomeWaitCardState extends ConsumerState<WelcomeWaitCard> {
+  /// While an ask or its 取消 is on its way: the card's button waits.
+  bool _busy = false;
+
+  String get churchName => widget.churchName;
+
+  Future<void> _ask(List<ClaimCandidate> candidates) async {
     final me = ref.read(meProvider).value;
     final picked = await showAppSheet<ClaimCandidate>(
       context,
@@ -369,7 +393,7 @@ class WelcomeWaitCard extends ConsumerWidget {
         searched: (c) => [c.name],
       ),
     );
-    if (picked == null || !context.mounted) return;
+    if (picked == null || !mounted) return;
     final l10n = L10n.of(context);
     final details = candidateDetails(l10n, picked);
     final ok = await askChoice(
@@ -379,21 +403,25 @@ class WelcomeWaitCard extends ConsumerWidget {
       yes: l10n.claimAskSend,
       no: l10n.cancel,
     );
-    if (ok != true || !context.mounted) return;
-    await _send(context, ref, picked.pendingId);
+    if (ok != true || !mounted) return;
+    await _send(picked.pendingId);
   }
 
-  Future<void> _send(BuildContext context, WidgetRef ref, String? pendingId) async {
+  Future<void> _send(String? pendingId) async {
+    if (_busy) return;
+    setState(() => _busy = true);
     try {
       await ref.churchData.askClaim(pendingId);
       if (pendingId != null) Haptics.success();
     } catch (e) {
-      if (context.mounted) showToast(context, errorText(L10n.of(context), e));
+      if (mounted) showToast(context, errorText(L10n.of(context), e));
+    } finally {
+      if (mounted) setState(() => _busy = false);
     }
   }
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  Widget build(BuildContext context) {
     final l10n = L10n.of(context);
     final c = AppColors.of(context);
     final ask = ref.watch(myClaimAskProvider).value;
@@ -417,13 +445,13 @@ class WelcomeWaitCard extends ConsumerWidget {
               ),
               if (ask != null) ...[
                 const SizedBox(height: Space.m),
-                SecondaryButton(label: l10n.cancel, expand: true, onPressed: () => _send(context, ref, null)),
+                SecondaryButton(label: l10n.cancel, expand: true, onPressed: _busy ? null : () => _send(null)),
               ] else if (candidates.isNotEmpty) ...[
                 const SizedBox(height: Space.m),
                 SecondaryButton(
                   label: l10n.claimAskEntry,
                   expand: true,
-                  onPressed: () => _ask(context, ref, candidates),
+                  onPressed: _busy ? null : () => _ask(candidates),
                 ),
               ],
             ],
