@@ -1064,8 +1064,6 @@
   "myDutyHere": "你的事奉",
   "swapAskCover": "我不行",
   "swapAskCoverSub": "送给名单上那天有空的同工，先按“我来”的人接手",
-  "swapAskCoverConfirm": "{day}的{duty}要请人代吗？",
-  "swapAskCoverSend": "请人代",
   "swapAskSwap": "和别周交换",
   "swapAskSwapSub": "挑一天和那天的人换，对方接受才换",
   "swapAskAnyone": "请有空的人代",

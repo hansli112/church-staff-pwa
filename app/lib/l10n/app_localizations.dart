@@ -6340,18 +6340,6 @@ abstract class L10n {
   /// **'送給名單上那天有空的同工，先按「我來」的人接手'**
   String get swapAskCoverSub;
 
-  /// Before 我不行 sends the request (#92)
-  ///
-  /// In zh, this message translates to:
-  /// **'{day}的{duty}要請人代嗎？'**
-  String swapAskCoverConfirm(String day, String duty);
-
-  /// No description provided for @swapAskCoverSend.
-  ///
-  /// In zh, this message translates to:
-  /// **'請人代'**
-  String get swapAskCoverSend;
-
   /// No description provided for @swapAskSwap.
   ///
   /// In zh, this message translates to:

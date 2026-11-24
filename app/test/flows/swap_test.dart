@@ -83,10 +83,6 @@ void main() {
     await settle(tester);
     await tester.tap(find.text('請有空的人代'));
     await settle(tester);
-    expect(find.text('10月4日的司琴要請人代嗎？'), findsOneWidget);
-    expect(requests(b), isEmpty, reason: 'not before I say so');
-    await tester.tap(find.text('請人代'));
-    await settle(tester);
     expect(find.text('已請 1 位同工代，有人接手會通知你'), findsOneWidget);
     final r = requests(b).single;
     expect((r.kind, r.from, r.duty), (SwapKind.cover, 'mei', '司琴'));
@@ -148,8 +144,6 @@ void main() {
     await tester.tap(onMine('司琴', '我不行'));
     await settle(tester);
     await tester.tap(find.text('請有空的人代'));
-    await settle(tester);
-    await tester.tap(find.text('請人代'));
     await settle(tester);
     expect(find.text('已告訴負責人和同工你不行'), findsNWidgets(2), reason: 'the toast, and my row');
     final r = requests(b).single;
@@ -213,15 +207,14 @@ void main() {
     expect(requests(b).single.isOpen, isTrue);
   });
 
-  testWidgets('我不行, then 取消: nobody is asked', (tester) async {
+  testWidgets('我不行, then closed without picking: nobody is asked', (tester) async {
     final b = church();
     await pumpApp(tester, b);
     await go(tester, '/rosters/sunday/2026-10-04');
     await tester.tap(onMine('司琴', '我不行'));
     await settle(tester);
-    await tester.tap(find.text('請有空的人代'));
-    await settle(tester);
-    await tester.tap(find.text('取消'));
+    expect(find.text('請有空的人代'), findsOneWidget);
+    await tester.tapAt(const Offset(20, 20));
     await settle(tester);
     expect(requests(b), isEmpty);
     expect(onMine('司琴', '我不行'), findsOneWidget);
@@ -352,8 +345,6 @@ void main() {
     await settle(tester);
     expect(find.text('和別週交換'), findsOneWidget, reason: 'asking, not swapping outright');
     await tester.tap(find.text('請有空的人代'));
-    await settle(tester);
-    await tester.tap(find.text('請人代'));
     await settle(tester);
     expect(requests(b).single.kind, SwapKind.cover);
     expect(requests(b).single.asked, ['host']);

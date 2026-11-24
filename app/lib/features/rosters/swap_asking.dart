@@ -72,19 +72,11 @@ String _askKey(Roster roster, String duty) => '${roster.id}/$duty';
 /// Whether an ask or a 收回 for my [duty] on [roster] is on its way.
 bool askingFor(WidgetRef ref, Roster roster, String duty) => ref.watch(askingProvider).contains(_askKey(roster, duty));
 
-/// 請人代 for my [duty] on [roster], once I say so: asks, and says how
+/// 請人代 for my [duty] on [roster], picked from 我不行's menu, which says
+/// what it does (no confirming again; 收回 undoes it): asks, and says how
 /// many were asked, or that the leads and those serving that day were told
 /// when nobody could be.
 Future<void> askForCover(BuildContext context, WidgetRef ref, Roster roster, String duty) async {
-  final l10n = L10n.of(context);
-  final ok = await askChoice(
-    context,
-    title: l10n.swapAskCoverConfirm(DateFormat.MMMd().format(roster.day.midnight), duty),
-    message: l10n.swapAskCoverSub,
-    yes: l10n.swapAskCoverSend,
-    no: l10n.cancel,
-  );
-  if (ok != true || !context.mounted) return;
   await _asking(context, ref, _askKey(roster, duty), () async {
     final telemetry = ref.read(telemetryProvider);
     final asked = await ref.churchData.askCover(roster, duty);
