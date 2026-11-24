@@ -232,7 +232,9 @@ class EchoingChurchData implements ChurchData {
 
   /// The calls that change what is listed show it at once: who is in a
   /// group, on a duty's list, added by name, renamed (seconds on the
-  /// backend, over every roster); the rest as the backend has them.
+  /// backend, over every roster); the rest as the backend has them, counted
+  /// as [saving] while on their way and sent at once, not after the
+  /// changes before them.
   @override
   Future<R> run<R>(ChurchCall<R> call) async {
     final echo = switch (call) {
@@ -265,7 +267,7 @@ class EchoingChurchData implements ChurchData {
       ),
       _ => null,
     };
-    if (echo == null) return _inner.run(call);
+    if (echo == null) return _counted(() => _inner.run(call));
     late final R answer;
     await _send(echo, () async {
       answer = await _inner.run(call);
@@ -707,7 +709,7 @@ class _EchoingAttendance implements AttendanceData {
   );
 
   @override
-  Future<int> remind(String key, Day day) => _inner.remind(key, day);
+  Future<int> remind(String key, Day day) => _d._counted(() => _inner.remind(key, day));
 
   @override
   Future<void> saveSince(Day? since) => _d._send(
@@ -829,10 +831,11 @@ class _EchoingJoining implements JoiningData {
 
   @override
   Future<Invite> createInvite({required Duration validFor, List<String> zoneTypes = const []}) =>
-      _inner.createInvite(validFor: validFor, zoneTypes: zoneTypes);
+      _d._counted(() => _inner.createInvite(validFor: validFor, zoneTypes: zoneTypes));
 
   @override
-  Future<Invite> renewInvite(String code, {required Duration validFor}) => _inner.renewInvite(code, validFor: validFor);
+  Future<Invite> renewInvite(String code, {required Duration validFor}) =>
+      _d._counted(() => _inner.renewInvite(code, validFor: validFor));
 
   @override
   Future<void> revokeInvite(String code) => _d._counted(() => _inner.revokeInvite(code));
@@ -856,10 +859,11 @@ class _CountedCalendar implements CalendarData {
   Future<List<CalendarChoice>> choices() => _inner.choices();
 
   @override
-  Future<void> select(String calendarId, String calendarName) => _inner.select(calendarId, calendarName);
+  Future<void> select(String calendarId, String calendarName) =>
+      _d._counted(() => _inner.select(calendarId, calendarName));
 
   @override
-  Future<void> disconnect() => _inner.disconnect();
+  Future<void> disconnect() => _d._counted(_inner.disconnect);
 
   @override
   Future<List<CalendarEvent>> events(String month) => _inner.events(month);
@@ -920,7 +924,7 @@ class _CountedUnavailable implements UnavailableData {
   Future<void> saveMine(UnavailableDays days) => _d._counted(() => _inner.saveMine(days));
 
   @override
-  Future<void> send() => _inner.send();
+  Future<void> send() => _d._counted(_inner.send);
 
   @override
   Stream<UnavailableAsked?> askedOfMe() => _inner.askedOfMe();

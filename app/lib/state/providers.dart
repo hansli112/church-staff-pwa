@@ -96,17 +96,39 @@ final profileProvider = Provider<AsyncValue<UserProfile?>>((ref) {
   );
 });
 
+/// How many of my profile saves ([saveProfile]) are on their way: they
+/// count as [savingProvider].
+final profileSavesProvider = NotifierProvider<_Count, int>(_Count.new);
+
+class _Count extends Notifier<int> {
+  @override
+  int build() => 0;
+
+  Future<T> during<T>(Future<T> Function() op) async {
+    state++;
+    try {
+      return await op();
+    } finally {
+      if (ref.mounted) state--;
+    }
+  }
+}
+
 /// Saves [profile] with my [name] and [locale], shown at once; throws
 /// when refused, shown as it was again.
 Future<void> saveProfile(WidgetRef ref, UserProfile profile, {String? name, String? Function()? locale}) {
   final edit = (name: name ?? profile.name, locale: locale == null ? profile.locale : locale());
   final profiles = ref.read(backendProvider).profiles;
+  final saves = ref.read(profileSavesProvider.notifier);
   return ref
       .read(_profileEditsProvider.notifier)
       .show(
         profile.uid,
         edit,
-        () => profiles.save(UserProfile(uid: profile.uid, name: edit.name, email: profile.email, locale: edit.locale)),
+        () => saves.during(
+          () =>
+              profiles.save(UserProfile(uid: profile.uid, name: edit.name, email: profile.email, locale: edit.locale)),
+        ),
       );
 }
 

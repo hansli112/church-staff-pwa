@@ -63,8 +63,13 @@ final churchDataProvider = Provider<EchoingChurchData?>((ref) {
   return data;
 });
 
-/// Whether a change to the current church is still on its way.
-final savingProvider = StreamProvider<bool>(
+/// Whether a change to the current church, or to my profile, is still on
+/// its way.
+final savingProvider = Provider<AsyncValue<bool>>(
+  (ref) => ref.watch(profileSavesProvider) > 0 ? const AsyncData(true) : ref.watch(_churchSavingProvider),
+);
+
+final _churchSavingProvider = StreamProvider<bool>(
   (ref) => ref.watch(churchDataProvider)?.watchSaving() ?? Stream.value(false),
 );
 

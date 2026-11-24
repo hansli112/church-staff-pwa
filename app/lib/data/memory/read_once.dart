@@ -8,6 +8,7 @@ class _MemoryReadOnce implements ReadOnceData {
 
   @override
   Future<List<Member>> members() async {
+    await _c._b.readOnceHeld?.future;
     _c._requireRosterEditors();
     return _c._b.members[_c.churchId]!.values.toList();
   }

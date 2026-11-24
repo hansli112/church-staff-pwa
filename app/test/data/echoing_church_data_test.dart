@@ -477,6 +477,74 @@ void main() {
     await pumpEventQueue();
     expect(data.saving, isFalse);
   });
+
+  test('a tap waiting on the backend with nothing to show early counts as saving while on its way', () {
+    final sunday = Roster(type: 'sunday', day: Day(2026, 10, 11));
+    final sends = <String, Future<Object?> Function(EchoingChurchData d)>{
+      '刪除教會': (d) => d.run(const DeleteChurch()),
+      '恢復教會': (d) => d.run(const RestoreChurch()),
+      '家人': (d) => d.run(const AnswerFamily('h1', yes: true)),
+      '認領': (d) => d.run(const AskClaim('p1')),
+      '取消認領': (d) => d.run(const AskClaim(null)),
+      '回覆認領': (d) => d.run(const AnswerClaim('mei', allow: true)),
+      '找人代': (d) => d.run(AskCover(sunday, '司琴')),
+      '交換': (d) => d.run(AskSwap(sunday, '司琴', sunday, 'mei')),
+      '回覆交換': (d) => d.run(const AnswerSwap('s1', yes: true)),
+      '復原交換': (d) => d.run(const UndoSwap('s1')),
+      '收回': (d) => d.run(const WithdrawSwap('s1')),
+      '通知同工填': (d) => d.run(AskUnavailable('sunday', from: Day(2026, 11, 1), to: Day(2026, 11, 30))),
+      '提醒同工填': (d) => d.run(const RemindUnavailable('sunday')),
+      '通知排班': (d) => d.run(const NotifyPlanned('sunday')),
+      '申請加入': (d) => d.run(const AnswerJoinRequest('mei', allow: true)),
+      '送出': (d) => d.unavailable.send(),
+      '提醒回報人數': (d) => d.attendance.remind('k', Day(2026, 10, 11)),
+      '選日曆': (d) => d.calendar.select('cal', '行事曆'),
+      '中斷日曆': (d) => d.calendar.disconnect(),
+      '新邀請': (d) => d.joining.createInvite(validFor: const Duration(days: 7)),
+      '延長邀請': (d) => d.joining.renewInvite('c1', validFor: const Duration(days: 7)),
+    };
+    for (final MapEntry(key: what, value: send) in sends.entries) {
+      final d = EchoingChurchData(_Waiting());
+      send(d).ignore();
+      expect(d.saving, isTrue, reason: what);
+      d.close();
+    }
+  });
+}
+
+/// Church data whose every write is still on its way.
+class _Waiting implements ChurchData {
+  @override
+  final calendar = _WaitingCalendar();
+  @override
+  final joining = _WaitingJoining();
+  @override
+  final attendance = _WaitingAttendance();
+  @override
+  final unavailable = _WaitingUnavailable();
+
+  @override
+  dynamic noSuchMethod(Invocation invocation) => Completer<Never>().future;
+}
+
+class _WaitingCalendar implements CalendarData {
+  @override
+  dynamic noSuchMethod(Invocation invocation) => Completer<Never>().future;
+}
+
+class _WaitingJoining implements JoiningData {
+  @override
+  dynamic noSuchMethod(Invocation invocation) => Completer<Never>().future;
+}
+
+class _WaitingAttendance implements AttendanceData {
+  @override
+  dynamic noSuchMethod(Invocation invocation) => Completer<Never>().future;
+}
+
+class _WaitingUnavailable implements UnavailableData {
+  @override
+  dynamic noSuchMethod(Invocation invocation) => Completer<Never>().future;
 }
 
 /// Church data whose rosters come back with 陳志豪 wherever 王牧師 was put.

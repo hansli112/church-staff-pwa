@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 import 'dart:typed_data';
 
@@ -117,6 +118,20 @@ void main() {
 
     expect(find.text('已匯出'), findsNothing);
     expect(telemetry.events, isEmpty);
+  });
+
+  testWidgets('a read that never comes back stops in time and says so', (tester) async {
+    final b = seededChurch();
+    await pumpApp(tester, b, overrides: [fileSaverProvider.overrideWithValue(_Saver())]);
+    await go(tester, '/me/church');
+    await tester.scrollUntilVisible(find.text('匯出資料'), 200);
+    b.readOnceHeld = Completer();
+    await tapText(tester, '匯出資料');
+    await tester.pump(exportWait);
+    await tester.pump();
+    expect(find.text('連不上網路，請檢查後再試一次'), findsOneWidget);
+    b.readOnceHeld!.complete();
+    await settle(tester);
   });
 
   testWidgets('only admins can export', (tester) async {

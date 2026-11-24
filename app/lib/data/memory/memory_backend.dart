@@ -294,6 +294,10 @@ class MemoryBackend implements Backend {
   /// to complete, as on a slow network.
   Completer<void>? backOfficeReadsHeld;
 
+  /// Scripted: while set, a church's members read once (ReadOnceData.members)
+  /// wait for this to complete, as on a connection that never answers.
+  Completer<void>? readOnceHeld;
+
   /// Scripted: while set, the back office's 設為管理員 and 取消管理員 wait
   /// for this to complete, as on a slow network or a cold start.
   Completer<void>? adminChangeHeld;

@@ -118,13 +118,17 @@ class StoreKitPlayStore implements SupportStore {
   @override
   bool get available => !kIsWeb;
 
+  /// How long the store is waited for before it counts as not reached, so
+  /// 支持 shows 重試 instead of loading on and on.
+  static const _storeWait = Duration(seconds: 20);
+
   @override
   Future<List<SupportItem>> products() async {
     // Can't reach the store: an error. Reached, with nothing on sale yet: none.
     // Google Play's plugin drops a failed query's code, so offline there can
     // look like nothing on sale.
-    if (!await _iap.isAvailable()) throw StateError('The store is unavailable');
-    final response = await _iap.queryProductDetails(SupportProducts.all);
+    if (!await _iap.isAvailable().timeout(_storeWait)) throw StateError('The store is unavailable');
+    final response = await _iap.queryProductDetails(SupportProducts.all).timeout(_storeWait);
     if (response.error case final error? when response.productDetails.isEmpty) throw error;
     _details
       ..clear()
@@ -174,7 +178,9 @@ class StoreKitPlayStore implements SupportStore {
   // Play's restore is silent and lists only subscriptions still paid.
   @override
   Future<void> refresh() async {
-    if (defaultTargetPlatform == TargetPlatform.android && await _iap.isAvailable()) await _iap.restorePurchases();
+    if (defaultTargetPlatform == TargetPlatform.android && await _iap.isAvailable().timeout(_storeWait)) {
+      await _iap.restorePurchases();
+    }
   }
 
   Future<void> _onPurchases(List<PurchaseDetails> purchases) async {
@@ -199,7 +205,9 @@ class StoreKitPlayStore implements SupportStore {
   /// a reinstalled app may not have heard from Play yet. None on iOS.
   Future<GooglePlayPurchaseDetails?> _paidPlayPlan({required String other}) async {
     if (defaultTargetPlatform != TargetPlatform.android) return null;
-    final owned = await _iap.getPlatformAddition<InAppPurchaseAndroidPlatformAddition>().queryPastPurchases();
+    final owned = await _iap.getPlatformAddition<InAppPurchaseAndroidPlatformAddition>().queryPastPurchases().timeout(
+      _storeWait,
+    );
     return owned.pastPurchases
         .where((p) => p.productID != other && SupportProducts.plans.contains(p.productID))
         .firstOrNull;

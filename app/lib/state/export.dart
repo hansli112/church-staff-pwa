@@ -1,7 +1,10 @@
+import 'dart:async';
+
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:share_plus/share_plus.dart';
 
+import '../data/backend.dart';
 import '../domain/export.dart';
 import 'attendance.dart';
 import 'providers.dart';
@@ -31,9 +34,18 @@ class PlatformFileSaver implements FileSaver {
 
 final fileSaverProvider = Provider<FileSaver>((ref) => const PlatformFileSaver());
 
+/// How long 匯出資料 waits for the church to be read before it says the
+/// connection failed.
+const exportWait = Duration(seconds: 30);
+
 /// Reads everything an admin can see of the current church, once; the
-/// 人數 of its meetings too, with 回報人數 on.
-Future<ChurchSnapshot> loadChurchSnapshot(WidgetRef ref) async {
+/// 人數 of its meetings too, with 回報人數 on. Not all read in
+/// [exportWait], it throws a [CloudException] unavailable.
+Future<ChurchSnapshot> loadChurchSnapshot(WidgetRef ref) => _loadChurchSnapshot(
+  ref,
+).timeout(exportWait, onTimeout: () => throw const CloudException(CloudErrorCode.unavailable));
+
+Future<ChurchSnapshot> _loadChurchSnapshot(WidgetRef ref) async {
   final data = ref.churchData;
   final ((church, services, members, pending, staffOrders, rosters, calendar, link, webhook), attendance) = await (
     (
