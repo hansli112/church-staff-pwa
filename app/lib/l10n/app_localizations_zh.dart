@@ -3519,6 +3519,11 @@ class L10nZh extends L10n {
   String get unavailableSent => '已送出';
 
   @override
+  String unavailableAskedMonths(String months) {
+    return '請填 $months';
+  }
+
+  @override
   String planAskRound(String months, int count) {
     return '$months・$count 位還沒填';
   }
@@ -7317,6 +7322,11 @@ class L10nZhHans extends L10nZh {
 
   @override
   String get unavailableSent => '已提交';
+
+  @override
+  String unavailableAskedMonths(String months) {
+    return '请填 $months';
+  }
 
   @override
   String planAskRound(String months, int count) {

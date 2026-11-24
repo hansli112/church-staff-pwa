@@ -1041,6 +1041,7 @@
   "unavailableSend": "提交",
   "unavailableAllFree": "都可以事奉",
   "unavailableSent": "已提交",
+  "unavailableAskedMonths": "请填 {months}",
   "planAskRound": "{months}・{count} 位还没填",
   "planAskRoundDone": "{months}・都填好了",
   "planAskRoundTitle": "{months}不能事奉的日子",

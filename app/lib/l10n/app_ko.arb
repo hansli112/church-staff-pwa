@@ -1041,6 +1041,7 @@
   "unavailableSend": "보내기",
   "unavailableAllFree": "모든 날 가능해요",
   "unavailableSent": "보냈어요",
+  "unavailableAskedMonths": "{months} 입력해 주세요",
   "planAskRound": "{months} · {count}명 아직 안 함",
   "planAskRoundDone": "{months} · 모두 입력했어요",
   "planAskRoundTitle": "{months} 봉사할 수 없는 날",

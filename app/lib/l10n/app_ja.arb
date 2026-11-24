@@ -1041,6 +1041,7 @@
   "unavailableSend": "送信",
   "unavailableAllFree": "どの日も奉仕できます",
   "unavailableSent": "送信しました",
+  "unavailableAskedMonths": "{months}分を入力してください",
   "planAskRound": "{months}・未入力 {count}人",
   "planAskRoundDone": "{months}・全員入力済み",
   "planAskRoundTitle": "{months}の奉仕できない日",

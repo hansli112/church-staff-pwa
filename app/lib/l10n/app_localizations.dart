@@ -6202,6 +6202,12 @@ abstract class L10n {
   /// **'已送出'**
   String get unavailableSent;
 
+  /// 不能服事的日子 (#91): above the month while asked and not sent; months is 「12月到1月」, shown bold
+  ///
+  /// In zh, this message translates to:
+  /// **'請填 {months}'**
+  String unavailableAskedMonths(String months);
+
   /// No description provided for @planAskRound.
   ///
   /// In zh, this message translates to:

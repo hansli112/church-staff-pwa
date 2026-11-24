@@ -338,6 +338,7 @@ void main() {
     await settle(tester);
 
     expect(find.text('2026年12月'), findsOneWidget, reason: 'the first month asked');
+    expect(find.text('請填 12月到1月', findRichText: true), findsOneWidget, reason: 'the months asked, above them');
     expect(find.text('都可以服事'), findsOneWidget, reason: 'none of those days marked');
     final dec13 = find.byWidgetPredicate(
       (w) => w is Semantics && (w.properties.label?.startsWith('2026年12月13日') ?? false),
@@ -350,6 +351,7 @@ void main() {
     expect(b.unavailableSentAt['grace']?['mei'], isNotNull);
     expect(meisDays(b), const UnavailableDays().add(Day(2026, 12, 13), Day(2026, 12, 13)), reason: 'kept first');
     expect(find.text('已送出'), findsOneWidget);
+    expect(find.text('請填 12月到1月', findRichText: true), findsNothing, reason: 'sent');
     expect(telemetry.named('unavailable_send'), [
       {'free': false},
     ]);
@@ -429,6 +431,7 @@ void main() {
     await go(tester, '/me/unavailable');
     expect(find.text('送出'), findsNothing);
     expect(find.text('都可以服事'), findsNothing);
+    expect(find.textContaining('請填', findRichText: true), findsNothing);
     expect(find.text('2026年10月'), findsOneWidget);
   });
 

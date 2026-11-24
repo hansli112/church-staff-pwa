@@ -3524,6 +3524,11 @@ class L10nJa extends L10n {
   String get unavailableSent => '送信しました';
 
   @override
+  String unavailableAskedMonths(String months) {
+    return '$months分を入力してください';
+  }
+
+  @override
   String planAskRound(String months, int count) {
     return '$months・未入力 $count人';
   }

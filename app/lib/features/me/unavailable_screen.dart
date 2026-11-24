@@ -27,7 +27,7 @@ import '../common/saving_indicator.dart';
 /// clears it; a drag marks the days it crosses, or clears them when it
 /// starts on a marked one. Each change shows at once and is kept in turn. Only those who arrange rosters see them,
 /// with what I wrote about each stretch. Asked by 通知同工填, it opens on the
-/// first month asked, with 送出 (都可以服事 with none of those days marked)
+/// first month asked, says which months above it, with 送出 (都可以服事 with none of those days marked)
 /// at the bottom until I send; changes after go on being kept.
 class UnavailableScreen extends ConsumerStatefulWidget {
   const UnavailableScreen({super.key});
@@ -233,6 +233,7 @@ class _UnavailableScreenState extends ConsumerState<UnavailableScreen> {
           : ListView(
               padding: const EdgeInsets.only(bottom: Space.xl),
               children: [
+                if (asked != null && asked.waitingOn(today)) _AskedMonths(monthsLabel(l10n, asked.from, asked.to)),
                 _Month(
                   month: Day(today.year, today.month + _page, 1),
                   today: today,
@@ -305,6 +306,38 @@ class _UnavailableScreenState extends ConsumerState<UnavailableScreen> {
                   ),
               ],
             ),
+    );
+  }
+}
+
+/// 「請填 12月到1月」 above the month while asked and not sent: home says
+/// the months, and the page opens only on the first.
+class _AskedMonths extends StatelessWidget {
+  const _AskedMonths(this.months);
+
+  final String months;
+
+  @override
+  Widget build(BuildContext context) {
+    final c = AppColors.of(context);
+    final line = L10n.of(context).unavailableAskedMonths(months);
+    final at = line.indexOf(months);
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(Space.m, Space.m, Space.m, 0),
+      child: Text.rich(
+        TextSpan(
+          children: [
+            TextSpan(text: line.substring(0, at)),
+            TextSpan(
+              text: months,
+              style: TextStyle(color: c.label, fontWeight: FontWeight.w600),
+            ),
+            TextSpan(text: line.substring(at + months.length)),
+          ],
+        ),
+        textAlign: TextAlign.center,
+        style: AppText.subheadline.copyWith(color: c.secondaryLabel),
+      ),
     );
   }
 }

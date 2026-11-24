@@ -3522,6 +3522,11 @@ class L10nKo extends L10n {
   String get unavailableSent => '보냈어요';
 
   @override
+  String unavailableAskedMonths(String months) {
+    return '$months 입력해 주세요';
+  }
+
+  @override
   String planAskRound(String months, int count) {
     return '$months · $count명 아직 안 함';
   }

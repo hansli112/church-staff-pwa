@@ -1041,6 +1041,7 @@
   "unavailableSend": "Send",
   "unavailableAllFree": "I can serve every day",
   "unavailableSent": "Sent",
+  "unavailableAskedMonths": "Fill in {months}",
   "planAskRound": "{count, plural, =1{{months} · 1 yet to reply} other{{months} · {count} yet to reply}}",
   "planAskRoundDone": "{months} · Everyone replied",
   "planAskRoundTitle": "Days they can't serve, {months}",
