@@ -298,7 +298,9 @@ class _Profiles implements ProfileRepository {
   Future<void> agreeToPhotoAi(String uid) async {
     final p = _b.users[uid];
     if (_b.auth.currentUser?.uid != uid || p == null) throw const CloudException(CloudErrorCode.permissionDenied);
-    await _b.write(() => _b.users[uid] = p.copyWith(photoAiConsent: true));
+    // As Firestore's cache: kept here at once, not waiting for the server.
+    _b.users[uid] = p.copyWith(photoAiConsent: true);
+    _b.notify();
   }
 
   @override

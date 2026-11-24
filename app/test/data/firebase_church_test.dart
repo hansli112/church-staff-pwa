@@ -13,6 +13,16 @@ import 'package:martha/domain/models.dart';
 import 'package:martha/env.dart';
 
 void main() {
+  test('Storage giving up on a dead connection says offline', () async {
+    final fixture = _Fixture();
+    fixture.storage.deleteError = FirebaseException(plugin: 'firebase_storage', code: 'retry-limit-exceeded');
+    const file = NoteFile(id: 'f1', name: 'a.pdf', type: 'application/pdf', size: 1, url: 'https://x.test/a.pdf');
+    await expectLater(
+      fixture.backend.church('grace').rosterNotes.discard('r1', file),
+      throwsA(isA<CloudException>().having((e) => e.code, 'code', CloudErrorCode.unavailable)),
+    );
+  });
+
   test('church metadata arrives before its resolved Storage logo URL on any origin', () {
     fakeAsync((time) {
       final fixture = _Fixture();
@@ -738,6 +748,7 @@ class _Snapshot extends Fake implements DocumentSnapshot<Map<String, dynamic>> {
 class _Storage extends Fake implements FirebaseStorage {
   final requests = <String, List<Completer<String>>>{};
   Object? lookupError;
+  Object? deleteError;
   int get downloads => requests.values.fold(0, (total, pending) => total + pending.length);
 
   Completer<String> pending(String churchId, [int index = 0]) => requests['churches/$churchId/logo.png']![index];
@@ -759,5 +770,10 @@ class _Logo extends Fake implements Reference {
     final reply = Completer<String>();
     storage.requests.putIfAbsent(path, () => []).add(reply);
     return reply.future;
+  }
+
+  @override
+  Future<void> delete() async {
+    if (storage.deleteError case final error?) throw error;
   }
 }

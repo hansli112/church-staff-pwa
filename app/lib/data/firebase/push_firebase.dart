@@ -62,9 +62,23 @@ class FirebasePushService implements PushService {
     final settings = await _messaging.requestPermission();
     final status = _map(settings.authorizationStatus);
     final uid = _uid;
-    if (status == PushPermission.granted && uid != null) await _register(uid);
+    if (status == PushPermission.granted && uid != null) {
+      // A failure that comes quickly (no APNs token yet) reaches the caller;
+      // one still under way after [_answerWithin] goes on by itself, and the
+      // next launch tries again should it fail.
+      final registering = _register(uid);
+      try {
+        await registering.timeout(_answerWithin);
+      } on TimeoutException {
+        registering.ignore();
+      }
+    }
     return status;
   }
+
+  /// How long turning notifications on waits for this device to register
+  /// before it answers anyway.
+  static const _answerWithin = Duration(seconds: 10);
 
   /// MainActivity.kt and AppDelegate.swift.
   static const _settings = MethodChannel('martha/settings');
@@ -130,7 +144,9 @@ class FirebasePushService implements PushService {
     if (_uid != uid) return;
     if (token != null) {
       await prefs.setString(_ownerKey, uid);
-      await _save(uid, token);
+      // Kept in Firestore's cache at once and sent once connected: not
+      // waited for, or a phone with no connection never answers.
+      _save(uid, token).ignore();
     }
     if (_uid != uid) return;
     _refresh = _messaging.onTokenRefresh.listen((t) => _save(uid, t).ignore());

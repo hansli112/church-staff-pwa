@@ -160,6 +160,22 @@ void main() {
     expect(b.photosUsed['grace'], 1);
   });
 
+  testWidgets('agreeing on a slow connection goes on to the photo, not waiting for it to be kept', (tester) async {
+    final oldPicker = ImagePickerPlatform.instance;
+    ImagePickerPlatform.instance = _PhotoPicker();
+    addTearDown(() => ImagePickerPlatform.instance = oldPicker);
+    final b = seededChurch(as: editor);
+    await pumpApp(tester, b);
+    await go(tester, '/rosters/import/sunday');
+    b.writeHeld = Completer();
+
+    await tapText(tester, '選照片');
+    await tapText(tester, '同意並繼續');
+    expect(b.photosUsed['grace'], 1);
+    expect(b.users[editor.uid]!.photoAiConsent, isTrue);
+    b.writeHeld!.complete();
+  });
+
   testWidgets('photos that cannot be read say so', (tester) async {
     final oldPicker = ImagePickerPlatform.instance;
     ImagePickerPlatform.instance = _PhotoPicker(error: Exception('camera roll unavailable'));

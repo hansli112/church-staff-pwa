@@ -4,6 +4,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:martha/data/firebase/push_firebase.dart';
+import 'package:martha/state/push.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 void main() {
@@ -17,6 +18,7 @@ void main() {
     db = _Firestore();
     push = FirebasePushService(prefs: await SharedPreferences.getInstance(), firestore: db, messaging: messaging);
     await push.refresh('mei');
+    await pumpEventQueue();
     expect(db.tokens('mei'), {push.deviceId: 'token-1'});
   });
 
@@ -36,6 +38,7 @@ void main() {
     expect(db.tokens('mei'), {push.deviceId: 'token-1'}, reason: 'still on her account');
 
     await push.refresh('jun');
+    await pumpEventQueue();
     // Hers stops working, so the backend drops it the next time it sends.
     expect(messaging.live, 'token-2');
     expect(db.tokens('jun'), {push.deviceId: 'token-2'});
@@ -62,6 +65,16 @@ void main() {
   test('the same account signing in again keeps its token', () async {
     await push.refresh('mei');
     expect(messaging.live, 'token-1');
+  });
+
+  test('turned on with no connection, it answers at once; the token is saved once connected', () async {
+    await push.unregister('mei');
+    await push.refresh('jun');
+    db.offline = true;
+    expect(await push.enable(), PushPermission.granted);
+    db.reconnect();
+    await pumpEventQueue();
+    expect(db.tokens('jun'), {push.deviceId: messaging.live});
   });
 
   test('signed out normally, nothing is deleted again', () async {
@@ -97,6 +110,18 @@ class _Messaging extends Fake implements FirebaseMessaging {
     sound: AppleNotificationSetting.enabled,
     providesAppNotificationSettings: AppleNotificationSetting.disabled,
   );
+
+  @override
+  Future<NotificationSettings> requestPermission({
+    bool alert = true,
+    bool announcement = false,
+    bool badge = true,
+    bool carPlay = false,
+    bool criticalAlert = false,
+    bool provisional = false,
+    bool sound = true,
+    bool providesAppNotificationSettings = false,
+  }) => getNotificationSettings();
 
   @override
   Future<String?> getToken({String? vapidKey, String? serviceWorkerScriptPath}) async => live;

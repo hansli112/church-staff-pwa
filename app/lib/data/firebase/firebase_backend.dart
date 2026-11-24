@@ -70,7 +70,7 @@ class FirebaseBackend implements Backend {
        _auth = auth ?? fa.FirebaseAuth.instance,
        _db = firestore ?? FirebaseFirestore.instance,
        _functions = functions ?? FirebaseFunctions.instanceFor(region: functionsRegion),
-       _storage = storage ?? FirebaseStorage.instance {
+       _storage = storage ?? _bounded(FirebaseStorage.instance) {
     if (serverReads) _serverReads[_db] = true;
   }
 
@@ -78,6 +78,14 @@ class FirebaseBackend implements Backend {
   final FirebaseFirestore _db;
   final FirebaseFunctions _functions;
   final FirebaseStorage _storage;
+
+  /// [storage], giving up on a dead connection in about a minute instead of
+  /// Storage's own ten (uploads) or two (the rest), so a 附件, the logo or a
+  /// move's file fails as offline (retry-limit-exceeded) rather than
+  /// spinning, and a pending delete does not hold up an update for long.
+  static FirebaseStorage _bounded(FirebaseStorage storage) => storage
+    ..setMaxUploadRetryTime(const Duration(seconds: 60))
+    ..setMaxOperationRetryTime(const Duration(seconds: 30));
 
   @override
   final TransportConnectivity connectivity = TransportConnectivity(browserHints: true);
@@ -491,8 +499,13 @@ class _Profiles implements ProfileRepository {
   Future<void> setAppLocale(String uid, String tag) => _guard(() => _db.doc('users/$uid').update({'appLocale': tag}));
 
   @override
-  Future<void> agreeToPhotoAi(String uid) =>
-      _guard(() => _db.doc('users/$uid').update({'photoAiConsentAt': FieldValue.serverTimestamp()}));
+  Future<void> agreeToPhotoAi(String uid) async {
+    if (_auth.currentUser?.uid != uid) throw const CloudException(CloudErrorCode.permissionDenied);
+    // In the cache at once, which is all the photo needs: the server's
+    // answer, offline, waits for a connection. Should it be refused, the
+    // next photo asks again.
+    _db.doc('users/$uid').update({'photoAiConsentAt': FieldValue.serverTimestamp()}).ignore();
+  }
 
   @override
   Stream<List<NotificationItem>> notifications(String uid) => _db
@@ -1938,7 +1951,8 @@ CloudException _cloudError(FirebaseException e) => switch (e) {
 /// What a Firebase error code means, when no reason of ours came with it.
 CloudErrorCode _codeFor(String code) => switch (code) {
   'permission-denied' || 'unauthenticated' => CloudErrorCode.permissionDenied,
-  'unavailable' || 'deadline-exceeded' => CloudErrorCode.unavailable,
+  // Storage gives up retrying with retry-limit-exceeded: no connection.
+  'unavailable' || 'deadline-exceeded' || 'retry-limit-exceeded' => CloudErrorCode.unavailable,
   'resource-exhausted' => CloudErrorCode.quotaExceeded,
   'aborted' || 'already-exists' => CloudErrorCode.conflict,
   _ => CloudErrorCode.unknown,
