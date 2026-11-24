@@ -269,13 +269,38 @@ class _AgendaState extends ConsumerState<_Agenda> {
   /// The picked day's section, brought into view when the day is picked.
   final _pickedDay = GlobalKey();
 
+  /// This month's first row from today on, brought to the top when the
+  /// month opens.
+  final _fromToday = GlobalKey();
+
+  /// Whether this month's rows were brought to today since it opened.
+  bool _atToday = false;
+
   /// The month whose neighbours were last read ahead.
   DateTime? _readAheadOf;
 
   @override
   void didUpdateWidget(_Agenda old) {
     super.didUpdateWidget(old);
-    if (old.month != widget.month && _scroll.hasClients) _scroll.jumpTo(0);
+    if (old.month != widget.month) {
+      _atToday = false;
+      // After this build: a jump now tells the app bar mid-build.
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted && _scroll.hasClients) _scroll.jumpTo(0);
+      });
+    }
+  }
+
+  /// The month this is opens on today's row: what is past is above it.
+  /// Once, when its events are first shown; not on a small screen, whose
+  /// grid scrolls with the rows and would go out of view.
+  void _bringTodayUp() {
+    _atToday = true;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final row = _fromToday.currentContext;
+      if (!mounted || row == null) return;
+      Scrollable.ensureVisible(row);
+    });
   }
 
   @override
@@ -367,9 +392,10 @@ class _AgendaState extends ConsumerState<_Agenda> {
       onShift: shift,
     );
 
-    Widget row(CalendarEvent e, {Widget? leading}) {
+    Widget row(CalendarEvent e, {Key? key, Widget? leading}) {
       final place = e.location?.trim() ?? '';
       return ListRow(
+        key: key,
         leading: leading,
         title: e.title,
         // When, always under the title, then where: one place for the time
@@ -427,13 +453,16 @@ class _AgendaState extends ConsumerState<_Agenda> {
       }
       // One list, the day beside its first event as on the 服事表 tab: a
       // heading and a card a day made a month of one-event days long.
+      final days = byDay.keys.toList()..sort();
+      final firstFromToday = days.where((d) => !d.isBefore(today)).firstOrNull;
       agenda = [
         ListSection(
           children: [
-            for (final d in byDay.keys.toList()..sort())
+            for (final d in days)
               for (final (i, e) in byDay[d]!.indexed)
                 row(
                   e,
+                  key: i == 0 && d == firstFromToday ? _fromToday : null,
                   leading: i == 0 ? dayBlock(d, today, color: e.color) : const SizedBox(width: DateBlock.minWidth),
                 ),
           ],
@@ -461,6 +490,8 @@ class _AgendaState extends ConsumerState<_Agenda> {
         final pinned =
             constraints.maxHeight - headerHeight - MonthGrid.tallest(context) >=
             MediaQuery.textScalerOf(context).scale(_agendaMinHeight);
+        final thisMonth = month == DateTime(today.year, today.month);
+        if (!_atToday && pinned && thisMonth && selected == null && events.hasValue) _bringTodayUp();
         return Column(
           children: [
             header,

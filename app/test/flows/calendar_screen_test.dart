@@ -45,6 +45,32 @@ void main() {
     await settle(tester);
     expect(agendaEvent('活動2').hitTestable(), findsOneWidget);
   });
+  testWidgets("this month opens on today's events, what is past above them", (tester) async {
+    final b = seededChurch(as: staffMei, clock: () => testNow.add(const Duration(days: 19)));
+    b.connectCalendar('grace', calendarName: '教會行事曆');
+    b.calendarEvents['grace'] = [
+      for (var day = 1; day <= 30; day++)
+        CalendarEvent(
+          id: '$day',
+          title: '活動$day',
+          start: DateTime(2026, 10, day, 19),
+          end: DateTime(2026, 10, day, 20),
+        ),
+    ];
+    await pumpApp(tester, b);
+    await openCalendar(tester);
+    final list = find.byType(CustomScrollView);
+    final top = tester.getTopLeft(list).dy;
+    expect(tester.getTopLeft(agendaEvent('活動20')).dy, lessThan(top + 60), reason: 'today first');
+    expect(agendaEvent('活動19').hitTestable(), findsNothing);
+
+    await tester.tap(find.byTooltip('下個月'));
+    await settle(tester);
+    await tester.tap(find.byTooltip('上個月'));
+    await settle(tester);
+    expect(tester.getTopLeft(agendaEvent('活動20')).dy, lessThan(top + 60), reason: 'back to this month, today again');
+  });
+
   group('a picked day', () {
     CalendarEvent event(String id, int day, {int days = 1}) => CalendarEvent(
       id: id,

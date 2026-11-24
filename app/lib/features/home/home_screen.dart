@@ -94,6 +94,11 @@ class HomeScreen extends ConsumerWidget {
           onRetry: () => ref.invalidate(savedRostersProvider),
         ),
         data: (list) {
+          // What asks me something waits for the server (the cache's may
+          // be done already), and the page with it: rows showing up a
+          // moment later pushed my days down.
+          final toMe = [swapRequestsToMeProvider, familyAskingProvider, unavailableAskedProvider];
+          if (toMe.any((p) => !ref.watch(p).hasValue && !ref.watch(p).hasError)) return const SizedBox.shrink();
           perfMark('home-visible');
           final claims = ref.watch(pendingClaimsProvider).value ?? const [];
           final gettingStarted = ref.watch(gettingStartedProvider);
