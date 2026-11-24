@@ -17,6 +17,7 @@ import '../../domain/plan_weeks.dart';
 import '../../domain/roster_edit.dart';
 import '../../domain/roster_news.dart';
 import '../../l10n/app_localizations.dart';
+import '../../state/plan_draft.dart';
 import '../../state/providers.dart';
 import '../../state/roster_actions.dart';
 import '../common/errors.dart';
@@ -133,7 +134,17 @@ class _PlanWeeksScreenState extends ConsumerState<PlanWeeksScreen> with SingleTi
     // Made now: one never used (表格) is still disposed of.
     _fading = AnimationController(vsync: this, duration: const Duration(milliseconds: 150));
     _faded = Tween<double>(begin: 1, end: 0.4).animate(_fading);
+    // What is changed here waits for 完成; only to look at, nothing does.
+    if (!widget.readOnly) {
+      _draft = ref.read(planDraftProvider.notifier);
+      _holder = _draft!.hold();
+    }
   }
+
+  /// Where what is changed here waits for 完成 (null only to look at), and
+  /// this page's hold on it.
+  PlanDraft? _draft;
+  int _holder = 0;
 
   @override
   void dispose() {
@@ -146,6 +157,11 @@ class _PlanWeeksScreenState extends ConsumerState<PlanWeeksScreen> with SingleTi
     _rows.dispose();
     _looks.dispose();
     _fading.dispose();
+    // Not saved by 完成: dropped, once the tree is done changing.
+    if (_draft case final draft?) {
+      final holder = _holder;
+      Future.microtask(() => draft.release(holder));
+    }
     super.dispose();
   }
 
@@ -293,7 +309,9 @@ class _PlanWeeksScreenState extends ConsumerState<PlanWeeksScreen> with SingleTi
       icon: const Icon(Symbols.more_horiz_rounded),
       onSelected: (v) => switch (v) {
         'ask' => _askUnavailable(type, from),
-        'photo' => context.push('/rosters/import/$type'),
+        'photo' => _saveFirst().then((ok) {
+          if (ok && mounted) context.push('/rosters/import/$type');
+        }),
         'image' => showRosterImage(context, serviceType: type, month: from),
         'table' => context.push('/rosters/table/$type'),
         _ => null,
@@ -454,20 +472,67 @@ class _PlanWeeksScreenState extends ConsumerState<PlanWeeksScreen> with SingleTi
     }
   }
 
-  /// 完成: goes back at once, telling whoever was put on or taken off
-  /// here behind it; a failure says so where it went, with 重試.
+  /// 完成: goes back at once, saving what was changed here and then
+  /// telling whoever was put on or taken off behind it; a failure says so
+  /// where it went, with 重試.
   void _finish() {
     // A second tap while the page goes would go back from the one behind.
     if (_leaving) return;
     final toasts = _toasts;
     final actions = ref.read(rosterActionsProvider);
-    final waiting = _waiting;
-    void tell() => _tellPlanned(toasts, actions, waiting, onRetry: tell);
+    final change = _draft?.change;
+    final ids = <String, List<String>>{
+      for (final r in [...?change?.after.values, ...?change?.before.values])
+        if (r != null && !r.isEvent) r.type: [],
+    };
+    for (final r in [...?change?.after.values, ...?change?.before.values]) {
+      if (r != null && !r.isEvent && !ids[r.type]!.contains(r.id)) ids[r.type]!.add(r.id);
+    }
+    final types = {..._waiting, ...ids.keys};
+    var saved = change == null;
+    Future<void> run() async {
+      if (!saved) {
+        try {
+          await actions.savePlanned(change!);
+          saved = true;
+        } catch (e) {
+          if (toasts.mounted) showToast(toasts, saveErrorText(L10n.of(toasts), e), onRetry: run);
+          return;
+        }
+      }
+      if (toasts.mounted) await _tellPlanned(toasts, actions, types, rosterIds: ids, onRetry: run);
+    }
+
     // Being told: no toast offering 通知 on the way out, though the news
     // has not caught up yet.
     _leaving = true;
-    tell();
+    unawaited(run());
+    // Shown as sent from here on.
+    _draft?.discard();
     context.pop();
+  }
+
+  /// Leaving with changes not saved: asked first, 放棄變更 drops them.
+  Future<void> _askToLeave() async {
+    if (!await confirmDiscard(context) || !mounted) return;
+    _draft?.discard();
+    context.pop();
+  }
+
+  /// What was changed here saved now, nobody told yet: before the day's
+  /// own page or 照片匯入, which save at once, open on it.
+  Future<bool> _saveFirst() async {
+    final change = _draft?.change;
+    if (change == null) return true;
+    final save = ref.read(rosterActionsProvider).savePlanned(change);
+    _draft?.discard();
+    try {
+      await save;
+      return mounted;
+    } catch (e) {
+      if (mounted) showToast(context, saveErrorText(L10n.of(context), e));
+      return false;
+    }
   }
 
   /// Left another way than 完成 while people wait (back, a swipe from the
@@ -479,6 +544,11 @@ class _PlanWeeksScreenState extends ConsumerState<PlanWeeksScreen> with SingleTi
     final waiting = _waiting;
     void tell() => _tellPlanned(toasts, actions, waiting, onRetry: tell);
     showToast(toasts, L10n.of(toasts).planNotYetTold, action: (label: L10n.of(toasts).planNotifyNow, onPressed: tell));
+  }
+
+  /// [day]'s own page, what was changed here saved first.
+  Future<void> _openDay(Roster day) async {
+    if (await _saveFirst() && mounted) unawaited(context.push('/rosters/${day.type}/${day.day.key}'));
   }
 
   /// Where toasts go, still there once this page is gone.
@@ -518,6 +588,7 @@ class _PlanWeeksScreenState extends ConsumerState<PlanWeeksScreen> with SingleTi
           if (ref.watch(plannedNewsProvider(type)).value ?? false) type,
     };
     final news = _waiting.isNotEmpty;
+    final unsaved = !view && ref.watch(planDraftProvider).isNotEmpty;
 
     Widget body;
     List<String> duties = const [];
@@ -539,8 +610,14 @@ class _PlanWeeksScreenState extends ConsumerState<PlanWeeksScreen> with SingleTi
     }
 
     return PopScope(
+      // Changed and not saved: asked before going.
+      canPop: !unsaved || _leaving,
       onPopInvokedWithResult: (didPop, _) {
-        if (didPop && news && !_leaving) _left();
+        if (!didPop) {
+          unawaited(_askToLeave());
+        } else if (news && !_leaving) {
+          _left();
+        }
       },
       // White, as a table is: the empty cells' dashes show on it.
       child: Scaffold(
@@ -771,7 +848,7 @@ class _PlanWeeksScreenState extends ConsumerState<PlanWeeksScreen> with SingleTi
               roster: day,
               today: today,
               border: line,
-              onTap: () => context.push('/rosters/${day.type}/${day.day.key}'),
+              onTap: () => _openDay(day),
             ),
           );
         case final Roster day when day.noService:
@@ -779,7 +856,7 @@ class _PlanWeeksScreenState extends ConsumerState<PlanWeeksScreen> with SingleTi
           // pick or drop on. Tapping opens the day, where it is undone.
           return GestureDetector(
             behavior: HitTestBehavior.opaque,
-            onTap: () => context.push('/rosters/${day.type}/${day.day.key}'),
+            onTap: () => _openDay(day),
             child: DecoratedBox(
               decoration: BoxDecoration(
                 color: c.background,
@@ -1485,6 +1562,7 @@ Future<void> _tellPlanned(
   BuildContext toasts,
   RosterActions actions,
   Set<String> types, {
+  Map<String, List<String>> rosterIds = const {},
   required VoidCallback onRetry,
 }) async {
   final l10n = L10n.of(toasts);
@@ -1492,7 +1570,7 @@ Future<void> _tellPlanned(
     var people = 0;
     var later = false;
     for (final type in types) {
-      final r = await actions.notifyPlanned(type);
+      final r = await actions.notifyPlanned(type, rosterIds: rosterIds[type] ?? const []);
       people += r.people;
       later |= r.later;
     }

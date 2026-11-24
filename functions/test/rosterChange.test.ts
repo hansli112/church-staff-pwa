@@ -314,6 +314,19 @@ describe('安排服事 (#90)', () => {
     assert.deepEqual(await notify(), { people: 0, later: false }, 'nothing left to tell');
   });
 
+  test('完成 saves the days and tells at once: told once the backend has read them, not before', async () => {
+    await church();
+    // Saved, its trigger not run yet.
+    const ref = db.doc('churches/C1/rosters/2026-10-11_sunday');
+    const before = await ref.get();
+    await ref.set({ type: 'sunday', dateKey: '2026-10-11', duties: [duty('司琴', ['美玉'])], via: 'plan', updatedAt: Timestamp.now() });
+    const told = notifyPlanned(triggerDeps(), caller('pastor'), { churchId: 'C1', serviceId: 'sunday', rosterIds: ['2026-10-11_sunday'] });
+    await new Promise((r) => setTimeout(r, 300));
+    await onRosterWritten(triggerDeps(), 'C1', before, await ref.get(), 'pastor', 'late');
+    assert.deepEqual(await told, { people: 1, later: false });
+    assert.match(pushed.at(-1)!.body, /排進 10\/11 司琴/);
+  });
+
   test('one without an account is not counted among those told', async () => {
     await church();
     await plan('2026-10-11', [duty('司琴', ['美玉']), duty('招待', ['黃鎮台'])]);
@@ -462,7 +475,13 @@ describe('安排服事 (#90)', () => {
 
   test('a service that is not one, or anything else sent along, is refused', async () => {
     await church();
-    for (const data of [{ serviceId: 'a/b' }, { serviceId: 7 }, { serviceId: 'sunday', extra: 1 }]) {
+    for (const data of [
+      { serviceId: 'a/b' },
+      { serviceId: 7 },
+      { serviceId: 'sunday', extra: 1 },
+      { serviceId: 'sunday', rosterIds: 'x' },
+      { serviceId: 'sunday', rosterIds: ['../x'] },
+    ]) {
       await assert.rejects(notifyPlanned(triggerDeps(), caller('pastor'), { churchId: 'C1', ...data }), { code: 'invalid-argument' });
     }
   });

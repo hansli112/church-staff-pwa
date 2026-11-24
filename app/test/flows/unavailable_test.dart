@@ -222,7 +222,11 @@ void main() {
     );
     await tester.tap(find.text('李美玉').last);
     await settle(tester);
-    expect(peopleOn(b, 11, '司琴'), ['李美玉'], reason: 'still to be picked');
+    expect(
+      find.descendant(of: cell('司琴', 11), matching: find.text('李美玉')),
+      findsOneWidget,
+      reason: 'still to be picked',
+    );
     expect(find.text('已更新司琴 · 李美玉這天不行'), findsOneWidget);
   });
 

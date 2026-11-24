@@ -14,6 +14,7 @@ import '../domain/staff.dart';
 import '../domain/staff_order.dart';
 import '../domain/swap.dart';
 import 'current_church.dart';
+import 'plan_draft.dart';
 import 'shown_changes.dart';
 
 // The calls ([ChurchCalls]) on [churchData] by name, wherever it is read.
@@ -233,9 +234,12 @@ final shownChurchLinkProvider = Provider<({String title, String body, String url
 /// Saved rosters from today on, every service and event, and events'
 /// rosters still on today (a retreat begun yesterday). Not an event's
 /// roster cancelled with its event: the backend keeps it only for undo.
+///
+/// While 安排服事 is open, with what it changed and has not saved yet
+/// ([planDraftProvider]), so every page it opens shows the same days.
 final savedRostersProvider = StreamProvider<List<Roster>>((ref) {
   final from = ref.watch(todayProvider);
-  return openChurch(ref)
+  final stored = openChurch(ref)
       .rosters(from: from)
       .map(
         (list) => [
@@ -243,6 +247,24 @@ final savedRostersProvider = StreamProvider<List<Roster>>((ref) {
             if (!(r.forEvent?.cancelled ?? false)) r,
         ],
       );
+  // The draft laid over each list as it comes, and again as it changes,
+  // without listening anew to the backend.
+  final out = StreamController<List<Roster>>();
+  List<Roster>? last;
+  void emit() {
+    if (last case final saved?) out.add(withDraft(saved, ref.read(planDraftProvider)));
+  }
+
+  final sub = stored.listen((saved) {
+    last = saved;
+    emit();
+  }, onError: out.addError);
+  ref.listen(planDraftProvider, (_, _) => emit());
+  ref.onDispose(() {
+    sub.cancel();
+    out.close();
+  });
+  return out.stream;
 });
 
 /// How many weeks back arranging looks for how many people a duty takes.

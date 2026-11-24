@@ -65,14 +65,17 @@ final class OrderSmallGroups extends _Write {
 }
 
 final class NotifyPlanned extends ChurchCall<PlannedNotice> {
-  const NotifyPlanned(this.serviceType);
+  const NotifyPlanned(this.serviceType, {this.rosterIds = const []});
   final String serviceType;
+
+  /// Days of it just saved: told once the backend has read them.
+  final List<String> rosterIds;
 
   @override
   String get callable => 'notifyPlanned';
 
   @override
-  Map<String, Object?> get data => {'serviceId': serviceType};
+  Map<String, Object?> get data => {'serviceId': serviceType, if (rosterIds.isNotEmpty) 'rosterIds': rosterIds};
 
   @override
   PlannedNotice answer(Map<String, Object?> data) => (people: _count(data['people']), later: data['later'] == true);
@@ -429,7 +432,10 @@ extension ChurchCalls on ChurchData {
   /// 通知同工 for [serviceType], by someone who arranges it: everyone put
   /// on or taken off its days in 安排服事 since hears it, one push each.
   /// In quiet hours ([PlannedNotice.later]) they wait until 7:00.
-  Future<PlannedNotice> notifyPlanned(String serviceType) => run(NotifyPlanned(serviceType));
+  /// [rosterIds]: its days saved a moment ago (安排服事's 完成), whose news
+  /// the backend reads first.
+  Future<PlannedNotice> notifyPlanned(String serviceType, {List<String> rosterIds = const []}) =>
+      run(NotifyPlanned(serviceType, rosterIds: rosterIds));
 
   /// 請人代 for my [duty] on [roster], a service's day from today on:
   /// everyone on the duty's list free that day ([coverAsked]). How many it

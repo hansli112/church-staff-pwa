@@ -90,6 +90,15 @@ Set<String> waiting(MemoryBackend b) => {
     if (value.service == 'sunday') key.split('/').last,
 };
 
+/// 完成: what was changed saved, and the page gone.
+Future<void> finish(WidgetTester tester) async {
+  await tester.tap(find.text('完成'));
+  await settle(tester);
+}
+
+/// Who is on [role] on October [day] in the table.
+Finder shownOn(String role, int day, String name) => find.descendant(of: cell(role, day), matching: find.text(name));
+
 /// Holds [from] until it lifts, then drags it onto [to] and lets go.
 Future<void> drag(WidgetTester tester, Finder from, Finder to) async {
   final gesture = await tester.startGesture(tester.getCenter(from));
@@ -215,7 +224,7 @@ void main() {
     );
   });
 
-  testWidgets('a cell picks its people at once; nobody is told until 完成, once, which goes back', (tester) async {
+  testWidgets('a cell picks its people on screen; 完成 saves them all and tells each once, going back', (tester) async {
     final b = seededChurch();
     final telemetry = RecordingTelemetry();
     await pumpApp(tester, b, overrides: [telemetryProvider.overrideWithValue(telemetry)]);
@@ -227,15 +236,19 @@ void main() {
     await settle(tester);
     await tester.tap(find.text('李美玉').last);
     await settle(tester);
-    expect(peopleOn(b, 11, '司琴'), ['李美玉']);
-    expect(waiting(b), {'mei'});
-    expect(telemetry.named('roster_edit'), [
-      {'via': 'plan'},
-    ]);
     expect(find.descendant(of: cell('司琴', 11), matching: find.text('李美玉')), findsOneWidget);
+    expect(peopleOn(b, 11, '司琴'), isEmpty, reason: 'not saved until 完成');
+    expect(waiting(b), isEmpty);
+    await pick(tester, '司琴', 18, '李美玉');
+    expect(telemetry.named('roster_edit'), isEmpty);
 
     await tester.tap(find.text('完成'));
     await settle(tester);
+    expect(peopleOn(b, 11, '司琴'), ['李美玉']);
+    expect(peopleOn(b, 18, '司琴'), ['李美玉']);
+    expect(telemetry.named('roster_edit'), [
+      {'via': 'plan'},
+    ], reason: 'saved at once, together');
     expect(find.text('已通知 1 位同工'), findsOneWidget);
     expect(telemetry.named('roster_notify'), [
       {'people': 1},
@@ -274,38 +287,81 @@ void main() {
     expect(find.textContaining('已通知'), findsNothing);
   });
 
-  testWidgets('leaving with people still to tell goes at once, and the page behind offers 通知', (tester) async {
+  testWidgets('leaving with changes not saved asks first: 放棄變更 drops them, 繼續編輯 stays', (tester) async {
     final b = seededChurch();
     await pumpApp(tester, b);
     await go(tester, '/rosters/plan/sunday');
     await pick(tester, '司琴', 11, '李美玉');
     await tester.tap(find.byType(BackButton));
     await settle(tester);
+    expect(find.text('放棄變更？'), findsOneWidget);
+    await tester.tap(find.text('繼續編輯'));
+    await settle(tester);
+    expect(path(tester), '/rosters/plan/sunday');
+    expect(find.descendant(of: cell('司琴', 11), matching: find.text('李美玉')), findsOneWidget);
+
+    await tester.tap(find.byType(BackButton));
+    await settle(tester);
+    await tester.tap(find.text('放棄變更').last);
+    await settle(tester);
+    expect(path(tester), '/rosters');
+    expect(peopleOn(b, 11, '司琴'), isEmpty);
+    expect(waiting(b), isEmpty, reason: 'nothing saved, nobody to tell');
+
+    await go(tester, '/rosters/plan/sunday');
+    expect(
+      find.descendant(of: cell('司琴', 11), matching: find.text('李美玉')),
+      findsNothing,
+      reason: 'dropped',
+    );
+    await tester.tap(find.byType(BackButton));
+    await settle(tester);
+    expect(path(tester), '/rosters', reason: 'nothing changed: gone at once');
+  });
+
+  testWidgets('people saved here before and not yet told: leaving offers 通知 on the page behind', (tester) async {
+    final b = seededChurch();
+    await pumpApp(tester, b);
+    await go(tester, '/rosters/plan/sunday');
+    await pick(tester, '司琴', 11, '李美玉');
+    // A date saves what was changed, and tells nobody yet.
+    await tester.tap(date(11));
+    await settle(tester);
+    expect(peopleOn(b, 11, '司琴'), ['李美玉']);
+    expect(waiting(b), {'mei'});
+    await tester.tap(find.byType(BackButton));
+    await settle(tester);
+    await tester.tap(find.byType(BackButton));
+    await settle(tester);
     expect(path(tester), '/rosters');
     expect(find.text('在這裡排進或移出的人還沒收到通知'), findsOneWidget);
-    expect(waiting(b), {'mei'}, reason: 'told with 通知, or whenever 完成 is next pressed');
     await tester.tap(find.text('通知'));
     await settle(tester);
     expect(find.text('已通知 1 位同工'), findsOneWidget);
     expect(waiting(b), isEmpty);
-
-    await go(tester, '/rosters/plan/sunday');
-    await tester.tap(find.byType(BackButton));
-    await settle(tester);
-    expect(find.textContaining('還沒收到通知'), findsNothing, reason: 'nobody left to tell');
   });
 
-  testWidgets('on an iPhone a swipe from the edge leaves too, people to tell or not', (tester) async {
+  testWidgets('on an iPhone a swipe from the edge leaves at once with nothing changed, and asks first with', (
+    tester,
+  ) async {
     debugDefaultTargetPlatformOverride = TargetPlatform.iOS;
     try {
       final b = seededChurch();
       await pumpApp(tester, b);
       await go(tester, '/rosters/plan/sunday');
-      await pick(tester, '司琴', 11, '李美玉');
       await tester.dragFrom(const Offset(2, 300), const Offset(500, 0));
       await settle(tester);
       expect(path(tester), '/rosters');
-      expect(find.text('在這裡排進或移出的人還沒收到通知'), findsOneWidget);
+
+      await go(tester, '/rosters/plan/sunday');
+      await pick(tester, '司琴', 11, '李美玉');
+      await tester.tap(find.byType(BackButton));
+      await settle(tester);
+      expect(find.text('放棄變更？'), findsOneWidget, reason: 'from below, as iPhone asks');
+      await tester.tap(find.text('放棄變更').last);
+      await settle(tester);
+      expect(path(tester), '/rosters');
+      expect(peopleOn(b, 11, '司琴'), isEmpty);
     } finally {
       debugDefaultTargetPlatformOverride = null;
     }
@@ -636,24 +692,19 @@ void main() {
     },
   );
 
-  testWidgets('復原 here also waits for 完成; the day’s own page tells at once', (tester) async {
+  testWidgets('復原 here takes back what waits for 完成; the day’s own page saves and tells at once', (tester) async {
     final b = seededChurch();
     await pumpApp(tester, b);
     await go(tester, '/rosters/plan/sunday');
     await pick(tester, '司琴', 11, '李美玉');
-    expect(waiting(b), {'mei'});
     await tester.tap(find.text('復原'));
     await settle(tester);
+    expect(find.descendant(of: cell('司琴', 11), matching: find.text('李美玉')), findsNothing);
+    await tester.tap(find.byType(BackButton));
+    await settle(tester);
+    expect(path(tester), '/rosters', reason: 'on and off again: nothing to save');
     expect(peopleOn(b, 11, '司琴'), isEmpty);
-    expect(waiting(b), isEmpty, reason: 'on and off again: nothing to tell');
 
-    await pick(tester, '司琴', 11, '李美玉');
-    b.planned.clear();
-    await tester.tap(find.text('復原'));
-    await settle(tester);
-    expect(waiting(b), {'mei'}, reason: 'taken off, told with the rest');
-
-    b.planned.clear();
     await go(tester, '/rosters/sunday/2026-10-11');
     await tester.tap(find.text('司琴'));
     await settle(tester);
@@ -671,11 +722,12 @@ void main() {
     await settle(tester);
     await tester.tap(find.text('這一天沒有這項服事'));
     await settle(tester);
-    expect(savedDay(b, 11).duties.map((d) => d.role), ['司會', '招待']);
     expect(find.descendant(of: cell('司琴', 11), matching: find.text('—')), findsOneWidget);
     await tester.tap(cell('司琴', 11));
     await settle(tester);
     expect(find.text('這一天沒有這項服事'), findsNothing);
+    await finish(tester);
+    expect(savedDay(b, 11).duties.map((d) => d.role), ['司會', '招待']);
   });
 
   testWidgets('a date is its day’s number over its weekday or its 特別活動, each a line, in a column as narrow as can be', (
@@ -829,28 +881,40 @@ void main() {
     expect(find.text('和誰交換司琴？'), findsOneWidget);
     await tester.tap(find.text('10月11日 週日').last);
     await settle(tester);
-    expect(peopleOn(b, 4, '司琴'), isEmpty);
-    expect(peopleOn(b, 11, '司琴'), ['李美玉']);
+    expect(shownOn('司琴', 4, '李美玉'), findsNothing);
+    expect(shownOn('司琴', 11, '李美玉'), findsOneWidget);
     expect(findShown('已把「李美玉」移到 10月11日 週日'), findsOneWidget);
-    expect(waiting(b), {'mei'});
+    expect(waiting(b), isEmpty, reason: 'not saved yet');
 
     await tester.tap(find.text('復原'));
     await settle(tester);
-    expect(peopleOn(b, 4, '司琴'), ['李美玉']);
-    expect(peopleOn(b, 11, '司琴'), isEmpty);
-    expect(waiting(b), isEmpty);
+    expect(shownOn('司琴', 4, '李美玉'), findsOneWidget);
+    expect(shownOn('司琴', 11, '李美玉'), findsNothing);
+
+    await tester.tap(cell('司琴', 4));
+    await settle(tester);
+    await tester.tap(find.text('和別週交換'));
+    await settle(tester);
+    await tester.tap(find.text('10月11日 週日').last);
+    await settle(tester);
+    await finish(tester);
+    expect(peopleOn(b, 4, '司琴'), isEmpty);
+    expect(peopleOn(b, 11, '司琴'), ['李美玉']);
   });
 
   testWidgets('dragging a cell onto another day of the duty trades them', (tester) async {
-    final b = seededChurch();
+    final backend = NotifyingBackend()..held = Completer();
+    final b = seededChurch(into: backend);
     await pumpApp(tester, b);
     await go(tester, '/rosters/plan/sunday');
     await drag(tester, cell('招待', 4), cell('招待', 11));
+    expect(findShown('已交換「陳志豪、李美玉」和「李美玉」'), findsOneWidget);
+    await finish(tester);
     expect(peopleOn(b, 4, '招待'), ['李美玉']);
     expect(peopleOn(b, 11, '招待'), ['陳志豪', '李美玉']);
-    expect(findShown('已交換「陳志豪、李美玉」和「李美玉」'), findsOneWidget);
     // 李美玉 招待 both days, as before: only 陳志豪 has news.
     expect(waiting(b), {'hao'});
+    backend.held!.complete();
   });
 
   testWidgets('a cell dropped on another duty, or let go of where it was, changes nothing', (tester) async {
@@ -898,6 +962,7 @@ void main() {
     final day = there()!;
     await gesture.up();
     await settle(tester);
+    await finish(tester);
     final landed = b.rosters['grace']![Roster.idFor('sunday', day)]!;
     expect(landed.duties.firstWhere((d) => d.role == '司琴').people, ['李美玉']);
     expect(peopleOn(b, 4, '司琴'), isEmpty);
@@ -914,12 +979,18 @@ void main() {
     await pumpApp(tester, b);
     await go(tester, '/rosters/plan/sunday');
     await drag(tester, cell('司琴', 4), cell('司琴', 18));
-    expect(peopleOn(b, 18, '司琴'), ['李美玉']);
+    expect(shownOn('司琴', 18, '李美玉'), findsOneWidget);
     await tester.tap(find.text('復原'));
     await settle(tester);
     expect(find.textContaining('權限'), findsNothing);
-    expect(peopleOn(b, 4, '司琴'), ['李美玉']);
-    expect(peopleOn(b, 18, '司琴'), isEmpty, reason: 'the day stays, with nobody on it');
+    expect(shownOn('司琴', 4, '李美玉'), findsOneWidget);
+    expect(shownOn('司琴', 18, '李美玉'), findsNothing);
+
+    await drag(tester, cell('司琴', 4), cell('司琴', 18));
+    await finish(tester);
+    expect(find.textContaining('權限'), findsNothing, reason: 'saved as only the duty it leads');
+    expect(peopleOn(b, 4, '司琴'), isEmpty);
+    expect(peopleOn(b, 18, '司琴'), ['李美玉']);
   });
   testWidgets('a cell emptied elsewhere while held still lets go', (tester) async {
     final b = seededChurch();

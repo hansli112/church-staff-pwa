@@ -352,12 +352,15 @@ class RosterActions {
 
   /// 通知同工 in 安排服事 (#90): tells everyone whose days of [type]
   /// changed there since, one push each.
-  Future<PlannedNotice> notifyPlanned(String type) async {
-    final notice = await _data.notifyPlanned(type);
+  Future<PlannedNotice> notifyPlanned(String type, {List<String> rosterIds = const []}) async {
+    final notice = await _data.notifyPlanned(type, rosterIds: rosterIds);
     // The rosters going out to the staff (GA4).
     if (notice.people > 0) _ref.read(telemetryProvider).logEvent('roster_notify', {'people': notice.people});
     return notice;
   }
+
+  /// 安排服事's 完成: [change], what waited there, saved now.
+  Future<void> savePlanned(RosterChange change) => _writes.saveNow(change).done;
 
   /// 通知同工填 (#91) for [type], the months of [from] to [to]: how many it told.
   Future<int> askUnavailable(String type, {required Day from, required Day to}) async {

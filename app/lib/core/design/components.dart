@@ -1405,6 +1405,10 @@ Future<bool> confirmAction(
   );
 }
 
+/// Asks whether to discard a page's unsaved changes (安排服事), as a sheet's
+/// are asked. True to discard them.
+Future<bool> confirmDiscard(BuildContext context) => _confirmDiscard(context);
+
 /// Asks whether to discard a sheet's unsaved changes: on iPhone from below,
 /// as Apple's sheets ask (an action sheet), elsewhere as a dialog. True to
 /// discard them.

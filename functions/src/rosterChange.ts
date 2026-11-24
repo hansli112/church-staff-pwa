@@ -1,5 +1,5 @@
 import { voidStaleSwaps } from './swaps.js';
-import type { DocumentSnapshot } from 'firebase-admin/firestore';
+import { Timestamp, type DocumentSnapshot } from 'firebase-admin/firestore';
 import { logger } from 'firebase-functions/v2';
 
 import { churchAccess, isChurchOpen } from './access.js';
@@ -504,6 +504,40 @@ async function sendPlanned(deps: PushDeps & Pick<Deps, 'now'>, church: DocumentS
   return told;
 }
 
+/** How long 通知同工 waits for days just saved to be read ([readThrough]). */
+const READ_WAIT_MS = 20_000;
+
+/**
+ * Waits until the trigger has read each of [ids], days 安排服事's 完成 has
+ * just saved (`via: 'plan'`) and then tells of at once: what waits for
+ * 通知同工 is what the trigger leaves (`plannedSeen`, [markRead]). Gives
+ * up after [READ_WAIT_MS]: what is read later waits for the next time.
+ */
+async function readThrough(deps: Pick<Deps, 'db'>, cid: string, ids: string[]) {
+  if (!ids.length) return;
+  const until = Date.now() + READ_WAIT_MS;
+  for (;;) {
+    const [rosters, seen] = await Promise.all([
+      deps.db.getAll(...ids.map((id) => deps.db.doc(`churches/${cid}/rosters/${id}`))),
+      deps.db.getAll(...ids.map((id) => deps.db.doc(`plannedSeen/${cid}_${id}`))),
+    ]);
+    const unread = rosters.some(
+      (r, i) => r.exists && viaOf(r.get('via')) === 'plan' && !sameTime(r.get('updatedAt'), seen[i].get('updatedAt')),
+    );
+    if (!unread || Date.now() > until) return;
+    await new Promise((r) => setTimeout(r, 300));
+  }
+}
+
+const sameTime = (a: unknown, b: unknown) =>
+  (a == null && b == null) || (a instanceof Timestamp && b instanceof Timestamp && a.isEqual(b));
+
+/** Notes that the trigger has read [after], a day saved in 安排服事, for [readThrough]. */
+async function markRead(deps: Deps, cid: string, after: DocumentSnapshot | undefined) {
+  if (!after?.exists || viaOf(after.get('via')) !== 'plan') return;
+  await deps.db.doc(`plannedSeen/${cid}_${after.id}`).set({ cid, updatedAt: after.get('updatedAt') ?? null, at: deps.now() });
+}
+
 /**
  * 通知同工 in 安排服事 (#90), by anyone who arranges service
  * `data.serviceId`: everyone whose days of it changed there since the last
@@ -513,9 +547,13 @@ async function sendPlanned(deps: PushDeps & Pick<Deps, 'now'>, church: DocumentS
 export async function notifyPlanned(deps: Deps & PushDeps, caller: Caller | null, data: unknown) {
   const input = record(data);
   const serviceId = input.serviceId;
+  const rosterIds = input.rosterIds ?? [];
   if (typeof serviceId !== 'string' || !/^[A-Za-z0-9_-]{1,64}$/.test(serviceId)
-      || Object.keys(input).some((k) => !['churchId', 'serviceId'].includes(k))) fail('invalid-argument', 'unknown');
+      || !Array.isArray(rosterIds) || rosterIds.length > 500
+      || rosterIds.some((id) => typeof id !== 'string' || !/^[A-Za-z0-9_-]{1,100}$/.test(id))
+      || Object.keys(input).some((k) => !['churchId', 'serviceId', 'rosterIds'].includes(k))) fail('invalid-argument', 'unknown');
   const { cid, church, caller: c } = await churchAccess(deps, caller, data, { arranges: serviceId });
+  await readThrough(deps, cid, rosterIds as string[]);
   const q = await deps.db
     .collection('plannedPushes')
     .where('cid', '==', cid)
@@ -538,6 +576,9 @@ export async function notifyPlanned(deps: Deps & PushDeps, caller: Caller | null
 export async function sendPlannedPushes(deps: PushDeps & Pick<Deps, 'now'>) {
   const past = await deps.db.collection('plannedPushes').where('dateKey', '<', earliestDay(deps.now())).get();
   for (const p of past.docs) await p.ref.delete();
+  // What 通知同工 waited on, long read.
+  const read = await deps.db.collection('plannedSeen').where('at', '<', new Date(deps.now().getTime() - 86_400_000)).get();
+  for (const r of read.docs) await r.ref.delete();
   const due = await deps.db.collection('plannedPushes').where('sendAt', '<=', deps.now()).get();
   const byChurch = new Map<string, DocumentSnapshot[]>();
   for (const d of due.docs) byChurch.set(d.get('cid') as string, [...(byChurch.get(d.get('cid') as string) ?? []), d]);
@@ -580,6 +621,21 @@ export async function queueRosterChange(deps: Deps, c: RosterChange, id: string)
  * where the batch says `imported`.
  */
 export async function onRosterWritten(
+  deps: Deps & PushDeps,
+  cid: string,
+  before: DocumentSnapshot | undefined,
+  after: DocumentSnapshot | undefined,
+  editedBy: string | undefined,
+  eventId: string,
+) {
+  try {
+    return await tellRosterWritten(deps, cid, before, after, editedBy, eventId);
+  } finally {
+    await markRead(deps, cid, after);
+  }
+}
+
+async function tellRosterWritten(
   deps: Deps & PushDeps,
   cid: string,
   before: DocumentSnapshot | undefined,

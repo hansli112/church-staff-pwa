@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../data/backend.dart';
 import '../domain/models.dart';
 import '../domain/roster_news.dart';
+import 'plan_draft.dart';
 import 'providers.dart';
 import 'session.dart';
 
@@ -61,7 +62,32 @@ class ChurchWrites {
 
   /// Writes [change]. Undo writes [undo]'s change, built when undoing, or
   /// [change] reversed; it throws to refuse.
-  ChurchWrite rosters(RosterChange change, {RosterChange Function()? undo}) => _reversible(
+  ///
+  /// Made in 安排服事 while it is open, it waits there instead
+  /// ([PlanDraft]), and so does its undo; a new 服事順序 it brings is saved
+  /// at once all the same.
+  ChurchWrite rosters(RosterChange change, {RosterChange Function()? undo}) {
+    final draft = _ref.read(planDraftProvider.notifier);
+    if (!draft.holds(change)) return _sent(change, undo: undo);
+    final order = change.staffOrder;
+    final ordered = order == null ? null : _sent(RosterChange(before: const {}, after: const {}, staffOrder: order));
+    draft.add(change);
+    return (
+      done: ordered?.done ?? Future<void>.value(),
+      undo: () async {
+        final draft = _ref.read(planDraftProvider.notifier);
+        // Saved or dropped since, with the page: nothing here to undo.
+        if (!draft.holding) throw const CloudException(CloudErrorCode.conflict);
+        draft.add(undo == null ? change.reversed : undo());
+        await ordered?.undo();
+      },
+    );
+  }
+
+  /// [change] saved now, as [rosters] but never held back.
+  ChurchWrite saveNow(RosterChange change) => _sent(change);
+
+  ChurchWrite _sent(RosterChange change, {RosterChange Function()? undo}) => _reversible(
     (data) async {
       await _sendRosters(data, change);
       // Counted once written (GA4), by where it was made; an import is
