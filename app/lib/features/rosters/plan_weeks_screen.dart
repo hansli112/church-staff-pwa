@@ -1535,7 +1535,9 @@ class _AskMonthsState extends State<_AskMonths> {
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
                   if (widget.round case final round?)
-                    ListSection(children: [ListRow(title: round, onTap: widget.onRound)]),
+                    ListSection(
+                      children: [ListRow(title: round, onTap: widget.onRound)],
+                    ),
                   for (final year in {for (final m in widget.months) m.year})
                     _MonthGrid(
                       year: year,
@@ -1621,7 +1623,19 @@ class _MonthGrid extends StatelessWidget {
                               : arranged.contains(month)
                               ? l10n.planMonthArranged
                               : null;
-                          final ink = edge ? c.onAccent : c.label;
+                          // 已排好 and not picked: outlined and grey, as asked less.
+                          final done = !edge && !inside && arranged.contains(month);
+                          final ink = edge
+                              ? c.onAccent
+                              : inside
+                              ? c.accent
+                              : done
+                              ? c.secondaryLabel
+                              : c.label;
+                          final shape = RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(Radii.s + 2),
+                            side: done ? BorderSide(color: c.separator) : BorderSide.none,
+                          );
                           return SizedBox(
                             width: width,
                             height: Space.minTap(Theme.of(context).platform) + Space.s,
@@ -1635,25 +1649,28 @@ class _MonthGrid extends StatelessWidget {
                                     ? c.accent
                                     : inside
                                     ? c.accentSoft
+                                    : done
+                                    ? c.surface
                                     : c.background,
-                                borderRadius: BorderRadius.circular(Radii.s + 2),
+                                shape: shape,
                                 child: InkWell(
-                                  borderRadius: BorderRadius.circular(Radii.s + 2),
+                                  customBorder: shape,
                                   onTap: () => onPick(month),
                                   child: Column(
                                     mainAxisAlignment: MainAxisAlignment.center,
                                     children: [
                                       Text(
                                         DateFormat.MMM().format(month.midnight),
-                                        style: AppText.body.copyWith(color: ink),
+                                        style: AppText.body.copyWith(
+                                          color: ink,
+                                          fontWeight: edge ? FontWeight.w600 : null,
+                                        ),
                                         maxLines: 1,
                                       ),
                                       if (note != null)
                                         Text(
                                           note,
-                                          style: AppText.caption2.copyWith(
-                                            color: edge ? c.onAccent : c.secondaryLabel,
-                                          ),
+                                          style: AppText.caption2.copyWith(color: ink),
                                           maxLines: 1,
                                           overflow: TextOverflow.ellipsis,
                                         ),

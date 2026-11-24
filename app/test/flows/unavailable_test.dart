@@ -307,7 +307,9 @@ void main() {
       b.rosters['grace']![Roster.idFor('sunday', d)] = Roster(
         type: 'sunday',
         day: d,
-        duties: [for (final x in duties) x.people.isEmpty ? x.copyWith(people: const ['李美玉']) : x],
+        duties: [
+          for (final x in duties) x.people.isEmpty ? x.copyWith(people: const ['李美玉']) : x,
+        ],
         saved: true,
       );
     }

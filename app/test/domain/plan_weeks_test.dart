@@ -26,7 +26,10 @@ void main() {
         day(12, 13, const [Duty(role: '司琴', people: mei)]),
       ];
       expect(monthArranged(full, const Arranges.all()), isTrue, reason: 'a duty taken off a day is not missing');
-      final gap = [...full, day(12, 20, const [Duty(role: '司琴'), Duty(role: '招待', people: mei)])];
+      final gap = [
+        ...full,
+        day(12, 20, const [Duty(role: '司琴'), Duty(role: '招待', people: mei)]),
+      ];
       expect(monthArranged(gap, const Arranges.all()), isFalse);
       expect(monthArranged(gap, const Arranges.only({'招待'})), isTrue, reason: 'only the duties I arrange');
       expect(monthArranged(gap, const Arranges.only({'敬拜'})), isFalse, reason: 'none of mine: nothing arranged');
