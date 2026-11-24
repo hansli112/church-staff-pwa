@@ -1785,28 +1785,41 @@ class _SwipeActionState extends State<SwipeAction> with SingleTickerProviderStat
                 return Stack(
                   children: [
                     // Kept in place when shut, so the row below keeps its state.
+                    // Red only where the row has moved off: rows are clear,
+                    // and a red the row's width showed through all of it.
                     Positioned.fill(
                       child: dx == 0
                           ? const SizedBox.shrink()
-                          : ColoredBox(
-                              color: c.destructive,
-                              child: Align(
-                                alignment: AlignmentDirectional.centerEnd,
-                                child: SizedBox(
-                                  width: dx < _button ? _button : dx,
-                                  child: Semantics(
-                                    button: true,
-                                    child: GestureDetector(
-                                      behavior: HitTestBehavior.opaque,
-                                      onTap: _act,
-                                      child: Align(
-                                        // Past the button, the word rides at the row's edge.
-                                        alignment: dx > _button
-                                            ? AlignmentDirectional.centerStart
-                                            : AlignmentDirectional.center,
-                                        child: Padding(
-                                          padding: const EdgeInsets.symmetric(horizontal: Space.l),
-                                          child: Text(label, style: style, maxLines: 1, softWrap: false),
+                          : Align(
+                              alignment: AlignmentDirectional.centerEnd,
+                              child: SizedBox(
+                                width: dx,
+                                child: ClipRect(
+                                  child: OverflowBox(
+                                    alignment: AlignmentDirectional.centerStart,
+                                    minWidth: 0,
+                                    maxWidth: dx < _button ? _button : dx,
+                                    child: ColoredBox(
+                                      color: c.destructive,
+                                      child: SizedBox(
+                                        width: dx < _button ? _button : dx,
+                                        height: double.infinity,
+                                        child: Semantics(
+                                          button: true,
+                                          child: GestureDetector(
+                                            behavior: HitTestBehavior.opaque,
+                                            onTap: _act,
+                                            child: Align(
+                                              // Past the button, the word rides at the row's edge.
+                                              alignment: dx > _button
+                                                  ? AlignmentDirectional.centerStart
+                                                  : AlignmentDirectional.center,
+                                              child: Padding(
+                                                padding: const EdgeInsets.symmetric(horizontal: Space.l),
+                                                child: Text(label, style: style, maxLines: 1, softWrap: false),
+                                              ),
+                                            ),
+                                          ),
                                         ),
                                       ),
                                     ),

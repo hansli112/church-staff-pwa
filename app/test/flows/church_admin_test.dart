@@ -837,6 +837,11 @@ void main() {
     await settle(tester);
     expect(find.text('刪除'), findsOneWidget, reason: 'it stays open');
     expect(b.services['grace']!.byId('sunday')!.duties, ['司會', '司琴', '招待'], reason: 'nothing deleted yet');
+    // Red only where the row moved off: the row is clear, and red under
+    // all of it turned the whole row red.
+    final row = tester.getSize(find.ancestor(of: find.text('司琴').first, matching: find.byType(SwipeAction)));
+    final red = find.ancestor(of: find.text('刪除'), matching: find.byType(ColoredBox)).first;
+    expect(tester.getSize(red).width, lessThan(row.width / 2));
 
     // Its name is slid off the screen's edge: the rest of the row.
     await tester.tapAt(Offset(200, tester.getCenter(find.text('司琴').first).dy));
