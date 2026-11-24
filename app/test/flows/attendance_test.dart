@@ -577,7 +577,9 @@ void main() {
       await go(tester, '/me/attendance');
       b.writeHeld = Completer();
       await tapText(tester, '提醒');
-      expect(find.byType(CircularProgressIndicator), findsOneWidget);
+      // One where 提醒 was, one beside 儲存中….
+      expect(find.byType(CircularProgressIndicator), findsNWidgets(2));
+      expect(find.text('儲存中…'), findsOneWidget);
       expect(find.text('提醒'), findsNothing, reason: 'not to be tapped again while it asks');
       b.writeHeld!.complete();
       b.writeHeld = null;

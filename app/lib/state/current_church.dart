@@ -65,13 +65,13 @@ final churchDataProvider = Provider<EchoingChurchData?>((ref) {
 
 /// Whether a change to the current church, or to my profile, is still on
 /// its way.
-final savingProvider = Provider<AsyncValue<bool>>(
-  (ref) => ref.watch(profileSavesProvider) > 0 ? const AsyncData(true) : ref.watch(_churchSavingProvider),
-);
-
-final _churchSavingProvider = StreamProvider<bool>(
-  (ref) => ref.watch(churchDataProvider)?.watchSaving() ?? Stream.value(false),
-);
+///
+/// One stream provider, not a provider over the church's: that one, first
+/// watched while a church is switched, refreshed the app mid-build.
+final savingProvider = StreamProvider<bool>((ref) {
+  if (ref.watch(profileSavesProvider) > 0) return Stream.value(true);
+  return ref.watch(churchDataProvider)?.watchSaving() ?? Stream.value(false);
+});
 
 final churchProvider = StreamProvider<Church?>((ref) {
   final data = ref.watch(churchDataProvider);
