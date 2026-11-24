@@ -166,14 +166,14 @@ void main() {
     await pumpApp(tester, b);
     await go(tester, '/rosters');
     await tester.pumpAndSettle();
-    GoRouter.of(tester.element(find.byType(Scaffold).first)).push('/rosters/import/sunday');
+    unawaited(GoRouter.of(tester.element(find.byType(Scaffold).first)).push('/rosters/import/sunday'));
     await settle(tester);
     await tapText(tester, '選照片');
     GoRouter.of(tester.element(find.byType(Scaffold).last)).pop();
     await settle(tester);
     reading.complete();
     await settle(tester);
-    GoRouter.of(tester.element(find.byType(Scaffold).first)).push('/rosters/import/sunday');
+    unawaited(GoRouter.of(tester.element(find.byType(Scaffold).first)).push('/rosters/import/sunday'));
     await settle(tester);
     expect(find.text('預覽'), findsOneWidget);
     expect(b.photosUsed['grace'], 1);

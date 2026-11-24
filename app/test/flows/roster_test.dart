@@ -50,7 +50,7 @@ void main() {
       expect(find.text('主日崇拜'), findsWidgets, reason: 'each day is titled by its service');
     });
 
-    testWidgets("a day ahead whose rosters fail to load says so, not an empty roster; 重試 reads them again", (
+    testWidgets('a day ahead whose rosters fail to load says so, not an empty roster; 重試 reads them again', (
       tester,
     ) async {
       final b = seededChurch(as: staffMei);
