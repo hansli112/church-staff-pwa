@@ -16,8 +16,7 @@ enum RosterVia {
   plan,
 
   /// A whole import, or its undo: only the webhook hears, once.
-  import
-  ;
+  import;
 
   /// Whether the pushes wait for 通知同工.
   bool get waitsForNotice => this == plan;

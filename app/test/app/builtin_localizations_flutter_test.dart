@@ -36,7 +36,14 @@ void main() {
         expect(a, b);
       }
       expect(material.narrowWeekdays, flutterMaterial.narrowWeekdays);
-      expect(material.firstDayOfWeekIndex, flutterMaterial.firstDayOfWeekIndex);
+      // Flutter 3.50 starts Taiwan's weeks on Monday, like Simplified
+      // Chinese: the app keeps Sunday, as 3.41 and Taiwan's calendars do
+      // (builtin_localizations_test.dart, _keptFrom341).
+      if (language != AppLanguage.zhHant && language != AppLanguage.zhHans) {
+        expect(material.firstDayOfWeekIndex, flutterMaterial.firstDayOfWeekIndex);
+      } else {
+        expect(material.firstDayOfWeekIndex, 0, reason: 'Sunday');
+      }
       expect(
         material.formatTimeOfDay(const TimeOfDay(hour: 14, minute: 5)),
         flutterMaterial.formatTimeOfDay(const TimeOfDay(hour: 14, minute: 5)),

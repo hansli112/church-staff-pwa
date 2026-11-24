@@ -21,8 +21,7 @@ enum AppLanguage {
   ),
   en(tag: 'en', locale: Locale('en'), intlLocale: 'en', label: 'English', monthByName: true, emailLanguage: 'en'),
   ja(tag: 'ja', locale: Locale('ja'), intlLocale: 'ja', label: '日本語', monthByName: false, emailLanguage: 'ja'),
-  ko(tag: 'ko', locale: Locale('ko'), intlLocale: 'ko', label: '한국어', monthByName: false, emailLanguage: 'ko')
-  ;
+  ko(tag: 'ko', locale: Locale('ko'), intlLocale: 'ko', label: '한국어', monthByName: false, emailLanguage: 'ko');
 
   const AppLanguage({
     required this.tag,

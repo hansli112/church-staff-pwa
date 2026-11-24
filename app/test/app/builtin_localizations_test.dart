@@ -17,35 +17,50 @@ Future<T> _load<T>(AppLanguage language) async {
   return delegate.load(language.locale);
 }
 
-void _expectSame(DateSymbols symbols, DateSymbols flutter) {
+/// What the app keeps from Flutter 3.41 where 3.50 changed it, by
+/// language tag: date symbols by name, patterns by skeleton. The phones'
+/// builds are still on 3.41 (Shorebird keeps a release's Flutter), and the
+/// web's should not differ from them; Simplified Chinese weeks starting on
+/// Monday and 2026/11 for 2026年11月 are a change to decide on, not to take
+/// with an upgrade.
+const _keptFrom341 = <String, Set<String>>{
+  'zh-Hans': {'FIRSTDAYOFWEEK', 'FIRSTWEEKCUTOFFDAY', 'yM'},
+  'en': {'TIMEFORMATS', 'DATETIMEFORMATS', 'j', 'jm', 'jms', 'jmv', 'jmz', 'jz'},
+  'ko': {'DATEFORMATS'},
+};
+
+void _expectSame(DateSymbols symbols, DateSymbols flutter, Set<String> kept) {
   expect(symbols.NAME, flutter.NAME);
-  for (final (a, b) in [
-    (symbols.ERAS, flutter.ERAS),
-    (symbols.ERANAMES, flutter.ERANAMES),
-    (symbols.NARROWMONTHS, flutter.NARROWMONTHS),
-    (symbols.STANDALONENARROWMONTHS, flutter.STANDALONENARROWMONTHS),
-    (symbols.MONTHS, flutter.MONTHS),
-    (symbols.STANDALONEMONTHS, flutter.STANDALONEMONTHS),
-    (symbols.SHORTMONTHS, flutter.SHORTMONTHS),
-    (symbols.STANDALONESHORTMONTHS, flutter.STANDALONESHORTMONTHS),
-    (symbols.WEEKDAYS, flutter.WEEKDAYS),
-    (symbols.STANDALONEWEEKDAYS, flutter.STANDALONEWEEKDAYS),
-    (symbols.SHORTWEEKDAYS, flutter.SHORTWEEKDAYS),
-    (symbols.STANDALONESHORTWEEKDAYS, flutter.STANDALONESHORTWEEKDAYS),
-    (symbols.NARROWWEEKDAYS, flutter.NARROWWEEKDAYS),
-    (symbols.STANDALONENARROWWEEKDAYS, flutter.STANDALONENARROWWEEKDAYS),
-    (symbols.SHORTQUARTERS, flutter.SHORTQUARTERS),
-    (symbols.QUARTERS, flutter.QUARTERS),
-    (symbols.AMPMS, flutter.AMPMS),
-    (symbols.DATEFORMATS, flutter.DATEFORMATS),
-    (symbols.TIMEFORMATS, flutter.TIMEFORMATS),
-    (symbols.DATETIMEFORMATS, flutter.DATETIMEFORMATS),
-    (symbols.WEEKENDRANGE, flutter.WEEKENDRANGE),
+  for (final (name, a, b) in <(String, Object?, Object?)>[
+    ('NAME', symbols.NAME, flutter.NAME),
+    ('ERAS', symbols.ERAS, flutter.ERAS),
+    ('ERANAMES', symbols.ERANAMES, flutter.ERANAMES),
+    ('NARROWMONTHS', symbols.NARROWMONTHS, flutter.NARROWMONTHS),
+    ('STANDALONENARROWMONTHS', symbols.STANDALONENARROWMONTHS, flutter.STANDALONENARROWMONTHS),
+    ('MONTHS', symbols.MONTHS, flutter.MONTHS),
+    ('STANDALONEMONTHS', symbols.STANDALONEMONTHS, flutter.STANDALONEMONTHS),
+    ('SHORTMONTHS', symbols.SHORTMONTHS, flutter.SHORTMONTHS),
+    ('STANDALONESHORTMONTHS', symbols.STANDALONESHORTMONTHS, flutter.STANDALONESHORTMONTHS),
+    ('WEEKDAYS', symbols.WEEKDAYS, flutter.WEEKDAYS),
+    ('STANDALONEWEEKDAYS', symbols.STANDALONEWEEKDAYS, flutter.STANDALONEWEEKDAYS),
+    ('SHORTWEEKDAYS', symbols.SHORTWEEKDAYS, flutter.SHORTWEEKDAYS),
+    ('STANDALONESHORTWEEKDAYS', symbols.STANDALONESHORTWEEKDAYS, flutter.STANDALONESHORTWEEKDAYS),
+    ('NARROWWEEKDAYS', symbols.NARROWWEEKDAYS, flutter.NARROWWEEKDAYS),
+    ('STANDALONENARROWWEEKDAYS', symbols.STANDALONENARROWWEEKDAYS, flutter.STANDALONENARROWWEEKDAYS),
+    ('SHORTQUARTERS', symbols.SHORTQUARTERS, flutter.SHORTQUARTERS),
+    ('QUARTERS', symbols.QUARTERS, flutter.QUARTERS),
+    ('AMPMS', symbols.AMPMS, flutter.AMPMS),
+    ('DATEFORMATS', symbols.DATEFORMATS, flutter.DATEFORMATS),
+    ('TIMEFORMATS', symbols.TIMEFORMATS, flutter.TIMEFORMATS),
+    ('DATETIMEFORMATS', symbols.DATETIMEFORMATS, flutter.DATETIMEFORMATS),
+    ('WEEKENDRANGE', symbols.WEEKENDRANGE, flutter.WEEKENDRANGE),
+    ('FIRSTDAYOFWEEK', symbols.FIRSTDAYOFWEEK, flutter.FIRSTDAYOFWEEK),
+    ('FIRSTWEEKCUTOFFDAY', symbols.FIRSTWEEKCUTOFFDAY, flutter.FIRSTWEEKCUTOFFDAY),
+    ('FIRSTDAYOFWEEK', symbols.FIRSTDAYOFWEEK, flutter.FIRSTDAYOFWEEK),
+    ('FIRSTWEEKCUTOFFDAY', symbols.FIRSTWEEKCUTOFFDAY, flutter.FIRSTWEEKCUTOFFDAY),
   ]) {
-    expect(a, b);
+    if (!kept.contains(name)) expect(a, b, reason: name);
   }
-  expect(symbols.FIRSTDAYOFWEEK, flutter.FIRSTDAYOFWEEK);
-  expect(symbols.FIRSTWEEKCUTOFFDAY, flutter.FIRSTWEEKCUTOFFDAY);
 }
 
 void main() {
@@ -102,8 +117,13 @@ void main() {
   test('each language’s date data is Flutter’s, as is', () {
     for (final language in AppLanguage.values) {
       final (symbols, patterns) = dateData(language);
-      _expectSame(symbols, flutter_dates.dateSymbols[language.intlLocale]!);
-      expect(patterns, flutter_dates.datePatterns[language.intlLocale], reason: language.tag);
+      final kept = _keptFrom341[language.tag] ?? const <String>{};
+      _expectSame(symbols, flutter_dates.dateSymbols[language.intlLocale]!, kept);
+      final flutter = flutter_dates.datePatterns[language.intlLocale]!;
+      expect(patterns.keys.toSet(), flutter.keys.toSet(), reason: language.tag);
+      for (final MapEntry(:key, :value) in patterns.entries) {
+        if (!kept.contains(key)) expect(value, flutter[key], reason: '${language.tag} $key');
+      }
     }
   });
 

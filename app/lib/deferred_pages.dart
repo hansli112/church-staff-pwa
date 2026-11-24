@@ -16,8 +16,7 @@ enum PageLibrary {
   calendarSettings,
   churchInfo,
   move,
-  rosterImport
-  ;
+  rosterImport;
 
   Future<void> load() => switch (this) {
     admin => code.loadAdmin(),

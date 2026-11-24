@@ -24,10 +24,28 @@ jobs:
       - uses: actions/checkout@v7
       - uses: subosito/flutter-action@v2
         with:
-          flutter-version: '3.41.9'
+          flutter-version: '3.50.1'
           channel: stable
           cache: true
       - run: scripts/check.sh app
+
+  # The store builds' patches build on the Flutter each release was built
+  # with (Shorebird keeps it): 1.0.5 on 3.41.0, 1.0.6 on 3.41.9. The app
+  # must still compile there until every store build is on 3.50.
+  store-flutter:
+    runs-on: ubuntu-24.04
+    strategy:
+      fail-fast: false
+      matrix:
+        flutter: ['3.41.0', '3.41.9']
+    steps:
+      - uses: actions/checkout@v7
+      - uses: subosito/flutter-action@v2
+        with:
+          flutter-version: ${{ matrix.flutter }}
+          channel: stable
+          cache: true
+      - run: cd app && flutter pub get && flutter gen-l10n && flutter analyze --no-fatal-infos --no-fatal-warnings lib
 
   backend:
     runs-on: ubuntu-24.04
@@ -60,7 +78,7 @@ jobs:
           java-version: '21'
       - uses: subosito/flutter-action@v2
         with:
-          flutter-version: '3.41.9'
+          flutter-version: '3.50.1'
           channel: stable
           cache: true
       - run: cd functions && npm ci

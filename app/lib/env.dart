@@ -11,8 +11,7 @@ enum Env {
   emulator,
   dev,
   prod,
-  demo
-  ;
+  demo;
 
   static Env get current {
     const name = String.fromEnvironment('MARTHA_ENV', defaultValue: 'emulator');

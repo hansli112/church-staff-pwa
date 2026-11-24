@@ -32,8 +32,7 @@ enum ServicePart {
   duties('duties'),
   ministries('ministries'),
   events('events'),
-  smallGroups('small-groups')
-  ;
+  smallGroups('small-groups');
 
   const ServicePart(this.path);
 

@@ -13,7 +13,8 @@ import 'languages.dart';
 
 // Copied from flutter_localizations' generated_date_localizations.dart
 // (Flutter 3.41.0), which holds every locale's: only the app's languages'.
-// A test checks they still match.
+// A test checks they still match, but for what 3.50 changed and the app
+// keeps (builtin_localizations_test.dart, _keptFrom341).
 
 final zhTwDateSymbols = intl.DateSymbols(
   NAME: 'zh_TW',

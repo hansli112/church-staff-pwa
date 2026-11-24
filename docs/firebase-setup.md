@@ -78,12 +78,12 @@ iOS 要在 Mac 上 build，最低版本是 iOS 15（Firebase 的要求）。Xcod
 
 上架的 Android、iOS 版用 Shorebird 建置，之後緊急的 bug 可以直接推修補，不用等商店審查（#79）。Shorebird 的 app 是 `app/shorebird.yaml` 的 `app_id`，帳號是個人的 Shorebird 帳號（`~/.shorebird/bin/shorebird login`）。
 
-**上架**：取代 `flutter build appbundle` / `flutter build ipa`，產生的 AAB / IPA 一樣自己上傳到商店。`--flutter-version` 跟本機和 CI 的 Flutter 一樣（`flutter --version`）。修補不能選 Flutter 版本，一律沿用那一版上架時的（1.0.3 到 1.0.5 是 3.41.0），所以本機升級不影響已上架版本的修補：
+**上架**：取代 `flutter build appbundle` / `flutter build ipa`，產生的 AAB / IPA 一樣自己上傳到商店。`--flutter-version` 跟本機和 CI 的 Flutter 一樣（`flutter --version`）。修補不能選 Flutter 版本，一律沿用那一版上架時的（1.0.3 到 1.0.5 是 3.41.0，1.0.6 是 3.41.9），所以本機升級不影響已上架版本的修補；不過程式要在那些版本上還編譯得過，CI 的 `store-flutter` 會檢查。2026-11-24 起本機、CI 和網頁用 3.50.1（網頁的 skwasm 文字錯誤，flutter/flutter#197203），下一個上架版本也用 3.50.1 建；所有商店版本都換到 3.50 以後，再拿掉 `store-flutter` 和 `analysis_options.yaml` 裡暫時關掉的 `deprecated_member_use`、換成 material_ui：
 
 ```sh
 cd app
-~/.shorebird/bin/shorebird release android --flutter-version=3.41.9 --dart-define-from-file=config/prod.json
-~/.shorebird/bin/shorebird release ios --flutter-version=3.41.9 --export-options-plist=ios/ExportOptions.plist --dart-define-from-file=config/prod.json
+~/.shorebird/bin/shorebird release android --flutter-version=3.50.1 --dart-define-from-file=config/prod.json
+~/.shorebird/bin/shorebird release ios --flutter-version=3.50.1 --export-options-plist=ios/ExportOptions.plist --dart-define-from-file=config/prod.json
 ```
 
 每一版都要這樣建，之後才能對它推修補；直接用 `flutter build` 上架的版本收不到修補。

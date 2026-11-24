@@ -30,8 +30,7 @@ enum StartStep {
   planWeeks,
 
   /// When the 小組 meets, for 回報人數.
-  meets
-  ;
+  meets;
 
   /// Left for the church to choose: never the next step, and no reason to
   /// keep 開始使用 up.

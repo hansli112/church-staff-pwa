@@ -109,8 +109,7 @@ enum Role { admin, leader, staff, member }
 /// Edit permissions, orthogonal to [Role]. An admin holds all of them.
 enum Group {
   rosterEditors('roster-editors'),
-  calendarEditors('calendar-editors')
-  ;
+  calendarEditors('calendar-editors');
 
   const Group(this.id);
 

@@ -841,8 +841,7 @@ enum CostPeriod { month, year }
 /// The currencies a cost can be entered in.
 enum Currency {
   twd,
-  usd
-  ;
+  usd;
 
   /// `TWD`, `USD`: what the backend stores.
   String get code => name.toUpperCase();

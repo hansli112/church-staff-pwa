@@ -9,8 +9,7 @@ import 'providers.dart';
 /// Where a store app came from, and so where it is updated.
 enum AppStore {
   googlePlay('Google Play'),
-  appStore('App Store')
-  ;
+  appStore('App Store');
 
   const AppStore(this.label);
 

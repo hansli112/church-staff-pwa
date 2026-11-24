@@ -24,8 +24,7 @@ enum Guide {
   smallGroups('small-groups'),
   notifications('notifications'),
   homeLink('home-link'),
-  moveFromSelfHost('move-from-self-host')
-  ;
+  moveFromSelfHost('move-from-self-host');
 
   const Guide(this.slug);
 

@@ -40,8 +40,7 @@ enum ChurchTimeZone {
   losAngeles('America/Los_Angeles', -8 * 60, _northAmerica),
   vancouver('America/Vancouver', -8 * 60, _britishColumbia),
   phoenix('America/Phoenix', -7 * 60),
-  honolulu('Pacific/Honolulu', -10 * 60)
-  ;
+  honolulu('Pacific/Honolulu', -10 * 60);
 
   const ChurchTimeZone(this.id, this._standard, [this._summer]);
 
