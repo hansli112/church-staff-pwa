@@ -12,6 +12,7 @@ import 'package:martha/domain/day.dart';
 import 'package:martha/domain/event_roster.dart';
 import 'package:martha/domain/models.dart';
 import 'package:martha/features/calendar/month_grid.dart';
+import 'package:martha/state/calendar.dart';
 import 'package:martha/state/session.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:url_launcher_platform_interface/url_launcher_platform_interface.dart';
@@ -105,6 +106,23 @@ void main() {
     } finally {
       debugDefaultTargetPlatformOverride = null;
     }
+  });
+
+  testWidgets('settings not read yet: no 連接 as if not connected; failing, 重試', (tester) async {
+    final settings = StreamController<CalendarSettings>();
+    addTearDown(settings.close);
+    final b = seededChurch()..connectCalendar('grace', calendarName: '教會行事曆');
+    await pumpApp(tester, b, overrides: [calendarSettingsProvider.overrideWith((ref) => settings.stream)]);
+    await go(tester, '/me/calendar');
+    expect(find.text('連接 Google 日曆'), findsNothing);
+    expect(find.byType(CircularProgressIndicator), findsOneWidget);
+    settings.addError(const CloudException(CloudErrorCode.unavailable));
+    await settle(tester);
+    expect(find.text('連接 Google 日曆'), findsNothing);
+    expect(find.text('重試'), findsOneWidget);
+    settings.add(b.calendars['grace']!);
+    await settle(tester);
+    expect(find.text('中斷連接'), findsOneWidget);
   });
 
   testWidgets('opening the page of a connected church closes nothing', (tester) async {

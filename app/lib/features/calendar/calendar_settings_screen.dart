@@ -11,6 +11,7 @@ import '../../l10n/app_localizations.dart';
 import '../../state/providers.dart';
 import '../common/errors.dart';
 import '../common/time_zones.dart';
+import '../common/saving_indicator.dart';
 import 'calendar_screen.dart';
 import '../../state/session.dart';
 
@@ -39,14 +40,26 @@ String? _timeZoneDiffers(L10n l10n, String? calendarTimeZone, ChurchTimeZone chu
 /// (the web app's own tab on the web); the backend stores the grant and this
 /// page updates when it arrives, closing the sheet where the phone lets it
 /// (iOS; on Android its last page says to close it).
-class CalendarSettingsScreen extends ConsumerWidget {
+class CalendarSettingsScreen extends ConsumerStatefulWidget {
   const CalendarSettingsScreen({super.key, this.result});
 
   /// `connected`, `denied`, `expired`, … when the OAuth redirect lands here.
   final String? result;
 
-  Future<void> _connect(BuildContext context, WidgetRef ref) async {
+  @override
+  ConsumerState<CalendarSettingsScreen> createState() => _CalendarSettingsScreenState();
+}
+
+class _CalendarSettingsScreenState extends ConsumerState<CalendarSettingsScreen> {
+  /// Asking the backend for Google's page, or 中斷連接 on its way: one tap,
+  /// once.
+  bool _connecting = false;
+  bool _disconnecting = false;
+
+  Future<void> _connect() async {
+    if (_connecting) return;
     final l10n = L10n.of(context);
+    setState(() => _connecting = true);
     try {
       final url = await ref.churchData.calendar.authUrl();
       await launchUrl(
@@ -55,23 +68,45 @@ class CalendarSettingsScreen extends ConsumerWidget {
         webOnlyWindowName: '_self',
       );
     } catch (e) {
-      if (context.mounted) showToast(context, errorText(l10n, e));
+      if (mounted) showToast(context, errorText(l10n, e));
+    } finally {
+      if (mounted) setState(() => _connecting = false);
+    }
+  }
+
+  Future<void> _disconnect() async {
+    final l10n = L10n.of(context);
+    final ok = await confirmDestructive(
+      context,
+      title: l10n.calDisconnectTitle,
+      message: l10n.calDisconnectBody,
+      action: l10n.calDisconnect,
+    );
+    if (!ok || !mounted || _disconnecting) return;
+    setState(() => _disconnecting = true);
+    try {
+      await ref.churchData.calendar.disconnect();
+    } catch (e) {
+      if (mounted) showToast(context, errorText(l10n, e));
+    } finally {
+      if (mounted) setState(() => _disconnecting = false);
     }
   }
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  Widget build(BuildContext context) {
     final l10n = L10n.of(context);
     final c = AppColors.of(context);
-    final settings = ref.watch(calendarSettingsProvider).value;
+    final result = widget.result;
+    final read = ref.watch(calendarSettingsProvider);
+    final settings = read.value;
     ref.listen(calendarSettingsProvider, (before, now) {
       final was = before?.value;
       // Only a change seen here: not the settings arriving as the page opens.
       if (!kIsWeb && was != null && !was.usable && (now.value?.usable ?? false)) closeInAppWebView();
     });
-    final church = ref.watch(churchDataProvider);
     return Scaffold(
-      appBar: AppBar(title: Text(l10n.calendarSetting)),
+      appBar: AppBar(title: Text(l10n.calendarSetting), actions: savingActions(const [])),
       body: ListView(
         children: [
           if (result != null && result != 'connected')
@@ -83,7 +118,15 @@ class CalendarSettingsScreen extends ConsumerWidget {
                 style: AppText.subheadline.copyWith(color: c.destructive),
               ),
             ),
-          if (settings == null || !settings.usable)
+          // Not read yet: not 連接 as if it were not connected.
+          if (!read.hasValue)
+            read.hasError
+                ? ErrorRetry(message: l10n.loadFailed, onRetry: () => ref.invalidate(calendarSettingsProvider))
+                : const Padding(
+                    padding: EdgeInsets.all(Space.xl),
+                    child: Center(child: CircularProgressIndicator.adaptive()),
+                  )
+          else if (settings == null || !settings.usable)
             Padding(
               padding: const EdgeInsets.all(Space.m),
               child: Column(
@@ -97,7 +140,8 @@ class CalendarSettingsScreen extends ConsumerWidget {
                   const SizedBox(height: Space.m),
                   PrimaryButton(
                     label: settings?.needsReconnect ?? false ? l10n.calReconnect : l10n.calConnect,
-                    onPressed: () => _connect(context, ref),
+                    busy: _connecting,
+                    onPressed: _connecting ? null : _connect,
                   ),
                 ],
               ),
@@ -118,16 +162,9 @@ class CalendarSettingsScreen extends ConsumerWidget {
                         if (account != null) ListRow(leading: const _GoogleMark(), title: account),
                         ListRow(
                           title: l10n.calDisconnect,
-                          destructive: true,
-                          onTap: () async {
-                            final ok = await confirmDestructive(
-                              context,
-                              title: l10n.calDisconnectTitle,
-                              message: l10n.calDisconnectBody,
-                              action: l10n.calDisconnect,
-                            );
-                            if (ok) await church!.calendar.disconnect();
-                          },
+                          destructive: !_disconnecting,
+                          dimmed: _disconnecting,
+                          onTap: _disconnecting ? null : _disconnect,
                         ),
                       ],
                     ),
