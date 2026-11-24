@@ -293,6 +293,12 @@ class L10nJa extends L10n {
   String get churchUnavailable => 'この教会を開けません';
 
   @override
+  String get churchOfflineTitle => 'オフライン';
+
+  @override
+  String get churchOfflineBody => 'オンラインになるとこの教会が開きます';
+
+  @override
   String get restoreChurch => '教会を復元';
 
   @override
@@ -1307,6 +1313,9 @@ class L10nJa extends L10n {
 
   @override
   String get photoRecognizing => '読み取り中です。1分ほどかかります。';
+
+  @override
+  String get photoStillRecognizing => 'まだ読み取り中です。もう少しお待ちください。';
 
   @override
   String photoChurchLimit(int limit) {
@@ -3565,6 +3574,11 @@ class L10nJa extends L10n {
   @override
   String planAskFilled(int count) {
     return '$count人が入力済み';
+  }
+
+  @override
+  String planAskFilledHeader(int count) {
+    return '入力済み・$count人';
   }
 
   @override

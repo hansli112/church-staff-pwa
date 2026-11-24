@@ -294,6 +294,12 @@ class L10nKo extends L10n {
   String get churchUnavailable => '이 교회를 열 수 없어요';
 
   @override
+  String get churchOfflineTitle => '오프라인';
+
+  @override
+  String get churchOfflineBody => '인터넷에 연결되면 이 교회가 열려요';
+
+  @override
   String get restoreChurch => '교회 복원';
 
   @override
@@ -1308,6 +1314,9 @@ class L10nKo extends L10n {
 
   @override
   String get photoRecognizing => '인식하는 중이에요. 1분 정도 걸려요.';
+
+  @override
+  String get photoStillRecognizing => '아직 인식하는 중이에요. 조금만 기다려 주세요.';
 
   @override
   String photoChurchLimit(int limit) {
@@ -3563,6 +3572,11 @@ class L10nKo extends L10n {
   @override
   String planAskFilled(int count) {
     return '$count명 입력했어요';
+  }
+
+  @override
+  String planAskFilledHeader(int count) {
+    return '입력함 · $count명';
   }
 
   @override

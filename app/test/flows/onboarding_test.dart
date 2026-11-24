@@ -553,6 +553,24 @@ void main() {
     expect(find.byType(NavigationBar), findsNothing);
   });
 
+  testWidgets('a church not read here yet, offline, says it opens once online, not that it is closed', (tester) async {
+    final b = MemoryBackend(clock: testClock);
+    final cid = b.addChurch('恩典堂');
+    final user = b.auth.signInAs('s@gmail.com');
+    b.addMember(cid, Member(uid: user.uid, name: '同工'));
+    b.churches.remove(cid);
+    b.setOnline(false);
+    await pumpApp(tester, b);
+    expect(find.text('離線中'), findsOneWidget);
+    expect(findShown('連上網路就會開啟這間教會'), findsOneWidget);
+    expect(find.text('無法開啟這間教會'), findsNothing);
+    expect(findShown('要加入其他教會，點管理員給的邀請連結'), findsNothing);
+
+    b.setOnline(true);
+    await settle(tester);
+    expect(find.text('無法開啟這間教會'), findsOneWidget);
+  });
+
   testWidgets('a deleted church can be restored by its admin', (tester) async {
     final b = MemoryBackend(clock: testClock);
     final cid = b.addChurch('刪除堂');

@@ -176,6 +176,9 @@
   "closedJoinOther": "要加入其他教會，點管理員給的邀請連結",
   "@closedJoinOther": {"description": "On a deleted or suspended church's page: how to join another church instead"},
   "churchUnavailable": "無法開啟這間教會",
+  "churchOfflineTitle": "離線中",
+  "@churchOfflineTitle": {"description": "Instead of churchUnavailable: offline, and this church was never read on this device"},
+  "churchOfflineBody": "連上網路就會開啟這間教會",
   "restoreChurch": "還原教會",
   "churchRestored": "教會已還原",
   "switchChurch": "切換教會",
@@ -801,6 +804,8 @@
   "photoTake": "拍照",
   "photoPick": "選照片",
   "photoRecognizing": "辨識中，大約需要一分鐘",
+  "photoStillRecognizing": "還在辨識，再等一下",
+  "@photoStillRecognizing": {"description": "Replaces photoRecognizing once reading has taken over a minute"},
   "photoChurchLimit": "這個月的 {limit} 張用完了，下個月 1 日恢復",
   "@photoChurchLimit": {
     "placeholders": {
@@ -2425,6 +2430,8 @@
   "@planAskWaiting": {"placeholders": {"count": {"type": "int"}}},
   "planAskFilled": "{count} 位填好了",
   "@planAskFilled": {"placeholders": {"count": {"type": "int"}}},
+  "planAskFilledHeader": "填好了・{count} 位",
+  "@planAskFilledHeader": {"description": "Header over the names of those who have sent theirs, under planAskWaiting", "placeholders": {"count": {"type": "int"}}},
   "planAskRemind": "再通知這 {count} 位",
   "@planAskRemind": {"placeholders": {"count": {"type": "int"}}},
   "notifSwap": "找人代／交換",

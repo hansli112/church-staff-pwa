@@ -616,6 +616,18 @@ abstract class L10n {
   /// **'無法開啟這間教會'**
   String get churchUnavailable;
 
+  /// Instead of churchUnavailable: offline, and this church was never read on this device
+  ///
+  /// In zh, this message translates to:
+  /// **'離線中'**
+  String get churchOfflineTitle;
+
+  /// No description provided for @churchOfflineBody.
+  ///
+  /// In zh, this message translates to:
+  /// **'連上網路就會開啟這間教會'**
+  String get churchOfflineBody;
+
   /// No description provided for @restoreChurch.
   ///
   /// In zh, this message translates to:
@@ -2397,6 +2409,12 @@ abstract class L10n {
   /// In zh, this message translates to:
   /// **'辨識中，大約需要一分鐘'**
   String get photoRecognizing;
+
+  /// Replaces photoRecognizing once reading has taken over a minute
+  ///
+  /// In zh, this message translates to:
+  /// **'還在辨識，再等一下'**
+  String get photoStillRecognizing;
 
   /// No description provided for @photoChurchLimit.
   ///
@@ -6249,6 +6267,12 @@ abstract class L10n {
   /// In zh, this message translates to:
   /// **'{count} 位填好了'**
   String planAskFilled(int count);
+
+  /// Header over the names of those who have sent theirs, under planAskWaiting
+  ///
+  /// In zh, this message translates to:
+  /// **'填好了・{count} 位'**
+  String planAskFilledHeader(int count);
 
   /// No description provided for @planAskRemind.
   ///

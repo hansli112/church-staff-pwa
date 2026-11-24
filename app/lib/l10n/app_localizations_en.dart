@@ -295,6 +295,12 @@ class L10nEn extends L10n {
   String get churchUnavailable => 'Can’t open this church';
 
   @override
+  String get churchOfflineTitle => 'Offline';
+
+  @override
+  String get churchOfflineBody => 'This church opens once you’re online';
+
+  @override
   String get restoreChurch => 'Restore church';
 
   @override
@@ -1370,6 +1376,9 @@ class L10nEn extends L10n {
 
   @override
   String get photoRecognizing => 'Reading the photo. This takes about a minute.';
+
+  @override
+  String get photoStillRecognizing => 'Still reading. Just a moment more.';
 
   @override
   String photoChurchLimit(int limit) {
@@ -3778,6 +3787,11 @@ class L10nEn extends L10n {
       one: '1 replied',
     );
     return '$_temp0';
+  }
+
+  @override
+  String planAskFilledHeader(int count) {
+    return 'Replied · $count';
   }
 
   @override

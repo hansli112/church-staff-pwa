@@ -5,6 +5,7 @@ import '../../core/design/components.dart';
 import '../../core/design/tokens.dart';
 import '../../domain/models.dart';
 import '../../l10n/app_localizations.dart';
+import '../../state/connectivity.dart';
 import '../../state/providers.dart';
 import '../common/errors.dart';
 import '../common/time_zones.dart';
@@ -45,10 +46,16 @@ class _ClosedScreenState extends ConsumerState<ClosedScreen> {
     final me = ref.watch(meProvider).value;
     final multiple = (ref.watch(membershipsProvider).value?.length ?? 0) > 1;
     final restorable = ref.watch(churchRestorableProvider);
+    // Never read on this device and no connection: not closed, only not
+    // here yet. It opens by itself once online.
+    final offline = church == null && !ref.watch(onlineProvider);
 
     final String title;
     final String body;
-    if (church == null) {
+    if (offline) {
+      title = l10n.churchOfflineTitle;
+      body = l10n.churchOfflineBody;
+    } else if (church == null) {
       title = l10n.churchUnavailable;
       body = '';
     } else if (church.status == ChurchStatus.deleted) {
@@ -86,8 +93,10 @@ class _ClosedScreenState extends ConsumerState<ClosedScreen> {
                 ],
                 // Without another church, the way out; its link may have
                 // been tapped already.
-                const SizedBox(height: Space.s),
-                BalancedText(l10n.closedJoinOther, style: AppText.body.copyWith(color: c.secondaryLabel)),
+                if (!offline) ...[
+                  const SizedBox(height: Space.s),
+                  BalancedText(l10n.closedJoinOther, style: AppText.body.copyWith(color: c.secondaryLabel)),
+                ],
                 const SizedBox(height: Space.xl),
                 if (canRestore)
                   PrimaryButton(

@@ -293,6 +293,12 @@ class L10nZh extends L10n {
   String get churchUnavailable => '無法開啟這間教會';
 
   @override
+  String get churchOfflineTitle => '離線中';
+
+  @override
+  String get churchOfflineBody => '連上網路就會開啟這間教會';
+
+  @override
   String get restoreChurch => '還原教會';
 
   @override
@@ -1307,6 +1313,9 @@ class L10nZh extends L10n {
 
   @override
   String get photoRecognizing => '辨識中，大約需要一分鐘';
+
+  @override
+  String get photoStillRecognizing => '還在辨識，再等一下';
 
   @override
   String photoChurchLimit(int limit) {
@@ -3564,6 +3573,11 @@ class L10nZh extends L10n {
   }
 
   @override
+  String planAskFilledHeader(int count) {
+    return '填好了・$count 位';
+  }
+
+  @override
   String planAskRemind(int count) {
     return '再通知這 $count 位';
   }
@@ -4106,6 +4120,12 @@ class L10nZhHans extends L10nZh {
 
   @override
   String get churchUnavailable => '无法打开这间教会';
+
+  @override
+  String get churchOfflineTitle => '离线中';
+
+  @override
+  String get churchOfflineBody => '连上网络就会打开这间教会';
 
   @override
   String get restoreChurch => '恢复教会';
@@ -5122,6 +5142,9 @@ class L10nZhHans extends L10nZh {
 
   @override
   String get photoRecognizing => '识别中，大约需要一分钟';
+
+  @override
+  String get photoStillRecognizing => '还在识别，再等一下';
 
   @override
   String photoChurchLimit(int limit) {
@@ -7376,6 +7399,11 @@ class L10nZhHans extends L10nZh {
   @override
   String planAskFilled(int count) {
     return '$count 位填好了';
+  }
+
+  @override
+  String planAskFilledHeader(int count) {
+    return '填好了・$count 位';
   }
 
   @override
