@@ -82,6 +82,13 @@ class RosterNoteSection extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final l10n = L10n.of(context);
+    // Nothing until the notes are read: 新增備註 then would write over one.
+    final (:read, :failed) = ref.watch(rosterNotesProvider.select((n) => (read: n.hasValue, failed: n.hasError)));
+    if (!read) {
+      return failed
+          ? ErrorRetry(message: l10n.loadFailed, onRetry: () => ref.invalidate(rosterNotesProvider))
+          : const SizedBox.shrink();
+    }
     final note = ref.watch(rosterNotesProvider.select((n) => n.value?[rosterId])) ?? const RosterNote();
     void edit() => showAppSheet<void>(
       context,

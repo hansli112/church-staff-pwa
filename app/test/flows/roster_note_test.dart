@@ -10,6 +10,7 @@ import 'package:martha/domain/models.dart';
 import 'package:martha/features/rosters/roster_note.dart';
 import 'package:material_symbols_icons/symbols.dart';
 import 'package:martha/data/backend.dart';
+import 'package:martha/state/providers.dart';
 
 import '../support/harness.dart';
 import '../support/seed.dart';
@@ -42,6 +43,25 @@ final picker = notePickerProvider.overrideWithValue(() async {
 
 void main() {
   setUp(() => next = []);
+
+  testWidgets('notes not read yet: no 新增備註 that would write over one; failing, 重試', (tester) async {
+    final b = seededChurch(as: editor);
+    final notes = StreamController<Map<String, RosterNote>>();
+    addTearDown(notes.close);
+    await pumpApp(tester, b, overrides: [picker, rosterNotesProvider.overrideWith((ref) => notes.stream)]);
+    await go(tester, '/rosters/sunday/2026-10-11');
+    expect(find.text('新增備註'), findsNothing, reason: 'there may be one, not read yet');
+
+    notes.addError(const CloudException(CloudErrorCode.unavailable));
+    await settle(tester);
+    expect(find.text('新增備註'), findsNothing);
+    expect(find.text('重試'), findsOneWidget);
+
+    notes.add(const {_id: RosterNote(text: '歌單：奇異恩典')});
+    await settle(tester);
+    expect(find.text('歌單：奇異恩典'), findsOneWidget);
+    expect(find.text('重試'), findsNothing);
+  });
 
   testWidgets('who arranges the day writes a note with files; everyone sees it, links and files open', (tester) async {
     final b = seededChurch(as: editor);
