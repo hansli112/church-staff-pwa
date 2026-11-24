@@ -318,4 +318,50 @@ void main() {
     expect(b.adminSearches, ['舊教']);
     expect(find.text('舊教會'), findsOneWidget);
   });
+
+  testWidgets('a new search shows a spinner, not the last one\'s churches; one that fails says so, with 重試', (
+    tester,
+  ) async {
+    final b = seededChurch();
+    b.auth.operators.add('pastor');
+    b.addChurch('舊教會', status: ChurchStatus.deleted);
+    await pumpApp(tester, b);
+    await go(tester, '/admin');
+
+    await tester.enterText(find.byType(TextField), '舊');
+    await settle(tester);
+    expect(find.text('舊教會'), findsOneWidget);
+    await tester.enterText(find.byType(TextField), '恩');
+    await tester.pump();
+    expect(find.text('舊教會'), findsNothing);
+    expect(find.byType(CircularProgressIndicator), findsOneWidget);
+    await settle(tester);
+    expect(find.text('恩典堂'), findsOneWidget);
+
+    b.auth.operators.remove('pastor');
+    await tester.enterText(find.byType(TextField), '恩典');
+    await settle(tester);
+    expect(find.text('恩典堂'), findsNothing);
+    expect(find.widgetWithText(ErrorRetry, '重試'), findsOneWidget);
+    b.auth.operators.add('pastor');
+    await tester.tap(find.text('重試'));
+    await settle(tester);
+    expect(find.text('恩典堂'), findsOneWidget);
+  });
+
+  testWidgets('a church\'s members that cannot be read say so, with 重試', (tester) async {
+    final b = seededChurch();
+    b.auth.operators.add('pastor');
+    await pumpApp(tester, b);
+    await go(tester, '/admin');
+    b.auth.operators.remove('pastor');
+    await tester.tap(find.text('恩典堂'));
+    await settle(tester);
+    expect(find.widgetWithText(ErrorRetry, '重試'), findsOneWidget);
+
+    b.auth.operators.add('pastor');
+    await tester.tap(find.text('重試'));
+    await settle(tester);
+    expect(button('李美玉', '設為管理員'), findsOneWidget);
+  });
 }

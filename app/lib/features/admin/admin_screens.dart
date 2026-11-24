@@ -54,7 +54,11 @@ const adminSearchPause = Duration(milliseconds: 400);
 
 class _AdminScreenState extends ConsumerState<AdminScreen> {
   /// The churches found for [_query]; with none typed, [_churchesProvider].
+  /// Null while the search for it is on its way.
   List<ChurchSummary>? _found;
+
+  /// Why the search for [_query] failed, with nothing found to show.
+  Object? _searchError;
   String _query = '';
   Timer? _typing;
 
@@ -72,12 +76,19 @@ class _AdminScreenState extends ConsumerState<AdminScreen> {
       // A failure shows on the list itself, with its retry.
       return _retry(ref.read(_churchesProvider.notifier));
     }
+    if (_searchError != null) setState(() => _searchError = null);
     try {
       final r = await ref.read(backendProvider).cloud.adminSearchChurches(query);
       // Not one typed over since.
       if (mounted && query == _query) setState(() => _found = r);
     } catch (e) {
-      if (mounted) showToast(context, errorText(L10n.of(context), e));
+      if (!mounted || query != _query) return;
+      // Found before (searched again on coming back): those stay.
+      if (_found == null) {
+        setState(() => _searchError = e);
+      } else {
+        showToast(context, errorText(L10n.of(context), e));
+      }
     }
   }
 
@@ -108,7 +119,12 @@ class _AdminScreenState extends ConsumerState<AdminScreen> {
             child: SearchField(
               hint: l10n.adminSearchHint,
               onChanged: (q) {
-                _query = q;
+                // Another search: not the last one's churches meanwhile.
+                setState(() {
+                  _query = q;
+                  _found = null;
+                  _searchError = null;
+                });
                 _typing?.cancel();
                 if (q.isEmpty) {
                   _search();
@@ -133,8 +149,10 @@ class _AdminScreenState extends ConsumerState<AdminScreen> {
                       saved: saved,
                     ),
                   )
+                : _searchError != null
+                ? ErrorRetry(message: errorText(l10n, _searchError!), onRetry: _search)
                 : found == null
-                ? const SizedBox.shrink()
+                ? const Center(child: CircularProgressIndicator.adaptive())
                 : _churches(l10n, found),
           ),
         ],
@@ -251,6 +269,10 @@ class _AdminChurchScreenState extends ConsumerState<AdminChurchScreen> {
 
   CloudApi get _cloud => ref.read(backendProvider).cloud;
 
+  /// The row whose change (改名, 停用, 重新開放) is on its way: it shows a
+  /// spinner, and none of them can be tapped meanwhile.
+  _ChurchAction? _running;
+
   Future<void> _refresh() async {
     final found = await _cloud.adminSearchChurches(_c.id);
     if (found.isNotEmpty && mounted) setState(() => _c = found.first);
@@ -259,16 +281,26 @@ class _AdminChurchScreenState extends ConsumerState<AdminChurchScreen> {
     } catch (_) {}
   }
 
-  Future<void> _run(Future<void> Function() action, [String? done]) async {
+  Future<void> _run(_ChurchAction which, Future<void> Function() action, [String? done]) async {
+    if (_running != null) return;
     final l10n = L10n.of(context);
+    setState(() => _running = which);
     try {
       await action();
-      await _refresh();
       if (mounted && done != null) showToast(context, done);
+      // Done: the rows wait only to show what it changed.
+      await _refresh().catchError((Object _) {});
     } catch (e) {
       if (mounted) showToast(context, errorText(l10n, e));
+    } finally {
+      if (mounted) setState(() => _running = null);
     }
   }
+
+  /// [which]'s row's end: a spinner while it is on its way.
+  Widget? _spinner(_ChurchAction which) => _running == which
+      ? const SizedBox.square(dimension: 20, child: CircularProgressIndicator.adaptive(strokeWidth: 2))
+      : null;
 
   /// Shows [m] as admin or not at once; the backend catches up behind,
   /// and a refusal puts the row back. 復原 of 取消管理員 gives back what
@@ -352,26 +384,36 @@ class _AdminChurchScreenState extends ConsumerState<AdminChurchScreen> {
               ListRow(title: l10n.churchStatus, value: statusLabel(l10n, c.status)),
               ListRow(
                 title: l10n.adminRename,
-                onTap: () async {
-                  final name = await promptText(
-                    context,
-                    title: l10n.adminRename,
-                    hint: l10n.churchName,
-                    initial: c.name,
-                    maxLength: TextLimits.churchName,
-                  );
-                  if (name != null) {
-                    await _run(
-                      () => _cloud.adminRenameChurch(c.id, name),
-                      l10n.saved,
-                    );
-                  }
-                },
+                trailing: _spinner(_ChurchAction.rename),
+                onTap: _running != null
+                    ? null
+                    : () async {
+                        final name = await promptText(
+                          context,
+                          title: l10n.adminRename,
+                          hint: l10n.churchName,
+                          initial: c.name,
+                          maxLength: TextLimits.churchName,
+                        );
+                        if (name != null) {
+                          await _run(
+                            _ChurchAction.rename,
+                            () => _cloud.adminRenameChurch(c.id, name),
+                            l10n.saved,
+                          );
+                        }
+                      },
               ),
             ],
           ),
+          // Never read: why, with 重試.
+          if (members.hasError && !members.isLoading)
+            ErrorRetry(
+              message: errorText(l10n, members.error!),
+              onRetry: () => ref.invalidate(_membersProvider(c.id)),
+            )
           // Not a spinner: the church's own rows above are already there.
-          if (members.hasError ? null : members.value case final saved?) ...[
+          else if (members.value case final saved?) ...[
             _ReadNotice(saved, onRetry: () => _retry(ref.read(_membersProvider(c.id).notifier))),
             ListSection(
               header: l10n.members,
@@ -392,29 +434,37 @@ class _AdminChurchScreenState extends ConsumerState<AdminChurchScreen> {
                   ListRow(
                     title: l10n.adminSuspend,
                     destructive: true,
-                    onTap: () async {
-                      final ok = await confirmDestructive(
-                        context,
-                        title: l10n.adminSuspendTitle(c.name),
-                        message: l10n.adminSuspendBody,
-                        action: l10n.adminSuspend,
-                      );
-                      if (ok) {
-                        await _run(
-                          () => _cloud.adminSetStatus(
-                            c.id,
-                            ChurchStatus.suspended,
-                          ),
-                        );
-                      }
-                    },
+                    trailing: _spinner(_ChurchAction.status),
+                    onTap: _running != null
+                        ? null
+                        : () async {
+                            final ok = await confirmDestructive(
+                              context,
+                              title: l10n.adminSuspendTitle(c.name),
+                              message: l10n.adminSuspendBody,
+                              action: l10n.adminSuspend,
+                            );
+                            if (ok) {
+                              await _run(
+                                _ChurchAction.status,
+                                () => _cloud.adminSetStatus(
+                                  c.id,
+                                  ChurchStatus.suspended,
+                                ),
+                              );
+                            }
+                          },
                   )
                 else
                   ListRow(
                     title: l10n.adminReopen,
-                    onTap: () => _run(
-                      () => _cloud.adminSetStatus(c.id, ChurchStatus.active),
-                    ),
+                    trailing: _spinner(_ChurchAction.status),
+                    onTap: _running != null
+                        ? null
+                        : () => _run(
+                            _ChurchAction.status,
+                            () => _cloud.adminSetStatus(c.id, ChurchStatus.active),
+                          ),
                   ),
               ],
             ),
@@ -423,6 +473,9 @@ class _AdminChurchScreenState extends ConsumerState<AdminChurchScreen> {
     );
   }
 }
+
+/// A change to the church itself, by its row on [AdminChurchScreen].
+enum _ChurchAction { rename, status }
 
 final _statsProvider = AsyncNotifierProvider.autoDispose<SavedRead<List<DailyStats>>, Saved<List<DailyStats>>>(
   () => SavedRead(
@@ -783,14 +836,18 @@ class _AdminFundingScreenState extends ConsumerState<AdminFundingScreen> {
     }
   }
 
+  /// While a 扣回 or its 復原 is on its way: its row shows a spinner.
+  bool _refunding = false;
+
   /// A 線上支持 payment refunded in ECPay's back office, which tells the
   /// backend nothing: taken off 雲端費用進度 by its order number.
   Future<void> _refund() async {
     final orderNo = await showAppSheet<String>(context, builder: (_) => const _RefundSheet());
-    if (orderNo == null || !mounted) return;
+    if (orderNo == null || !mounted || _refunding) return;
     final l10n = L10n.of(context);
     final cloud = ref.read(backendProvider).cloud;
     final OnlinePayment refund;
+    setState(() => _refunding = true);
     try {
       refund = await cloud.adminRefundOnlineSupport(orderNo, refunded: true);
     } on CloudException catch (e) {
@@ -800,6 +857,8 @@ class _AdminFundingScreenState extends ConsumerState<AdminFundingScreen> {
     } catch (e) {
       if (mounted) showToast(context, errorText(l10n, e));
       return;
+    } finally {
+      if (mounted) setState(() => _refunding = false);
     }
     if (!mounted) return;
     // Taken off before: undoing this one would count a real refund again.
@@ -809,8 +868,14 @@ class _AdminFundingScreenState extends ConsumerState<AdminFundingScreen> {
     showToast(
       context,
       l10n.onlineRefunded(refund.month, money(l10n, refund.amount)),
+      // A failure is said by the toast (復原失敗).
       onUndo: () async {
-        await cloud.adminRefundOnlineSupport(orderNo, refunded: false);
+        if (mounted) setState(() => _refunding = true);
+        try {
+          await cloud.adminRefundOnlineSupport(orderNo, refunded: false);
+        } finally {
+          if (mounted) setState(() => _refunding = false);
+        }
         container.invalidate(_fundingProvider);
       },
     );
@@ -880,7 +945,18 @@ class _AdminFundingScreenState extends ConsumerState<AdminFundingScreen> {
               ListSection(
                 header: l10n.onlineRefundHeader,
                 footer: l10n.onlineRefundFooter,
-                children: [ListRow(title: l10n.onlineRefundAdd, onTap: _refund)],
+                children: [
+                  ListRow(
+                    title: l10n.onlineRefundAdd,
+                    trailing: _refunding
+                        ? const SizedBox.square(
+                            dimension: 20,
+                            child: CircularProgressIndicator.adaptive(strokeWidth: 2),
+                          )
+                        : null,
+                    onTap: _refunding ? null : _refund,
+                  ),
+                ],
               ),
             ],
           );

@@ -1,6 +1,9 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
+import 'package:martha/core/design/components.dart';
 import 'package:martha/data/backend.dart';
 
 import '../support/harness.dart';
@@ -128,6 +131,35 @@ void main() {
     await settle(tester);
     expect(find.text('這筆已經從 2026-09 扣回過了'), findsOneWidget);
     expect(find.text('復原'), findsNothing);
+    expect(b.refundedOnline, {'M20261006A'});
+  });
+
+  testWidgets('扣回 on its way: the row waits with a spinner, and taps do nothing', (tester) async {
+    final b = seededChurch();
+    b.auth.operators.add('pastor');
+    b.onlinePayments['M20261006A'] = (amount: 97, month: '2026-09');
+    await pumpApp(tester, b);
+    GoRouter.of(tester.element(find.byType(Scaffold).first)).go('/admin/funding');
+    await settle(tester);
+
+    await tester.scrollUntilVisible(find.text('扣回一筆退款'), 200);
+    await tester.tap(find.text('扣回一筆退款'));
+    await settle(tester);
+    await tester.enterText(find.byKey(const Key('refundOrderNo')), 'M20261006A');
+    await tester.pump();
+    final held = b.writeHeld = Completer();
+    await tester.tap(find.text('從進度扣回'));
+    await settle(tester);
+    final row = find.widgetWithText(ListRow, '扣回一筆退款');
+    expect(find.descendant(of: row, matching: find.byType(CircularProgressIndicator)), findsOneWidget);
+    await tester.tap(find.text('扣回一筆退款'));
+    await settle(tester);
+    expect(find.text('從進度扣回'), findsNothing, reason: 'no second sheet while the first is on its way');
+
+    held.complete();
+    b.writeHeld = null;
+    await settle(tester);
+    expect(find.descendant(of: row, matching: find.byType(CircularProgressIndicator)), findsNothing);
     expect(b.refundedOnline, {'M20261006A'});
   });
 }
