@@ -2216,6 +2216,37 @@ class L10nJa extends L10n {
   String get fundingCostsFooter => '価格が変わったら更新してください。年払いの項目は各月に均等に割ります。名前と月額は応援ページで公開されます。';
 
   @override
+  String get supportRecords => '応援の記録';
+
+  @override
+  String supportRecordsMonth(String month, int count) {
+    return '$month $count 件';
+  }
+
+  @override
+  String get supportKindAll => 'すべて';
+
+  @override
+  String get supportKindOnce => '1回';
+
+  @override
+  String get supportKindMonthly => '毎月';
+
+  @override
+  String get paidOnWeb => 'ウェブサイト';
+
+  @override
+  String get supportRefunded => '返金済み';
+
+  @override
+  String supportMonthSplit(String once, String monthly) {
+    return '1回 $once・毎月 $monthly';
+  }
+
+  @override
+  String get supportRecordsNone => '応援の記録はまだありません';
+
+  @override
   String get fundingMonthsHeader => '最近の数か月';
 
   @override

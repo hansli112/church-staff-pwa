@@ -3994,6 +3994,60 @@ abstract class L10n {
   /// **'價格變了再改。每年的項目平均分到每個月。名稱和每月金額會公開在支持頁。'**
   String get fundingCostsFooter;
 
+  /// Platform console: every 支持 paid, by month (App Store, Google Play, 線上支持)
+  ///
+  /// In zh, this message translates to:
+  /// **'支持紀錄'**
+  String get supportRecords;
+
+  /// Value of 支持紀錄 on 雲端費用: this month's name and how many payments
+  ///
+  /// In zh, this message translates to:
+  /// **'{month} {count} 筆'**
+  String supportRecordsMonth(String month, int count);
+
+  /// No description provided for @supportKindAll.
+  ///
+  /// In zh, this message translates to:
+  /// **'全部'**
+  String get supportKindAll;
+
+  /// No description provided for @supportKindOnce.
+  ///
+  /// In zh, this message translates to:
+  /// **'一次性'**
+  String get supportKindOnce;
+
+  /// No description provided for @supportKindMonthly.
+  ///
+  /// In zh, this message translates to:
+  /// **'每月'**
+  String get supportKindMonthly;
+
+  /// Where a 支持 was paid: 線上支持 on the website (ECPay)
+  ///
+  /// In zh, this message translates to:
+  /// **'網站'**
+  String get paidOnWeb;
+
+  /// No description provided for @supportRefunded.
+  ///
+  /// In zh, this message translates to:
+  /// **'已退款'**
+  String get supportRefunded;
+
+  /// Under a month of 支持紀錄: what came in each way, net of refunds
+  ///
+  /// In zh, this message translates to:
+  /// **'一次性 {once} · 每月 {monthly}'**
+  String supportMonthSplit(String once, String monthly);
+
+  /// No description provided for @supportRecordsNone.
+  ///
+  /// In zh, this message translates to:
+  /// **'還沒有支持紀錄'**
+  String get supportRecordsNone;
+
   /// No description provided for @fundingMonthsHeader.
   ///
   /// In zh, this message translates to:

@@ -99,6 +99,27 @@ FundingOverview fundingOverviewFromJson(ReplyJson d) {
           FundingMonth(month: month, received: received.round(), target: target.round()),
     ],
     funding: summary is Map ? fundingFromJson(Map<String, Object?>.from(summary)) : null,
+    payments: [
+      for (final raw in d['payments'] as List<dynamic>? ?? const [])
+        if (raw case {
+          'store': final String store,
+          'amount': final num amount,
+          'currency': final String currency,
+          'amountTwd': final num amountTwd,
+          'month': final String month,
+          'at': final num at,
+        } when PaymentStore.values.any((s) => s.name == store))
+          SupportPayment(
+            store: PaymentStore.values.byName(store),
+            productId: raw['productId'] as String? ?? '',
+            amount: amount,
+            currency: currency,
+            amountTwd: amountTwd.round(),
+            refundedTwd: (raw['refundedTwd'] as num?)?.round() ?? 0,
+            month: month,
+            at: DateTime.fromMillisecondsSinceEpoch(at.toInt()),
+          ),
+    ],
   );
 }
 
@@ -111,6 +132,19 @@ Map<String, Object?> fundingOverviewToJson(FundingOverview o) => {
     final f? => fundingToJson(f),
     null => null,
   },
+  'payments': [
+    for (final p in o.payments)
+      {
+        'store': p.store.name,
+        'productId': p.productId,
+        'amount': p.amount,
+        'currency': p.currency,
+        'amountTwd': p.amountTwd,
+        'refundedTwd': p.refundedTwd,
+        'month': p.month,
+        'at': p.at.millisecondsSinceEpoch,
+      },
+  ],
 };
 
 Map<String, Object?> costItemToJson(CostItem i) => {

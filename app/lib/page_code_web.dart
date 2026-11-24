@@ -18,6 +18,7 @@ Future<void> loadRosterImport() => roster_import.loadLibrary();
 Widget adminScreen() => admin_screens.AdminScreen();
 Widget adminStatsScreen() => admin_screens.AdminStatsScreen();
 Widget adminFundingScreen() => admin_screens.AdminFundingScreen();
+Widget adminSupportRecordsScreen() => admin_screens.AdminSupportRecordsScreen();
 Widget calendarSettingsScreen(String? result) => calendar_settings.CalendarSettingsScreen(result: result);
 Widget churchInfoScreen() => church_info.ChurchInfoScreen();
 Widget moveScreen() => move_screen.MoveScreen();

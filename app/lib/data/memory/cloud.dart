@@ -443,7 +443,12 @@ class MemoryCloud implements CloudApi {
   Future<FundingOverview> adminFunding() async {
     _requireOperator();
     await _b.backOfficeReadsHeld?.future;
-    return FundingOverview(costs: List.of(_b.fundingCosts), months: const [], funding: _b.funding);
+    return FundingOverview(
+      costs: List.of(_b.fundingCosts),
+      months: const [],
+      funding: _b.funding,
+      payments: List.of(_b.fundingPayments),
+    );
   }
 
   @override

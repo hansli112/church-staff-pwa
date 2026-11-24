@@ -165,7 +165,11 @@ final routerProvider = Provider<GoRouter>((ref) {
         (_) => const WarmUpOnOpen(WarmUp.backOffice, child: DeferredPage.admin()),
         routes: [
           page('stats', (_) => const DeferredPage.adminStats()),
-          page('funding', (_) => const DeferredPage.adminFunding()),
+          page(
+            'funding',
+            (_) => const DeferredPage.adminFunding(),
+            routes: [page('records', (_) => const DeferredPage.adminSupportRecords())],
+          ),
         ],
       ),
       if (Env.current.isDevelopment) page('/dev/components', (_) => const ComponentGallery()),

@@ -68,6 +68,18 @@ void main() {
           {'name': '網域', 'perMonth': 31, 'per': 'month'},
         ],
       },
+      'payments': [
+        {
+          'store': 'apple',
+          'productId': 'tip_small',
+          'amount': 7.79,
+          'currency': 'MYR',
+          'amountTwd': 62,
+          'refundedTwd': 0,
+          'month': '2026-10',
+          'at': 1793600100000,
+        },
+      ],
     };
     expect(fundingOverviewToJson(fundingOverviewFromJson(_stored(funding))), funding);
   });

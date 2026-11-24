@@ -1,4 +1,4 @@
-import { FieldValue, type DocumentSnapshot } from 'firebase-admin/firestore';
+import { FieldValue, type DocumentSnapshot, type Timestamp } from 'firebase-admin/firestore';
 import { logger } from 'firebase-functions/v2';
 
 import { DAY_MS, dateKeyUtc8, fail, requireOperator, serverTime, text, type Caller, type Deps } from './common.js';
@@ -272,15 +272,20 @@ function costNames(value: unknown): CostNames | undefined {
   return Object.keys(names).length ? names : undefined;
 }
 
-/** The cost list and the last 12 months, newest first. */
+/** How many payments 支持紀錄 lists, newest first: years of them, at a few a month. */
+const PAYMENTS_SHOWN = 500;
+
+/** The cost list, the last 12 months and the payments (支持紀錄), newest first. */
 export async function adminFunding(deps: Deps, caller: Caller | null, _data: unknown) {
   requireOperator(caller);
   const { db } = deps;
-  const [costs, months, summary] = await Promise.all([
+  const [costs, months, summary, payments] = await Promise.all([
     db.doc('platform/fundingCosts').get(),
     // A few docs a year: sorting here beats a descending index on the ID.
     db.collection('fundingMonths').get(),
     db.doc('platform/funding').get(),
+    // A refund waiting for its payment has no `at`, so it is not among them.
+    db.collection('fundingPayments').orderBy('at', 'desc').limit(PAYMENTS_SHOWN).get(),
   ]);
   return {
     costs: (costs.get('items') as CostItem[] | undefined) ?? [],
@@ -289,6 +294,16 @@ export async function adminFunding(deps: Deps, caller: Caller | null, _data: unk
       .sort((a, b) => b.month.localeCompare(a.month))
       .slice(0, 12),
     funding: summary.exists ? { ...summary.data(), updatedAt: summary.get('updatedAt')?.toMillis() ?? null } : null,
+    payments: payments.docs.map((p) => ({
+      store: p.get('store') as Payment['store'],
+      productId: String(p.get('productId') ?? ''),
+      amount: p.get('amount') as number,
+      currency: String(p.get('currency') ?? ''),
+      amountTwd: p.get('amountTwd') as number,
+      refundedTwd: (p.get('refundedTwd') as number | undefined) ?? 0,
+      month: String(p.get('month') ?? ''),
+      at: (p.get('at') as Timestamp).toMillis(),
+    })),
   };
 }
 

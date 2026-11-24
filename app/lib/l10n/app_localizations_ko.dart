@@ -2214,6 +2214,37 @@ class L10nKo extends L10n {
   String get fundingCostsFooter => '가격이 바뀌면 수정해 주세요. 연간 항목은 매달로 나눠 계산해요. 이름과 월 금액은 후원 페이지에 공개돼요.';
 
   @override
+  String get supportRecords => '후원 기록';
+
+  @override
+  String supportRecordsMonth(String month, int count) {
+    return '$month $count건';
+  }
+
+  @override
+  String get supportKindAll => '전체';
+
+  @override
+  String get supportKindOnce => '일회';
+
+  @override
+  String get supportKindMonthly => '매월';
+
+  @override
+  String get paidOnWeb => '웹사이트';
+
+  @override
+  String get supportRefunded => '환불됨';
+
+  @override
+  String supportMonthSplit(String once, String monthly) {
+    return '일회 $once · 매월 $monthly';
+  }
+
+  @override
+  String get supportRecordsNone => '아직 후원 기록이 없습니다';
+
+  @override
   String get fundingMonthsHeader => '최근 몇 달';
 
   @override

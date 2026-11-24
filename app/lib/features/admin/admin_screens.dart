@@ -15,6 +15,7 @@ import '../../data/backend.dart';
 import '../../domain/limits.dart';
 import '../../domain/models.dart';
 import '../../l10n/app_localizations.dart';
+import '../../domain/day.dart';
 import '../../state/providers.dart';
 import '../../state/saved_read.dart';
 import '../common/calendar_read_notice.dart';
@@ -833,6 +834,15 @@ class _AdminFundingScreenState extends ConsumerState<AdminFundingScreen> {
             padding: const EdgeInsets.only(bottom: Space.xl),
             children: [
               _ReadNotice(saved, onRetry: () => _retry(ref.read(_fundingProvider.notifier))),
+              ListSection(
+                children: [
+                  ListRow(
+                    title: l10n.supportRecords,
+                    value: _thisMonthCount(l10n, o.payments, ref.watch(todayProvider)),
+                    onTap: () => context.push('/admin/funding/records'),
+                  ),
+                ],
+              ),
               if (pending != null)
                 ListSection(children: [ListRow(title: l10n.fundingTargetUpdating)])
               else if (o.funding case final f?)
@@ -875,6 +885,184 @@ class _AdminFundingScreenState extends ConsumerState<AdminFundingScreen> {
             ],
           );
         },
+      ),
+    );
+  }
+}
+
+/// 支持紀錄's row on 雲端費用: this month's name and how many came in.
+String _thisMonthCount(L10n l10n, List<SupportPayment> payments, Day today) {
+  final key = today.key.substring(0, 7);
+  final count = payments.where((p) => p.month == key).length;
+  return l10n.supportRecordsMonth(DateFormat.MMM().format(today.midnight), count);
+}
+
+/// The month of [key] (YYYY-MM), as a section's title: 2026年11月.
+String _monthTitle(String key) {
+  final [y, m] = key.split('-').map(int.parse).toList();
+  return DateFormat.yMMMM().format(DateTime(y, m));
+}
+
+/// 支持紀錄: every 支持 paid, by the month it counts in (UTC+8), newest
+/// first: what came in (NT\$, and as paid when another currency), 一次性
+/// or 每月, through which store, when; one refunded says so, and counts
+/// nothing. A month's title has what came in, its footer each way's
+/// share. Who paid is not kept, so not shown; a 每月 payment may be a new
+/// subscription or a renewal, which the stores do not tell apart here.
+class AdminSupportRecordsScreen extends ConsumerStatefulWidget {
+  const AdminSupportRecordsScreen({super.key});
+
+  @override
+  ConsumerState<AdminSupportRecordsScreen> createState() => _AdminSupportRecordsScreenState();
+}
+
+enum _SupportKind { all, once, monthly }
+
+class _AdminSupportRecordsScreenState extends ConsumerState<AdminSupportRecordsScreen> {
+  var _kind = _SupportKind.all;
+
+  String _paid(SupportPayment p) {
+    if (p.currency == 'TWD') return '';
+    final symbol = NumberFormat.simpleCurrency(name: p.currency).currencySymbol;
+    return '$symbol ${NumberFormat('#,##0.##').format(p.amount)}';
+  }
+
+  String _store(L10n l10n, PaymentStore store) => switch (store) {
+    PaymentStore.apple => 'App Store',
+    PaymentStore.google => 'Google Play',
+    PaymentStore.ecpay => l10n.paidOnWeb,
+  };
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = L10n.of(context);
+    final overview = ref.watch(_fundingProvider);
+    return Scaffold(
+      appBar: AppBar(title: Text(l10n.supportRecords)),
+      body: _SavedView(
+        value: overview,
+        onRetry: () => ref.invalidate(_fundingProvider),
+        builder: (saved) {
+          final shown = [
+            for (final p in saved.value.payments)
+              if (switch (_kind) {
+                _SupportKind.all => true,
+                _SupportKind.once => !p.monthly,
+                _SupportKind.monthly => p.monthly,
+              })
+                p,
+          ];
+          final byMonth = <String, List<SupportPayment>>{};
+          for (final p in shown) {
+            (byMonth[p.month] ??= []).add(p);
+          }
+          final time = DateFormat('M/d HH:mm');
+          int sum(Iterable<SupportPayment> ps) => ps.fold(0, (n, p) => n + p.netTwd);
+          return ListView(
+            padding: const EdgeInsets.only(bottom: Space.xl),
+            children: [
+              _ReadNotice(saved, onRetry: () => _retry(ref.read(_fundingProvider.notifier))),
+              Padding(
+                padding: const EdgeInsets.fromLTRB(Space.m, Space.s, Space.m, Space.s),
+                child: SegmentedButton<_SupportKind>(
+                  showSelectedIcon: false,
+                  segments: [
+                    ButtonSegment(value: _SupportKind.all, label: Text(l10n.supportKindAll)),
+                    ButtonSegment(value: _SupportKind.once, label: Text(l10n.supportKindOnce)),
+                    ButtonSegment(value: _SupportKind.monthly, label: Text(l10n.supportKindMonthly)),
+                  ],
+                  selected: {_kind},
+                  onSelectionChanged: (v) => setState(() => _kind = v.first),
+                ),
+              ),
+              if (byMonth.isEmpty) ListSection(children: [ListRow(title: l10n.supportRecordsNone)]),
+              for (final MapEntry(key: month, value: payments) in byMonth.entries)
+                ListSection(
+                  header: '${_monthTitle(month)} · ${money(l10n, sum(payments))}',
+                  footer: _kind == _SupportKind.all
+                      ? l10n.supportMonthSplit(
+                          money(l10n, sum(payments.where((p) => !p.monthly))),
+                          money(l10n, sum(payments.where((p) => p.monthly))),
+                        )
+                      : null,
+                  children: [
+                    for (final p in payments)
+                      _PaymentRow(
+                        amount: money(l10n, p.amountTwd),
+                        paid: _paid(p),
+                        details: [
+                          p.monthly ? l10n.supportKindMonthly : l10n.supportKindOnce,
+                          _store(l10n, p.store),
+                          if (p.refunded) time.format(p.at),
+                        ].join(' · '),
+                        trailing: p.refunded ? l10n.supportRefunded : time.format(p.at),
+                        refunded: p.refunded,
+                      ),
+                  ],
+                ),
+            ],
+          );
+        },
+      ),
+    );
+  }
+}
+
+/// One row of 支持紀錄: [amount] in NT\$ and, paid in another currency,
+/// [paid] beside it; [details] under it; [trailing] the time, or 已退款
+/// for one [refunded], whose amount is struck through.
+class _PaymentRow extends StatelessWidget {
+  const _PaymentRow({
+    required this.amount,
+    required this.paid,
+    required this.details,
+    required this.trailing,
+    required this.refunded,
+  });
+
+  final String amount;
+  final String paid;
+  final String details;
+  final String trailing;
+  final bool refunded;
+
+  @override
+  Widget build(BuildContext context) {
+    final c = AppColors.of(context);
+    final secondary = AppText.subheadline.copyWith(color: c.secondaryLabel);
+    return MergeSemantics(
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: Space.m, vertical: Space.s + 2),
+        child: Row(
+          children: [
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text.rich(
+                    TextSpan(
+                      children: [
+                        TextSpan(
+                          text: amount,
+                          style: AppText.body.copyWith(
+                            fontWeight: FontWeight.w600,
+                            color: refunded ? c.tertiaryLabel : c.label,
+                            decoration: refunded ? TextDecoration.lineThrough : null,
+                          ),
+                        ),
+                        if (paid.isNotEmpty) TextSpan(text: '  $paid', style: secondary),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 2),
+                  Text(details, style: secondary),
+                ],
+              ),
+            ),
+            const SizedBox(width: Space.s),
+            Text(trailing, style: secondary.copyWith(color: refunded ? c.destructive : null)),
+          ],
+        ),
       ),
     );
   }

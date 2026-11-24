@@ -31,7 +31,7 @@ enum PageLibrary {
   /// deferred routes here too, so the splash waits for their actual page.
   static PageLibrary? forLocation(Uri location) {
     final path = location.path;
-    if (const {'/admin', '/admin/stats', '/admin/funding'}.contains(path)) return admin;
+    if (const {'/admin', '/admin/stats', '/admin/funding', '/admin/funding/records'}.contains(path)) return admin;
     if (path == '/me/church') return churchInfo;
     if (path == '/me/calendar') return calendarSettings;
     if (path == '/welcome/move') return move;
@@ -55,6 +55,7 @@ class DeferredPage extends ConsumerWidget {
   const DeferredPage.admin({super.key}) : library = PageLibrary.admin, _builder = _admin;
   const DeferredPage.adminStats({super.key}) : library = PageLibrary.admin, _builder = _adminStats;
   const DeferredPage.adminFunding({super.key}) : library = PageLibrary.admin, _builder = _adminFunding;
+  const DeferredPage.adminSupportRecords({super.key}) : library = PageLibrary.admin, _builder = _adminSupportRecords;
   const DeferredPage.churchInfo({super.key}) : library = PageLibrary.churchInfo, _builder = _churchInfo;
   const DeferredPage.move({super.key}) : library = PageLibrary.move, _builder = _move;
 
@@ -78,6 +79,7 @@ class DeferredPage extends ConsumerWidget {
   static Widget _admin(BuildContext context) => code.adminScreen();
   static Widget _adminStats(BuildContext context) => code.adminStatsScreen();
   static Widget _adminFunding(BuildContext context) => code.adminFundingScreen();
+  static Widget _adminSupportRecords(BuildContext context) => code.adminSupportRecordsScreen();
   static Widget _churchInfo(BuildContext context) => code.churchInfoScreen();
   static Widget _move(BuildContext context) => code.moveScreen();
 

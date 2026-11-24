@@ -2211,6 +2211,37 @@ class L10nZh extends L10n {
   String get fundingCostsFooter => '價格變了再改。每年的項目平均分到每個月。名稱和每月金額會公開在支持頁。';
 
   @override
+  String get supportRecords => '支持紀錄';
+
+  @override
+  String supportRecordsMonth(String month, int count) {
+    return '$month $count 筆';
+  }
+
+  @override
+  String get supportKindAll => '全部';
+
+  @override
+  String get supportKindOnce => '一次性';
+
+  @override
+  String get supportKindMonthly => '每月';
+
+  @override
+  String get paidOnWeb => '網站';
+
+  @override
+  String get supportRefunded => '已退款';
+
+  @override
+  String supportMonthSplit(String once, String monthly) {
+    return '一次性 $once · 每月 $monthly';
+  }
+
+  @override
+  String get supportRecordsNone => '還沒有支持紀錄';
+
+  @override
   String get fundingMonthsHeader => '最近幾個月';
 
   @override
@@ -5954,6 +5985,37 @@ class L10nZhHans extends L10nZh {
 
   @override
   String get fundingCostsFooter => '价格变了再改。每年的项目平均分到每个月。名称和每月金额会公开在支持页。';
+
+  @override
+  String get supportRecords => '支持记录';
+
+  @override
+  String supportRecordsMonth(String month, int count) {
+    return '$month $count 笔';
+  }
+
+  @override
+  String get supportKindAll => '全部';
+
+  @override
+  String get supportKindOnce => '一次性';
+
+  @override
+  String get supportKindMonthly => '每月';
+
+  @override
+  String get paidOnWeb => '网站';
+
+  @override
+  String get supportRefunded => '已退款';
+
+  @override
+  String supportMonthSplit(String once, String monthly) {
+    return '一次性 $once · 每月 $monthly';
+  }
+
+  @override
+  String get supportRecordsNone => '还没有支持记录';
 
   @override
   String get fundingMonthsHeader => '最近几个月';

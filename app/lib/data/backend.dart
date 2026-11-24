@@ -894,14 +894,54 @@ class FundingMonth {
 /// [alreadyRefunded] when it had been taken off before.
 typedef OnlinePayment = ({int amount, String month, bool alreadyRefunded});
 
+/// Where a 支持 was paid: App Store, Google Play, or 線上支持 (ECPay).
+enum PaymentStore { apple, google, ecpay }
+
+/// One 支持 (functions/src/funding.ts `fundingPayments`), for 支持紀錄: no
+/// name or account, which is not kept. [amount] in [currency] (`TWD`,
+/// `MYR`…), as the store paid it; [amountTwd] counted towards 雲端費用,
+/// less [refundedTwd]; [month] (YYYY-MM, UTC+8) it counts in.
+class SupportPayment {
+  const SupportPayment({
+    required this.store,
+    required this.productId,
+    required this.amount,
+    required this.currency,
+    required this.amountTwd,
+    this.refundedTwd = 0,
+    required this.month,
+    required this.at,
+  });
+
+  final PaymentStore store;
+  final String productId;
+  final num amount;
+  final String currency;
+  final int amountTwd;
+  final int refundedTwd;
+  final String month;
+  final DateTime at;
+
+  /// 每月支持 (a subscription's payment, first or renewed), not 一次性.
+  bool get monthly => productId.startsWith('supporter_monthly');
+
+  bool get refunded => refundedTwd > 0;
+
+  /// What it counts towards 雲端費用 now.
+  int get netTwd => amountTwd - refundedTwd;
+}
+
 class FundingOverview {
-  const FundingOverview({required this.costs, required this.months, required this.funding});
+  const FundingOverview({required this.costs, required this.months, required this.funding, this.payments = const []});
 
   final List<CostItem> costs;
 
   /// The last 12 months, newest first.
   final List<FundingMonth> months;
   final Funding? funding;
+
+  /// The payments, newest first (支持紀錄).
+  final List<SupportPayment> payments;
 }
 
 class PhotoInput {

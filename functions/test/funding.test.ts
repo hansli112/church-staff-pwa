@@ -215,6 +215,19 @@ describe('the ledger: every payment, whoever it came through', () => {
     assert.equal(await month(), 300);
   });
 
+  test('the operator sees each payment, newest first: what, through which store, when, and any refund; not a refund still waiting for its payment', async () => {
+    const d = withRates();
+    await recordPayment(d, payment());
+    await recordPayment(d, payment({ id: 'apple_1', store: 'apple', productId: 'supporter_monthly', amount: 9.99, currency: 'USD', at: new Date('2026-10-07T10:00:00+08:00') }));
+    await setRefund(d, 'ecpay_M1', 'ecpay', 1);
+    await setRefund(d, 'google_9', 'google', 1);
+    const back = await adminFunding(d, op, {});
+    assert.deepEqual(back.payments, [
+      { store: 'apple', productId: 'supporter_monthly', amount: 9.99, currency: 'USD', amountTwd: 320, refundedTwd: 0, month: '2026-10', at: Date.parse('2026-10-07T10:00:00+08:00') },
+      { store: 'ecpay', productId: 'web_once', amount: 500, currency: 'TWD', amountTwd: 500, refundedTwd: 500, month: '2026-10', at: Date.parse('2026-10-06T08:00:00+08:00') },
+    ]);
+  });
+
   test('refunded before the payment arrives: the payment never counts', async () => {
     const d = withRates();
     await setRefund(d, 'ecpay_M1', 'ecpay', 1);

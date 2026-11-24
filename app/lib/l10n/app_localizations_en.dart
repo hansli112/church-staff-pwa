@@ -2350,6 +2350,37 @@ class L10nEn extends L10n {
       'Update when prices change. Yearly items are split evenly across the months. Each name and its monthly amount are shown to everyone on the support page.';
 
   @override
+  String get supportRecords => 'Support payments';
+
+  @override
+  String supportRecordsMonth(String month, int count) {
+    return '$month: $count';
+  }
+
+  @override
+  String get supportKindAll => 'All';
+
+  @override
+  String get supportKindOnce => 'One-time';
+
+  @override
+  String get supportKindMonthly => 'Monthly';
+
+  @override
+  String get paidOnWeb => 'Website';
+
+  @override
+  String get supportRefunded => 'Refunded';
+
+  @override
+  String supportMonthSplit(String once, String monthly) {
+    return 'One-time $once · Monthly $monthly';
+  }
+
+  @override
+  String get supportRecordsNone => 'No support payments yet';
+
+  @override
   String get fundingMonthsHeader => 'Recent months';
 
   @override

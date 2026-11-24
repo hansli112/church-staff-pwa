@@ -106,6 +106,9 @@ class MemoryBackend implements Backend {
   /// The operator's cost list.
   List<CostItem> fundingCosts = [];
 
+  /// The payments 支持紀錄 lists, newest first, as the backend keeps them.
+  List<SupportPayment> fundingPayments = [];
+
   /// Scripted: what the backend publishes once the operator changes the
   /// costs. Null leaves [funding] as it is.
   Funding Function(List<CostItem> costs)? publishFunding;

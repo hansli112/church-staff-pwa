@@ -21,6 +21,7 @@ Future<void> loadRosterImport() async {}
 Widget adminScreen() => const AdminScreen();
 Widget adminStatsScreen() => const AdminStatsScreen();
 Widget adminFundingScreen() => const AdminFundingScreen();
+Widget adminSupportRecordsScreen() => const AdminSupportRecordsScreen();
 Widget calendarSettingsScreen(String? result) => CalendarSettingsScreen(result: result);
 Widget churchInfoScreen() => const ChurchInfoScreen();
 Widget moveScreen() => const MoveScreen();

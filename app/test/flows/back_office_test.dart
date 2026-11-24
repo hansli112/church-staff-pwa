@@ -50,6 +50,64 @@ void main() {
     expect(find.text('費用項目'), findsOneWidget);
   });
 
+  testWidgets('支持紀錄 lists each payment by month: how much, which kind, which store, when, refunds counting nothing', (
+    tester,
+  ) async {
+    final b = seededChurch();
+    b.auth.operators.add('pastor');
+    b.fundingPayments = [
+      SupportPayment(
+        store: PaymentStore.apple,
+        productId: 'tip_small',
+        amount: 7.79,
+        currency: 'MYR',
+        amountTwd: 62,
+        month: '2026-10',
+        at: DateTime(2026, 10, 1, 9, 15),
+      ),
+      SupportPayment(
+        store: PaymentStore.google,
+        productId: 'supporter_monthly',
+        amount: 81,
+        currency: 'TWD',
+        amountTwd: 81,
+        month: '2026-10',
+        at: DateTime(2026, 10, 1, 8, 30),
+      ),
+      SupportPayment(
+        store: PaymentStore.ecpay,
+        productId: 'web_once',
+        amount: 24,
+        currency: 'TWD',
+        amountTwd: 24,
+        refundedTwd: 24,
+        month: '2026-09',
+        at: DateTime(2026, 9, 16, 17, 18),
+      ),
+    ];
+    await pumpApp(tester, b);
+    await go(tester, '/admin/funding');
+    expect(find.text('10月 2 筆'), findsOneWidget, reason: 'this month, on 雲端費用');
+    await tester.tap(find.text('支持紀錄'));
+    await settle(tester);
+
+    expect(findShown('2026年10月 · NT\$143'), findsOneWidget);
+    expect(findShown('NT\$62  RM 7.79'), findsOneWidget);
+    expect(findShown('一次性 · App Store'), findsOneWidget);
+    expect(findShown('每月 · Google Play'), findsOneWidget);
+    expect(findShown('10/1 09:15'), findsOneWidget);
+    expect(findShown('一次性 NT\$62 · 每月 NT\$81'), findsOneWidget);
+    expect(findShown('2026年9月 · NT\$0'), findsOneWidget, reason: 'a refund counts nothing');
+    expect(findShown('一次性 · 網站 · 9/16 17:18'), findsOneWidget);
+    expect(findShown('已退款'), findsOneWidget);
+
+    await tester.tap(find.text('每月'));
+    await settle(tester);
+    expect(findShown('2026年10月 · NT\$81'), findsOneWidget);
+    expect(findShown('2026年9月 · NT\$0'), findsNothing, reason: 'no 每月 that month');
+    expect(findShownContaining('App Store'), findsNothing);
+  });
+
   testWidgets('stats that cannot be read again stay, saying when they were read', (tester) async {
     final b = seededChurch();
     b.auth.operators.add('pastor');
