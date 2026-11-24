@@ -35,7 +35,7 @@ class RosterDay {
 
 /// [RosterDay] of a service (its ID) on a day; null when the church has no
 /// such service. A day ahead is the one saved, or the service's duties
-/// when none is; a day gone by, as it was saved, from the list when it is
+/// when none is, once the saved ones are read; a day gone by, as it was saved, from the list when it is
 /// there or else read, and with no duties when nobody was arranged on it.
 final rosterDayProvider = Provider.autoDispose.family<AsyncValue<RosterDay>?, (String, Day)>((ref, key) {
   final (serviceType, day) = key;
@@ -59,9 +59,13 @@ final rosterDayProvider = Provider.autoDispose.family<AsyncValue<RosterDay>?, (S
       roster = saved.value ?? Roster(type: serviceType, day: day);
     }
   } else {
-    roster =
-        ref.watch(serviceRostersProvider(serviceType)).value?.where((r) => r.day == day).firstOrNull ??
-        draftRoster(service, day);
+    // Not the service's empty duties until the saved ones are read: that
+    // would say nobody serves.
+    final saved = ref.watch(serviceRostersProvider(serviceType));
+    if (!saved.hasValue) {
+      return saved.hasError ? AsyncError(saved.error!, saved.stackTrace ?? StackTrace.current) : const AsyncLoading();
+    }
+    roster = saved.requireValue.where((r) => r.day == day).firstOrNull ?? draftRoster(service, day);
   }
   final arranges = ref.watch(arrangesProvider(serviceType));
   return AsyncData(

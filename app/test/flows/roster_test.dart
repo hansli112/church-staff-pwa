@@ -4,7 +4,9 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
+import 'package:martha/data/backend.dart';
 import 'package:martha/data/memory/memory_backend.dart';
+import 'package:martha/state/providers.dart';
 import 'package:martha/domain/day.dart';
 import 'package:martha/domain/models.dart';
 import 'package:martha/features/rosters/editable_roster.dart';
@@ -45,6 +47,30 @@ void main() {
       expect(find.textContaining('司琴、招待'), findsOneWidget);
       expect(findDay('10月11日'), findsOneWidget);
       expect(find.text('主日崇拜'), findsWidgets, reason: 'each day is titled by its service');
+    });
+
+    testWidgets("a day ahead whose rosters fail to load says so, not an empty roster; 重試 reads them again", (
+      tester,
+    ) async {
+      final b = seededChurch(as: staffMei);
+      var fail = true;
+      await pumpApp(
+        tester,
+        b,
+        overrides: [
+          savedRostersProvider.overrideWith(
+            (ref) => fail
+                ? Stream.error(const CloudException(CloudErrorCode.unavailable))
+                : Stream.value([...b.rosters['grace']!.values]),
+          ),
+        ],
+      );
+      await go(tester, '/rosters/sunday/2026-10-04');
+      expect(find.text('載入失敗，請檢查網路後再試一次'), findsOneWidget);
+      expect(find.text('司琴'), findsNothing, reason: 'not the service\'s empty duties');
+      fail = false;
+      await tapText(tester, '重試');
+      expect(find.text('李美玉'), findsWidgets);
     });
 
     testWidgets("an event's roster shows in 我的服事 by its title and opens; a cancelled one is gone", (tester) async {

@@ -54,7 +54,9 @@ class RosterDayScreen extends ConsumerWidget {
         body: page.hasError
             ? ErrorRetry(
                 message: l10n.loadFailed,
-                onRetry: () => ref.invalidate(pastRosterProvider((serviceType, day))),
+                onRetry: () => day.isBefore(ref.read(todayProvider))
+                    ? ref.invalidate(pastRosterProvider((serviceType, day)))
+                    : ref.invalidate(savedRostersProvider),
               )
             : const SizedBox.shrink(),
       );
