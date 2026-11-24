@@ -36,7 +36,10 @@ class FakeStore implements SupportStore {
   final List<SupportItem> items;
 
   /// The store can't be reached.
-  final bool unreachable;
+  bool unreachable;
+
+  /// Set: the store's sheet stays up until it completes, its answer after.
+  Completer<void>? answering;
   final _results = StreamController<PurchaseResult>.broadcast(sync: true);
   final bought = <String>[];
 
@@ -62,7 +65,13 @@ class FakeStore implements SupportStore {
     if (refuses) throw StateError('refused');
     bought.add(item.id);
     if (item.subscription) owned.add(item.id);
-    _results.add((productId: item.id, outcome: PurchaseOutcome.thanks, paidAt: now?.call(), restored: false));
+    final result = (productId: item.id, outcome: PurchaseOutcome.thanks, paidAt: now?.call(), restored: false);
+    final held = answering;
+    if (held == null) {
+      _results.add(result);
+    } else {
+      unawaited(held.future.then((_) => _results.add(result)));
+    }
   }
 
   /// Restoring reports each plan owned paid again.
@@ -464,10 +473,35 @@ void main() {
   });
 
   testWidgets("when the store can't be reached, try again later", (tester) async {
-    await pumpWithStore(tester, FakeStore(unreachable: true), FakeIcons());
+    final store = FakeStore(unreachable: true);
+    await pumpWithStore(tester, store, FakeIcons());
     GoRouter.of(tester.element(find.byType(Scaffold).first)).go('/me/support');
     await settle(tester);
     expect(find.text('現在無法連上商店，請稍後再試'), findsOneWidget);
+    store.unreachable = false;
+    await tester.tap(find.widgetWithText(TextButton, '重試'));
+    await settle(tester);
+    expect(find.text('NT\$90'), findsOneWidget);
+  });
+
+  testWidgets('while the store asks, the amount tapped shows so and no other starts', (tester) async {
+    final store = FakeStore()..answering = Completer();
+    await pumpWithStore(tester, store, FakeIcons());
+    GoRouter.of(tester.element(find.byType(Scaffold).first)).go('/me/support');
+    await settle(tester);
+    await showMiddle(tester, find.text('NT\$90'));
+    await tester.tap(find.text('NT\$90'));
+    await settle(tester);
+    expect(find.text('NT\$90'), findsNothing, reason: 'a spinner in its place');
+    expect(find.byType(CircularProgressIndicator), findsOneWidget);
+    await tester.tap(find.text(plan60));
+    await settle(tester);
+    expect(store.bought, ['tip_small']);
+    store.answering!.complete();
+    await settle(tester);
+    expect(find.text('謝謝你的支持'), findsOneWidget);
+    await closeThanks(tester);
+    expect(find.text('NT\$90'), findsOneWidget);
   });
 
   group('the subscription', () {

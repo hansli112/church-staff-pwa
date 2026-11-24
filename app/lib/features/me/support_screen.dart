@@ -42,6 +42,10 @@ class _SupportScreenState extends ConsumerState<SupportScreen> {
   /// the passing note.
   SupportItem? _buying;
 
+  /// What was tapped, while the store's sheet is up: until any answer.
+  /// No other amount starts meanwhile.
+  String? _asking;
+
   @override
   void initState() {
     super.initState();
@@ -51,6 +55,7 @@ class _SupportScreenState extends ConsumerState<SupportScreen> {
       final item = _buying;
       final bought = r.productId == item?.id && !r.restored;
       if (bought && r.outcome != PurchaseOutcome.pending) _buying = null;
+      if (r.productId == _asking) setState(() => _asking = null);
       switch (r.outcome) {
         case PurchaseOutcome.thanks:
           Haptics.success();
@@ -76,14 +81,18 @@ class _SupportScreenState extends ConsumerState<SupportScreen> {
   }
 
   void _buy(SupportItem item) {
+    if (_asking != null) return;
     _buying = item;
+    setState(() => _asking = item.id);
     final telemetry = ref.read(telemetryProvider);
     // The store refused before showing anything: nothing was paid.
     unawaited(
       ref.read(supportStoreProvider).buy(item).catchError((Object e, StackTrace s) {
         telemetry.recordError(e, s);
         _buying = null;
-        if (mounted) showToast(context, L10n.of(context).supportFailed);
+        if (!mounted) return;
+        setState(() => _asking = null);
+        showToast(context, L10n.of(context).supportFailed);
       }),
     );
   }
@@ -145,8 +154,12 @@ class _SupportScreenState extends ConsumerState<SupportScreen> {
               ),
           ],
           products.when(
-            loading: () => const SizedBox(height: 120),
-            error: (_, _) => EmptyState(message: l10n.supportUnavailable),
+            loading: () => const SizedBox(
+              height: 120,
+              child: Center(child: CircularProgressIndicator.adaptive()),
+            ),
+            error: (_, _) =>
+                ErrorRetry(message: l10n.supportUnavailable, onRetry: () => ref.invalidate(_productsProvider)),
             data: (items) {
               if (items.isEmpty) return EmptyState(message: l10n.supportComingSoon);
               final tips = items.where((i) => !i.subscription).toList();
@@ -156,7 +169,7 @@ class _SupportScreenState extends ConsumerState<SupportScreen> {
                   if (tips.isNotEmpty)
                     ListSection(
                       header: l10n.supportTips,
-                      children: [_Amounts(tips, label: (t) => t.price, onPick: _buy)],
+                      children: [_Amounts(tips, label: (t) => t.price, asking: _asking, onPick: _buy)],
                     ),
                   // App Store 3.1.2: that it renews, how to cancel, and
                   // the terms and privacy policy, beside the subscription.
@@ -174,7 +187,13 @@ class _SupportScreenState extends ConsumerState<SupportScreen> {
                       ],
                       children: [
                         // The other plan switches to it.
-                        _Amounts(monthly, label: (m) => l10n.supportPerMonth(m.price), paid: plan, onPick: _buy),
+                        _Amounts(
+                          monthly,
+                          label: (m) => l10n.supportPerMonth(m.price),
+                          paid: plan,
+                          asking: _asking,
+                          onPick: _buy,
+                        ),
                         if (plan != null)
                           ListRow(
                             title: l10n.manageSubscription,
@@ -270,12 +289,16 @@ class _Thanks extends StatelessWidget {
 /// text leaves them no room. [paid] (the plan paid for) is ticked and not
 /// bought again.
 class _Amounts extends StatelessWidget {
-  const _Amounts(this.items, {required this.label, required this.onPick, this.paid});
+  const _Amounts(this.items, {required this.label, required this.onPick, this.paid, this.asking});
 
   final List<SupportItem> items;
   final String Function(SupportItem item) label;
   final void Function(SupportItem item) onPick;
   final String? paid;
+
+  /// The one the store is asking about: a spinner, and every amount
+  /// waits, looking as it did.
+  final String? asking;
 
   static const _check = 18.0;
 
@@ -314,7 +337,11 @@ class _Amounts extends StatelessWidget {
                   child: Semantics(
                     selected: item.id == paid,
                     child: FilledButton(
-                      onPressed: item.id == paid ? null : () => onPick(item),
+                      onPressed: item.id == paid
+                          ? null
+                          : asking != null
+                          ? () {}
+                          : () => onPick(item),
                       // Neutral: the accent marks only the plan paid for, a state.
                       style: FilledButton.styleFrom(
                         backgroundColor: c.fill,
@@ -325,16 +352,24 @@ class _Amounts extends StatelessWidget {
                         padding: const EdgeInsets.all(Space.s),
                         textStyle: AppText.headline,
                       ),
-                      child: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          if (item.id == paid) ...[
-                            const Icon(Symbols.check_rounded, size: _check),
-                            const SizedBox(width: Space.xs),
-                          ],
-                          Flexible(child: Text(label(item), textAlign: TextAlign.center)),
-                        ],
-                      ),
+                      child: item.id == asking
+                          ? Semantics(
+                              label: label(item),
+                              child: const SizedBox.square(
+                                dimension: 20,
+                                child: CircularProgressIndicator.adaptive(strokeWidth: 2),
+                              ),
+                            )
+                          : Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                if (item.id == paid) ...[
+                                  const Icon(Symbols.check_rounded, size: _check),
+                                  const SizedBox(width: Space.xs),
+                                ],
+                                Flexible(child: Text(label(item), textAlign: TextAlign.center)),
+                              ],
+                            ),
                     ),
                   ),
                 ),

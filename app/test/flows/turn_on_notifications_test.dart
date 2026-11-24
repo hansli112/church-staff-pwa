@@ -144,6 +144,20 @@ void main() {
     },
   );
 
+  testWidgets('開啟通知 on the home page asks once, however often tapped while the phone asks', (tester) async {
+    final prompt = Completer<void>();
+    final push = FakePush(answer: PushPermission.granted, prompt: prompt);
+    await pumpApp(tester, seededChurch(as: staffMei), overrides: [pushServiceProvider.overrideWithValue(push)]);
+
+    await tapText(tester, '開啟通知');
+    expect(find.byType(CircularProgressIndicator), findsOneWidget);
+    await tapText(tester, '開啟通知');
+    expect(push.asked, 1);
+    prompt.complete();
+    await settle(tester);
+    expect(find.text('開啟通知'), findsNothing);
+  });
+
   testWidgets('allowed from the home page, the card gone, then no token: recorded, and nothing breaks', (tester) async {
     final prompt = Completer<void>();
     final push = FakePush(answer: PushPermission.granted, registers: false, prompt: prompt);

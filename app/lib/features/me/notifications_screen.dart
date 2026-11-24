@@ -12,20 +12,30 @@ import 'turn_on_notifications.dart';
 import '../common/errors.dart';
 import '../common/site_pages.dart';
 import '../common/saving_indicator.dart';
+import 'unread_page.dart';
 
 /// Which notifications I get from this church, and when I am reminded of my
 /// duties. Stored on my member doc (`notificationPrefs`, the one field I may
 /// write there). Until the phone allows notifications the switches are off,
 /// and turning one on asks for it; allowed, only that one is on.
-class NotificationsScreen extends ConsumerWidget {
+class NotificationsScreen extends ConsumerStatefulWidget {
   const NotificationsScreen({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<NotificationsScreen> createState() => _NotificationsScreenState();
+}
+
+class _NotificationsScreenState extends ConsumerState<NotificationsScreen> {
+  /// Turned on while the phone asks, and until it is saved: shown on, the
+  /// rest waiting.
+  NotificationKind? _asking;
+
+  @override
+  Widget build(BuildContext context) {
     final l10n = L10n.of(context);
     final me = ref.watch(meProvider).value;
     final permission = ref.watch(pushPermissionProvider).value;
-    if (me == null) return Scaffold(appBar: AppBar());
+    if (me == null) return unreadPage(context, ref, [meProvider]);
     final muted = me.mutedNotifications;
     // Safari gets no notifications: only the page opened from the home screen.
     final needsHomeScreen = ref.watch(addToHomeProvider) == AddToHome.ios;
@@ -73,21 +83,25 @@ class NotificationsScreen extends ConsumerWidget {
       // Saved even if this page is left while the phone asks.
       final data = ref.churchData;
       var next = on ? ({...muted}..remove(kind)) : {...muted, kind};
-      if (on && permission == PushPermission.notAsked) {
-        // Once allowed, each launch registers the device again. Asking that
-        // failed (registering, mostly) still keeps the choice.
-        final result = await enableNotifications(context, nudge: true);
-        if (result != null && result != PushPermission.granted) return;
-        // The others showed off, so they stay off: only the one tapped.
-        next = {
-          ...muted,
-          for (final (k, _, _) in [...kinds, ...adminKinds]) k,
-        }..remove(kind);
-      }
+      final asking = on && permission == PushPermission.notAsked;
+      if (asking) setState(() => _asking = kind);
       try {
+        if (asking) {
+          // Once allowed, each launch registers the device again. Asking that
+          // failed (registering, mostly) still keeps the choice.
+          final result = await enableNotifications(context, nudge: true);
+          if (result != null && result != PushPermission.granted) return;
+          // The others showed off, so they stay off: only the one tapped.
+          next = {
+            ...muted,
+            for (final (k, _, _) in [...kinds, ...adminKinds]) k,
+          }..remove(kind);
+        }
         await data.setNotificationPrefs(me.uid, next);
       } catch (e) {
         if (context.mounted) showToast(context, saveErrorText(l10n, e));
+      } finally {
+        if (asking && mounted) setState(() => _asking = null);
       }
     }
 
@@ -102,8 +116,8 @@ class NotificationsScreen extends ConsumerWidget {
     Widget row((NotificationKind, String, String?) k) => SwitchRow(
       title: k.$2,
       subtitle: k.$3,
-      value: !shownOff && !muted.contains(k.$1),
-      onChanged: blocked ? null : (v) => set(k.$1, v),
+      value: _asking != null ? _asking == k.$1 : !shownOff && !muted.contains(k.$1),
+      onChanged: blocked || _asking != null ? null : (v) => set(k.$1, v),
     );
 
     return Scaffold(

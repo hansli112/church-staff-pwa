@@ -76,7 +76,11 @@ class _TurnOnNotificationsScreenState extends ConsumerState<TurnOnNotificationsS
 
   Future<void> _enable() async {
     setState(() => _busy = true);
-    await enableNotifications(context);
+    try {
+      await enableNotifications(context);
+    } finally {
+      if (mounted) setState(() => _busy = false);
+    }
     if (mounted) context.go('/home');
   }
 
@@ -114,7 +118,7 @@ class _TurnOnNotificationsScreenState extends ConsumerState<TurnOnNotificationsS
 /// The home page's 開啟通知, until it is on or dismissed. Turned off on the
 /// phone, it opens the phone's settings, since the phone will not ask
 /// again; a browser has no such page, so there it is not shown.
-class TurnOnNotificationsCard extends ConsumerWidget {
+class TurnOnNotificationsCard extends ConsumerStatefulWidget {
   const TurnOnNotificationsCard({super.key});
 
   static bool shown(WidgetRef ref) {
@@ -127,7 +131,24 @@ class TurnOnNotificationsCard extends ConsumerWidget {
   }
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<TurnOnNotificationsCard> createState() => _TurnOnNotificationsCardState();
+}
+
+class _TurnOnNotificationsCardState extends ConsumerState<TurnOnNotificationsCard> {
+  /// While the phone asks: asked once.
+  bool _busy = false;
+
+  Future<void> _enable() async {
+    setState(() => _busy = true);
+    try {
+      await enableNotifications(context, nudge: true);
+    } finally {
+      if (mounted) setState(() => _busy = false);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
     final l10n = L10n.of(context);
     final off = ref.watch(pushPermissionProvider).value == PushPermission.denied;
     return ListSection(
@@ -136,12 +157,24 @@ class TurnOnNotificationsCard extends ConsumerWidget {
           title: off ? l10n.notifOpenSettings : l10n.notifEnable,
           subtitle: l10n.notifAskTitle,
           leading: const Icon(Symbols.notifications_active_rounded),
-          trailing: IconButton(
-            icon: const Icon(Symbols.close_rounded, size: 20),
-            tooltip: l10n.notifCardHide,
-            onPressed: () => ref.read(notificationsCardHiddenProvider.notifier).mark(),
-          ),
-          onTap: off ? () => openNotificationSettings(context, ref) : () => enableNotifications(context, nudge: true),
+          trailing: _busy
+              // Where the close button was, as big, so the row keeps its size.
+              ? const SizedBox.square(
+                  dimension: 48,
+                  child: Center(
+                    child: SizedBox.square(dimension: 20, child: CircularProgressIndicator.adaptive(strokeWidth: 2)),
+                  ),
+                )
+              : IconButton(
+                  icon: const Icon(Symbols.close_rounded, size: 20),
+                  tooltip: l10n.notifCardHide,
+                  onPressed: () => ref.read(notificationsCardHiddenProvider.notifier).mark(),
+                ),
+          onTap: _busy
+              ? null
+              : off
+              ? () => openNotificationSettings(context, ref)
+              : _enable,
         ),
       ],
     );

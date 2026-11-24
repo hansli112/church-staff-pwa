@@ -1,8 +1,13 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
+import 'package:martha/core/design/components.dart';
 import 'package:martha/domain/models.dart';
+import 'package:martha/state/push.dart';
 
+import '../support/fake_push.dart';
 import '../support/harness.dart';
 import '../support/seed.dart';
 
@@ -52,5 +57,47 @@ void main() {
     await settle(tester);
     expect(find.text('管理員'), findsNothing);
     expect(find.text('同工加入'), findsNothing);
+  });
+
+  group('turned on the first time, while the phone asks', () {
+    bool shownOn(WidgetTester tester, String title) => tester
+        .widget<Switch>(find.descendant(of: find.widgetWithText(SwitchRow, title), matching: find.byType(Switch)))
+        .value;
+
+    Future<FakePush> open(WidgetTester tester, PushPermission answer, Completer<void> prompt) async {
+      final push = FakePush(answer: answer, prompt: prompt);
+      await pumpApp(tester, seededChurch(as: staffMei), overrides: [pushServiceProvider.overrideWithValue(push)]);
+      GoRouter.of(tester.element(find.byType(Scaffold).first)).go('/me/notifications');
+      await settle(tester);
+      return push;
+    }
+
+    testWidgets('the switch shows on at once, asked once however often tapped', (tester) async {
+      final prompt = Completer<void>();
+      final push = await open(tester, PushPermission.granted, prompt);
+      expect(shownOn(tester, '服事提醒'), isFalse);
+      await tester.tap(find.text('服事提醒'));
+      await settle(tester);
+      expect(shownOn(tester, '服事提醒'), isTrue);
+      await tester.tap(find.text('服事提醒'));
+      await tester.tap(find.text('找人代／交換'));
+      await settle(tester);
+      expect(push.asked, 1);
+      prompt.complete();
+      await settle(tester);
+      expect(shownOn(tester, '服事提醒'), isTrue);
+      expect(shownOn(tester, '找人代／交換'), isFalse);
+    });
+
+    testWidgets('refused, it goes back off', (tester) async {
+      final prompt = Completer<void>();
+      await open(tester, PushPermission.denied, prompt);
+      await tester.tap(find.text('服事提醒'));
+      await settle(tester);
+      expect(shownOn(tester, '服事提醒'), isTrue);
+      prompt.complete();
+      await settle(tester);
+      expect(shownOn(tester, '服事提醒'), isFalse);
+    });
   });
 }
