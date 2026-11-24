@@ -10,6 +10,8 @@ import 'package:martha/data/backend.dart';
 import 'package:martha/data/memory/memory_backend.dart';
 import 'package:martha/domain/day.dart';
 import 'package:martha/domain/models.dart';
+import 'package:martha/domain/unavailable.dart';
+import 'package:martha/state/providers.dart';
 import 'package:martha/state/session.dart';
 
 import '../support/harness.dart';
@@ -372,6 +374,33 @@ void main() {
 
     await go(tester, '/home');
     expect(find.text('填不能服事的日子'), findsNothing, reason: 'sent');
+  });
+
+  testWidgets('home waits for what was asked of me, then shows it with my days, not after them', (tester) async {
+    final b = seededChurch(as: staffMei);
+    final asked = StreamController<UnavailableAsked?>();
+    addTearDown(asked.close);
+    await pumpApp(tester, b, overrides: [unavailableAskedProvider.overrideWith((ref) => asked.stream)]);
+    await go(tester, '/home');
+    expect(find.text('我接下來的服事'), findsNothing, reason: 'waiting for the server');
+    expect(find.text('填不能服事的日子'), findsNothing);
+
+    asked.add(UnavailableAsked(at: testNow, from: Day(2026, 12, 1), to: Day(2026, 12, 1)));
+    await settle(tester);
+    expect(find.text('我接下來的服事'), findsOneWidget);
+    expect(find.text('填不能服事的日子'), findsOneWidget, reason: 'in the same frame as my days');
+  });
+
+  testWidgets('home shows my days when what was asked of me cannot be read', (tester) async {
+    final b = seededChurch(as: staffMei);
+    await pumpApp(
+      tester,
+      b,
+      overrides: [unavailableAskedProvider.overrideWith((ref) => Stream.error(Exception('offline')))],
+    );
+    await go(tester, '/home');
+    expect(find.text('我接下來的服事'), findsOneWidget);
+    expect(find.text('填不能服事的日子'), findsNothing);
   });
 
   testWidgets('都可以服事 sends with no days marked, and home stops asking', (tester) async {

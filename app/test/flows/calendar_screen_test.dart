@@ -71,6 +71,60 @@ void main() {
     expect(tester.getTopLeft(agendaEvent('活動20')).dy, lessThan(top + 60), reason: 'back to this month, today again');
   });
 
+  testWidgets('a month other than this one opens on its first day', (tester) async {
+    final b = seededChurch(as: staffMei, clock: () => testNow.add(const Duration(days: 19)));
+    b.connectCalendar('grace', calendarName: '教會行事曆');
+    b.calendarEvents['grace'] = [
+      for (var day = 1; day <= 30; day++)
+        CalendarEvent(
+          id: '$day',
+          title: '十一月$day',
+          start: DateTime(2026, 11, day, 19),
+          end: DateTime(2026, 11, day, 20),
+        ),
+    ];
+    await pumpApp(tester, b);
+    await openCalendar(tester);
+    await tester.tap(find.byTooltip('下個月'));
+    await settle(tester);
+    expect(agendaEvent('十一月1').hitTestable(), findsOneWidget);
+  });
+
+  testWidgets('with no events from today on, this month opens at its top', (tester) async {
+    final b = seededChurch(as: staffMei, clock: () => testNow.add(const Duration(days: 19)));
+    b.connectCalendar('grace', calendarName: '教會行事曆');
+    b.calendarEvents['grace'] = [
+      for (var day = 1; day <= 10; day++)
+        CalendarEvent(
+          id: '$day',
+          title: '活動$day',
+          start: DateTime(2026, 10, day, 19),
+          end: DateTime(2026, 10, day, 20),
+        ),
+    ];
+    await pumpApp(tester, b);
+    await openCalendar(tester);
+    expect(agendaEvent('活動1').hitTestable(), findsOneWidget);
+  });
+
+  testWidgets('a grid that scrolls with the events stays in view on opening', (tester) async {
+    final b = seededChurch(as: staffMei, clock: () => testNow.add(const Duration(days: 19)));
+    b.connectCalendar('grace', calendarName: '教會行事曆');
+    b.calendarEvents['grace'] = [
+      for (var day = 1; day <= 30; day++)
+        CalendarEvent(
+          id: '$day',
+          title: '活動$day',
+          start: DateTime(2026, 10, day, 19),
+          end: DateTime(2026, 10, day, 20),
+        ),
+    ];
+    // Large text: the month grid scrolls with the list.
+    await pumpApp(tester, b, textScale: 2);
+    await openCalendar(tester);
+    expect(monthDay(1).hitTestable(), findsOneWidget);
+  });
+
   group('a picked day', () {
     CalendarEvent event(String id, int day, {int days = 1}) => CalendarEvent(
       id: id,
