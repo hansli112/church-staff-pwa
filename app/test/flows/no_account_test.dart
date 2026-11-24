@@ -141,6 +141,25 @@ void main() {
     expect(savedDay(b, 11).duties.firstWhere((d) => d.role == '司琴').uids, {'王小明': added.id});
   });
 
+  testWidgets('a 同工 being added: the duty spins and opens nothing till they are on it', (tester) async {
+    final b = church(as: editor);
+    await pumpApp(tester, b);
+    await go(tester, '/rosters/sunday/2026-10-11');
+    await tapText(tester, '司琴');
+    await tester.enterText(find.byType(TextField).last, '王小明');
+    await settle(tester);
+    b.writeHeld = Completer<void>();
+    await tapText(tester, '新增同工「王小明」');
+    final row = find.ancestor(of: find.text('司琴'), matching: find.byType(InkWell)).first;
+    expect(find.descendant(of: row, matching: find.byType(CircularProgressIndicator)), findsOneWidget);
+    expect(tester.widget<InkWell>(row).onTap, isNull);
+    b.writeHeld!.complete();
+    b.writeHeld = null;
+    await settle(tester);
+    expect(find.descendant(of: row, matching: find.byType(CircularProgressIndicator)), findsNothing);
+    expect(savedDay(b, 11).duties.firstWhere((d) => d.role == '司琴').people, ['王小明']);
+  });
+
   testWidgets('a name someone here has is not offered as a new 同工', (tester) async {
     final b = church(as: editor);
     await pumpApp(tester, b);

@@ -188,7 +188,8 @@ class _DutyRow extends ConsumerWidget {
     final l10n = L10n.of(context);
     final c = AppColors.of(context);
     final platform = Theme.of(context).platform;
-    final ready = editable && _editingReady(ref, roster);
+    final adding = addingStaffTo(ref, roster, duty.role);
+    final ready = editable && !adding && _editingReady(ref, roster);
     return InkWell(
       onTap: ready ? () => _pick(context, ref) : null,
       child: ConstrainedBox(
@@ -219,7 +220,10 @@ class _DutyRow extends ConsumerWidget {
                     : Text(duty.people.join(l10n.listSeparator), style: AppText.body),
               ),
               const SizedBox(width: Space.s),
-              if (editable) Icon(Symbols.chevron_right_rounded, color: c.tertiaryLabel, size: 22),
+              if (adding)
+                const SizedBox.square(dimension: 22, child: CircularProgressIndicator.adaptive(strokeWidth: 2))
+              else if (editable)
+                Icon(Symbols.chevron_right_rounded, color: c.tertiaryLabel, size: 22),
             ],
           ),
         ),

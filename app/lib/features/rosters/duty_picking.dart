@@ -223,6 +223,28 @@ Future<bool> swapDutyDays(
   );
 }
 
+/// Duties with 同工 typed in being added, as `rosterId/role`: the day
+/// waits for them, so the duty's row spins and opens nothing meanwhile.
+final addingStaffProvider = NotifierProvider<AddingStaff, Set<String>>(AddingStaff.new);
+
+class AddingStaff extends Notifier<Set<String>> {
+  @override
+  Set<String> build() => const {};
+
+  Future<T> during<T>(String key, Future<T> Function() work) async {
+    state = {...state, key};
+    try {
+      return await work();
+    } finally {
+      if (ref.mounted) state = {...state}..remove(key);
+    }
+  }
+}
+
+/// Whether 同工 typed in for [role] on [roster] are being added.
+bool addingStaffTo(WidgetRef ref, Roster roster, String role) =>
+    ref.watch(addingStaffProvider).contains('${roster.id}/$role');
+
 Future<void> _savePicked(
   BuildContext context,
   WidgetRef ref,
@@ -240,7 +262,11 @@ Future<void> _savePicked(
   }
   final DutyPickSave save;
   try {
-    save = await ref.read(dutyPickingProvider).save(roster, duty, result, via: via);
+    final picking = ref.read(dutyPickingProvider);
+    Future<DutyPickSave> saving() => picking.save(roster, duty, result, via: via);
+    save = result.newStaff.isEmpty
+        ? await saving()
+        : await ref.read(addingStaffProvider.notifier).during('${roster.id}/${duty.role}', saving);
   } on StaffNotAdded catch (e) {
     if (context.mounted) showToast(context, nameErrorText(l10n, e.error, e.name));
     return;
