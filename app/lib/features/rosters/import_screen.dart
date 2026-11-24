@@ -443,20 +443,7 @@ class _ImportScreenState extends ConsumerState<ImportScreen> {
           ),
         ),
         if (_busy)
-          Padding(
-            padding: const EdgeInsets.all(Space.l),
-            child: Column(
-              children: [
-                const CircularProgressIndicator.adaptive(),
-                const SizedBox(height: Space.m),
-                BalancedText(
-                  l10n.photoRecognizing,
-                  textAlign: TextAlign.start,
-                  style: AppText.body.copyWith(color: c.secondaryLabel),
-                ),
-              ],
-            ),
-          )
+          const _Recognizing()
         else ...[
           PrimaryButton(
             label: l10n.photoTake,
@@ -1068,6 +1055,51 @@ class _WhoSheetState extends State<_WhoSheet> {
           ),
         ),
       ],
+    );
+  }
+}
+
+/// The spinner while photos are read: about a minute, it says, and once a
+/// minute has gone by, that it is still going.
+class _Recognizing extends StatefulWidget {
+  const _Recognizing();
+
+  @override
+  State<_Recognizing> createState() => _RecognizingState();
+}
+
+class _RecognizingState extends State<_Recognizing> {
+  late final Timer _minute;
+  bool _long = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _minute = Timer(const Duration(minutes: 1), () => setState(() => _long = true));
+  }
+
+  @override
+  void dispose() {
+    _minute.cancel();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = L10n.of(context);
+    return Padding(
+      padding: const EdgeInsets.all(Space.l),
+      child: Column(
+        children: [
+          const CircularProgressIndicator.adaptive(),
+          const SizedBox(height: Space.m),
+          BalancedText(
+            _long ? l10n.photoStillRecognizing : l10n.photoRecognizing,
+            textAlign: TextAlign.start,
+            style: AppText.body.copyWith(color: AppColors.of(context).secondaryLabel),
+          ),
+        ],
+      ),
     );
   }
 }

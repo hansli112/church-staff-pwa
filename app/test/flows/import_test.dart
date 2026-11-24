@@ -179,6 +179,27 @@ void main() {
     expect(b.photosUsed['grace'], 1);
   });
 
+  testWidgets('a photo read for over a minute says it is still being read', (tester) async {
+    final oldPicker = ImagePickerPlatform.instance;
+    ImagePickerPlatform.instance = _PhotoPicker();
+    addTearDown(() => ImagePickerPlatform.instance = oldPicker);
+    final b = agreedChurch();
+    final reading = Completer<void>();
+    b.recognizing = reading.future;
+    b.recognized = const [];
+    await pumpApp(tester, b);
+    await go(tester, '/rosters/import/sunday');
+    await tapText(tester, '選照片');
+    expect(findShown('辨識中，大約需要一分鐘'), findsOneWidget);
+    await tester.pump(const Duration(seconds: 59));
+    expect(findShown('還在辨識，再等一下'), findsNothing);
+    await tester.pump(const Duration(seconds: 2));
+    expect(findShown('還在辨識，再等一下'), findsOneWidget);
+    expect(findShown('辨識中，大約需要一分鐘'), findsNothing);
+    reading.complete();
+    await settle(tester);
+  });
+
   testWidgets("進階 copies the photo prompt, the church's own, for an AI of the editor's choosing", (tester) async {
     final out = captureOutbox(tester);
     final b = agreedChurch();
