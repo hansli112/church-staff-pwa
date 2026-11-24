@@ -5,11 +5,14 @@
 #
 #   scripts/deploy.sh dev
 #   scripts/deploy.sh prod [--only hosting]
+#
+# The rules go with the functions: a feature's rules left behind once kept
+# everyone from reading the 家人 its functions had saved.
 set -euo pipefail
 
 env_name="${1:?dev or prod}"
 shift
-only="functions,hosting"
+only="firestore,storage,functions,hosting"
 if [ "${1:-}" = "--only" ]; then only="${2:?what to deploy}"; fi
 
 root="$(cd "$(dirname "$0")/.." && pwd)"

@@ -29,6 +29,8 @@ class FamilyScreen extends ConsumerWidget {
     try {
       people = await ref.read(familyAddableProvider.future);
     } catch (e) {
+      // Asked again on the next tap, not this failure kept.
+      ref.invalidate(familyAddableProvider);
       if (context.mounted) showToast(context, errorText(l10n, e));
       return;
     }
@@ -102,6 +104,9 @@ class FamilyScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final l10n = L10n.of(context);
     final me = ref.watch(meProvider).value;
+    // Asked for now, so 加入家人 opens its list at once rather than waiting
+    // on the backend then.
+    ref.watch(familyAddableProvider);
     final changed = ref.watch(_familyShown);
     final had = ref.watch(familyProvider);
     final family = [
