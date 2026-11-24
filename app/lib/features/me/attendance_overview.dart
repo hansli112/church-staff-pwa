@@ -193,7 +193,30 @@ class _AttendanceOverviewScreenState extends ConsumerState<AttendanceOverviewScr
       }
     }
     if (gatherings && !out.any((s) => s.service == null)) out.add((service: null, rows: [], named: true));
-    return out;
+    // 未填 first, the oldest first, today's too: what is left to do, not
+    // under the rest (2026-11-24). Then the rest as they were.
+    bool missing(AttendanceRow r) => r.day != null && r.value == null;
+    return [
+      for (final s in out)
+        (
+          service: s.service,
+          rows: [
+            // Same day: as they were (sort is not stable).
+            ...([
+                  for (final (i, r) in s.rows.indexed)
+                    if (missing(r)) (i, r),
+                ]..sort(
+                  (a, b) => switch (a.$2.day!.compareTo(b.$2.day!)) {
+                    0 => a.$1.compareTo(b.$1),
+                    final c => c,
+                  },
+                ))
+                .map((x) => x.$2),
+            ...s.rows.where((r) => !missing(r)),
+          ],
+          named: s.named,
+        ),
+    ];
   }
 
   Widget _addGatheringRow(BuildContext context, WidgetRef ref) => ListRow(

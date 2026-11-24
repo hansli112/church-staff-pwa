@@ -460,8 +460,8 @@ void main() {
       expect(inRow('青年崇拜', '未填'), findsOneWidget, reason: '每週都填人數, no roster; Saturday 10/10');
       expect(find.text('平安小組'), findsNothing, reason: 'on a break');
       double at(Finder f) => tester.getTopLeft(f).dy;
-      final ys = [at(inRow('主日崇拜', '120 人')), at(inRow('喜樂小組', '未填')), at(inRow('青年崇拜', '未填'))];
-      expect(ys, orderedEquals([...ys]..sort()), reason: 'a service, then its 小組, whatever the day; then the next');
+      final ys = [at(inRow('喜樂小組', '未填')), at(inRow('主日崇拜', '120 人')), at(inRow('青年崇拜', '未填'))];
+      expect(ys, orderedEquals([...ys]..sort()), reason: "未填 first in a service's card; then the next service");
       IconButton arrow(IconData icon) => tester.widget<IconButton>(find.widgetWithIcon(IconButton, icon));
 
       await tester.tap(find.byTooltip('上一週'));
