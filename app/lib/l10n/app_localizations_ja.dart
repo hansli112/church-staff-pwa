@@ -3524,9 +3524,18 @@ class L10nJa extends L10n {
   String get unavailableSent => '送信しました';
 
   @override
-  String unavailableAskedMonths(String months) {
-    return '$months分を入力してください';
+  String unavailableAskedMonths(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'この$countか月を入力してください',
+      one: 'この月を入力してください',
+    );
+    return '$_temp0';
   }
+
+  @override
+  String get unavailableSendNote => 'わかる日だけで大丈夫です。送信後も変更できます。';
 
   @override
   String planAskRound(String months, int count) {

@@ -3725,9 +3725,18 @@ class L10nEn extends L10n {
   String get unavailableSent => 'Sent';
 
   @override
-  String unavailableAskedMonths(String months) {
-    return 'Fill in $months';
+  String unavailableAskedMonths(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'Fill in these $count months',
+      one: 'Fill in this month',
+    );
+    return '$_temp0';
   }
+
+  @override
+  String get unavailableSendNote => 'Fill in what you know. You can change it after sending.';
 
   @override
   String planAskRound(String months, int count) {

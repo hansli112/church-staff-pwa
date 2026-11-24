@@ -6202,11 +6202,17 @@ abstract class L10n {
   /// **'已送出'**
   String get unavailableSent;
 
-  /// 不能服事的日子 (#91): above the month while asked and not sent; months is 「12月到1月」, shown bold
+  /// 不能服事的日子 (#91): above the months asked, while not sent
   ///
   /// In zh, this message translates to:
-  /// **'請填 {months}'**
-  String unavailableAskedMonths(String months);
+  /// **'{count, plural, =1{請填這個月} =2{請填這兩個月} other{請填這 {count} 個月}}'**
+  String unavailableAskedMonths(int count);
+
+  /// 不能服事的日子 (#91): above 送出 while asked and not sent; one may not know the later days yet
+  ///
+  /// In zh, this message translates to:
+  /// **'填知道的就好，送出後還能改。'**
+  String get unavailableSendNote;
 
   /// No description provided for @planAskRound.
   ///

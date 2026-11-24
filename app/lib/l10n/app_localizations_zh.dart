@@ -3519,9 +3519,19 @@ class L10nZh extends L10n {
   String get unavailableSent => '已送出';
 
   @override
-  String unavailableAskedMonths(String months) {
-    return '請填 $months';
+  String unavailableAskedMonths(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '請填這 $count 個月',
+      two: '請填這兩個月',
+      one: '請填這個月',
+    );
+    return '$_temp0';
   }
+
+  @override
+  String get unavailableSendNote => '填知道的就好，送出後還能改。';
 
   @override
   String planAskRound(String months, int count) {
@@ -7324,9 +7334,19 @@ class L10nZhHans extends L10nZh {
   String get unavailableSent => '已提交';
 
   @override
-  String unavailableAskedMonths(String months) {
-    return '请填 $months';
+  String unavailableAskedMonths(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '请填这 $count 个月',
+      two: '请填这两个月',
+      one: '请填这个月',
+    );
+    return '$_temp0';
   }
+
+  @override
+  String get unavailableSendNote => '填知道的就好，提交后还能改。';
 
   @override
   String planAskRound(String months, int count) {

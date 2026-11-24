@@ -27,7 +27,7 @@ import '../common/saving_indicator.dart';
 /// clears it; a drag marks the days it crosses, or clears them when it
 /// starts on a marked one. Each change shows at once and is kept in turn. Only those who arrange rosters see them,
 /// with what I wrote about each stretch. Asked by 通知同工填, it opens on the
-/// first month asked, says which months above it, with 送出 (都可以服事 with none of those days marked)
+/// first month asked, the months asked above it to go to, with 送出 (都可以服事 with none of those days marked)
 /// at the bottom until I send; changes after go on being kept.
 class UnavailableScreen extends ConsumerStatefulWidget {
   const UnavailableScreen({super.key});
@@ -200,10 +200,22 @@ class _UnavailableScreenState extends ConsumerState<UnavailableScreen> {
             child: Builder(
               builder: (context) {
                 final free = days.during(a.from, a.to.lastOfMonth) == null;
-                return PrimaryButton(
-                  label: free ? l10n.unavailableAllFree : l10n.unavailableSend,
-                  busy: _sending,
-                  onPressed: () => _send(free: free),
+                return Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    // Many do not know yet what comes later (2026-11-24).
+                    Text(
+                      l10n.unavailableSendNote,
+                      textAlign: TextAlign.center,
+                      style: AppText.footnote.copyWith(color: c.secondaryLabel),
+                    ),
+                    const SizedBox(height: Space.s),
+                    PrimaryButton(
+                      label: free ? l10n.unavailableAllFree : l10n.unavailableSend,
+                      busy: _sending,
+                      onPressed: () => _send(free: free),
+                    ),
+                  ],
                 );
               },
             ),
@@ -233,7 +245,18 @@ class _UnavailableScreenState extends ConsumerState<UnavailableScreen> {
           : ListView(
               padding: const EdgeInsets.only(bottom: Space.xl),
               children: [
-                if (asked != null && asked.waitingOn(today)) _AskedMonths(monthsLabel(l10n, asked.from, asked.to)),
+                if (asked != null && asked.waitingOn(today))
+                  _AskedMonths(
+                    months: [
+                      for (var m = asked.from; !asked.to.isBefore(m); m = Day(m.year, m.month + 1, 1))
+                        if (!m.lastOfMonth.isBefore(today)) m,
+                    ],
+                    shown: Day(today.year, today.month + _page, 1),
+                    onPick: (month) => setState(() {
+                      _moved = true;
+                      _page = ((month.year - today.year) * 12 + month.month - today.month).clamp(0, months - 1).toInt();
+                    }),
+                  ),
                 _Month(
                   month: Day(today.year, today.month + _page, 1),
                   today: today,
@@ -310,33 +333,56 @@ class _UnavailableScreenState extends ConsumerState<UnavailableScreen> {
   }
 }
 
-/// 「請填 12月到1月」 above the month while asked and not sent: home says
-/// the months, and the page opens only on the first.
+/// The months asked, above the month while not sent: home says them, and
+/// the page opens only on the first. A tap goes to one; the arrows still go
+/// to the others, whose days matter as much.
 class _AskedMonths extends StatelessWidget {
-  const _AskedMonths(this.months);
+  const _AskedMonths({required this.months, required this.shown, required this.onPick});
 
-  final String months;
+  /// The first of each, those not gone by.
+  final List<Day> months;
+
+  /// The month showing, perhaps not one asked.
+  final Day shown;
+  final ValueChanged<Day> onPick;
 
   @override
   Widget build(BuildContext context) {
+    final l10n = L10n.of(context);
     final c = AppColors.of(context);
-    final line = L10n.of(context).unavailableAskedMonths(months);
-    final at = line.indexOf(months);
     return Padding(
       padding: const EdgeInsets.fromLTRB(Space.m, Space.m, Space.m, 0),
-      child: Text.rich(
-        TextSpan(
-          children: [
-            TextSpan(text: line.substring(0, at)),
-            TextSpan(
-              text: months,
-              style: TextStyle(color: c.label, fontWeight: FontWeight.w600),
-            ),
-            TextSpan(text: line.substring(at + months.length)),
-          ],
-        ),
-        textAlign: TextAlign.center,
-        style: AppText.subheadline.copyWith(color: c.secondaryLabel),
+      child: Column(
+        children: [
+          Text(
+            l10n.unavailableAskedMonths(months.length),
+            textAlign: TextAlign.center,
+            style: AppText.footnote.copyWith(color: c.secondaryLabel),
+          ),
+          const SizedBox(height: Space.s),
+          LayoutBuilder(
+            builder: (context, constraints) {
+              // Each wide enough for its name; scrolled when there are many.
+              final width = months.length * 88.0;
+              final segments = SegmentedButton<Day>(
+                showSelectedIcon: false,
+                emptySelectionAllowed: true,
+                segments: [
+                  for (final m in months)
+                    ButtonSegment(value: m, label: Text(DateFormat.MMM().format(m.midnight), maxLines: 1)),
+                ],
+                selected: {if (months.contains(shown)) shown},
+                onSelectionChanged: (v) {
+                  if (v.isEmpty) return;
+                  Haptics.selection();
+                  onPick(v.first);
+                },
+              );
+              if (width <= constraints.maxWidth) return SizedBox(width: width, child: segments);
+              return SingleChildScrollView(scrollDirection: Axis.horizontal, child: segments);
+            },
+          ),
+        ],
       ),
     );
   }

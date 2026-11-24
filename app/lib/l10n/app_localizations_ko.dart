@@ -3522,9 +3522,18 @@ class L10nKo extends L10n {
   String get unavailableSent => '보냈어요';
 
   @override
-  String unavailableAskedMonths(String months) {
-    return '$months 입력해 주세요';
+  String unavailableAskedMonths(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '이 $count개월을 입력해 주세요',
+      one: '이 달을 입력해 주세요',
+    );
+    return '$_temp0';
   }
+
+  @override
+  String get unavailableSendNote => '아는 날만 입력하면 돼요. 보낸 후에도 바꿀 수 있어요.';
 
   @override
   String planAskRound(String months, int count) {
