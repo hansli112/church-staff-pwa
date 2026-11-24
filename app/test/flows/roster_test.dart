@@ -9,6 +9,7 @@ import 'package:martha/data/memory/memory_backend.dart';
 import 'package:martha/state/providers.dart';
 import 'package:martha/domain/day.dart';
 import 'package:martha/domain/models.dart';
+import 'package:martha/domain/staff_order.dart';
 import 'package:martha/features/rosters/editable_roster.dart';
 import 'package:martha/features/rosters/people_picker.dart';
 import 'package:martha/features/rosters/roster_card.dart';
@@ -71,6 +72,31 @@ void main() {
       fail = false;
       await tapText(tester, '重試');
       expect(find.text('李美玉'), findsWidgets);
+    });
+
+    testWidgets('who arranges: what editing reads fails, the roster says so with 重試, not just grey buttons', (
+      tester,
+    ) async {
+      final b = seededChurch(as: editor);
+      var fail = true;
+      await pumpApp(
+        tester,
+        b,
+        overrides: [
+          staffOrderProvider.overrideWith(
+            (ref, type) => fail
+                ? Stream.error(const CloudException(CloudErrorCode.unavailable))
+                : Stream.value(b.staffOrders['grace']?[type] ?? StaffOrder()),
+          ),
+        ],
+      );
+      await go(tester, '/rosters/sunday/2026-10-04');
+      expect(find.text('載入失敗，請檢查網路後再試一次'), findsOneWidget);
+      fail = false;
+      await tapText(tester, '重試');
+      expect(find.text('載入失敗，請檢查網路後再試一次'), findsNothing);
+      await tapText(tester, '司琴');
+      expect(find.byType(PeoplePicker), findsOneWidget, reason: 'editing works again');
     });
 
     testWidgets("an event's roster shows in 我的服事 by its title and opens; a cancelled one is gone", (tester) async {

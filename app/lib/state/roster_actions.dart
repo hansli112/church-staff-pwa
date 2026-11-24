@@ -483,4 +483,45 @@ final rosterEditingProvider = Provider.autoDispose.family<bool, String>((ref, ty
   ];
   return loaded.every((v) => v.hasValue);
 });
+
+/// The first read [rosterEditingProvider] waits on for service [type] that
+/// failed with nothing to show, or null: editing then stays off until
+/// [readEditingAgain].
+final rosterEditingErrorProvider = Provider.autoDispose.family<Object?, String>(
+  (ref, type) => _failed([
+    ref.watch(servicesProvider),
+    ref.watch(savedRostersProvider),
+    ref.watch(staffProvider),
+    ref.watch(staffOrderProvider(type)),
+  ]),
+);
+
+/// Like [rosterEditingErrorProvider], for [eventEditingProvider].
+final eventEditingErrorProvider = Provider.autoDispose<Object?>((ref) {
+  final services = ref.watch(servicesProvider);
+  return _failed([
+    services,
+    ref.watch(savedRostersProvider),
+    ref.watch(staffProvider),
+    for (final s in services.value?.services ?? const <Service>[]) ref.watch(staffOrderProvider(s.id)),
+  ]);
+});
+
+Object? _failed(List<AsyncValue<Object?>> reads) => reads.where((v) => v.hasError && !v.hasValue).firstOrNull?.error;
+
+/// Reads again what editing failed to read ([rosterEditingErrorProvider]):
+/// for service [type], or, with none, an event's roster (every service).
+void readEditingAgain(WidgetRef ref, {String? type}) {
+  bool failed(AsyncValue<Object?> v) => v.hasError && !v.hasValue;
+  if (failed(ref.read(servicesProvider))) ref.invalidate(servicesProvider);
+  if (failed(ref.read(savedRostersProvider))) ref.invalidate(savedRostersProvider);
+  if (failed(ref.read(membersProvider))) ref.invalidate(membersProvider);
+  final types = type != null
+      ? [type]
+      : [for (final s in ref.read(servicesProvider).value?.services ?? const <Service>[]) s.id];
+  for (final t in types) {
+    if (failed(ref.read(staffOrderProvider(t)))) ref.invalidate(staffOrderProvider(t));
+  }
+}
+
 final rosterActionsProvider = Provider<RosterActions>(RosterActions.new);

@@ -22,6 +22,10 @@ import 'roster_card.dart';
 bool _editingReady(WidgetRef ref, Roster roster) =>
     roster.isEvent ? ref.watch(eventEditingProvider) : ref.watch(rosterEditingProvider(roster.type));
 
+/// What editing [roster] failed to read, with nothing to show, or null.
+Object? _editingError(WidgetRef ref, Roster roster) =>
+    roster.isEvent ? ref.watch(eventEditingErrorProvider) : ref.watch(rosterEditingErrorProvider(roster.type));
+
 /// A roster as its editors see it: tap a duty, names and all, to pick
 /// people, swipe it away.
 class EditableRoster extends ConsumerWidget {
@@ -126,6 +130,12 @@ class EditableRoster extends ConsumerWidget {
         ),
         if (roster.duties.isEmpty && (whenEmpty != null || onAddDuty == null))
           whenEmpty ?? EmptyState(message: l10n.addDuty),
+        // Its buttons stay grey until what editing reads is read.
+        if (_editingError(ref, roster) != null)
+          ErrorRetry(
+            message: l10n.loadFailed,
+            onRetry: () => readEditingAgain(ref, type: roster.isEvent ? null : roster.type),
+          ),
       ],
     );
   }

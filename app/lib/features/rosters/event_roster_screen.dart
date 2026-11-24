@@ -265,16 +265,35 @@ class EventRosterScreen extends ConsumerWidget {
 
 /// An event's roster with no duties yet: what it says, and the two ways to
 /// start, one filled and one plain, not two links alike.
-class _StartRoster extends StatelessWidget {
+class _StartRoster extends StatefulWidget {
   const _StartRoster({required this.onAdd, required this.copies, this.onCopy});
 
   /// Null, as [onCopy], while what they write with loads.
   final VoidCallback? onAdd;
   final bool copies;
-  final VoidCallback? onCopy;
+  final Future<void> Function()? onCopy;
+
+  @override
+  State<_StartRoster> createState() => _StartRosterState();
+}
+
+class _StartRosterState extends State<_StartRoster> {
+  /// 沿用其他活動 reading the other events, or its list open: one tap, one list.
+  bool _copying = false;
+
+  Future<void> _copy(Future<void> Function() copy) async {
+    if (_copying) return;
+    setState(() => _copying = true);
+    try {
+      await copy();
+    } finally {
+      if (mounted) setState(() => _copying = false);
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
+    final _StartRoster(:onAdd, :copies, :onCopy) = widget;
     final l10n = L10n.of(context);
     final c = AppColors.of(context);
     return Padding(
@@ -294,7 +313,11 @@ class _StartRoster extends StatelessWidget {
           ),
           if (copies) ...[
             const SizedBox(height: Space.s),
-            SecondaryButton(label: l10n.copyDuties, expand: true, onPressed: onCopy),
+            SecondaryButton(
+              label: l10n.copyDuties,
+              expand: true,
+              onPressed: onCopy == null || _copying ? null : () => _copy(onCopy),
+            ),
           ],
         ],
       ),
