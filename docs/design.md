@@ -393,6 +393,7 @@ Chrome 小幅改善；桌面 WebKit 差距小且教會資訊冷開反而較慢�
   - 只記 uid、教會 ID 和錯誤本身。錯誤都先經過 `loggable()`（`functions/src/redact.ts`），只留種類、code、status，以及去掉 email 和電話號碼的訊息與堆疊。訊息裡的姓名去不掉，所以自己丟的錯誤只寫 ID，不寫名字。不記整個錯誤物件：Google API 的錯誤會帶著整個請求和回應（token、活動標題、參加的人）。
 - 通知：Crashlytics 與 Error Reporting 的「新錯誤類型」email，寄到 support@marthasit.com，不用開新帳號。收到後怎麼查、怎麼修見 `docs/firebase-setup.md`〈收到錯誤信之後〉。
 - 檢視：Hans 後台加「統計」頁，畫每日快照趨勢；行為與錯誤細節連到 Firebase / GCP console。
+- 週報（2026-11-25）：每週一 9:00（台北）`weeklyReport` 寄一封信到 support@marthasit.com，比上一個完整週一到週日和前一週：新使用者（每天）、使用者、使用中的教會、7 天內打開過 App、有人排服事表的教會；新教會有幾間邀了第二個人、排了服事表、10 人以上；改最多服事表的教會、上週有排這週停了的教會、網站線上支持。prod 另外讀 GA4（各平台活躍與新使用者、關鍵事件、國家、來源）和 Search Console（點擊、曝光、點閱率、排名、搜尋字詞）。信件用表格和行內樣式畫，Gmail 不顯示 SVG、flex。只有 prod 寄，dev 的排程什麼都不做。寄信用 Resend（`report@marthasit.com`）。本機預覽：`functions/scripts/weekly-report.ts`。
 - 隱私：log 只記 uid、cid、錯誤堆疊，不記姓名、email、服事表內容；log 保留預設 30 天。分析不提供關閉開關，隱私權政策與商店隱私標籤揭露。
 
 ## 授權

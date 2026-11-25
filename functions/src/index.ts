@@ -17,6 +17,7 @@ import {
 } from 'firebase-functions/v2/firestore';
 import { onCall, onRequest, type CallableOptions, type CallableRequest, type Request } from 'firebase-functions/v2/https';
 import type { Response } from 'express';
+import { logger } from 'firebase-functions/v2';
 import { defineSecret, type SecretParam } from 'firebase-functions/params';
 import { onMessagePublished } from 'firebase-functions/v2/pubsub';
 import { onSchedule } from 'firebase-functions/v2/scheduler';
@@ -61,6 +62,7 @@ import * as sharedSettings from './sharedSettings.js';
 import * as smallGroups from './smallGroups.js';
 import * as triggers from './triggers.js';
 import * as webhook from './webhook.js';
+import { sendWeeklyReport } from './weeklyReport.js';
 
 initializeApp();
 
@@ -290,6 +292,31 @@ export const dailyStats = onSchedule(
   { region: REGION, schedule: 'every day 01:30', timeZone: 'Asia/Taipei' },
   async () => {
     await writeDailyStats(deps());
+  },
+);
+
+// 週報: Monday morning, after dailyStats wrote Sunday's snapshot; prod
+// only. GA4 and Search Console are read as search-console@ (GA4 viewer,
+// Search Console restricted user) by impersonation: the runtime account
+// has roles/iam.serviceAccountTokenCreator on it.
+const resendKey = defineSecret('RESEND_API_KEY');
+export const weeklyReport = onSchedule(
+  { region: REGION, schedule: 'every monday 09:00', timeZone: 'Asia/Taipei', secrets: [resendKey] },
+  async () => {
+    if (process.env.GCLOUD_PROJECT !== PROD_PROJECT) return;
+    // scripts/firebase-project.sh makes a placeholder; Resend's keys start re_.
+    if (!resendKey.value().startsWith('re_')) return logger.info('weeklyReport: no Resend key, not sent');
+    await sendWeeklyReport({
+      ...deps(),
+      analytics: {
+        accessToken: async () => (await applicationDefault().getAccessToken()).access_token,
+        reader: `search-console@${PROD_PROJECT}.iam.gserviceaccount.com`,
+        ga4Property: '557570984',
+        gscSite: 'sc-domain:marthasit.com',
+        project: PROD_PROJECT,
+      },
+      resend: { apiKey: resendKey.value(), from: '馬大別忙週報 <report@marthasit.com>', to: 'support@marthasit.com' },
+    });
   },
 );
 

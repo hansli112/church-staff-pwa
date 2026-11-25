@@ -3,7 +3,7 @@ import { Timestamp } from 'firebase-admin/firestore';
 import { dateKeyUtc8, serverTime, type Deps } from './common.js';
 
 /** A roster's `via` when the backend changed it, not someone. */
-const BY_THE_BACKEND = new Set(['calendar', 'relink', 'restore', 'timeZone', 'import']);
+export const BY_THE_BACKEND = new Set(['calendar', 'relink', 'restore', 'timeZone', 'import']);
 
 /**
  * Writes stats/{date} for the day before [deps.now()] (UTC+8). Uses set(),

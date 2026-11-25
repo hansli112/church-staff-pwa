@@ -69,6 +69,7 @@ test('each function lists the secrets its dependencies read, and no others', () 
     calendarEvents: calendar,
     calendarWrite: calendar,
     calendarCallback: calendar,
+    weeklyReport: ['RESEND_API_KEY'],
   });
 });
 

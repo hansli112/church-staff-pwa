@@ -269,6 +269,25 @@ printf placeholder | gcloud secrets create ECPAY_HASH_IV  --project <專案> --r
 
 **從測試換到正式**：測試特店和正式特店的編號和兩把金鑰都不一樣。三樣一起換（secret 加新版本、`.env` 的 `ECPAY_MERCHANT_ID` 和 `ECPAY_ENV=production`），再部署 Functions。
 
+## 週報（Resend）
+
+`weeklyReport` 每週一 9:00 用 Resend 寄週報（`docs/design.md`〈數據與監控〉），只有 prod 寄。`RESEND_API_KEY` 還是 `firebase-project.sh` 建的佔位值時不寄；dev 留著佔位值就好（函式宣告了這個 secret，沒有的話部署會停）。
+
+1. 在 Resend 加網域 `marthasit.com`，照它給的 DNS 紀錄（DKIM 的 TXT、`send` 子網域的 MX 和 SPF TXT）加到 Porkbun，等 Resend 顯示 Verified。
+2. 建一把只能寄信（Sending access）的 API key，只在自己的終端機貼：
+   ```sh
+   gcloud secrets versions add RESEND_API_KEY --project marthasit --data-file=-
+   ```
+   （貼上 key，按 Enter 再按 Ctrl-D。）
+3. GA4 和 Search Console 用 `search-console@marthasit.iam.gserviceaccount.com`（GA4 資源 557570984 的檢視者、Search Console `sc-domain:marthasit.com` 的受限使用者）。Functions 的執行帳號借用它，不用金鑰檔：
+   ```sh
+   gcloud iam service-accounts add-iam-policy-binding search-console@marthasit.iam.gserviceaccount.com \
+     --project marthasit --member=serviceAccount:493104398300-compute@developer.gserviceaccount.com \
+     --role=roles/iam.serviceAccountTokenCreator
+   ```
+   專案要開 `analyticsdata.googleapis.com`、`searchconsole.googleapis.com`、`iamcredentials.googleapis.com`。
+4. 寄之前先看：`scripts/as-owner.sh marthasit npx --prefix functions tsx functions/scripts/weekly-report.ts --project marthasit --out reports/weekly.html`（自己的 gcloud 帳號也要能借用 search-console@）。
+
 **從藍新換過來的專案**（2026-10-16 以前建的）：`deploy.sh` 不會自己刪 Function，先刪掉舊的三支再部署，部署完把舊 secret 也刪掉：
 ```sh
 npx --prefix functions firebase functions:delete newebpayStart newebpayNotify newebpayReturn --region asia-east1 --project <專案> --force

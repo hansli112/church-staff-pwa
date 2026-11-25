@@ -202,6 +202,8 @@ if [ -n "$billing" ] && ! $dry; then
   # 線上支持 stays off while these are placeholders (docs/firebase-setup.md).
   printf placeholder | secret ECPAY_HASH_KEY
   printf placeholder | secret ECPAY_HASH_IV
+  # 週報 is not sent while this is a placeholder.
+  printf placeholder | secret RESEND_API_KEY
 fi
 
 # 10. Budget alert to the account owner.
