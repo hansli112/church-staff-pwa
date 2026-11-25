@@ -18,8 +18,8 @@ import { dateKeyIn, timeZoneOf, timeZonesAt, type ChurchTimeZone } from './timeZ
 export const REMINDER_HOURS: { first: number; last: number; usual: number } = { first: 6, last: 22, usual: 19 };
 
 /**
- * When a member is reminded: Monday evening of the week's duties, the
- * evening before each, or both. Matches ReminderTiming in
+ * Which days a member is reminded: Monday, of the week's duties, the day
+ * before each, or both. Matches ReminderTiming in
  * app/lib/domain/models.dart and firestore.rules (test/parity.test.ts).
  */
 export const REMINDER_TIMINGS = ['weekly', 'dayBefore', 'both'] as const;
@@ -69,24 +69,24 @@ export async function sendReminders(deps: PushDeps & { now: () => Date }) {
     const due = timeZonesAt([hour], new Date(now));
     if (due.size === 0) continue;
     // Off the usual hour, only the churches where someone picked it.
-    let only: Set<string> | null = null;
+    let pickedIn: Set<string> | null = null;
     if (hour !== REMINDER_HOURS.usual) {
       const picked = await deps.db.collectionGroup('members').where('notificationPrefs.reminderHour', '==', hour).select().get();
       if (picked.empty) continue;
-      only = new Set(picked.docs.map((d) => d.ref.parent.parent!.id));
+      pickedIn = new Set(picked.docs.map((d) => d.ref.parent.parent!.id));
     }
-    sent += await remindAt(deps, now, due, hour, only);
+    sent += await remindAt(deps, now, due, hour, pickedIn);
   }
   return sent;
 }
 
-/** [sendReminders] for the churches of [due], all at [hour] now; of [only] if given. */
+/** [sendReminders] for the churches of [due], all at [hour] now; of [pickedIn], those where someone picked it, if given. */
 async function remindAt(
   deps: PushDeps,
   now: number,
   due: Set<ChurchTimeZone>,
   hour: number,
-  only: Set<string> | null,
+  pickedIn: Set<string> | null,
 ) {
   // Those due now share one offset, so one today, tomorrow and Monday.
   const timeZone = [...due][0];
@@ -107,7 +107,7 @@ async function remindAt(
   }
   let sent = 0;
   for (const [cid, docs] of byChurch) {
-    if (only && !only.has(cid)) continue;
+    if (pickedIn && !pickedIn.has(cid)) continue;
     const church = await deps.db.doc(`churches/${cid}`).get();
     if (!isChurchOpen(church) || !due.has(timeZoneOf(church))) continue;
     const services = await serviceNames(deps, cid);

@@ -435,7 +435,7 @@ export const onLogoUploaded = onObjectFinalized({ region: REGION, memory: '512Mi
   );
 });
 
-// Roster changes (push and webhook) and evening reminders
+// Roster changes (push and webhook) and duty reminders
 export const onRosterWritten = onDocumentWrittenWithAuthContext(
   { region: REGION, document: 'churches/{cid}/rosters/{rosterId}' },
   async (event) => {
@@ -469,8 +469,7 @@ export const sendRosterChanges = using(
 
 // Events' rosters against what was done in Google Calendar itself, at
 // 6:30, 12:30 and 18:30 on each church's clock; the evening run comes
-// before its reminders at 19:00, which go out every hour to the churches
-// whose clock says so.
+// before the reminders at 19:00, the hour most get them at.
 export const syncEventRosters = using(
   calDeps,
   { region: REGION, schedule: '30 * * * *', timeZone: 'Asia/Taipei', timeoutSeconds: 540 },
@@ -481,7 +480,7 @@ export const syncEventRosters = using(
     }),
 );
 
-// Every hour: the evening reminders, roster pushes held over quiet hours
+// Every hour: duty reminders at the hour each picked, roster pushes held over quiet hours
 // (and 安排服事's left for after them), and 回報人數 at 21:00 (#85).
 export const sendReminders = onSchedule(
   { region: REGION, schedule: '0 * * * *', timeZone: 'Asia/Taipei' },
