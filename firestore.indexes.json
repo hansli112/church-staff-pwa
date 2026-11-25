@@ -29,6 +29,20 @@
       ]
     },
     {
+      "collectionGroup": "churches",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "status",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "createdAt",
+          "order": "DESCENDING"
+        }
+      ]
+    },
+    {
       "collectionGroup": "swapRequests",
       "queryScope": "COLLECTION_GROUP",
       "fields": [

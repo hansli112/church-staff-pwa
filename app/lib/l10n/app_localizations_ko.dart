@@ -1050,6 +1050,14 @@ class L10nKo extends L10n {
   String get adminNoChurches => '교회를 찾을 수 없어요';
 
   @override
+  String adminChurchCount(int count) {
+    return '총 $count곳';
+  }
+
+  @override
+  String get adminShowMore => '더 보기';
+
+  @override
   String get adminStats => '통계';
 
   @override

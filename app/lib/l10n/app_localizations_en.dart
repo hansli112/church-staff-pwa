@@ -1085,6 +1085,20 @@ class L10nEn extends L10n {
   String get adminNoChurches => 'No churches found';
 
   @override
+  String adminChurchCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count churches',
+      one: '1 church',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get adminShowMore => 'Show more';
+
+  @override
   String get adminStats => 'Stats';
 
   @override

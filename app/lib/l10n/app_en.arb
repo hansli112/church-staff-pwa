@@ -322,6 +322,8 @@
   "accountDeleted": "Account deleted",
   "adminSearchHint": "Church name or ID",
   "adminNoChurches": "No churches found",
+  "adminChurchCount": "{count, plural, =1{1 church} other{{count} churches}}",
+  "adminShowMore": "Show more",
   "adminStats": "Stats",
   "adminChurches": "Churches",
   "adminRename": "Rename",

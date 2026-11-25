@@ -2074,6 +2074,7 @@ class _Callables {
       'photoQuota',
       'photoPrompt',
       'adminSearchChurches',
+      'adminChurches',
       'adminChurchMembers',
       'adminStats',
       'adminFunding',
@@ -2332,6 +2333,10 @@ class FirebaseCloudApi implements CloudApi {
   @override
   Future<List<ChurchSummary>> adminSearchChurches(String query) async =>
       churchSummariesFromJson(_asMap(await _call('adminSearchChurches', {'query': query})));
+
+  @override
+  Future<ChurchPage> adminChurches({String? after}) async =>
+      churchPageFromJson(_asMap(await _call('adminChurches', {'after': ?after})));
 
   @override
   Future<void> adminRenameChurch(String churchId, String name) =>

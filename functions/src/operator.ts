@@ -14,29 +14,57 @@ export async function adminSearchChurches(deps: Deps, caller: Caller | null, dat
   const query = typeof (data as { query?: unknown })?.query === 'string'
     ? ((data as { query: string }).query)
     : '';
-  // Scale is tens to hundreds of churches; a scan is fine and keeps the
-  // search forgiving (part of a name, any width or case).
+  // A scan keeps the search forgiving (part of a name, any width or
+  // case); it reads every church, so only a search does it.
   const all = await deps.db.collection('churches').select('name', 'status').get();
   const hits = all.docs
     .filter((d) => d.id === query.trim() || matchesSearch((d.get('name') as string) ?? '', query))
     .slice(0, 50);
-  const churches = await Promise.all(
-    hits.map(async (d) => {
-      const members = d.ref.collection('members');
-      const [count, admins] = await Promise.all([
-        members.count().get(),
-        members.where('role', '==', 'admin').get(),
-      ]);
-      return {
-        id: d.id,
-        name: d.get('name'),
-        status: d.get('status'),
-        memberCount: count.data().count,
-        admins: admins.docs.map((a) => ({ uid: a.id, name: a.get('name'), email: a.get('email') })),
-      };
-    }),
-  );
-  return { churches };
+  return { churches: await Promise.all(hits.map(summary)) };
+}
+
+/** How many churches the back office lists at a time. */
+export const CHURCH_PAGE = 50;
+
+/**
+ * The churches not deleted, newest first, [CHURCH_PAGE] at a time: the
+ * page after church `after`, or the first. `next` is the church to ask
+ * after for the page after this one, null at the last; `total`, how many
+ * there are.
+ */
+export async function adminChurches(deps: Deps, caller: Caller | null, data: unknown) {
+  requireOperator(caller);
+  const after = (data as { after?: unknown })?.after;
+  const listed = deps.db.collection('churches').where('status', 'in', ['active', 'suspended']);
+  let query = listed.orderBy('createdAt', 'desc').limit(CHURCH_PAGE + 1);
+  if (after !== undefined && after !== null) {
+    const last = await deps.db.doc(`churches/${churchId(after)}`).get();
+    if (!last.exists) fail('not-found', 'unknown');
+    query = query.startAfter(last);
+  }
+  const [page, count] = await Promise.all([query.get(), listed.count().get()]);
+  const shown = page.docs.slice(0, CHURCH_PAGE);
+  return {
+    churches: await Promise.all(shown.map(summary)),
+    total: count.data().count,
+    next: page.docs.length > CHURCH_PAGE ? shown[shown.length - 1].id : null,
+  };
+}
+
+/** A church as the back office lists it: with how many members and its admins. */
+async function summary(d: FirebaseFirestore.QueryDocumentSnapshot) {
+  const members = d.ref.collection('members');
+  const [count, admins] = await Promise.all([
+    members.count().get(),
+    members.where('role', '==', 'admin').get(),
+  ]);
+  return {
+    id: d.id,
+    name: d.get('name'),
+    status: d.get('status'),
+    memberCount: count.data().count,
+    admins: admins.docs.map((a) => ({ uid: a.id, name: a.get('name'), email: a.get('email') })),
+  };
 }
 
 /** Renames a church. */

@@ -322,6 +322,8 @@
   "accountDeleted": "계정을 삭제했어요",
   "adminSearchHint": "교회 이름 또는 ID",
   "adminNoChurches": "교회를 찾을 수 없어요",
+  "adminChurchCount": "총 {count}곳",
+  "adminShowMore": "더 보기",
   "adminStats": "통계",
   "adminChurches": "교회",
   "adminRename": "이름 변경",

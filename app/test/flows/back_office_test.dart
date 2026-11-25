@@ -329,6 +329,30 @@ void main() {
     expect(find.text('舊教會'), findsOneWidget);
   });
 
+  testWidgets('the list is newest first, 50 at a time, with how many there are; 顯示更多 shows the next', (tester) async {
+    final b = seededChurch();
+    b.auth.operators.add('pastor');
+    for (var i = 1; i <= 54; i++) {
+      b.addChurch('教會$i', id: 'c$i');
+    }
+    b.addChurch('舊教會', status: ChurchStatus.deleted);
+    await pumpApp(tester, b);
+    await go(tester, '/admin');
+    expect(find.text('共 55 間'), findsOneWidget);
+    expect(find.text('教會54'), findsOneWidget);
+
+    final list = find.byType(Scrollable).last;
+    await tester.scrollUntilVisible(find.text('顯示更多'), 500, scrollable: list);
+    expect(find.text('教會5'), findsOneWidget);
+    expect(find.text('教會4'), findsNothing);
+    await tester.tap(find.text('顯示更多'));
+    await settle(tester);
+    await tester.scrollUntilVisible(find.text('恩典堂'), 500, scrollable: list);
+    expect(find.text('教會4'), findsOneWidget);
+    expect(find.text('顯示更多'), findsNothing);
+    expect(find.text('舊教會'), findsNothing);
+  });
+
   testWidgets('a search waits for typing to pause, as each one reads every church', (tester) async {
     final b = seededChurch();
     b.auth.operators.add('pastor');

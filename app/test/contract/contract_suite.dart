@@ -2261,6 +2261,7 @@ void contractTests(Future<ContractWorld> Function() open) {
     test('operator calls refuse everyone else', () async {
       final g = await Grace.open(w);
       await expectLater(cloud().adminSearchChurches(''), denied());
+      await expectLater(cloud().adminChurches(), denied());
       await expectLater(cloud().adminChurchMembers(g.cid), denied());
       await expectLater(cloud().adminSetStatus(g.cid, ChurchStatus.suspended), denied());
       await expectLater(cloud().adminStats(), denied());
@@ -2287,6 +2288,23 @@ void contractTests(Future<ContractWorld> Function() open) {
         unorderedEquals([g.pastor, g.mei]),
       );
       expect(await cloud().adminStats(), isEmpty);
+    });
+
+    test('lists the churches not deleted, newest first, and how many there are', () async {
+      final g = await Grace.open(w);
+      await w.signUp('op@example.com');
+      final other = await cloud().createChurch('Other Church');
+      await w.makeOperator('op@example.com');
+      final page = await cloud().adminChurches();
+      expect(page.churches.map((c) => c.id), [other, g.cid]);
+      expect((page.total, page.next), (2, null));
+      expect(page.churches.last.admins.map((a) => a.uid), [g.pastor]);
+      await w.signIn(Grace.pastorEmail);
+      await g.church.deleteChurch();
+      await w.signIn('op@example.com');
+      final left = await cloud().adminChurches();
+      expect(left.churches.map((c) => c.id), [other]);
+      expect(left.total, 1);
     });
 
     test('suspends and reopens a church, never a deleted one', () async {

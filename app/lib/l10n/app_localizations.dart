@@ -1930,6 +1930,18 @@ abstract class L10n {
   /// **'找不到教會'**
   String get adminNoChurches;
 
+  /// Back office: how many churches there are, not deleted, above the list
+  ///
+  /// In zh, this message translates to:
+  /// **'共 {count} 間'**
+  String adminChurchCount(int count);
+
+  /// No description provided for @adminShowMore.
+  ///
+  /// In zh, this message translates to:
+  /// **'顯示更多'**
+  String get adminShowMore;
+
   /// No description provided for @adminStats.
   ///
   /// In zh, this message translates to:

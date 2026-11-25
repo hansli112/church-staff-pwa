@@ -39,13 +39,14 @@ class AdminScreen extends ConsumerStatefulWidget {
   ConsumerState<AdminScreen> createState() => _AdminScreenState();
 }
 
-/// Every church, as the page opens; kept on this device, so it shows at once.
-final _churchesProvider = AsyncNotifierProvider.autoDispose<SavedRead<List<ChurchSummary>>, Saved<List<ChurchSummary>>>(
+/// The newest churches, as the page opens; kept on this device, so they
+/// show at once.
+final _churchesProvider = AsyncNotifierProvider.autoDispose<SavedRead<ChurchPage>, Saved<ChurchPage>>(
   () => SavedRead(
-    'adminChurches',
-    read: (ref) => ref.read(backendProvider).cloud.adminSearchChurches(''),
-    encode: churchSummariesToJson,
-    decode: churchSummariesFromJson,
+    'adminChurchPage',
+    read: (ref) => ref.read(backendProvider).cloud.adminChurches(),
+    encode: churchPageToJson,
+    decode: churchPageFromJson,
   ),
 );
 
@@ -61,6 +62,48 @@ class _AdminScreenState extends ConsumerState<AdminScreen> {
   Object? _searchError;
   String _query = '';
   Timer? _typing;
+
+  /// The churches 顯示更多 read, after the first page.
+  List<ChurchSummary> _more = const [];
+
+  /// The church to read after for 顯示更多, once it has read some; null at
+  /// the last.
+  String? _moreAfter;
+  bool _moreRead = false;
+  bool _readingMore = false;
+
+  Future<void> _showMore(String after) async {
+    if (_readingMore) return;
+    setState(() => _readingMore = true);
+    try {
+      final page = await ref.read(backendProvider).cloud.adminChurches(after: after);
+      if (!mounted) return;
+      setState(() {
+        _more = [..._more, ...page.churches];
+        _moreAfter = page.next;
+        _moreRead = true;
+      });
+    } catch (e) {
+      if (mounted) showToast(context, errorText(L10n.of(context), e));
+    } finally {
+      if (mounted) setState(() => _readingMore = false);
+    }
+  }
+
+  /// [id] as the backend has it now, in the churches 顯示更多 read.
+  Future<void> _readAgain(String id) async {
+    try {
+      final found = (await ref.read(backendProvider).cloud.adminSearchChurches(id)).where((c) => c.id == id);
+      if (!mounted || found.isEmpty) return;
+      final now = found.first;
+      setState(
+        () => _more = [
+          for (final c in _more)
+            if (c.id != id) c else if (now.status != ChurchStatus.deleted) now,
+        ],
+      );
+    } catch (_) {}
+  }
 
   @override
   void dispose() {
@@ -139,15 +182,21 @@ class _AdminScreenState extends ConsumerState<AdminScreen> {
                 ? _SavedView(
                     value: ref.watch(_churchesProvider),
                     onRetry: () => ref.invalidate(_churchesProvider),
-                    // Deleted ones only when searched for.
-                    builder: (saved) => _churches(
-                      l10n,
-                      [
-                        for (final c in saved.value)
-                          if (c.status != ChurchStatus.deleted) c,
-                      ],
-                      saved: saved,
-                    ),
+                    builder: (saved) {
+                      final first = saved.value;
+                      final shown = {for (final c in first.churches) c.id};
+                      return _churches(
+                        l10n,
+                        [
+                          ...first.churches,
+                          for (final c in _more)
+                            if (!shown.contains(c.id)) c,
+                        ],
+                        saved: saved,
+                        total: first.total,
+                        next: _moreRead ? _moreAfter : first.next,
+                      );
+                    },
                   )
                 : _searchError != null
                 ? ErrorRetry(message: errorText(l10n, _searchError!), onRetry: _search)
@@ -160,13 +209,22 @@ class _AdminScreenState extends ConsumerState<AdminScreen> {
     );
   }
 
-  /// A church opens once the list is the server's, not a kept one.
-  Widget _churches(L10n l10n, List<ChurchSummary> churches, {Saved<List<ChurchSummary>>? saved}) {
+  /// A church opens once the list is the server's, not a kept one. The
+  /// list, not a search, says how many there are ([total]) and reads more
+  /// after [next].
+  Widget _churches(
+    L10n l10n,
+    List<ChurchSummary> churches, {
+    Saved<ChurchPage>? saved,
+    int? total,
+    String? next,
+  }) {
     if (churches.isEmpty) return EmptyState(message: l10n.adminNoChurches);
     return ListView(
       children: [
         if (saved != null) _ReadNotice(saved, onRetry: () => _retry(ref.read(_churchesProvider.notifier))),
         ListSection(
+          header: total == null ? null : l10n.adminChurchCount(total),
           children: [
             for (final c in churches)
               ListRow(
@@ -178,11 +236,21 @@ class _AdminScreenState extends ConsumerState<AdminScreen> {
                           MaterialPageRoute<void>(builder: (_) => AdminChurchScreen(summary: c)),
                         );
                         await _search();
+                        if (_more.any((m) => m.id == c.id)) await _readAgain(c.id);
                       }
                     : null,
               ),
           ],
         ),
+        if (next != null)
+          Padding(
+            padding: const EdgeInsets.all(Space.m),
+            child: SecondaryButton(
+              label: l10n.adminShowMore,
+              busy: _readingMore,
+              onPressed: () => _showMore(next),
+            ),
+          ),
       ],
     );
   }

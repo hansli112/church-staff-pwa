@@ -654,6 +654,16 @@
   "accountDeleted": "帳號已刪除",
   "adminSearchHint": "教會名稱或 ID",
   "adminNoChurches": "找不到教會",
+  "adminChurchCount": "共 {count} 間",
+  "@adminChurchCount": {
+    "description": "Back office: how many churches there are, not deleted, above the list",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "adminShowMore": "顯示更多",
   "adminStats": "統計",
   "adminChurches": "教會",
   "adminRename": "改名",

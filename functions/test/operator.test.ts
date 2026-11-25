@@ -6,6 +6,7 @@ import { Timestamp } from 'firebase-admin/firestore';
 import { logClientError } from '../src/logging.js';
 import {
   adminChurchMembers,
+  adminChurches,
   adminRenameChurch,
   adminRevokeAdmin,
   adminSearchChurches,
@@ -28,6 +29,7 @@ describe('operator back office', () => {
     await seedChurch('C1', { alice: 'admin' });
     const admin = caller('alice'); // admin of a church, not the platform
     await rejectsWith(adminSearchChurches(deps, admin, { query: '' }), 'permissionDenied');
+    await rejectsWith(adminChurches(deps, admin, {}), 'permissionDenied');
     await rejectsWith(adminRenameChurch(deps, admin, { churchId: 'C1', name: 'x' }), 'permissionDenied');
     await rejectsWith(adminTransferAdmin(deps, admin, { churchId: 'C1', uid: 'alice' }), 'permissionDenied');
     await rejectsWith(adminRevokeAdmin(deps, admin, { churchId: 'C1', uid: 'alice' }), 'permissionDenied');
@@ -45,6 +47,30 @@ describe('operator back office', () => {
     assert.equal(churches[0].id, 'C1');
     assert.equal(churches[0].memberCount, 2);
     assert.deepEqual(churches[0].admins.map((a) => a.uid), ['alice']);
+  });
+
+  test('the list is newest first, 50 at a time, without deleted churches, and says how many there are', async () => {
+    for (let i = 0; i < 52; i++) {
+      await seedChurch(`C${i}`, i === 0 ? { alice: 'admin', bob: 'staff' } : {}, {
+        createdAt: Timestamp.fromMillis(Date.UTC(2026, 9, 1) + i * 60_000),
+      });
+    }
+    await seedChurch('gone', {}, { status: 'deleted', createdAt: Timestamp.fromMillis(Date.UTC(2026, 10, 1)) });
+    await seedChurch('closed', {}, { status: 'suspended', createdAt: Timestamp.fromMillis(Date.UTC(2026, 8, 1)) });
+
+    const first = await adminChurches(deps, op, {});
+    assert.equal(first.total, 53);
+    assert.equal(first.churches.length, 50);
+    assert.deepEqual(first.churches.slice(0, 2).map((c) => c.id), ['C51', 'C50']);
+    assert.equal(first.churches[49].id, 'C2');
+    assert.equal(first.next, 'C2');
+
+    const second = await adminChurches(deps, op, { after: first.next });
+    assert.deepEqual(second.churches.map((c) => c.id), ['C1', 'C0', 'closed']);
+    assert.equal(second.churches[1].memberCount, 2);
+    assert.deepEqual(second.churches[1].admins.map((a) => a.uid), ['alice']);
+    assert.equal(second.next, null);
+    assert.equal(second.total, 53);
   });
 
   test('rename may give a church the name another one has', async () => {

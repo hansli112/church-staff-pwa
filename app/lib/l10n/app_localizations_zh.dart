@@ -1049,6 +1049,14 @@ class L10nZh extends L10n {
   String get adminNoChurches => '找不到教會';
 
   @override
+  String adminChurchCount(int count) {
+    return '共 $count 間';
+  }
+
+  @override
+  String get adminShowMore => '顯示更多';
+
+  @override
   String get adminStats => '統計';
 
   @override
@@ -4931,6 +4939,14 @@ class L10nZhHans extends L10nZh {
 
   @override
   String get adminNoChurches => '找不到教会';
+
+  @override
+  String adminChurchCount(int count) {
+    return '共 $count 间';
+  }
+
+  @override
+  String get adminShowMore => '显示更多';
 
   @override
   String get adminStats => '统计';

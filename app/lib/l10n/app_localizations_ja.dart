@@ -1049,6 +1049,14 @@ class L10nJa extends L10n {
   String get adminNoChurches => '教会が見つかりません';
 
   @override
+  String adminChurchCount(int count) {
+    return '全$count件';
+  }
+
+  @override
+  String get adminShowMore => 'さらに表示';
+
+  @override
   String get adminStats => '統計';
 
   @override

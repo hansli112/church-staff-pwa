@@ -322,6 +322,8 @@
   "accountDeleted": "アカウントを削除しました",
   "adminSearchHint": "教会名または ID",
   "adminNoChurches": "教会が見つかりません",
+  "adminChurchCount": "全{count}件",
+  "adminShowMore": "さらに表示",
   "adminStats": "統計",
   "adminChurches": "教会",
   "adminRename": "名前を変更",

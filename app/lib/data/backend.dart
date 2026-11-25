@@ -760,6 +760,22 @@ class ChurchSummary {
   final List<Member> admins;
 }
 
+/// A page of the back office's churches: [adminChurchPage] of them at most.
+class ChurchPage {
+  const ChurchPage({required this.churches, required this.total, this.next});
+
+  final List<ChurchSummary> churches;
+
+  /// How many churches there are, not deleted.
+  final int total;
+
+  /// The church to ask after for the next page; null at the last.
+  final String? next;
+}
+
+/// How many churches [CloudApi.adminChurches] gives at a time.
+const adminChurchPage = 50;
+
 class DailyStats {
   const DailyStats({required this.day, required this.values});
 
@@ -1056,6 +1072,10 @@ abstract interface class CloudApi {
 
   // Platform operator only.
   Future<List<ChurchSummary>> adminSearchChurches(String query);
+
+  /// The churches not deleted, newest first: the page after church [after],
+  /// or the first.
+  Future<ChurchPage> adminChurches({String? after});
   Future<void> adminRenameChurch(String churchId, String name);
   Future<List<Member>> adminChurchMembers(String churchId);
 

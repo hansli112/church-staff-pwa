@@ -322,6 +322,8 @@
   "accountDeleted": "账号已删除",
   "adminSearchHint": "教会名称或 ID",
   "adminNoChurches": "找不到教会",
+  "adminChurchCount": "共 {count} 间",
+  "adminShowMore": "显示更多",
   "adminStats": "统计",
   "adminChurches": "教会",
   "adminRename": "改名",

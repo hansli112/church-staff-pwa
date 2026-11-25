@@ -278,6 +278,7 @@ export const deleteAccount = callable(account.deleteAccount, () => ({ ...deps(),
 
 // Platform operator
 export const adminSearchChurches = callable(operator.adminSearchChurches);
+export const adminChurches = callable(operator.adminChurches);
 export const adminRenameChurch = callable(operator.adminRenameChurch);
 export const adminTransferAdmin = callable(operator.adminTransferAdmin);
 export const adminRevokeAdmin = callable(operator.adminRevokeAdmin);

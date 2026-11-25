@@ -25,6 +25,18 @@ List<ChurchSummary> churchSummariesFromJson(ReplyJson d) => [
       ),
 ];
 
+ChurchPage churchPageFromJson(ReplyJson d) => ChurchPage(
+  churches: churchSummariesFromJson(d),
+  total: (d['total'] as num?)?.toInt() ?? 0,
+  next: d['next'] as String?,
+);
+
+Map<String, Object?> churchPageToJson(ChurchPage page) => {
+  ...churchSummariesToJson(page.churches),
+  'total': page.total,
+  'next': page.next,
+};
+
 Map<String, Object?> churchSummariesToJson(List<ChurchSummary> churches) => {
   'churches': [
     for (final c in churches)

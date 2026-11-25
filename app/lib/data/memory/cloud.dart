@@ -357,19 +357,38 @@ class MemoryCloud implements CloudApi {
     _b.adminSearches.add(query);
     return [
       for (final c in _b.churches.values)
-        if (matchesSearch(c.name, query) || c.id == query.trim())
-          ChurchSummary(
-            id: c.id,
-            name: c.name,
-            status: c.status,
-            memberCount: _b.members[c.id]!.length,
-            admins: [
-              for (final m in _b.members[c.id]!.values)
-                if (m.isAdmin) m,
-            ],
-          ),
+        if (matchesSearch(c.name, query) || c.id == query.trim()) _summary(c),
     ];
   }
+
+  /// Newest first: the last added.
+  @override
+  Future<ChurchPage> adminChurches({String? after}) async {
+    _requireOperator();
+    final listed = [
+      for (final c in _b.churches.values.toList().reversed)
+        if (c.status != ChurchStatus.deleted) c,
+    ];
+    final from = after == null ? 0 : listed.indexWhere((c) => c.id == after) + 1;
+    if (after != null && from == 0) throw const CloudException(CloudErrorCode.notFound);
+    final shown = listed.skip(from).take(adminChurchPage).toList();
+    return ChurchPage(
+      churches: [for (final c in shown) _summary(c)],
+      total: listed.length,
+      next: from + shown.length < listed.length ? shown.last.id : null,
+    );
+  }
+
+  ChurchSummary _summary(Church c) => ChurchSummary(
+    id: c.id,
+    name: c.name,
+    status: c.status,
+    memberCount: _b.members[c.id]!.length,
+    admins: [
+      for (final m in _b.members[c.id]!.values)
+        if (m.isAdmin) m,
+    ],
+  );
 
   @override
   Future<void> adminRenameChurch(String churchId, String name) async {
