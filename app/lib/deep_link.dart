@@ -67,9 +67,11 @@ LinkTarget resolveLink(AppStage stage, List<Membership> memberships, Uri link) {
     case AppStage.noChurch:
       // 加入主畫面 and 開啟通知 come right after joining, maybe before the
       // church has come in.
+      // 平台後台 is no church's: it opens in none.
       if (at('/welcome') ||
           at('/c') ||
           at('/account') ||
+          at('/admin') ||
           at('/dev') ||
           at('/add-to-home') ||
           at('/turn-on-notifications')) {
@@ -78,7 +80,7 @@ LinkTarget resolveLink(AppStage stage, List<Membership> memberships, Uri link) {
       if (waiting()) return resume('/welcome');
       return _go('/welcome');
     case AppStage.churchClosed:
-      if (at('/closed') || at('/c') || at('/account') || at('/welcome') || at('/dev')) {
+      if (at('/closed') || at('/c') || at('/account') || at('/admin') || at('/welcome') || at('/dev')) {
         return _stay;
       }
       if (waiting()) return resume('/closed');

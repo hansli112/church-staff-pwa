@@ -133,7 +133,7 @@ describe('週報', () => {
       { name: '日文', supported: true, n: [0, 2] },
       { name: '其他', supported: true, n: [0, 1] },
     ]);
-    assert.match(weeklyMail(r).html, /義大利文<span[^>]*>App 沒有/);
+    assert.match(weeklyMail(r).html, /義大利文<span[^>]*>尚未支援/);
     assert.deepEqual(r.gsc!.now, { clicks: 80, impressions: 130, ctr: 0.62, position: 2.9 });
     assert.equal(r.gsc!.before.clicks, 1);
     assert.deepEqual(r.gsc!.queries, [{ query: '馬大別忙', clicks: 20, impressions: 25, position: 1.2 }]);

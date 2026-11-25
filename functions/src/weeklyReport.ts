@@ -426,7 +426,7 @@ function gaSections(ga: Ga) {
 
 function languageRows(list: Ga['languages']) {
   const max = Math.max(1, ...list.map((l) => l.n[1]));
-  const tag = `<span style="font-size:11px;color:${C.label2};background:${C.fill};border-radius:4px;padding:1px 5px;margin-left:6px;vertical-align:1px">App 沒有</span>`;
+  const tag = `<span style="font-size:11px;color:${C.label2};background:${C.fill};border-radius:4px;padding:1px 5px;margin-left:6px;vertical-align:1px">尚未支援</span>`;
   const head = `<tr><td></td><td></td><td align="right" style="font-size:13px;color:${C.label3};padding:0 0 6px 12px;white-space:nowrap">這週</td><td align="right" style="font-size:13px;color:${C.label3};padding:0 0 6px 12px;white-space:nowrap">近 4 週</td></tr>`;
   return T('', head + list.map((l) => `<tr><td style="font-size:15px;padding:5px 12px 5px 0;white-space:nowrap">${esc(l.name)}${l.supported ? '' : tag}</td>
 <td width="30%" style="padding:5px 0">${bar(l.n[1] / max)}</td>

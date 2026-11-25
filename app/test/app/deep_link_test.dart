@@ -149,6 +149,15 @@ void main() {
     (closed, invite, stay),
   ]);
 
+  table('平台後台 opens in no church or a closed one: it is not any church\'s', [
+    (noChurch, '/admin', stay),
+    (noChurch, '/admin/funding/records', stay),
+    (closed, '/admin', stay),
+    (closed, '/admin/stats', stay),
+    (noChurch, '/login?from=%2Fadmin', to('/admin')),
+    (closed, '/login?from=%2Fadmin', to('/admin')),
+  ]);
+
   table('ready: leaves waiting pages for home', [
     (ready, '/loading', to('/home')),
     (ready, '/login', to('/home')),

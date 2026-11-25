@@ -9,6 +9,7 @@ import 'package:martha/core/languages.dart';
 import 'package:martha/data/backend.dart';
 import 'package:martha/data/memory/memory_backend.dart';
 import 'package:martha/domain/models.dart';
+import 'package:martha/features/church/closed_screen.dart';
 
 import '../support/harness.dart';
 import '../support/seed.dart';
@@ -351,6 +352,18 @@ void main() {
     expect(find.text('教會4'), findsOneWidget);
     expect(find.text('顯示更多'), findsNothing);
     expect(find.text('舊教會'), findsNothing);
+  });
+
+  testWidgets('平台後台 opens with my church deleted', (tester) async {
+    final b = seededChurch();
+    b.auth.operators.add('pastor');
+    b.addChurch('活水教會');
+    b.churches['grace'] = b.churches['grace']!.copyWith(status: ChurchStatus.deleted);
+    await pumpApp(tester, b);
+    expect(find.byType(ClosedScreen), findsOneWidget);
+    await go(tester, '/admin');
+    expect(find.text('共 1 間'), findsOneWidget);
+    expect(find.text('活水教會'), findsOneWidget);
   });
 
   testWidgets('a search waits for typing to pause, as each one reads every church', (tester) async {
