@@ -212,6 +212,37 @@ final attendanceDueProvider = Provider.autoDispose<List<AttendanceDue>>((ref) {
   ];
 });
 
+/// Whether what 首頁 says of 人數 has been read: 填寫人數 for the groups I
+/// am reminded of or asked to fill in, and for admins and 行政 回報人數's
+/// 未填 of every group they fill in. Read side by side from this phone's
+/// copy, so 首頁 shows them with my days, not a moment later; one that
+/// cannot be read does not hold it up. Nothing to wait for with 回報人數
+/// off, or for whom it asks nothing.
+final attendanceHomeReadProvider = Provider.autoDispose<bool>((ref) {
+  bool read(AsyncValue<Object?> v) => (v.hasValue || v.hasError) && !v.isReloading;
+  final me = ref.watch(meProvider).value;
+  final since = ref.watch(churchProvider.select((c) => c.value?.attendanceSince));
+  if (me == null || since == null) return true;
+  final fills = ref.watch(myFillsProvider);
+  final mine = {...me.remindedAttendance, ...?fills.value};
+  // Only for whom 首頁 has something of 人數 to show.
+  if (read(fills) && mine.isEmpty && !me.overseesAttendance) return true;
+  final reads = [
+    fills,
+    ref.watch(_recentRostersProvider),
+    ref.watch(smallGroupsProvider),
+    ref.watch(gatheringsProvider),
+    for (final key in {
+      ...mine,
+      if (me.overseesAttendance)
+        for (final g in ref.watch(attendanceGroupsProvider))
+          if (me.writesAttendance(g.group)) g.group.key,
+    })
+      ref.watch(attendanceProvider(key)),
+  ];
+  return reads.every(read);
+});
+
 /// For admins and 行政 on 首頁: the week 回報人數 opens on, so the page
 /// says the same: how many are still 未填 in it, or that today's is still
 /// to fill in. Null for whoever does not oversee it, with it off, or until

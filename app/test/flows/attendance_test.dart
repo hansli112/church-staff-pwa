@@ -11,7 +11,9 @@ import 'package:martha/data/backend.dart';
 import 'package:martha/data/memory/memory_backend.dart';
 import 'package:martha/domain/day.dart';
 import 'package:martha/domain/models.dart';
+import 'package:martha/state/attendance.dart';
 import 'package:martha/state/export.dart';
+import 'package:martha/state/providers.dart';
 import 'package:martha/state/session.dart';
 
 import '../support/harness.dart';
@@ -904,6 +906,33 @@ void main() {
       await tapText(tester, '回報人數');
       expect(find.text('10月4日 – 10月10日'), findsOneWidget, reason: 'the latest week anyone filled in');
       expect(findShown('還有 1 個未填'), findsOneWidget, reason: 'as 首頁 said');
+    });
+
+    testWidgets('首頁 waits for every group\'s 人數 an admin or 行政 oversees, then shows 回報人數 with my days', (tester) async {
+      final b = withJoy(withAttendance(seededChurch(as: office, extra: [office], clock: eveningOf(Day(2026, 10, 11)))));
+      b.attendance['grace'] = {
+        'service:sunday': AttendanceRecord(days: {Day(2026, 10, 4): const AttendanceDay.count(120)}),
+      };
+      final joys = StreamController<AttendanceRecord>();
+      addTearDown(joys.close);
+      await pumpApp(
+        tester,
+        b,
+        overrides: [
+          attendanceProvider.overrideWith(
+            (ref, key) => key == 'small:joy' ? joys.stream : openChurch(ref).attendance.watch(key),
+          ),
+        ],
+      );
+      await go(tester, '/home');
+      final anything = find.byWidgetPredicate((w) => w is ListRow || w is EmptyState);
+      expect(anything, findsNothing, reason: "waiting for 喜樂小組's 人數");
+      joys.add(const AttendanceRecord());
+      // The first frame with anything on the page has 回報人數 too.
+      for (var i = 0; i < 20 && anything.evaluate().isEmpty; i++) {
+        await tester.pump(const Duration(milliseconds: 50));
+      }
+      expect(inRow('回報人數', '還有 1 個未填'), findsOneWidget, reason: 'with the rest of the page, not after');
     });
 
     testWidgets('a 小組長 sets its 聚會時間 from its 人數 page: 每月第 1、3 個週五', (tester) async {

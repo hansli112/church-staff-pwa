@@ -53,7 +53,6 @@ final _waitingForZoneProvider = Provider.autoDispose<int>((ref) {
 final _homeReadProvider = Provider.autoDispose<bool>((ref) {
   bool read(AsyncValue<Object?> v) => (v.hasValue || v.hasError) && !v.isReloading;
   final me = ref.watch(meProvider).value;
-  final since = ref.watch(churchProvider.select((c) => c.value?.attendanceSince));
   // Watched all at once, so they are read side by side.
   final reads = [
     ref.watch(swapRequestsToMeProvider),
@@ -62,13 +61,10 @@ final _homeReadProvider = Provider.autoDispose<bool>((ref) {
     ref.watch(servicesProvider),
     ref.watch(churchLinkProvider),
     if (me?.isAdmin ?? false) ref.watch(membersProvider),
-    if (since != null) ...[
-      ref.watch(myFillsProvider),
-      for (final key in {...?me?.remindedAttendance, ...?ref.watch(myFillsProvider).value})
-        ref.watch(attendanceProvider(key)),
-    ],
   ];
-  return reads.every(read);
+  // 填寫人數, and 回報人數's 未填 for admins and 行政.
+  final attendance = ref.watch(attendanceHomeReadProvider);
+  return reads.every(read) && attendance;
 });
 
 /// 首頁: the days I serve next. That is what most people open the app for.
