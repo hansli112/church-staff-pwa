@@ -46,6 +46,10 @@ beforeEach(async () => {
   await db.doc('stats/2026-11-15').set({ date: '2026-11-15', users_active_7d: 2 });
   await db.doc('ecpayOrders/20261119aaaa').set({ status: 'paid', amount: 300, paidAt: ts('2026-11-19T10:00:00+08:00') });
   await db.doc('ecpayOrders/20261110bbbb').set({ status: 'paid', amount: 100, paidAt: ts('2026-11-10T10:00:00+08:00') });
+  await db.doc('platform/funding').set({ month: '2026-11', target: 417, received: 409 });
+  await db.doc('fundingPayments/apple_1').set({ store: 'apple', month: '2026-11', amountTwd: 300 });
+  await db.doc('fundingPayments/google_2').set({ store: 'google', month: '2026-11', amountTwd: 109 });
+  await db.doc('fundingPayments/ecpay_3').set({ store: 'ecpay', month: '2026-10', amountTwd: 24 });
   await db.doc('ecpayOrders/20261120cccc').set({ status: 'pending', amount: 500, createdAt: ts('2026-11-20T10:00:00+08:00') });
 });
 
@@ -61,6 +65,13 @@ function googleRoutes() {
       if (!dim) return { body: gaRows([[['date_range_0'], [120]], [['date_range_1'], [40]]]) };
       if (dim === 'platform') return { body: gaRows([[['iOS', 'date_range_0'], [70, 30]], [['web', 'date_range_0'], [50, 20]], [['iOS', 'date_range_1'], [30, 5]]]) };
       if (dim === 'eventName') return { body: gaRows([[['church_create', 'date_range_0'], [9]], [['church_create', 'date_range_1'], [2]]]) };
+      if (dim === 'customUser:church_id') {
+        assert.deepEqual(JSON.parse(req.body).dateRanges.map((r: { startDate: string }) => r.startDate), ['2026-11-16', '2026-11-09', '2026-10-19'], 'this week, last week, 4 weeks before');
+        return { body: gaRows([
+          [['new', 'date_range_0'], [2]], [['quiet', 'date_range_1'], [1]],
+          [['synced', 'date_range_0'], [1]], [['synced', 'date_range_2'], [1]], [['(not set)', 'date_range_0'], [40]],
+        ]) };
+      }
       if (dim === 'languageCode') {
         assert.deepEqual(JSON.parse(req.body).dateRanges[1], { startDate: '2026-10-26', endDate: '2026-11-22' }, 'the last 4 weeks');
         assert.deepEqual(JSON.parse(req.body).metrics, [{ name: 'activeUsers' }], 'everyone who used it, not only the new');
@@ -103,6 +114,9 @@ describe('週報', () => {
     assert.deepEqual(r.busiest, [{ name: '新的教會', members: 2, edits: 2, editsBefore: 0 }]);
     assert.deepEqual(r.quiet.map((c) => c.name), ['停下來的教會']);
     assert.deepEqual(r.paid, { count: 1, amount: 300 });
+    assert.deepEqual(r.funding, { month: '2026-11', target: 417, received: 409, payments: 2 });
+    assert.equal(r.noChurch, 0);
+    assert.equal(r.use, null);
     assert.equal(r.ga, null);
     assert.equal(r.gsc, null);
   });
@@ -135,6 +149,21 @@ describe('週報', () => {
       { name: '其他', supported: true, n: [0, 1] },
     ]);
     assert.match(weeklyMail(r).html, /義大利文<span[^>]*>尚未支援/);
+    const u = r.use!;
+    assert.deepEqual([u.churches, u.team, u.solo], [[2, 1], [1, 0], [1, 1]], 'a church made after last week is not in last week');
+    assert.deepEqual(u.bySize, [
+      { label: '1 人', churches: 2, active: 1, opened: 1, members: 1 },
+      { label: '2 人', churches: 1, active: 1, opened: 2, members: 2 },
+    ]);
+    assert.deepEqual(u.secondWeek, { of: 0, back: 0 });
+    assert.deepEqual(u.retained, { of: 1, still: 1 });
+    assert.deepEqual(u.members, { of: 2, opened: 2 });
+    assert.deepEqual(u.top, [{ name: '新的教會', members: 2, opened: 2 }]);
+    assert.deepEqual([u.stopped, u.stoppedSolo], [[], 1]);
+    const mail = weeklyMail(r);
+    assert.equal(mail.subject, '馬大別忙週報 11月16日 – 22日：2 間教會在用');
+    assert.match(mail.html, /一個人用的另有 1 間/);
+    assert.match(mail.html, /NT\$409/);
     assert.deepEqual(r.gsc!.now, { clicks: 80, impressions: 130, ctr: 0.62, position: 2.9 });
     assert.equal(r.gsc!.before.clicks, 1);
     assert.deepEqual(r.gsc!.queries, [{ query: '馬大別忙', clicks: 20, impressions: 25, position: 1.2 }]);

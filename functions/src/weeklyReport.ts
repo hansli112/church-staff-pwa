@@ -78,6 +78,28 @@ interface GscTotals {
   ctr: number;
   position: number;
 }
+/** Churches where someone opened the app or the website (GA4's church_id). */
+interface Use {
+  churches: Pair;
+  team: Pair;
+  solo: Pair;
+  bySize: { label: string; churches: number; active: number; opened: number; members: number }[];
+  /** Made the week before: how many someone opened this week. */
+  secondWeek: { of: number; back: number };
+  /** In use 4 weeks before: how many still are. */
+  retained: { of: number; still: number };
+  /** Of the members of churches with 2 or more, in use this week: how many opened. */
+  members: { of: number; opened: number };
+  top: { name: string; members: number; opened: number }[];
+  stopped: { name: string; members: number; opened: number }[];
+  stoppedSolo: number;
+}
+interface Funding {
+  month: string;
+  target: number;
+  received: number;
+  payments: number;
+}
 export interface WeeklyReport {
   now: Week;
   before: Week;
@@ -92,6 +114,10 @@ export interface WeeklyReport {
   busiest: Church[];
   quiet: Church[];
   paid: { count: number; amount: number };
+  /** Users in no church. */
+  noChurch: number;
+  funding: Funding | null;
+  use: Use | null;
   ga: Ga | null;
   gsc: Gsc | null;
 }
@@ -102,7 +128,7 @@ export async function collectWeeklyReport(d: WeeklyReportDeps, end = lastSunday(
   const before: Week = { from: shift(end, -13), to: shift(end, -7) };
   const days = Array.from({ length: 14 }, (_, i) => shift(before.from, i));
 
-  const [statsNow, statsBefore, users, churches, members, rosters, orders, analytics] = await Promise.all([
+  const [statsNow, statsBefore, users, churches, members, rosters, orders, funding, analytics] = await Promise.all([
     db.doc(`stats/${now.to}`).get(),
     db.doc(`stats/${before.to}`).get(),
     db.collection('users').select('createdAt').get(),
@@ -114,6 +140,7 @@ export async function collectWeeklyReport(d: WeeklyReportDeps, end = lastSunday(
       .select('via', 'updatedAt')
       .get(),
     db.collection('ecpayOrders').where('status', '==', 'paid').select('amount', 'paidAt').get(),
+    readFunding(d),
     d.analytics ? readAnalytics(d, d.analytics, now, before) : Promise.resolve(null),
   ]);
 
@@ -121,9 +148,9 @@ export async function collectWeeklyReport(d: WeeklyReportDeps, end = lastSunday(
   const userDays = users.docs.map((u) => dayOf(u.get('createdAt')));
   const newUsersByDay = days.map((k) => userDays.filter((u) => u === k).length);
 
-  const byId = new Map<string, Church & { active: boolean }>();
+  const byId = new Map<string, Church & { active: boolean; id: string }>();
   for (const c of churches.docs) {
-    byId.set(c.id, { name: c.get('name') ?? c.id, active: c.get('status') === 'active', created: dayOf(c.get('createdAt')), members: 0, edits: 0, editsBefore: 0 });
+    byId.set(c.id, { id: c.id, name: c.get('name') ?? c.id, active: c.get('status') === 'active', created: dayOf(c.get('createdAt')), members: 0, edits: 0, editsBefore: 0 });
   }
   for (const m of members.docs) {
     const c = byId.get(m.ref.parent.parent!.id);
@@ -141,6 +168,7 @@ export async function collectWeeklyReport(d: WeeklyReportDeps, end = lastSunday(
   const fresh = active.filter((c) => inWeek(c.created, now));
   const paid = orders.docs.filter((o) => inWeek(dayOf(o.get('paidAt')), now));
   const plain = ({ name, members, edits, editsBefore }: Church): Church => ({ name, members, edits, editsBefore });
+  const inChurch = new Set(members.docs.map((m) => m.id));
 
   return {
     now,
@@ -163,8 +191,50 @@ export async function collectWeeklyReport(d: WeeklyReportDeps, end = lastSunday(
     busiest: active.filter((c) => c.edits > 0).sort((a, b) => b.edits - a.edits).slice(0, 10).map(plain),
     quiet: active.filter((c) => c.editsBefore > 0 && c.edits === 0).sort((a, b) => b.editsBefore - a.editsBefore).map(plain),
     paid: { count: paid.length, amount: sum(paid.map((o) => Number(o.get('amount') ?? 0))) },
+    noChurch: count(users.docs, (u) => !inChurch.has(u.id)),
+    funding,
+    use: analytics ? churchUse(active, analytics.opens, now, before) : null,
     ga: analytics?.ga ?? null,
     gsc: analytics?.gsc ?? null,
+  };
+}
+
+async function readFunding({ db }: Deps): Promise<Funding | null> {
+  const f = await db.doc('platform/funding').get();
+  const month = f.get('month') as string | undefined;
+  if (!month) return null;
+  const payments = await db.collection('fundingPayments').where('month', '==', month).count().get();
+  return { month, target: Number(f.get('target') ?? 0), received: Number(f.get('received') ?? 0), payments: payments.data().count };
+}
+
+const SIZES: [string, number, number][] = [['1 人', 0, 1], ['2 人', 2, 2], ['3–5 人', 3, 5], ['6–10 人', 6, 10], ['11–30 人', 11, 30], ['31 人以上', 31, Infinity]];
+
+/** [opens]: church ID -> people who opened it [this week, last week, 4 weeks before]. */
+function churchUse(churches: (Church & { id: string })[], opens: Map<string, number[]>, now: Week, before: Week): Use {
+  const o = (c: { id: string; members: number }, w: number) => Math.min(opens.get(c.id)?.[w] ?? 0, Math.max(1, c.members));
+  const made = (c: Church, by: string) => !c.created || c.created <= by;
+  const pair = (f: (c: Church & { id: string }) => boolean): Pair =>
+    [count(churches, (c) => made(c, now.to) && f(c) && o(c, 0) > 0), count(churches, (c) => made(c, before.to) && f(c) && o(c, 1) > 0)];
+  const team = churches.filter((c) => c.members >= 2 && o(c, 0) > 0);
+  const lastWeek = churches.filter((c) => inWeek(c.created, before));
+  const fourBefore = churches.filter((c) => o(c, 2) > 0);
+  const stopped = churches.filter((c) => o(c, 1) > 0 && o(c, 0) === 0);
+  const named = (c: Church & { id: string }, w: number) => ({ name: c.name, members: c.members, opened: o(c, w) });
+  return {
+    churches: pair(() => true),
+    team: pair((c) => c.members >= 2),
+    solo: pair((c) => c.members < 2),
+    bySize: SIZES.map(([label, lo, hi]) => {
+      const g = churches.filter((c) => made(c, now.to) && c.members >= lo && c.members <= hi);
+      const used = g.filter((c) => o(c, 0) > 0);
+      return { label, churches: g.length, active: used.length, opened: sum(used.map((c) => o(c, 0))), members: sum(used.map((c) => c.members)) };
+    }).filter((s) => s.churches > 0),
+    secondWeek: { of: lastWeek.length, back: count(lastWeek, (c) => o(c, 0) > 0) },
+    retained: { of: fourBefore.length, still: count(fourBefore, (c) => o(c, 0) > 0) },
+    members: { of: sum(team.map((c) => c.members)), opened: sum(team.map((c) => o(c, 0))) },
+    top: [...team].sort((a, b) => o(b, 0) - o(a, 0) || b.members - a.members).slice(0, 10).map((c) => named(c, 0)),
+    stopped: stopped.filter((c) => c.members >= 2).sort((a, b) => b.members - a.members).map((c) => named(c, 1)),
+    stoppedSolo: count(stopped, (c) => c.members < 2),
   };
 }
 
@@ -202,7 +272,7 @@ function languageOf(code: string): { name: string; supported: boolean } | null {
   return { name, supported: APP_LANGUAGES.has(base) };
 }
 
-async function readAnalytics(d: Deps, a: Analytics, now: Week, before: Week): Promise<{ ga: Ga; gsc: Gsc }> {
+async function readAnalytics(d: Deps, a: Analytics, now: Week, before: Week): Promise<{ ga: Ga; gsc: Gsc; opens: Map<string, number[]> }> {
   const post = async <T>(url: string, token: string, body: unknown): Promise<T> => {
     const res = await d.fetch(url, {
       method: 'POST',
@@ -239,6 +309,25 @@ async function readAnalytics(d: Deps, a: Analytics, now: Week, before: Week): Pr
     }
     return out;
   };
+  /** Church ID -> active users [this week, last week, 4 weeks before]. */
+  const churchOpens = async () => {
+    const weeks = [now, before, { from: shift(now.from, -28), to: shift(now.to, -28) }];
+    const r = await post<{ rows?: GaRow[] }>(`https://analyticsdata.googleapis.com/v1beta/properties/${a.ga4Property}:runReport`, accessToken, {
+      dateRanges: weeks.map((w) => ({ startDate: w.from, endDate: w.to })),
+      dimensions: [{ name: 'customUser:church_id' }],
+      metrics: [{ name: 'activeUsers' }],
+      limit: 100000,
+    });
+    const out = new Map<string, number[]>();
+    for (const row of r.rows ?? []) {
+      const [id, range] = (row.dimensionValues ?? []).map((v) => v.value);
+      if (!id || id === '(not set)') continue;
+      const v = out.get(id) ?? [0, 0, 0];
+      v[Number(range?.replace('date_range_', '')) || 0] = Number(row.metricValues[0].value);
+      out.set(id, v);
+    }
+    return out;
+  };
   type GscRow = { keys?: string[] } & GscTotals;
   const gsc = (w: Week, dimensions: string[] = [], rowLimit = 10) =>
     post<{ rows?: GscRow[] }>(`https://searchconsole.googleapis.com/webmasters/v3/sites/${encodeURIComponent(a.gscSite)}/searchAnalytics/query`, accessToken, {
@@ -246,7 +335,7 @@ async function readAnalytics(d: Deps, a: Analytics, now: Week, before: Week): Pr
     }).then((r) => r.rows ?? []);
 
   const fourWeeks = { startDate: shift(now.to, -27), endDate: now.to };
-  const [total, platform, events, country, source, language, gNow, gBefore, queries] = await Promise.all([
+  const [total, platform, events, country, source, language, opens, gNow, gBefore, queries] = await Promise.all([
     ga(null, ['activeUsers']),
     ga('platform', ['activeUsers', 'newUsers']),
     ga('eventName', ['eventCount'], { dimensionFilter: { filter: { fieldName: 'eventName', inListFilter: { values: KEY_EVENTS.map(([e]) => e) } } } }),
@@ -254,6 +343,7 @@ async function readAnalytics(d: Deps, a: Analytics, now: Week, before: Week): Pr
     ga('sessionSource', ['newUsers']),
     // [this week, the last 4 weeks] in place of [this week, last week]
     ga('languageCode', ['activeUsers'], { dateRanges: [{ startDate: now.from, endDate: now.to }, fourWeeks] }),
+    churchOpens(),
     gsc(now),
     gsc(before),
     gsc(now, ['query'], 8),
@@ -283,6 +373,7 @@ async function readAnalytics(d: Deps, a: Analytics, now: Week, before: Week): Pr
   const rest = [...ranked.slice(8), ...(languages.has('其他') ? [languages.get('其他')!] : [])];
   const totals = (rows: GscRow[]): GscTotals => rows[0] ?? { clicks: 0, impressions: 0, ctr: 0, position: 0 };
   return {
+    opens,
     ga: {
       active: total.get('')?.[0] ?? [0, 0],
       platforms: PLATFORMS.map(([key, label]) => {
@@ -379,7 +470,7 @@ function meter(label: string, n: number, of: number) {
 <td align="right" style="padding:6px 0 6px 12px;white-space:nowrap" width="90"><b style="font-size:17px">${num(n)}</b> ${span(C.label3, pct(n, of))}</td></tr>`;
 }
 
-function rank(list: Church[], value: (c: Church) => number, note: (c: Church) => string) {
+function rank<T extends { name: string }>(list: T[], value: (c: T) => number, note: (c: T) => string) {
   const max = Math.max(1, ...list.map(value));
   return T('', list.map((c, i) => `<tr>
 <td style="padding:10px 0;${i ? `border-top:1px solid ${C.sep};` : ''}font-size:15px">
@@ -401,7 +492,7 @@ function table(head: string[], rows: string[][]) {
   return T('', `<tr>${th}</tr>${tr}`);
 }
 
-function gaSections(ga: Ga) {
+function platformCard(ga: Ga) {
   const sum0 = sum(ga.platforms.map((p) => p.active[0]));
   const parts = ga.platforms.map((p, i) => ({ ...p, color: C.series[i] })).filter((p) => p.active[0] > 0);
   const seg = parts.map((p) => {
@@ -414,15 +505,13 @@ function gaSections(ga: Ga) {
     `${num(p.active[0])}<br>${delta(p.active[0], p.active[1])}`,
     `${num(p.fresh[0])}<br>${delta(p.fresh[0], p.fresh[1])}`,
   ]);
-  return [
-    group('App 與網站'),
-    card(`活躍使用者 ${num(ga.active[0])}`, `${sum0 ? T('table-layout:fixed', `<tr>${seg}</tr>`) : ''}
-<div style="height:12px"></div>${table(['', '活躍', '新使用者'], platformRows)}`, `上週 ${num(ga.active[1])}`),
-    card('大家做了什麼', table(['', '這週', '上週'], ga.events.map((e) => [e.label, num(e.count[0]), `<span style="color:${C.label3}">${num(e.count[1])}</span>`]))),
-    card('新使用者從哪來', `${sub('國家', 0)}${hbars(ga.countries)}${sub('來源')}${hbars(ga.sources)}`),
-    ga.languages.length ? card('使用者的手機語言', languageRows(ga.languages)) : '',
-  ].join('');
+  return card(`活躍使用者 ${num(ga.active[0])}`, `${sum0 ? T('table-layout:fixed', `<tr>${seg}</tr>`) : ''}
+<div style="height:12px"></div>${table(['', '活躍', '新使用者'], platformRows)}`, `上週 ${num(ga.active[1])}`);
 }
+const eventsCard = (ga: Ga) =>
+  card('各個動作的次數', table(['', '這週', '上週'], ga.events.map((e) => [e.label, num(e.count[0]), `<span style="color:${C.label3}">${num(e.count[1])}</span>`])));
+const originCard = (ga: Ga) => card('新使用者從哪來', `${sub('國家', 0)}${hbars(ga.countries)}${sub('來源')}${hbars(ga.sources)}`);
+const languageCard = (ga: Ga) => (ga.languages.length ? card('使用者的手機語言', languageRows(ga.languages)) : '');
 
 function languageRows(list: Ga['languages']) {
   const max = Math.max(1, ...list.map((l) => l.n[1]));
@@ -451,40 +540,83 @@ function gscSection(g: Gsc) {
 export function weeklyMail(r: WeeklyReport): Mail {
   const sameMonth = r.now.from.slice(5, 7) === r.now.to.slice(5, 7);
   const range = `${md(r.now.from)} – ${sameMonth ? `${Number(r.now.to.slice(8))}日` : md(r.now.to)}`;
+  const u = r.use;
   const opened = r.openedApp[0];
+  const hero = u
+    ? `${num(u.churches[0])}<span style="font-size:20px;font-weight:600;letter-spacing:0;margin-left:8px">間教會有人打開 App</span>`
+    : `${num(r.editing[0])}<span style="font-size:20px;font-weight:600;letter-spacing:0;margin-left:8px">間教會有人排服事表</span>`;
+  const heroNote = u
+    ? `上週 ${num(u.churches[1])} 間・有同工的 ${num(u.team[0])} 間・一個人的 ${num(u.solo[0])} 間`
+    : `上週 ${num(r.editing[1])} 間`;
+  // Under 10 a share says more than it knows: the count instead.
+  const share = (a: number, b: number, note: string) =>
+    b >= 10 ? { value: pct(a, b), delta: span(C.label3, note) }
+    : b ? { value: `${num(a)}<span style="font-size:20px;color:${C.label3}">／${num(b)}</span>`, delta: span(C.label3, '數量還太少，先看間數') }
+    : { value: '—', delta: span(C.label3, '還沒有資料') };
+  const kpis = u
+    ? [
+        { label: '新教會', value: num(r.fresh.count), delta: delta(r.fresh.count, r.fresh.before) },
+        { label: '第二週還有人打開', ...share(u.secondWeek.back, u.secondWeek.of, `上週建立的 ${num(u.secondWeek.of)} 間裡 ${num(u.secondWeek.back)} 間`) },
+        { label: '有同工的教會，打開的同工', ...share(u.members.opened, u.members.of, `${num(u.members.opened)}／${num(u.members.of)} 人`) },
+        { label: '4 週前在用的，這週還在用', ...share(u.retained.still, u.retained.of, `${num(u.retained.of)} 間裡 ${num(u.retained.still)} 間`) },
+      ]
+    : [
+        { label: '使用者', value: num(r.users[0]), delta: delta(r.users[0], r.users[1]) },
+        { label: '使用中的教會', value: num(r.churches[0]), delta: delta(r.churches[0], r.churches[1]) },
+        { label: '7 天內打開過 App', value: opened == null ? '—' : num(opened), delta: opened == null ? span(C.label3, '還沒有資料') : delta(opened, r.openedApp[1]) },
+        { label: '新教會', value: num(r.fresh.count), delta: delta(r.fresh.count, r.fresh.before) },
+      ];
+  const row = (cells: string[], i: number) =>
+    `<tr>${cells.map((c, j) => `<td ${j ? 'align="right"' : ''} style="padding:10px 0 10px ${j ? '12px' : '0'};${j ? `white-space:nowrap;color:${C.label3};font-size:13px;` : 'font-size:15px;'}${i ? `border-top:1px solid ${C.sep};` : ''}">${c}</td>`).join('')}</tr>`;
+  const churchSection = u
+    ? [
+        card('在用的教會，依人數', table(['', '在用／全部', '打開的同工'], u.bySize.map((b) => [b.label, `<b>${num(b.active)}</b> <span style="color:${C.label3}">／${num(b.churches)}</span>`, b.members ? pct(b.opened, b.members) : '—']))),
+        card('最多同工打開的教會', u.top.length ? rank(u.top, (c) => c.opened, (c) => `${num(c.members)} 人`) : empty('沒有')),
+        card('上週有人打開、這週沒有', (u.stopped.length
+          ? T('', u.stopped.slice(0, 15).map((c, i) => row([esc(c.name), `上週 ${c.opened} 人打開・${c.members} 人`], i)).join(''))
+            + (u.stopped.length > 15 ? sub(`還有 ${u.stopped.length - 15} 間`, 8) : '')
+          : empty('有同工的教會都還有人打開'))
+          + (u.stoppedSolo ? sub(`一個人用的另有 ${num(u.stoppedSolo)} 間`, 12) : '')),
+      ]
+    : [
+        card('上週有排、這週停了', r.quiet.length
+          ? T('', r.quiet.map((c, i) => row([esc(c.name), `上週 ${c.editsBefore} 份・${c.members} 人`], i)).join(''))
+          : empty('沒有')),
+      ];
+  const support = r.funding
+    ? `<b style="font-size:28px">NT$${num(r.funding.received)}</b><span style="font-size:15px;color:${C.label2};margin-left:8px">／雲端費用 NT$${num(r.funding.target)}</span>
+<div style="margin:12px 0 8px">${bar(r.funding.target ? r.funding.received / r.funding.target : 0, C.accent, C.accentSoft)}</div>${span(C.label3, `${num(r.funding.payments)} 筆，App 和網站都算`)}`
+    : r.paid.count
+      ? `<b style="font-size:28px;margin-right:10px">NT$${num(r.paid.amount)}</b>${span(C.label3, `${r.paid.count} 筆`)}`
+      : empty('沒有');
   const body = [
     `<tr><td style="padding:0 0 24px">
 <div style="font-size:13px;font-weight:600;color:${C.accent}">馬大別忙週報</div>
 <div style="font-size:28px;font-weight:700;line-height:1.2;margin-top:4px">${range}</div>
-<div style="margin-top:28px;font-size:56px;font-weight:700;line-height:1;letter-spacing:-1px">${num(r.newUsers[0])}<span style="font-size:20px;font-weight:600;letter-spacing:0;margin-left:8px">位新使用者</span></div>
-<div style="margin-top:10px">${span(C.label3, `上週 ${num(r.newUsers[1])} 位`, 15)}</div></td></tr>`,
-    card('', tiles([
-      { label: '使用者', value: num(r.users[0]), delta: delta(r.users[0], r.users[1]) },
-      { label: '使用中的教會', value: num(r.churches[0]), delta: delta(r.churches[0], r.churches[1]) },
-      { label: '7 天內打開過 App', value: opened == null ? '—' : num(opened), delta: opened == null ? span(C.label3, '還沒有資料') : delta(opened, r.openedApp[1]) },
-      { label: '有人排服事表的教會', value: num(r.editing[0]), delta: delta(r.editing[0], r.editing[1]) },
-    ])),
-    card('每天的新使用者', dailyBars(r)),
-    group('教會與服事表'),
+<div style="margin-top:28px;font-size:56px;font-weight:700;line-height:1;letter-spacing:-1px">${hero}</div>
+<div style="margin-top:10px">${span(C.label3, heroNote, 15)}</div></td></tr>`,
+    card('', tiles(kpis)),
+    group('教會'),
+    ...churchSection,
+    group('新來的'),
+    card(`新使用者 ${num(r.newUsers[0])} 位`, `${dailyBars(r)}${sub(`全部 ${num(r.users[0])} 位，其中 ${num(r.noChurch)} 位還沒加入教會`, 16)}`, `上週 ${num(r.newUsers[1])} 位`),
     card(`新教會 ${num(r.fresh.count)} 間`, r.fresh.count
       ? `${T('', meter('邀了第二個人', r.fresh.invited, r.fresh.count) + meter('排了服事表', r.fresh.planned, r.fresh.count) + meter('10 人以上', r.fresh.tenPlus, r.fresh.count))}
 ${sub('人數最多')}${rank(r.fresh.biggest, (c) => c.members, (c) => `改了 ${c.edits} 份服事表`)}`
       : empty('沒有新教會'), r.fresh.before ? `上週 ${num(r.fresh.before)} 間` : ''),
+    r.ga ? originCard(r.ga) : '',
+    group('大家怎麼用'),
+    r.ga ? eventsCard(r.ga) : '',
     card('改最多服事表的教會', r.busiest.length
-      ? rank(r.busiest, (c) => c.edits, (c) => `${c.members} 人${c.editsBefore ? `・上週 ${c.editsBefore} 份` : ''}`)
+      ? rank(r.busiest.slice(0, 5), (c) => c.edits, (c) => `${c.members} 人${c.editsBefore ? `・上週 ${c.editsBefore} 份` : ''}`)
       : empty('沒有人改服事表')),
-    card('上週有排、這週停了', r.quiet.length
-      ? T('', r.quiet.map((c, i) => `<tr><td style="font-size:15px;padding:10px 0;${i ? `border-top:1px solid ${C.sep}` : ''}">${esc(c.name)}</td>
-<td align="right" style="font-size:13px;color:${C.label3};padding:10px 0;white-space:nowrap;${i ? `border-top:1px solid ${C.sep}` : ''}">上週 ${c.editsBefore} 份・${c.members} 人</td></tr>`).join(''))
-      : empty('沒有')),
-    r.ga ? gaSections(r.ga) : '',
+    r.ga ? platformCard(r.ga) : '',
+    card(r.funding ? `${Number(r.funding.month.slice(5))}月的支持` : '網站線上支持', support),
+    r.ga || r.gsc ? group('參考') : '',
+    r.ga ? languageCard(r.ga) : '',
     r.gsc ? gscSection(r.gsc) : '',
-    r.ga || r.gsc ? '<tr><td height="8"></td></tr>' : '',
-    card('網站線上支持', r.paid.count
-      ? `<b style="font-size:28px;margin-right:10px">NT$${num(r.paid.amount)}</b>${span(C.label3, `${r.paid.count} 筆`)}`
-      : empty('沒有')),
     `<tr><td style="font-size:12px;color:${C.label3};line-height:1.7;padding-top:8px">
-服事表只算有人動手改的，不算 Google 日曆同步、改時區、復原和搬家。App 內購看商店後台。${r.gsc ? 'Google 搜尋的資料晚兩三天，最後幾天可能還沒算進來。' : ''}<br>
+${u ? '有人打開：這週有人打開 App 或網站，照 GA4 記下的教會算；拒絕追蹤的人不算，在好幾間教會的人只算一間。' : ''}改服事表只算有人動手改的，不算 Google 日曆同步、改時區、復原和搬家。${r.gsc ? 'Google 搜尋的資料晚兩三天，最後幾天可能還沒算進來。' : ''}<br>
 資料到 ${md(r.now.to)}，${md(r.made)}產生</td></tr>`,
   ].join('\n');
 
@@ -501,15 +633,19 @@ ${body}
   const text = [
     `馬大別忙週報 ${range}`,
     '',
-    `新使用者 ${num(r.newUsers[0])}（上週 ${num(r.newUsers[1])}）`,
+    u ? `有人打開 App 的教會 ${num(u.churches[0])} 間（上週 ${num(u.churches[1])}）：有同工的 ${num(u.team[0])}、一個人的 ${num(u.solo[0])}` : '',
+    `新使用者 ${num(r.newUsers[0])}（上週 ${num(r.newUsers[1])}），還沒加入教會 ${num(r.noChurch)}`,
     `使用者 ${num(r.users[0])}、使用中的教會 ${num(r.churches[0])}、有人排服事表的教會 ${num(r.editing[0])}`,
     `新教會 ${num(r.fresh.count)} 間：邀了第二個人 ${r.fresh.invited}、排了服事表 ${r.fresh.planned}、10 人以上 ${r.fresh.tenPlus}`,
     r.ga ? `活躍使用者 ${num(r.ga.active[0])}（上週 ${num(r.ga.active[1])}）` : '',
     r.gsc ? `Google 搜尋：點擊 ${num(r.gsc.now.clicks)}、曝光 ${num(r.gsc.now.impressions)}` : '',
-    r.quiet.length ? `上週有排、這週停了：${r.quiet.map((c) => c.name).join('、')}` : '',
+    u?.stopped.length ? `上週有人打開、這週沒有：${u.stopped.map((c) => c.name).join('、')}` : '',
+    !u && r.quiet.length ? `上週有排、這週停了：${r.quiet.map((c) => c.name).join('、')}` : '',
+    r.funding ? `${Number(r.funding.month.slice(5))}月的支持 NT$${num(r.funding.received)}／雲端費用 NT$${num(r.funding.target)}` : '',
   ].filter((l) => l !== '').join('\n');
 
-  return { subject: `馬大別忙週報 ${range}：${num(r.newUsers[0])} 位新使用者`, html, text };
+  const lead = u ? `${num(u.churches[0])} 間教會在用` : `${num(r.newUsers[0])} 位新使用者`;
+  return { subject: `馬大別忙週報 ${range}：${lead}`, html, text };
 }
 
 // ---------------------------------------------------------------- send
