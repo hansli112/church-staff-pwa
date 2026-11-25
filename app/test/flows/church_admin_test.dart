@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:material_symbols_icons/symbols.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
+import 'package:image_picker_platform_interface/image_picker_platform_interface.dart';
 import 'package:martha/core/design/components.dart';
 import 'package:martha/data/backend.dart';
 import 'package:martha/data/memory/memory_backend.dart';
@@ -315,6 +316,28 @@ void main() {
       await tester.enterText(find.byType(TextField), '１４４');
       await settle(tester);
       expect(find.text('同工144'), findsOneWidget);
+    });
+  });
+
+  group('logo', () {
+    testWidgets('tapping 上傳 logo again while the picker is open asks no second picker', (tester) async {
+      final picker = _LogoPicker();
+      final oldPicker = ImagePickerPlatform.instance;
+      ImagePickerPlatform.instance = picker;
+      addTearDown(() => ImagePickerPlatform.instance = oldPicker);
+      await pumpApp(tester, seededChurch());
+      await go(tester, '/me/church');
+      await tester.scrollUntilVisible(find.text('上傳 logo'), 300);
+      await tester.tap(find.text('上傳 logo'));
+      await tester.pump();
+      await tester.tap(find.text('上傳 logo'));
+      await tester.pump();
+      expect(picker.asked, 1);
+      picker.selection.complete(null);
+      await settle(tester);
+      await tester.tap(find.text('上傳 logo'));
+      await tester.pump();
+      expect(picker.asked, 2, reason: 'closing the picker lets it be asked again');
     });
   });
 
@@ -1022,4 +1045,20 @@ void main() {
     expect(find.text('王大衛'), findsOneWidget);
     expect(find.text('已更新名字'), findsOneWidget);
   });
+}
+
+/// A photo picker that stays open until [selection] completes.
+class _LogoPicker extends ImagePickerPlatform {
+  int asked = 0;
+  var selection = Completer<XFile?>();
+
+  @override
+  Future<XFile?> getImageFromSource({
+    required ImageSource source,
+    ImagePickerOptions options = const ImagePickerOptions(),
+  }) {
+    asked++;
+    if (selection.isCompleted) selection = Completer();
+    return selection.future;
+  }
 }

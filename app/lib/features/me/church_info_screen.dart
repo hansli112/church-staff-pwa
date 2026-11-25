@@ -84,10 +84,24 @@ class _ChurchInfoScreenState extends ConsumerState<ChurchInfoScreen> {
     }
   }
 
+  /// The photo picker is open: a second one would cancel it, and the
+  /// first then fails (multiple_request).
+  bool _picking = false;
+
   Future<void> _pickLogo() async {
+    if (_picking || _uploading) return;
     final l10n = L10n.of(context);
-    final file = await ImagePicker().pickImage(source: ImageSource.gallery);
-    if (file == null) return;
+    final XFile? file;
+    setState(() => _picking = true);
+    try {
+      file = await ImagePicker().pickImage(source: ImageSource.gallery);
+    } catch (e) {
+      if (mounted) showToast(context, errorText(l10n, e));
+      return;
+    } finally {
+      if (mounted) setState(() => _picking = false);
+    }
+    if (file == null || !mounted) return;
     setState(() => _uploading = true);
     try {
       final bytes = prepareLogo(await file.readAsBytes());
@@ -230,7 +244,7 @@ class _ChurchInfoScreenState extends ConsumerState<ChurchInfoScreen> {
                           child: CircularProgressIndicator(strokeWidth: 2),
                         )
                       : null,
-                  onTap: _uploading ? null : _pickLogo,
+                  onTap: _uploading || _picking ? null : _pickLogo,
                 ),
               ],
             )
