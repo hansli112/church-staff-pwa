@@ -855,7 +855,7 @@ class L10nKo extends L10n {
   }
 
   @override
-  String get calFilter => '필터';
+  String get calFilter => '보기 및 필터';
 
   @override
   String get calFilterMine => '나와 관련된 행사';
@@ -1519,10 +1519,16 @@ class L10nKo extends L10n {
   String get calNextMonth => '다음 달';
 
   @override
-  String get calShowMonth => '달력 보기';
+  String get calMonthAndList => '달력과 목록';
 
   @override
   String get calHideMonth => '목록만 보기';
+
+  @override
+  String get calPickMonth => '월 선택';
+
+  @override
+  String get calThisMonth => '이번 달';
 
   @override
   String get calendarSetting => '캘린더';

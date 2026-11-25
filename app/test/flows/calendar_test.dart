@@ -17,6 +17,7 @@ import 'package:martha/state/session.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:url_launcher_platform_interface/url_launcher_platform_interface.dart';
 
+import '../support/calendar.dart';
 import '../support/harness.dart';
 import '../support/seed.dart';
 import '../support/telemetry.dart';
@@ -384,7 +385,7 @@ void main() {
     ];
     await pumpApp(tester, b);
     await go(tester, '/calendar');
-    expect(find.text('2026年10月'), findsOneWidget);
+    expect(calendarMonth('10月 2026'), findsOneWidget);
     await tapText(tester, '退修會');
     await tester.enterText(find.byType(TextField).first, '秋季退修會');
     await tester.pump();
@@ -723,11 +724,11 @@ void main() {
     expect(tester.getSemantics(gridDay(15)).flagsCollection.isSelected, Tristate.isTrue);
     await tester.fling(find.byType(MonthGrid), const Offset(-300, 0), 1000);
     await settle(tester);
-    expect(find.text('2026年11月'), findsOneWidget);
+    expect(calendarMonth('11月 2026'), findsOneWidget);
     expect(tester.getSemantics(gridDay(15)).flagsCollection.isSelected, isNot(Tristate.isTrue));
     await tester.fling(find.byType(MonthGrid), const Offset(300, 0), 1000);
     await settle(tester);
-    expect(find.text('2026年10月'), findsOneWidget);
+    expect(calendarMonth('10月 2026'), findsOneWidget);
     semantics.dispose();
   });
 
@@ -737,10 +738,9 @@ void main() {
     await pumpApp(tester, b);
     await go(tester, '/calendar');
     expect(find.byType(MonthGrid), findsOneWidget);
-    await tester.tap(find.byTooltip('只看列表'));
+    await pickInCalendarMenu(tester, '只看列表');
     await settle(tester);
     expect(find.byType(MonthGrid), findsNothing);
-    expect(find.byTooltip('顯示月曆'), findsOneWidget);
     expect((await SharedPreferences.getInstance()).getBool('calendar_month_grid'), isFalse);
   });
 
@@ -751,7 +751,7 @@ void main() {
     await go(tester, '/calendar');
     await tester.tap(gridDay(15));
     await settle(tester);
-    await tester.tap(find.byTooltip('只看列表'));
+    await pickInCalendarMenu(tester, '只看列表');
     await settle(tester);
     await tester.tap(find.byTooltip('新增活動'));
     await settle(tester);
@@ -780,7 +780,7 @@ void main() {
     await tester.fling(find.byType(MonthGrid), const Offset(-300, 0), 1000);
     await tester.pump();
     await tester.pump();
-    expect(find.text('2026年12月'), findsOneWidget);
+    expect(calendarMonth('12月 2026'), findsOneWidget);
     expect(find.byType(MonthGrid), findsOneWidget);
 
     b.calendarEventsHeld!.completeError(StateError('offline'));
@@ -867,7 +867,7 @@ void main() {
     await pumpApp(tester, b);
     await go(tester, '/calendar');
     b.calendarEventsHeld = Completer();
-    await tester.tap(find.byTooltip('下個月'));
+    await swipeMonth(tester, 1);
     await tester.pump();
     await tester.pump();
     final loading = tester.getSize(find.byType(MonthGrid)).height;
@@ -885,10 +885,10 @@ void main() {
     ];
     await pumpApp(tester, b);
     await go(tester, '/calendar');
-    await tester.tap(find.byTooltip('下個月'));
+    await swipeMonth(tester, 1);
     await settle(tester);
     b.calendarEventsHeld = Completer();
-    await tester.tap(find.byTooltip('下個月'));
+    await swipeMonth(tester, 1);
     await tester.pump();
     expect(inAgenda('聖誕晚會'), findsOneWidget, reason: 'no read to wait for');
     b.calendarEventsHeld!.complete();

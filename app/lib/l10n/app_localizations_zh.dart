@@ -854,7 +854,7 @@ class L10nZh extends L10n {
   }
 
   @override
-  String get calFilter => '篩選';
+  String get calFilter => '顯示與篩選';
 
   @override
   String get calFilterMine => '跟我有關的';
@@ -1518,10 +1518,16 @@ class L10nZh extends L10n {
   String get calNextMonth => '下個月';
 
   @override
-  String get calShowMonth => '顯示月曆';
+  String get calMonthAndList => '月曆和列表';
 
   @override
   String get calHideMonth => '只看列表';
+
+  @override
+  String get calPickMonth => '選月份';
+
+  @override
+  String get calThisMonth => '這個月';
 
   @override
   String get calendarSetting => '行事曆';
@@ -4738,7 +4744,7 @@ class L10nZhHans extends L10nZh {
   }
 
   @override
-  String get calFilter => '筛选';
+  String get calFilter => '显示与筛选';
 
   @override
   String get calFilterMine => '跟我有关的';
@@ -5402,10 +5408,16 @@ class L10nZhHans extends L10nZh {
   String get calNextMonth => '下个月';
 
   @override
-  String get calShowMonth => '显示月历';
+  String get calMonthAndList => '月历和列表';
 
   @override
   String get calHideMonth => '只看列表';
+
+  @override
+  String get calPickMonth => '选月份';
+
+  @override
+  String get calThisMonth => '这个月';
 
   @override
   String get calendarSetting => '行事历';

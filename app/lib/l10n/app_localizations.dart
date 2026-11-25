@@ -1594,10 +1594,10 @@ abstract class L10n {
   /// **'{group}的活動'**
   String eventOfGroup(String group);
 
-  /// Tooltip of the calendar's filter menu
+  /// Tooltip of the calendar's menu: month grid or list only, and which events
   ///
   /// In zh, this message translates to:
-  /// **'篩選'**
+  /// **'顯示與篩選'**
   String get calFilter;
 
   /// Calendar filter: the church's events, my groups' and those I serve at
@@ -2764,17 +2764,29 @@ abstract class L10n {
   /// **'下個月'**
   String get calNextMonth;
 
-  /// No description provided for @calShowMonth.
+  /// No description provided for @calMonthAndList.
   ///
   /// In zh, this message translates to:
-  /// **'顯示月曆'**
-  String get calShowMonth;
+  /// **'月曆和列表'**
+  String get calMonthAndList;
 
   /// No description provided for @calHideMonth.
   ///
   /// In zh, this message translates to:
   /// **'只看列表'**
   String get calHideMonth;
+
+  /// No description provided for @calPickMonth.
+  ///
+  /// In zh, this message translates to:
+  /// **'選月份'**
+  String get calPickMonth;
+
+  /// No description provided for @calThisMonth.
+  ///
+  /// In zh, this message translates to:
+  /// **'這個月'**
+  String get calThisMonth;
 
   /// No description provided for @calendarSetting.
   ///

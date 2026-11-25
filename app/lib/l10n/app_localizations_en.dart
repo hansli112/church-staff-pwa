@@ -876,7 +876,7 @@ class L10nEn extends L10n {
   }
 
   @override
-  String get calFilter => 'Filter';
+  String get calFilter => 'View and filter';
 
   @override
   String get calFilterMine => 'Related to me';
@@ -1610,10 +1610,16 @@ class L10nEn extends L10n {
   String get calNextMonth => 'Next month';
 
   @override
-  String get calShowMonth => 'Show month';
+  String get calMonthAndList => 'Month and list';
 
   @override
   String get calHideMonth => 'List only';
+
+  @override
+  String get calPickMonth => 'Choose month';
+
+  @override
+  String get calThisMonth => 'This month';
 
   @override
   String get calendarSetting => 'Calendar';

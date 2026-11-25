@@ -5,6 +5,7 @@ import 'package:martha/data/memory/memory_backend.dart';
 import 'package:martha/domain/event_roster.dart';
 import 'package:martha/domain/models.dart';
 
+import '../support/calendar.dart';
 import '../support/harness.dart';
 import '../support/seed.dart';
 
@@ -54,22 +55,22 @@ void main() {
   testWidgets("跟我有關的 at first: the church's events and my groups'; 全部 shows the rest", (tester) async {
     await pumpApp(tester, church());
     await go(tester, '/calendar');
-    expect(find.text('跟我有關的'), findsOneWidget);
+    expect(await calendarFilterShown(tester), '跟我有關的');
     expect(find.text('同工會'), findsWidgets);
     expect(find.text('敬拜團練習'), findsWidgets);
     expect(find.text('青年團契'), findsNothing, reason: "青年崇拜's, and he is not in it");
 
-    await tapText(tester, '跟我有關的');
-    await tapText(tester, '全部');
+    await pickInCalendarMenu(tester, '全部');
+    await settle(tester);
     expect(find.text('青年團契'), findsWidgets);
-    await tapText(tester, '全部');
+    await openCalendarMenu(tester);
     expect(find.text('全教會'), findsNothing, reason: "跟我有關的 has the church's, and 全部 sounds the same");
   });
 
   testWidgets('an admin sees everything at first', (tester) async {
     await pumpApp(tester, church(as: pastor));
     await go(tester, '/calendar');
-    expect(find.text('全部'), findsOneWidget);
+    expect(await calendarFilterShown(tester), '全部');
     expect(find.text('青年團契'), findsWidgets);
   });
 
@@ -137,7 +138,7 @@ void main() {
     ).copyWith(saved: true);
     await pumpApp(tester, b);
     await go(tester, '/calendar');
-    await tester.tap(find.byTooltip('上個月'));
+    await swipeMonth(tester, -1);
     await settle(tester);
     expect(find.text('青年退修會'), findsWidgets, reason: "青年崇拜's, but he played 司琴");
   });
@@ -166,12 +167,13 @@ void main() {
     await go(tester, '/calendar');
     expect(find.text('喜樂小組烤肉'), findsWidgets, reason: 'his 小組');
     expect(find.text('平安小組烤肉'), findsNothing);
-    await tapText(tester, '跟我有關的');
+    await openCalendarMenu(tester);
     expect(find.text('敬拜團'), findsWidgets);
     expect(find.text('青年崇拜'), findsWidgets);
     expect(find.text('喜樂小組'), findsNothing, reason: 'a church may have twenty');
 
-    await tapText(tester, '全部');
+    await tester.tap(find.ancestor(of: find.text('全部').last, matching: find.byType(CheckedPopupMenuItem<Object>)));
+    await settle(tester);
     expect(find.text('平安小組烤肉'), findsWidgets);
   });
 
@@ -190,7 +192,7 @@ void main() {
     );
     await pumpApp(tester, b);
     await go(tester, '/calendar');
-    expect(find.text('跟我有關的'), findsOneWidget);
+    expect(await calendarFilterShown(tester), '跟我有關的');
     expect(find.text('喜樂小組烤肉'), findsWidgets);
   });
 
@@ -200,7 +202,7 @@ void main() {
       b.smallGroups['grace'] = {'joy': const SmallGroupDetails(id: 'joy', name: '喜樂小組', service: 'sunday')};
       await pumpApp(tester, b, savedPrefs: {'calendar_filter/grace': saved});
       await go(tester, '/calendar');
-      expect(find.text('跟我有關的'), findsOneWidget);
+      expect(await calendarFilterShown(tester), '跟我有關的');
       expect(find.text('敬拜團練習'), findsWidgets);
     });
   }
@@ -209,13 +211,13 @@ void main() {
     final b = church();
     await pumpApp(tester, b);
     await go(tester, '/calendar');
-    await tapText(tester, '跟我有關的');
-    await tapText(tester, '敬拜團');
+    await pickInCalendarMenu(tester, '敬拜團');
+    await settle(tester);
     expect(find.text('同工會'), findsNothing);
     b.ministries['grace'] = const MinistrySettings(ministries: [], ids: ['worship']);
     b.notify();
     await settle(tester);
-    expect(find.text('跟我有關的'), findsOneWidget);
+    expect(await calendarFilterShown(tester), '跟我有關的');
     expect(find.text('同工會'), findsWidgets);
   });
 }

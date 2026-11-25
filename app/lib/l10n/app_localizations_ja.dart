@@ -854,7 +854,7 @@ class L10nJa extends L10n {
   }
 
   @override
-  String get calFilter => '絞り込み';
+  String get calFilter => '表示と絞り込み';
 
   @override
   String get calFilterMine => '自分に関係あるもの';
@@ -1518,10 +1518,16 @@ class L10nJa extends L10n {
   String get calNextMonth => '次の月';
 
   @override
-  String get calShowMonth => '月表示';
+  String get calMonthAndList => 'カレンダーとリスト';
 
   @override
   String get calHideMonth => 'リストのみ';
+
+  @override
+  String get calPickMonth => '月を選ぶ';
+
+  @override
+  String get calThisMonth => '今月';
 
   @override
   String get calendarSetting => 'カレンダー';

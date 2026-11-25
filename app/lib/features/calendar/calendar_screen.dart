@@ -1,3 +1,4 @@
+import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:material_symbols_icons/symbols.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -32,6 +33,9 @@ class CalendarMonth extends Notifier<DateTime> {
   }
 
   void shift(int months) => state = DateTime(state.year, state.month + months);
+
+  /// [month]'s month, picked from its name.
+  void show(DateTime month) => state = DateTime(month.year, month.month);
 }
 
 final calendarMonthProvider = NotifierProvider<CalendarMonth, DateTime>(CalendarMonth.new);
@@ -171,37 +175,50 @@ class CalendarScreen extends ConsumerWidget {
           },
         ),
     ];
+    final ready = settings?.ready ?? false;
+    final c = AppColors.of(context);
+    // Narrowed: not every event shows, said by the button's colour.
+    final narrowed = filter != 'all';
     return Scaffold(
       appBar: AppBar(
-        title: Text(l10n.tabCalendar),
+        centerTitle: false,
+        titleSpacing: Space.m,
+        // The month is the title, as on the iPhone's and Google's
+        // calendars; 行事曆 is said by the tab below.
+        title: ready ? _MonthTitle(month: month) : Text(l10n.tabCalendar),
         actions: savingActions([
-          if (settings?.ready ?? false)
-            PopupMenuButton<String>(
+          if (ready)
+            PopupMenuButton<Object>(
               tooltip: l10n.calFilter,
-              onSelected: ref.read(calendarFilterProvider.notifier).pick,
+              onSelected: (v) => switch (v) {
+                _View(:final grid) => grid == gridShown ? null : ref.read(monthGridShownProvider.notifier).toggle(),
+                final String key => ref.read(calendarFilterProvider.notifier).pick(key),
+                _ => null,
+              },
               itemBuilder: (_) => [
+                CheckedPopupMenuItem(
+                  value: const _View(grid: true),
+                  checked: gridShown,
+                  child: Text(l10n.calMonthAndList),
+                ),
+                CheckedPopupMenuItem(
+                  value: const _View(grid: false),
+                  checked: !gridShown,
+                  child: Text(l10n.calHideMonth),
+                ),
+                const PopupMenuDivider(),
                 for (final (key, label) in filters)
                   CheckedPopupMenuItem(value: key, checked: key == filter, child: Text(label)),
               ],
-              child: Padding(
-                padding: const EdgeInsets.symmetric(horizontal: Space.s),
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Text(
-                      filters.where((f) => f.$1 == filter).firstOrNull?.$2 ??
-                          (filter == 'mine' ? l10n.calFilterMine : l10n.calFilterAll),
-                    ),
-                    const Icon(Symbols.arrow_drop_down_rounded),
-                  ],
-                ),
-              ),
-            ),
-          if (settings?.ready ?? false)
-            IconButton(
-              tooltip: gridShown ? l10n.calHideMonth : l10n.calShowMonth,
-              icon: Icon(gridShown ? Symbols.view_list_rounded : Symbols.calendar_view_month_rounded),
-              onPressed: () => ref.read(monthGridShownProvider.notifier).toggle(),
+              icon: narrowed
+                  ? DecoratedBox(
+                      decoration: BoxDecoration(color: c.accentSoft, shape: BoxShape.circle),
+                      child: Padding(
+                        padding: const EdgeInsets.all(4),
+                        child: Icon(Symbols.filter_list_rounded, color: c.accent),
+                      ),
+                    )
+                  : const Icon(Symbols.filter_list_rounded),
             ),
           if (canEdit)
             IconButton(
@@ -350,7 +367,6 @@ class _AgendaState extends ConsumerState<_Agenda> {
     final today = ref.watch(todayProvider);
     final selected = ref.watch(calendarSelectedDayProvider);
     final gridShown = ref.watch(monthGridShownProvider);
-    final title = DateFormat.yMMMM().format(month);
     final me = ref.watch(meProvider).value;
     final filter = ref.watch(shownCalendarFilterProvider);
     final servedAt = ref.watch(
@@ -363,26 +379,6 @@ class _AgendaState extends ConsumerState<_Agenda> {
     ];
     void shift(int months) => ref.read(calendarMonthProvider.notifier).shift(months);
 
-    final header = Padding(
-      padding: const EdgeInsets.symmetric(horizontal: Space.s),
-      child: Row(
-        children: [
-          IconButton(
-            tooltip: l10n.calPrevMonth,
-            icon: const Icon(Symbols.chevron_left_rounded),
-            onPressed: () => shift(-1),
-          ),
-          Expanded(
-            child: Text(title, textAlign: TextAlign.center, style: AppText.headline),
-          ),
-          IconButton(
-            tooltip: l10n.calNextMonth,
-            icon: const Icon(Symbols.chevron_right_rounded),
-            onPressed: () => shift(1),
-          ),
-        ],
-      ),
-    );
     final grid = MonthGrid(
       month: shownMonth,
       today: today,
@@ -489,49 +485,169 @@ class _AgendaState extends ConsumerState<_Agenda> {
 
     return LayoutBuilder(
       builder: (context, constraints) {
-        final headerHeight = Space.minTap(Theme.of(context).platform);
         final pinned =
-            constraints.maxHeight - headerHeight - MonthGrid.tallest(context) >=
+            constraints.maxHeight - MonthGrid.tallest(context) >=
             MediaQuery.textScalerOf(context).scale(_agendaMinHeight);
         final thisMonth = month == DateTime(today.year, today.month);
         if (!_scrolledToToday && pinned && thisMonth && selected == null && events.hasValue) _scrollToToday();
-        return Column(
-          children: [
-            header,
-            if (pinned) ...[
-              _Folding(
-                shown: gridShown,
-                child: Column(children: [grid, divider]),
-              ),
-              // Above the rows, not scrolled away with what is past.
-              ...notices,
-            ],
-            Expanded(
-              child: RefreshIndicator.adaptive(
-                onRefresh: () => ref.refresh(calendarEventsProvider(monthKey(month)).future),
-                child: CustomScrollView(
-                  controller: _scroll,
-                  physics: const AlwaysScrollableScrollPhysics(),
-                  slivers: [
-                    if (!pinned) ...notices.map((n) => SliverToBoxAdapter(child: n)),
-                    if (!pinned)
-                      SliverToBoxAdapter(
-                        child: _Folding(shown: gridShown, child: grid),
-                      ),
-                    if (instead != null)
-                      SliverFillRemaining(hasScrollBody: false, child: Center(child: instead))
-                    else
-                      SliverPadding(
-                        padding: const EdgeInsets.only(bottom: Space.xl),
-                        sliver: SliverList.list(children: agenda),
-                      ),
-                  ],
+        // Swiped, the month changes, the agenda too and with the grid
+        // folded away; or from the month's name above.
+        return GestureDetector(
+          onHorizontalDragEnd: (details) {
+            final v = details.primaryVelocity ?? 0;
+            if (v.abs() >= 200) shift(v < 0 ? 1 : -1);
+          },
+          child: Column(
+            children: [
+              if (pinned) ...[
+                _Folding(
+                  shown: gridShown,
+                  child: Column(children: [grid, divider]),
+                ),
+                // Above the rows, not scrolled away with what is past.
+                ...notices,
+              ],
+              Expanded(
+                child: RefreshIndicator.adaptive(
+                  onRefresh: () => ref.refresh(calendarEventsProvider(monthKey(month)).future),
+                  child: CustomScrollView(
+                    controller: _scroll,
+                    physics: const AlwaysScrollableScrollPhysics(),
+                    slivers: [
+                      if (!pinned) ...notices.map((n) => SliverToBoxAdapter(child: n)),
+                      if (!pinned)
+                        SliverToBoxAdapter(
+                          child: _Folding(shown: gridShown, child: grid),
+                        ),
+                      if (instead != null)
+                        SliverFillRemaining(hasScrollBody: false, child: Center(child: instead))
+                      else
+                        SliverPadding(
+                          padding: const EdgeInsets.only(bottom: Space.xl),
+                          sliver: SliverList.list(children: agenda),
+                        ),
+                    ],
+                  ),
                 ),
               ),
-            ),
-          ],
+            ],
+          ),
         );
       },
+    );
+  }
+}
+
+/// A choice in the calendar's menu: the month grid above the agenda, or
+/// the agenda alone.
+class _View {
+  const _View({required this.grid});
+
+  final bool grid;
+}
+
+/// The month on screen, as the screen's title: its name large, the year
+/// beside it. Tapped, wheels pick another; 這個月 comes back to today's.
+/// With a screen reader, swiping up and down goes month by month.
+class _MonthTitle extends ConsumerWidget {
+  const _MonthTitle({required this.month});
+
+  final DateTime month;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final l10n = L10n.of(context);
+    final c = AppColors.of(context);
+    final months = ref.read(calendarMonthProvider.notifier);
+    final style = AppText.title2.copyWith(fontWeight: FontWeight.w700);
+    return Semantics(
+      button: true,
+      label: DateFormat.yMMMM().format(month),
+      hint: l10n.calPickMonth,
+      onIncrease: () => months.shift(1),
+      onDecrease: () => months.shift(-1),
+      excludeSemantics: true,
+      child: GestureDetector(
+        behavior: HitTestBehavior.opaque,
+        onTap: () async {
+          final picked = await showAppSheet<DateTime>(
+            context,
+            builder: (_) => _MonthSheet(month: month, today: ref.read(todayProvider)),
+          );
+          if (picked != null) months.show(picked);
+        },
+        child: ConstrainedBox(
+          constraints: BoxConstraints(minHeight: Space.minTap(Theme.of(context).platform)),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Flexible(
+                child: Text.rich(
+                  TextSpan(
+                    children: [
+                      TextSpan(text: DateFormat.MMMM().format(month)),
+                      const TextSpan(text: ' '),
+                      TextSpan(
+                        text: '${month.year}',
+                        style: TextStyle(fontWeight: FontWeight.w400, color: c.secondaryLabel),
+                      ),
+                    ],
+                  ),
+                  style: style,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ),
+              Icon(Symbols.expand_more_rounded, color: c.accent),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/// Wheels for the month and year, as the iPhone has them; 完成 shows the
+/// month turned to, 這個月 today's.
+class _MonthSheet extends StatefulWidget {
+  const _MonthSheet({required this.month, required this.today});
+
+  final DateTime month;
+  final Day today;
+
+  @override
+  State<_MonthSheet> createState() => _MonthSheetState();
+}
+
+class _MonthSheetState extends State<_MonthSheet> {
+  late DateTime _month = widget.month;
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = L10n.of(context);
+    return SafeArea(
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          SheetBar(
+            title: l10n.calPickMonth,
+            leading: SecondaryButton(
+              label: l10n.calThisMonth,
+              onPressed: () => Navigator.pop(context, DateTime(widget.today.year, widget.today.month)),
+            ),
+            actions: [SecondaryButton(label: l10n.done, onPressed: () => Navigator.pop(context, _month))],
+          ),
+          SizedBox(
+            // The iPhone's own wheels' height.
+            height: 216,
+            child: CupertinoDatePicker(
+              mode: CupertinoDatePickerMode.monthYear,
+              initialDateTime: DateTime(widget.month.year, widget.month.month),
+              onDateTimeChanged: (d) => _month = DateTime(d.year, d.month),
+            ),
+          ),
+        ],
+      ),
     );
   }
 }

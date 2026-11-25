@@ -1,3 +1,4 @@
+import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
@@ -5,6 +6,7 @@ import 'package:martha/core/design/components.dart';
 import 'package:martha/domain/models.dart';
 import 'package:martha/features/calendar/month_grid.dart';
 
+import '../support/calendar.dart';
 import '../support/harness.dart';
 import '../support/seed.dart';
 
@@ -64,9 +66,9 @@ void main() {
     expect(tester.getTopLeft(agendaEvent('活動20')).dy, lessThan(top + 60), reason: 'today first');
     expect(agendaEvent('活動19').hitTestable(), findsNothing);
 
-    await tester.tap(find.byTooltip('下個月'));
+    await swipeMonth(tester, 1);
     await settle(tester);
-    await tester.tap(find.byTooltip('上個月'));
+    await swipeMonth(tester, -1);
     await settle(tester);
     expect(tester.getTopLeft(agendaEvent('活動20')).dy, lessThan(top + 60), reason: 'back to this month, today again');
   });
@@ -126,7 +128,7 @@ void main() {
     ];
     await pumpApp(tester, b);
     await openCalendar(tester);
-    await tester.tap(find.byTooltip('下個月'));
+    await swipeMonth(tester, 1);
     await settle(tester);
     expect(agendaEvent('十一月1').hitTestable(), findsOneWidget);
   });
@@ -238,7 +240,7 @@ void main() {
     await openCalendar(tester);
     final open = tester.getSize(find.byType(MonthGrid)).height;
 
-    await tester.tap(find.byTooltip('只看列表'));
+    await pickInCalendarMenu(tester, '只看列表');
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 120));
     final folding = tester.getSize(
@@ -250,7 +252,7 @@ void main() {
     expect(find.text('這天沒有活動'), findsNothing, reason: 'a grid folding away takes no taps');
     expect(find.byType(MonthGrid), findsNothing);
 
-    await tester.tap(find.byTooltip('顯示月曆'));
+    await pickInCalendarMenu(tester, '月曆和列表');
     await tester.pump();
     expect(find.byType(MonthGrid), findsOneWidget);
     await settle(tester);
@@ -274,5 +276,63 @@ void main() {
     await tester.tap(monthDay(28));
     await settle(tester);
     expect(agendaEvent('詩班練習').hitTestable(), findsOneWidget);
+  });
+
+  testWidgets('the month is the title, no 行事曆 over it; a swipe goes month by month, the list alone too', (
+    tester,
+  ) async {
+    final b = seededChurch(as: staffMei);
+    b.connectCalendar('grace', calendarName: '教會行事曆');
+    b.calendarEvents['grace'] = [
+      CalendarEvent(id: 'n', title: '感恩節', start: DateTime(2026, 11, 26, 19), end: DateTime(2026, 11, 26, 21)),
+    ];
+    await pumpApp(tester, b);
+    await openCalendar(tester);
+    expect(calendarMonth('10月 2026'), findsOneWidget);
+    expect(find.descendant(of: find.byType(AppBar), matching: find.text('行事曆')), findsNothing);
+    expect(find.byTooltip('上個月'), findsNothing);
+
+    await pickInCalendarMenu(tester, '只看列表');
+    await settle(tester);
+    await swipeMonth(tester, 1);
+    await settle(tester);
+    expect(calendarMonth('11月 2026'), findsOneWidget);
+    expect(agendaEvent('感恩節'), findsOneWidget);
+    await swipeMonth(tester, -1);
+    await settle(tester);
+    expect(calendarMonth('10月 2026'), findsOneWidget);
+  });
+
+  testWidgets('the month tapped, wheels pick another; 這個月 comes back to today', (tester) async {
+    final b = seededChurch(as: staffMei);
+    b.connectCalendar('grace', calendarName: '教會行事曆');
+    await pumpApp(tester, b);
+    await openCalendar(tester);
+    await tester.tap(calendarMonth('10月 2026'));
+    await settle(tester);
+    expect(find.text('選月份'), findsOneWidget);
+    final wheels = find.byType(CupertinoDatePicker);
+    await tester.drag(find.descendant(of: wheels, matching: find.textContaining('2026')).first, const Offset(0, -40));
+    await settle(tester);
+    await tapText(tester, '完成');
+    expect(calendarMonth('10月 2027'), findsOneWidget);
+
+    await tester.tap(calendarMonth('10月 2027'));
+    await settle(tester);
+    await tapText(tester, '這個月');
+    expect(calendarMonth('10月 2026'), findsOneWidget);
+  });
+
+  testWidgets('顯示與篩選 stands out while not every event shows', (tester) async {
+    final b = seededChurch(as: staffMei);
+    b.connectCalendar('grace', calendarName: '教會行事曆');
+    await pumpApp(tester, b);
+    await openCalendar(tester);
+    Finder soft() => find.descendant(of: find.byTooltip('顯示與篩選'), matching: find.byType(DecoratedBox));
+    expect(await calendarFilterShown(tester), '跟我有關的');
+    expect(soft(), findsOneWidget);
+    await pickInCalendarMenu(tester, '全部');
+    await settle(tester);
+    expect(soft(), findsNothing);
   });
 }
