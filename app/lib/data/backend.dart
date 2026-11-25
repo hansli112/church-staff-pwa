@@ -349,6 +349,10 @@ abstract interface class ChurchData {
   /// When member [uid] (only themself) is reminded of their duties here.
   Future<void> setReminderTiming(String uid, ReminderTiming timing);
 
+  /// The hour member [uid] (only themself) is reminded at here
+  /// ([ReminderHours]).
+  Future<void> setReminderHour(String uid, int hour);
+
   /// Sets the home-screen name (admins only); null goes back to the church
   /// name.
   Future<void> setHomeName(String? name);

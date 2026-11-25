@@ -6,7 +6,7 @@ import { beforeEach, describe, test } from 'node:test';
 import { Timestamp, type CollectionReference } from 'firebase-admin/firestore';
 import { getStorage } from 'firebase-admin/storage';
 
-import { churchPreview, createChurch, deleteChurch, purgeDeletedChurches, restoreChurch, setChurchTimeZone, type PurgeDeps } from '../src/church.js';
+import { churchPreview, createChurch, deleteChurch, purgeDeletedChurches, renameChurch, restoreChurch, setChurchTimeZone, type PurgeDeps } from '../src/church.js';
 import { memoryGoogle } from '../src/memoryGoogle.js';
 import { addPending, callerKey, waitingFor } from '../src/pendingMembers.js';
 import { seal } from '../src/sealing.js';
@@ -114,6 +114,16 @@ describe("a church's time zone", () => {
     await setChurchTimeZone(purgeDeps, caller('alice'), { churchId: 'C1', timeZone: 'America/Chicago' });
     assert.equal((await db.doc('churches/C1').get()).get('timeZone'), 'America/Chicago');
     assert.deepEqual(warn.mock.calls.map((c) => c.arguments[0]), []);
+  });
+});
+
+describe('renameChurch', () => {
+  test('an admin renames the church, trimmed; others may not, nor to nothing', async () => {
+    await seedChurch('C1', { alice: 'admin', bob: 'staff' });
+    await rejectsWith(renameChurch(deps, caller('bob'), { churchId: 'C1', name: '甲' }), 'permissionDenied');
+    await rejectsWith(renameChurch(deps, caller('alice'), { churchId: 'C1', name: '  ' }), 'unknown');
+    await renameChurch(deps, caller('alice'), { churchId: 'C1', name: ' 恩典之家 ' });
+    assert.equal((await db.doc('churches/C1').get()).get('name'), '恩典之家');
   });
 });
 

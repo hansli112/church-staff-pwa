@@ -260,6 +260,11 @@ class EchoingChurchData implements ChurchData {
           ),
         },
       ),
+      RenameChurch(:final name) => _Echo(
+        at: {
+          _churchAt: _Change<Church?>((c) => c?.copyWith(name: name.trim()), (c) => c?.name == name.trim()),
+        },
+      ),
       SetTimeZone(:final timeZone) => _Echo(
         at: {
           _churchAt: _Change<Church?>((c) => c?.copyWith(timeZone: timeZone), (c) => c?.timeZone == timeZone),
@@ -431,6 +436,12 @@ class EchoingChurchData implements ChurchData {
   Future<void> setReminderTiming(String uid, ReminderTiming timing) => _send(
     _Echo(members: {uid: (m) => m.copyWith(reminderTiming: timing)}),
     () => _inner.setReminderTiming(uid, timing),
+  );
+
+  @override
+  Future<void> setReminderHour(String uid, int hour) => _send(
+    _Echo(members: {uid: (m) => m.copyWith(reminderHour: hour)}),
+    () => _inner.setReminderHour(uid, hour),
   );
 
   // Everything else as the backend has it.
@@ -939,4 +950,5 @@ bool _sameMember(Member? a, Member? b) =>
         a.sameAdminFields(b) &&
         a.email == b.email &&
         a.reminderTiming == b.reminderTiming &&
+        a.reminderHour == b.reminderHour &&
         setEquals(a.mutedNotifications, b.mutedNotifications));

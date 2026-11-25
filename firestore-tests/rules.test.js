@@ -302,6 +302,10 @@ describe('同工 (members)', () => {
     await assertFails(updateDoc(ref, { notificationPrefs: { muted: ['spam'] } }));
     await assertFails(updateDoc(ref, { notificationPrefs: { muted: 'reminder' } }));
     await assertFails(updateDoc(ref, { 'notificationPrefs.reminderTiming': 'hourly' }));
+    await assertSucceeds(updateDoc(ref, { 'notificationPrefs.reminderHour': 8 }));
+    await assertFails(updateDoc(ref, { 'notificationPrefs.reminderHour': 5 }));
+    await assertFails(updateDoc(ref, { 'notificationPrefs.reminderHour': 23 }));
+    await assertFails(updateDoc(ref, { 'notificationPrefs.reminderHour': '8' }));
     await assertFails(updateDoc(ref, { notificationPrefs: 'off' }));
   });
 

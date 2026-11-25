@@ -72,6 +72,19 @@ export async function setChurchTimeZone(deps: CalDeps, caller: Caller | null, da
   return {};
 }
 
+/** Renames the church (an admin), as everyone in it sees it. */
+export async function renameChurch(deps: Deps, caller: Caller | null, data: unknown) {
+  const { cid } = await churchAccess(deps, caller, data, 'admin');
+  const name = text((data as { name?: unknown }).name, TEXT_LIMITS.churchName);
+  await deps.db.runTransaction(async (tx) => {
+    const ref = deps.db.doc(`churches/${cid}`);
+    // Closed since the access check: as any write there.
+    if (!isChurchOpen(await tx.get(ref))) churchClosed();
+    tx.update(ref, { name });
+  });
+  return {};
+}
+
 /**
  * Creates church [name] with [c] as its admin, in one transaction with the
  * name reservation. [services] and the admin's [zones] and [groups] come

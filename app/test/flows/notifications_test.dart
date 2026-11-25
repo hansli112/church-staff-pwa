@@ -12,21 +12,34 @@ import '../support/harness.dart';
 import '../support/seed.dart';
 
 void main() {
-  testWidgets('reminders come every Monday evening until another time is picked', (tester) async {
+  testWidgets('reminders come every Monday at 7 p.m. until another day or hour is picked', (tester) async {
     final b = seededChurch(as: staffMei);
     await pumpApp(tester, b);
     GoRouter.of(tester.element(find.byType(Scaffold).first)).go('/me/notifications');
     await settle(tester);
 
     // The choice below says when; the switch does not say it again.
-    expect(find.text('每週一晚上，列出這週的服事'), findsNothing);
-    await tester.tap(find.text('前一天晚上'));
+    expect(find.text('每週一，列出這週的服事'), findsNothing);
+    await tester.tap(find.text('前一天'));
     await settle(tester);
     expect(b.members['grace']!['mei']!.reminderTiming, ReminderTiming.dayBefore);
 
     await tester.tap(find.text('兩個都要'));
     await settle(tester);
     expect(b.members['grace']!['mei']!.reminderTiming, ReminderTiming.both);
+
+    expect(find.text('晚上 7 點'), findsOneWidget);
+    await tester.tap(find.text('時間'));
+    await settle(tester);
+    for (final hour in ['早上 6 點', '中午 12 點', '下午 1 點', '晚上 10 點']) {
+      expect(find.text(hour), findsOneWidget);
+    }
+    expect(find.text('早上 5 點'), findsNothing);
+    expect(find.text('晚上 11 點'), findsNothing);
+    await tester.tap(find.text('早上 8 點'));
+    await settle(tester);
+    expect(b.members['grace']!['mei']!.reminderHour, 8);
+    expect(find.text('早上 8 點'), findsOneWidget, reason: 'the sheet closed, the row says it');
   });
 
   testWidgets('with reminders off, there is no time to pick', (tester) async {
@@ -38,8 +51,9 @@ void main() {
     await tester.tap(find.text('服事提醒'));
     await settle(tester);
     expect(b.members['grace']!['mei']!.mutedNotifications, {NotificationKind.reminder});
-    expect(find.text('前一天晚上'), findsNothing);
-    expect(find.text('每週一晚上，列出這週的服事'), findsOneWidget, reason: 'what turning it on would bring');
+    expect(find.text('前一天'), findsNothing);
+    expect(find.text('時間'), findsNothing);
+    expect(find.text('每週一，列出這週的服事'), findsOneWidget, reason: 'what turning it on would bring');
   });
 
   testWidgets("an admin's own notifications are under 管理員; nobody else has them", (tester) async {

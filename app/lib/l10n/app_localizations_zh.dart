@@ -1127,28 +1127,46 @@ class L10nZh extends L10n {
   String get notifReminder => '服事提醒';
 
   @override
-  String get notifReminderWeeklySub => '每週一晚上，列出這週的服事';
+  String get notifReminderWeeklySub => '每週一，列出這週的服事';
 
   @override
-  String get notifReminderDayBeforeSub => '服事前一天晚上提醒你';
+  String get notifReminderDayBeforeSub => '服事前一天提醒你';
 
   @override
-  String get notifReminderBothSub => '每週一晚上，和服事前一天晚上';
+  String get notifReminderBothSub => '每週一，和服事前一天';
 
   @override
   String get notifReminderTime => '服事提醒時間';
 
   @override
-  String get notifReminderWeekly => '每週一晚上';
+  String get notifReminderWeekly => '每週一';
 
   @override
-  String get notifReminderDayBefore => '前一天晚上';
+  String get notifReminderDayBefore => '前一天';
 
   @override
   String get notifReminderBoth => '兩個都要';
 
   @override
-  String get notifReminderTimeFooter => '都在晚上 7 點';
+  String get notifReminderHour => '時間';
+
+  @override
+  String hourMorning(int hour) {
+    return '早上 $hour 點';
+  }
+
+  @override
+  String get hourNoon => '中午 12 點';
+
+  @override
+  String hourAfternoon(int hour) {
+    return '下午 $hour 點';
+  }
+
+  @override
+  String hourEvening(int hour) {
+    return '晚上 $hour 點';
+  }
 
   @override
   String get notifRosterChange => '服事表異動';
@@ -4993,28 +5011,46 @@ class L10nZhHans extends L10nZh {
   String get notifReminder => '事奉提醒';
 
   @override
-  String get notifReminderWeeklySub => '每周一晚上，列出这周的事奉';
+  String get notifReminderWeeklySub => '每周一，列出这周的事奉';
 
   @override
-  String get notifReminderDayBeforeSub => '事奉前一天晚上提醒你';
+  String get notifReminderDayBeforeSub => '事奉前一天提醒你';
 
   @override
-  String get notifReminderBothSub => '每周一晚上，和事奉前一天晚上';
+  String get notifReminderBothSub => '每周一，和事奉前一天';
 
   @override
   String get notifReminderTime => '事奉提醒时间';
 
   @override
-  String get notifReminderWeekly => '每周一晚上';
+  String get notifReminderWeekly => '每周一';
 
   @override
-  String get notifReminderDayBefore => '前一天晚上';
+  String get notifReminderDayBefore => '前一天';
 
   @override
   String get notifReminderBoth => '两个都要';
 
   @override
-  String get notifReminderTimeFooter => '都在晚上 7 点';
+  String get notifReminderHour => '时间';
+
+  @override
+  String hourMorning(int hour) {
+    return '早上 $hour 点';
+  }
+
+  @override
+  String get hourNoon => '中午 12 点';
+
+  @override
+  String hourAfternoon(int hour) {
+    return '下午 $hour 点';
+  }
+
+  @override
+  String hourEvening(int hour) {
+    return '晚上 $hour 点';
+  }
 
   @override
   String get notifRosterChange => '事奉表变动';

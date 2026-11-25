@@ -280,6 +280,17 @@ final class SetTimeZone extends _Write {
   Map<String, Object?> get data => {'timeZone': timeZone.id};
 }
 
+final class RenameChurch extends _Write {
+  const RenameChurch(this.name);
+  final String name;
+
+  @override
+  String get callable => 'renameChurch';
+
+  @override
+  Map<String, Object?> get data => {'name': name};
+}
+
 final class DeleteChurch extends _Write {
   const DeleteChurch();
 
@@ -534,6 +545,9 @@ extension ChurchCalls on ChurchData {
   /// Sets the church's time zone (admins). Rosters keep their dates; the
   /// calendar's times are then shown on the new clock.
   Future<void> setTimeZone(ChurchTimeZone timeZone) => run(SetTimeZone(timeZone));
+
+  /// Renames the church (admins), as everyone in it sees it.
+  Future<void> renameChurch(String name) => run(RenameChurch(name));
 
   /// Deletes the church while it is open (admins); restorable for 30 days.
   Future<void> deleteChurch() => run(const DeleteChurch());

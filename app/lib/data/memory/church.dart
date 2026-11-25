@@ -13,6 +13,16 @@ mixin _MemoryChurch on _MemoryChurchBase {
     await _b.write(() => _b.churches[churchId] = _b.churches[churchId]!.copyWith(homeName: () => name));
   }
 
+  /// The renameChurch function: trimmed, not empty, within the limit.
+  Future<void> renameChurch(String name) async {
+    _functionAdmin();
+    final trimmed = name.trim();
+    if (trimmed.isEmpty || !withinTextLimit(trimmed, TextLimits.churchName)) {
+      throw const CloudException(CloudErrorCode.unknown);
+    }
+    await _b.write(() => _b.churches[churchId] = _b.churches[churchId]!.copyWith(name: trimmed));
+  }
+
   /// Its calendar's events are kept on the church's clock: unlike Google's,
   /// they do not move with it.
   Future<void> setTimeZone(ChurchTimeZone timeZone) async {

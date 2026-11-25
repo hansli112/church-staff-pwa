@@ -1163,28 +1163,46 @@ class L10nEn extends L10n {
   String get notifReminder => 'Serving reminders';
 
   @override
-  String get notifReminderWeeklySub => 'Monday evenings, a list of this week’s serving';
+  String get notifReminderWeeklySub => 'Mondays, a list of this week’s serving';
 
   @override
-  String get notifReminderDayBeforeSub => 'The evening before you serve';
+  String get notifReminderDayBeforeSub => 'The day before you serve';
 
   @override
-  String get notifReminderBothSub => 'Monday evenings and the evening before you serve';
+  String get notifReminderBothSub => 'Mondays and the day before you serve';
 
   @override
   String get notifReminderTime => 'Reminder time';
 
   @override
-  String get notifReminderWeekly => 'Monday evenings';
+  String get notifReminderWeekly => 'Mondays';
 
   @override
-  String get notifReminderDayBefore => 'The evening before';
+  String get notifReminderDayBefore => 'The day before';
 
   @override
   String get notifReminderBoth => 'Both';
 
   @override
-  String get notifReminderTimeFooter => 'All at 7 p.m.';
+  String get notifReminderHour => 'Time';
+
+  @override
+  String hourMorning(int hour) {
+    return '$hour a.m.';
+  }
+
+  @override
+  String get hourNoon => '12 noon';
+
+  @override
+  String hourAfternoon(int hour) {
+    return '$hour p.m.';
+  }
+
+  @override
+  String hourEvening(int hour) {
+    return '$hour p.m.';
+  }
 
   @override
   String get notifRosterChange => 'Schedule changes';

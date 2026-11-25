@@ -2077,19 +2077,19 @@ abstract class L10n {
   /// No description provided for @notifReminderWeeklySub.
   ///
   /// In zh, this message translates to:
-  /// **'每週一晚上，列出這週的服事'**
+  /// **'每週一，列出這週的服事'**
   String get notifReminderWeeklySub;
 
   /// No description provided for @notifReminderDayBeforeSub.
   ///
   /// In zh, this message translates to:
-  /// **'服事前一天晚上提醒你'**
+  /// **'服事前一天提醒你'**
   String get notifReminderDayBeforeSub;
 
   /// No description provided for @notifReminderBothSub.
   ///
   /// In zh, this message translates to:
-  /// **'每週一晚上，和服事前一天晚上'**
+  /// **'每週一，和服事前一天'**
   String get notifReminderBothSub;
 
   /// No description provided for @notifReminderTime.
@@ -2101,13 +2101,13 @@ abstract class L10n {
   /// No description provided for @notifReminderWeekly.
   ///
   /// In zh, this message translates to:
-  /// **'每週一晚上'**
+  /// **'每週一'**
   String get notifReminderWeekly;
 
   /// No description provided for @notifReminderDayBefore.
   ///
   /// In zh, this message translates to:
-  /// **'前一天晚上'**
+  /// **'前一天'**
   String get notifReminderDayBefore;
 
   /// No description provided for @notifReminderBoth.
@@ -2116,11 +2116,35 @@ abstract class L10n {
   /// **'兩個都要'**
   String get notifReminderBoth;
 
-  /// No description provided for @notifReminderTimeFooter.
+  /// Row under 服事提醒時間: the hour reminders come at, on the church's clock
   ///
   /// In zh, this message translates to:
-  /// **'都在晚上 7 點'**
-  String get notifReminderTimeFooter;
+  /// **'時間'**
+  String get notifReminderHour;
+
+  /// An hour from 6 to 11 in the morning
+  ///
+  /// In zh, this message translates to:
+  /// **'早上 {hour} 點'**
+  String hourMorning(int hour);
+
+  /// Twelve noon
+  ///
+  /// In zh, this message translates to:
+  /// **'中午 12 點'**
+  String get hourNoon;
+
+  /// An hour from 1 to 5 in the afternoon (hour is 1–5)
+  ///
+  /// In zh, this message translates to:
+  /// **'下午 {hour} 點'**
+  String hourAfternoon(int hour);
+
+  /// An hour from 6 to 10 in the evening (hour is 6–10)
+  ///
+  /// In zh, this message translates to:
+  /// **'晚上 {hour} 點'**
+  String hourEvening(int hour);
 
   /// No description provided for @notifRosterChange.
   ///

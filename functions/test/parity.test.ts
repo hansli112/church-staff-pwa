@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { test } from 'node:test';
 
-import { REMINDER_TIMINGS } from '../src/notifications.js';
+import { REMINDER_HOURS, REMINDER_TIMINGS } from '../src/notifications.js';
 import { GROUP_KEY } from '../src/powers.js';
 import { NOTIFICATION_KINDS } from '../src/push.js';
 
@@ -36,6 +36,16 @@ test('the kinds of notification a member can turn off', () => {
 test('when a member is reminded', () => {
   assert.deepEqual(dartEnum('ReminderTiming'), [...REMINDER_TIMINGS]);
   assert.deepEqual(rulesList('p.reminderTiming'), [...REMINDER_TIMINGS]);
+});
+
+test('the hours a member may be reminded at', () => {
+  for (const [name, hour] of Object.entries(REMINDER_HOURS)) {
+    assert.ok(new RegExp(`static const ${name} = ${hour};`).test(models), `ReminderHours.${name} in models.dart`);
+  }
+  assert.ok(
+    rules.includes(`p.reminderHour >= ${REMINDER_HOURS.first} && p.reminderHour <= ${REMINDER_HOURS.last}`),
+    'reminderHour in firestore.rules',
+  );
 });
 
 test("an event roster's group, as the rules check it", () => {

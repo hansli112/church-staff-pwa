@@ -1127,28 +1127,46 @@ class L10nJa extends L10n {
   String get notifReminder => '奉仕のリマインダー';
 
   @override
-  String get notifReminderWeeklySub => '毎週月曜の夜に、その週の奉仕をお知らせします';
+  String get notifReminderWeeklySub => '毎週月曜に、その週の奉仕をお知らせします';
 
   @override
-  String get notifReminderDayBeforeSub => '奉仕の前日の夜にお知らせします';
+  String get notifReminderDayBeforeSub => '奉仕の前日にお知らせします';
 
   @override
-  String get notifReminderBothSub => '毎週月曜の夜と、奉仕の前日の夜';
+  String get notifReminderBothSub => '毎週月曜と、奉仕の前日';
 
   @override
   String get notifReminderTime => 'リマインダーの時間';
 
   @override
-  String get notifReminderWeekly => '毎週月曜の夜';
+  String get notifReminderWeekly => '毎週月曜';
 
   @override
-  String get notifReminderDayBefore => '前日の夜';
+  String get notifReminderDayBefore => '前日';
 
   @override
   String get notifReminderBoth => '両方';
 
   @override
-  String get notifReminderTimeFooter => 'どちらも夜7時です';
+  String get notifReminderHour => '時間';
+
+  @override
+  String hourMorning(int hour) {
+    return '午前$hour時';
+  }
+
+  @override
+  String get hourNoon => '正午';
+
+  @override
+  String hourAfternoon(int hour) {
+    return '午後$hour時';
+  }
+
+  @override
+  String hourEvening(int hour) {
+    return '午後$hour時';
+  }
 
   @override
   String get notifRosterChange => '奉仕表の変更';

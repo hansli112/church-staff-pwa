@@ -40,6 +40,7 @@ class MemoryChurchData extends _MemoryChurchBase
       AddByName(:final name, :final serviceType) => addByName(name, serviceType),
       SetDuty(:final uid, :final serviceType, :final duty, on: true) => grantDuty(uid, serviceType, duty),
       SetDuty(:final uid, :final serviceType, :final duty, on: false) => revokeDuty(uid, serviceType, duty),
+      RenameChurch(:final name) => renameChurch(name),
       SetTimeZone(:final timeZone) => setTimeZone(timeZone),
       DeleteChurch() => deleteChurch(),
       RestoreChurch() => restoreChurch(),

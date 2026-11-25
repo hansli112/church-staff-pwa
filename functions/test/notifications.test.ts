@@ -80,6 +80,19 @@ describe('reminders', () => {
     assert.deepEqual(sent.map(({ tokens, body }) => ({ tokens, body })), [{ tokens: ['tok-hao'], body: '主日崇拜 招待' }]);
   });
 
+  test('each at the hour they picked, on the church\'s clock: not at 19:00 then', async () => {
+    await dayBeforeChurch();
+    await db.doc('churches/C1/members/mei').update({ 'notificationPrefs.reminderHour': 8 });
+    await db.doc('churches/C1/rosters/2026-10-04_sunday').set({
+      type: 'sunday', dateKey: '2026-10-04', duties: duties(['美玉'], ['志豪']),
+    });
+    const { sent, messaging } = fakePush();
+    await sendReminders({ db, messaging, now: () => new Date('2026-10-03T08:00:00+08:00'), appUrl });
+    assert.deepEqual(sent.map(({ tokens }) => tokens), [['tok-mei', 'tok-mei-2']], 'hers at 8');
+    await sendReminders({ db, messaging, now, appUrl });
+    assert.deepEqual(sent.map(({ tokens }) => tokens), [['tok-mei', 'tok-mei-2'], ['tok-hao']], 'his at 19, not hers again');
+  });
+
   test('one message per person for tomorrow, listing their duties', async () => {
     await dayBeforeChurch();
     await db.doc('churches/C1/rosters/2026-10-04_sunday').set({

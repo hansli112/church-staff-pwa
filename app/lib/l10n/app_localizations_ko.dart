@@ -1128,28 +1128,46 @@ class L10nKo extends L10n {
   String get notifReminder => '봉사 알림';
 
   @override
-  String get notifReminderWeeklySub => '매주 월요일 저녁, 이번 주 봉사 목록';
+  String get notifReminderWeeklySub => '매주 월요일, 이번 주 봉사 목록';
 
   @override
-  String get notifReminderDayBeforeSub => '봉사 전날 저녁에 알려 드려요';
+  String get notifReminderDayBeforeSub => '봉사 전날 알려 드려요';
 
   @override
-  String get notifReminderBothSub => '매주 월요일 저녁과 봉사 전날 저녁';
+  String get notifReminderBothSub => '매주 월요일과 봉사 전날';
 
   @override
   String get notifReminderTime => '봉사 알림 시간';
 
   @override
-  String get notifReminderWeekly => '매주 월요일 저녁';
+  String get notifReminderWeekly => '매주 월요일';
 
   @override
-  String get notifReminderDayBefore => '전날 저녁';
+  String get notifReminderDayBefore => '전날';
 
   @override
   String get notifReminderBoth => '둘 다';
 
   @override
-  String get notifReminderTimeFooter => '모두 저녁 7시에 보내요';
+  String get notifReminderHour => '시간';
+
+  @override
+  String hourMorning(int hour) {
+    return '오전 $hour시';
+  }
+
+  @override
+  String get hourNoon => '낮 12시';
+
+  @override
+  String hourAfternoon(int hour) {
+    return '오후 $hour시';
+  }
+
+  @override
+  String hourEvening(int hour) {
+    return '저녁 $hour시';
+  }
 
   @override
   String get notifRosterChange => '봉사표 변경';

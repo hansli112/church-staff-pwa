@@ -147,6 +147,7 @@ export const createChurch = callable(church.createChurch);
 export const deleteChurch = callable(church.deleteChurch);
 export const restoreChurch = callable(church.restoreChurch);
 export const setChurchTimeZone = callable(church.setChurchTimeZone, calDeps);
+export const renameChurch = callable(church.renameChurch);
 export const churchPreview = callable(church.churchPreview);
 export const purgeDeletedChurches = using(
   calDeps,

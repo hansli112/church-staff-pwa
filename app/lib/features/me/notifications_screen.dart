@@ -113,6 +113,20 @@ class _NotificationsScreenState extends ConsumerState<NotificationsScreen> {
       }
     }
 
+    Future<void> pickHour() async {
+      final data = ref.churchData;
+      final hour = await showAppSheet<int>(
+        context,
+        builder: (context) => _HourSheet(hour: me.reminderHour),
+      );
+      if (hour == null || hour == me.reminderHour) return;
+      try {
+        await data.setReminderHour(me.uid, hour);
+      } catch (e) {
+        if (context.mounted) showToast(context, saveErrorText(l10n, e));
+      }
+    }
+
     Widget row((NotificationKind, String, String?) k) => SwitchRow(
       title: k.$2,
       subtitle: k.$3,
@@ -155,7 +169,6 @@ class _NotificationsScreenState extends ConsumerState<NotificationsScreen> {
           if (timingShown)
             ListSection(
               header: l10n.notifReminderTime,
-              footer: l10n.notifReminderTimeFooter,
               children: [
                 for (final (timing, title, _) in timings)
                   ListRow(
@@ -165,6 +178,56 @@ class _NotificationsScreenState extends ConsumerState<NotificationsScreen> {
                   ),
               ],
             ),
+          if (timingShown)
+            ListSection(
+              children: [
+                ListRow(title: l10n.notifReminderHour, value: hourLabel(l10n, me.reminderHour), onTap: pickHour),
+              ],
+            ),
+        ],
+      ),
+    );
+  }
+}
+
+/// [hour] (0–23) as a reminder's time is said: 早上 8 點, 中午 12 點, 晚上 7 點.
+String hourLabel(L10n l10n, int hour) => switch (hour) {
+  < 12 => l10n.hourMorning(hour),
+  12 => l10n.hourNoon,
+  < 18 => l10n.hourAfternoon(hour - 12),
+  _ => l10n.hourEvening(hour - 12),
+};
+
+/// The hours reminders may come at ([ReminderHours]), [hour] ticked; the
+/// one tapped closes it.
+class _HourSheet extends StatelessWidget {
+  const _HourSheet({required this.hour});
+
+  final int hour;
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = L10n.of(context);
+    return SafeArea(
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          SheetBar(title: l10n.notifReminderHour, actions: const []),
+          Flexible(
+            child: SingleChildScrollView(
+              child: ListSection(
+                children: [
+                  for (var h = ReminderHours.first; h <= ReminderHours.last; h++)
+                    ListRow(
+                      title: hourLabel(l10n, h),
+                      selected: h == hour,
+                      onTap: () => Navigator.pop(context, h),
+                    ),
+                ],
+              ),
+            ),
+          ),
         ],
       ),
     );

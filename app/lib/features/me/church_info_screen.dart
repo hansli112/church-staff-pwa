@@ -6,6 +6,7 @@ import 'package:image_picker/image_picker.dart';
 import '../../core/design/components.dart';
 import '../../core/design/tokens.dart';
 import '../../domain/export.dart';
+import '../../domain/limits.dart';
 import '../../domain/logo.dart';
 import '../../domain/models.dart';
 import '../../l10n/app_localizations.dart';
@@ -62,6 +63,24 @@ class _ChurchInfoScreenState extends ConsumerState<ChurchInfoScreen> {
       if (mounted) showToast(context, errorText(l10n, e));
     } finally {
       if (mounted) setState(() => _exporting = false);
+    }
+  }
+
+  /// 改名, by an admin: as everyone in the church sees it.
+  Future<void> _rename(Church church) async {
+    final l10n = L10n.of(context);
+    final name = await promptText(
+      context,
+      title: l10n.rename,
+      hint: l10n.churchName,
+      initial: church.name,
+      maxLength: TextLimits.churchName,
+    );
+    if (name == null || name.trim().isEmpty || name.trim() == church.name || !mounted) return;
+    try {
+      await ref.churchData.renameChurch(name);
+    } catch (e) {
+      if (mounted) showToast(context, saveErrorText(l10n, e));
     }
   }
 
@@ -164,10 +183,16 @@ class _ChurchInfoScreenState extends ConsumerState<ChurchInfoScreen> {
                     ),
                   ),
                 const SizedBox(height: Space.s),
-                BalancedText(
-                  church.name,
-                  style: AppText.title2,
-                ),
+                if (admin)
+                  DefaultTextStyle.merge(
+                    style: AppText.title2,
+                    child: NameTitle(name: church.name, centred: true, onTap: () => _rename(church)),
+                  )
+                else
+                  BalancedText(
+                    church.name,
+                    style: AppText.title2,
+                  ),
               ],
             ),
           ),

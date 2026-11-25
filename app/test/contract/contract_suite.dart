@@ -482,6 +482,14 @@ void contractTests(Future<ContractWorld> Function() open) {
       expect((await g.church.church().first)!.timeZone, ChurchTimeZone.chicago);
     });
 
+    test('only admins rename the church, trimmed', () async {
+      final g = await Grace.open(w);
+      await g.church.renameChurch(' 恩典之家 ');
+      expect((await g.church.church().firstWhere((c) => c?.name == '恩典之家'))!.name, '恩典之家');
+      await w.signIn(Grace.meiEmail);
+      await expectLater(g.church.renameChurch('甲'), denied());
+    });
+
     test('only admins upload the logo', () async {
       final g = await Grace.open(w);
       await g.church.uploadLogo(png);
@@ -724,6 +732,13 @@ void contractTests(Future<ContractWorld> Function() open) {
       expect(both.reminderTiming, ReminderTiming.both);
       expect(both.mutedNotifications, {NotificationKind.rosterChange});
       await expectLater(g.church.setReminderTiming(g.editor, ReminderTiming.both), denied());
+      expect(both.reminderHour, ReminderHours.usual);
+      await g.church.setReminderHour(g.mei, 8);
+      final eight = (await g.church.member(g.mei).first)!;
+      expect(eight.reminderHour, 8);
+      expect(eight.reminderTiming, ReminderTiming.both);
+      await expectLater(g.church.setReminderHour(g.mei, 23), denied());
+      await expectLater(g.church.setReminderHour(g.editor, 8), denied());
     });
   });
 

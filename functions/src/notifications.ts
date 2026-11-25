@@ -1,4 +1,4 @@
-// Evening reminders. Roster change pushes are in rosterChange.ts.
+// Duty reminders. Roster change pushes are in rosterChange.ts.
 import type { DocumentSnapshot } from 'firebase-admin/firestore';
 
 import { isChurchOpen } from './access.js';
@@ -7,10 +7,15 @@ import { familiesOf } from './family.js';
 import type { Words } from './languages.js';
 import { notifyMembers, type PushDeps } from './push.js';
 import { rosterDay, rosterLink, serviceNames } from './rosters.js';
-import { dateKeyIn, timeZoneOf, timeZonesAt } from './timeZones.js';
+import { dateKeyIn, timeZoneOf, timeZonesAt, type ChurchTimeZone } from './timeZones.js';
 
-/** The hour of the evening reminders, on each church's clock. */
-export const REMINDER_HOUR = 19;
+/**
+ * The hours a member may be reminded at, on their church's clock
+ * (`notificationPrefs.reminderHour`), and the one unless they pick another.
+ * Matches ReminderHours in app/lib/domain/models.dart and firestore.rules
+ * (test/parity.test.ts).
+ */
+export const REMINDER_HOURS: { first: number; last: number; usual: number } = { first: 6, last: 22, usual: 19 };
 
 /**
  * When a member is reminded: Monday evening of the week's duties, the
@@ -23,6 +28,11 @@ export type ReminderTiming = (typeof REMINDER_TIMINGS)[number];
 function reminderTiming(member: DocumentSnapshot): ReminderTiming {
   const t = member.get('notificationPrefs.reminderTiming');
   return t === 'dayBefore' || t === 'both' ? t : 'weekly';
+}
+
+function reminderHour(member: DocumentSnapshot): number {
+  const h = member.get('notificationPrefs.reminderHour');
+  return Number.isInteger(h) && h >= REMINDER_HOURS.first && h <= REMINDER_HOURS.last ? h : REMINDER_HOURS.usual;
 }
 
 /** Someone's duties on one roster: which, of what service or event. */
@@ -43,21 +53,43 @@ const whose = (w: Words, item: DutyLine, line: string) => (item.who ? w.familyLi
 const reminderLink = (lines: DutyLine[]) => (lines.length === 1 ? lines[0].link : '/home');
 
 /**
- * Evening reminders, run every hour on the hour: for the churches whose
- * clock says [REMINDER_HOUR], to everyone with a uid on a duty of an
- * active one, as each chose: on Monday one message listing their duties
- * from that Monday to Sunday, and every evening one listing tomorrow's
- * (except Monday for those getting both, whose weekly list has tomorrow);
- * one about a single roster opens it.
+ * Duty reminders, run every hour on the hour: to everyone with a uid on a
+ * duty of an active church whose clock says the hour they picked
+ * ([REMINDER_HOURS], 19 unless they picked another), as each chose: on
+ * Monday one message listing their duties from that Monday to Sunday, and
+ * every day one listing tomorrow's (except Monday for those getting both,
+ * whose weekly list has tomorrow); one about a single roster opens it.
  * An event's roster counts on the day it starts, by its title; not once
  * its event is cancelled.
  */
 export async function sendReminders(deps: PushDeps & { now: () => Date }) {
   const now = deps.now().getTime();
+  let sent = 0;
+  for (let hour = REMINDER_HOURS.first; hour <= REMINDER_HOURS.last; hour++) {
+    const due = timeZonesAt([hour], new Date(now));
+    if (due.size === 0) continue;
+    // Off the usual hour, only the churches where someone picked it.
+    let only: Set<string> | null = null;
+    if (hour !== REMINDER_HOURS.usual) {
+      const picked = await deps.db.collectionGroup('members').where('notificationPrefs.reminderHour', '==', hour).select().get();
+      if (picked.empty) continue;
+      only = new Set(picked.docs.map((d) => d.ref.parent.parent!.id));
+    }
+    sent += await remindAt(deps, now, due, hour, only);
+  }
+  return sent;
+}
+
+/** [sendReminders] for the churches of [due], all at [hour] now; of [only] if given. */
+async function remindAt(
+  deps: PushDeps,
+  now: number,
+  due: Set<ChurchTimeZone>,
+  hour: number,
+  only: Set<string> | null,
+) {
   // Those due now share one offset, so one today, tomorrow and Monday.
-  const due = timeZonesAt([REMINDER_HOUR], new Date(now));
   const timeZone = [...due][0];
-  if (!timeZone) return 0;
   const today = dateKeyIn(timeZone, new Date(now));
   const tomorrow = dateKeyIn(timeZone, new Date(now + DAY_MS));
   const isMonday = new Date(`${today}T00:00:00Z`).getUTCDay() === 1;
@@ -75,6 +107,7 @@ export async function sendReminders(deps: PushDeps & { now: () => Date }) {
   }
   let sent = 0;
   for (const [cid, docs] of byChurch) {
+    if (only && !only.has(cid)) continue;
     const church = await deps.db.doc(`churches/${cid}`).get();
     if (!isChurchOpen(church) || !due.has(timeZoneOf(church))) continue;
     const services = await serviceNames(deps, cid);
@@ -103,7 +136,7 @@ export async function sendReminders(deps: PushDeps & { now: () => Date }) {
       ...(extra.length ? await deps.db.getAll(...extra.map((uid) => deps.db.doc(`churches/${cid}/members/${uid}`))) : []),
     ];
     for (const member of members) {
-      if (!member.exists) continue;
+      if (!member.exists || reminderHour(member) !== hour) continue;
       const timing = reminderTiming(member);
       // One's own first on a day, then the family's.
       const items = [...(perUid.get(member.id) ?? []), ...(theirs.get(member.id) ?? [])];

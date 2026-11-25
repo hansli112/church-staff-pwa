@@ -172,6 +172,17 @@ enum NotificationKind {
 /// ReminderTiming in functions/src/notifications.ts.
 enum ReminderTiming { weekly, dayBefore, both }
 
+/// The hours a member may be reminded at, on the church's clock, and the
+/// one unless they pick another. Matches REMINDER_HOURS in
+/// functions/src/notifications.ts and firestore.rules.
+abstract final class ReminderHours {
+  static const first = 6;
+  static const last = 22;
+  static const usual = 19;
+
+  static bool valid(Object? hour) => hour is int && hour >= first && hour <= last;
+}
+
 @immutable
 class Member {
   const Member({
@@ -185,6 +196,7 @@ class Member {
     this.smallGroups = const {},
     this.mutedNotifications = const {},
     this.reminderTiming = ReminderTiming.weekly,
+    this.reminderHour = ReminderHours.usual,
     this.joinedAt,
   }) : _identities = identities;
 
@@ -200,6 +212,9 @@ class Member {
   final Set<String> smallGroups;
   final Set<NotificationKind> mutedNotifications;
   final ReminderTiming reminderTiming;
+
+  /// The hour reminders come at ([ReminderHours]), on the church's clock.
+  final int reminderHour;
   final DateTime? joinedAt;
 
   /// 管理員, or a whole church's 牧者: role admin, as the rules read it.
@@ -265,6 +280,7 @@ class Member {
       smallGroups: smallGroups,
       mutedNotifications: mutedNotifications,
       reminderTiming: reminderTiming,
+      reminderHour: reminderHour,
       joinedAt: joinedAt,
     );
   }
@@ -406,6 +422,7 @@ class Member {
     Set<String>? smallGroups,
     Set<NotificationKind>? mutedNotifications,
     ReminderTiming? reminderTiming,
+    int? reminderHour,
   }) => Member(
     uid: uid,
     name: name ?? this.name,
@@ -417,6 +434,7 @@ class Member {
     smallGroups: smallGroups ?? this.smallGroups,
     mutedNotifications: mutedNotifications ?? this.mutedNotifications,
     reminderTiming: reminderTiming ?? this.reminderTiming,
+    reminderHour: reminderHour ?? this.reminderHour,
     joinedAt: joinedAt,
   );
 }
