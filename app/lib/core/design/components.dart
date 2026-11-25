@@ -499,6 +499,7 @@ class ListRow extends StatelessWidget {
     this.selected,
     this.subtitleLines,
     this.subtitleAlert = false,
+    this.subtitleAction = false,
   });
 
   final String title;
@@ -506,6 +507,10 @@ class ListRow extends StatelessWidget {
 
   /// [subtitle] in the destructive color: something on the row to fix.
   final bool subtitleAlert;
+
+  /// [subtitle] what tapping the row does, in the accent color after a
+  /// pencil: 寫原因 on a row with none written yet.
+  final bool subtitleAction;
 
   /// At most this many lines of [subtitle], the rest cut with an
   /// ellipsis: a long address in a list, whole on the page it opens.
@@ -555,7 +560,13 @@ class ListRow extends StatelessWidget {
     final showChevron = chevron ?? (onTap != null && trailing == null && selected == null && !destructive && !tinted);
     final textScaler = MediaQuery.textScalerOf(context);
     final valueStyle = AppText.body.copyWith(color: c.secondaryLabel);
-    final subtitleStyle = AppText.subheadline.copyWith(color: subtitleAlert ? c.destructive : c.secondaryLabel);
+    final subtitleStyle = AppText.subheadline.copyWith(
+      color: subtitleAlert
+          ? c.destructive
+          : subtitleAction
+          ? c.accent
+          : c.secondaryLabel,
+    );
     final row = InkWell(
       onTap: onTap,
       child: ConstrainedBox(
@@ -613,7 +624,19 @@ class ListRow extends StatelessWidget {
                         if (subtitle != null)
                           Padding(
                             padding: const EdgeInsets.only(top: 2),
-                            child: subtitleLines == null
+                            child: subtitleAction
+                                ? Row(
+                                    children: [
+                                      Icon(
+                                        Symbols.edit_note_rounded,
+                                        size: textScaler.scale(18),
+                                        color: c.accent,
+                                      ),
+                                      const SizedBox(width: Space.xs),
+                                      Flexible(child: Text(subtitle!, style: subtitleStyle)),
+                                    ],
+                                  )
+                                : subtitleLines == null
                                 ? BalancedText(
                                     subtitle!,
                                     textAlign: TextAlign.start,

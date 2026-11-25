@@ -6103,8 +6103,14 @@ abstract class L10n {
   /// No description provided for @unavailableNoteFooter.
   ///
   /// In zh, this message translates to:
-  /// **'點一段寫原因；排服事的人選人時看得到'**
+  /// **'原因選填，排服事的人選人時看得到'**
   String get unavailableNoteFooter;
+
+  /// Under a stretch of days one cannot serve with no reason yet, in the accent color: tapping the row writes one
+  ///
+  /// In zh, this message translates to:
+  /// **'寫原因'**
+  String get unavailableAddNote;
 
   /// Header over the days a member marked but is already arranged to serve
   ///

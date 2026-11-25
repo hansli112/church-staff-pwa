@@ -3454,7 +3454,10 @@ class L10nZh extends L10n {
   String get unavailableNoteHint => '選填，例如出國';
 
   @override
-  String get unavailableNoteFooter => '點一段寫原因；排服事的人選人時看得到';
+  String get unavailableNoteFooter => '原因選填，排服事的人選人時看得到';
+
+  @override
+  String get unavailableAddNote => '寫原因';
 
   @override
   String get unavailableServing => '這幾天你已經被排到';
@@ -7317,7 +7320,10 @@ class L10nZhHans extends L10nZh {
   String get unavailableNoteHint => '选填，例如出国';
 
   @override
-  String get unavailableNoteFooter => '点一段写原因；排事奉的人选人时看得到';
+  String get unavailableNoteFooter => '原因选填，排事奉的人选人时看得到';
+
+  @override
+  String get unavailableAddNote => '写原因';
 
   @override
   String get unavailableServing => '这几天你已经被排到';

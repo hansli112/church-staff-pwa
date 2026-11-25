@@ -146,7 +146,9 @@ void main() {
     expect(find.text('2027年12月'), findsOneWidget);
   });
 
-  testWidgets('dragged across days, a stretch; it takes a reason, and is removed with 復原', (tester) async {
+  testWidgets('dragged across days, a stretch; its row says 寫原因 till it takes one, and it is removed with 復原', (
+    tester,
+  ) async {
     final b = seededChurch(as: staffMei);
     await pumpApp(tester, b);
     await go(tester, '/me/unavailable');
@@ -156,13 +158,15 @@ void main() {
     expect(meisDays(b)!.spans, [UnavailableSpan(_oct(20), _oct(23))]);
 
     await top(tester);
-    await tester.tap(find.text('10月20日 – 10月23日'));
+    expect(find.text('寫原因'), findsOneWidget, reason: 'on the row, not only in the small words under the list');
+    await tester.tap(find.text('寫原因'));
     await settle(tester);
     await tester.enterText(find.byType(TextField), '出國');
     await tester.tap(find.text('儲存'));
     await settle(tester);
     expect(meisDays(b)!.spans.single.note, '出國');
     expect(find.text('出國'), findsOneWidget);
+    expect(find.text('寫原因'), findsNothing);
 
     await tester.tap(find.text('刪除'));
     await settle(tester);

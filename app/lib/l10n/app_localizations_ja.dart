@@ -3459,7 +3459,10 @@ class L10nJa extends L10n {
   String get unavailableNoteHint => '任意（例：旅行）';
 
   @override
-  String get unavailableNoteFooter => 'タップすると理由を書けます。奉仕を割り当てる人が選ぶときに見えます';
+  String get unavailableNoteFooter => '理由は任意です。奉仕を割り当てる人が選ぶときに見えます';
+
+  @override
+  String get unavailableAddNote => '理由を書く';
 
   @override
   String get unavailableServing => 'この日はすでに奉仕が入っています';

@@ -316,7 +316,9 @@ class _UnavailableScreenState extends ConsumerState<UnavailableScreen> {
                       for (final span in days.spans)
                         ListRow(
                           title: _spanLabel(span, today),
-                          subtitle: span.note.isEmpty ? null : span.note,
+                          // Not written yet: said on the row, not only under the list.
+                          subtitle: span.note.isEmpty ? l10n.unavailableAddNote : span.note,
+                          subtitleAction: span.note.isEmpty,
                           chevron: false,
                           trailing: RowButton(
                             label: l10n.delete,

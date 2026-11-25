@@ -3653,7 +3653,10 @@ class L10nEn extends L10n {
   String get unavailableNoteHint => 'Optional, e.g. traveling';
 
   @override
-  String get unavailableNoteFooter => 'Tap one to add a reason; those who arrange serving see it when picking people';
+  String get unavailableNoteFooter => 'Reasons are optional; those who arrange serving see them when picking people';
+
+  @override
+  String get unavailableAddNote => 'Add a reason';
 
   @override
   String get unavailableServing => 'You\'re already serving on these days';

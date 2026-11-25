@@ -3457,7 +3457,10 @@ class L10nKo extends L10n {
   String get unavailableNoteHint => '선택 사항, 예: 여행';
 
   @override
-  String get unavailableNoteFooter => '눌러서 이유를 적을 수 있어요. 봉사를 배정하는 사람이 사람을 고를 때 보여요';
+  String get unavailableNoteFooter => '이유는 선택 사항이에요. 봉사를 배정하는 사람이 사람을 고를 때 보여요';
+
+  @override
+  String get unavailableAddNote => '이유 쓰기';
 
   @override
   String get unavailableServing => '이날은 이미 봉사가 있어요';
