@@ -1,3 +1,5 @@
+import 'dart:math';
+
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:material_symbols_icons/symbols.dart';
@@ -185,7 +187,8 @@ class CalendarScreen extends ConsumerWidget {
         titleSpacing: Space.m,
         // The month is the title, as on the iPhone's and Google's
         // calendars; 行事曆 is said by the tab below.
-        title: ready ? _MonthTitle(month: month) : Text(l10n.tabCalendar),
+        // 行事曆 only where there is no month to show: not while loading.
+        title: settings == null || ready ? _MonthTitle(month: month) : Text(l10n.tabCalendar),
         actions: savingActions([
           if (ready)
             PopupMenuButton<Object>(
@@ -210,12 +213,16 @@ class CalendarScreen extends ConsumerWidget {
                 for (final (key, label) in filters)
                   CheckedPopupMenuItem(value: key, checked: key == filter, child: Text(label)),
               ],
+              // Said to a screen reader too, not by the colour alone.
               icon: narrowed
-                  ? DecoratedBox(
-                      decoration: BoxDecoration(color: c.accentSoft, shape: BoxShape.circle),
-                      child: Padding(
-                        padding: const EdgeInsets.all(4),
-                        child: Icon(Symbols.filter_list_rounded, color: c.accent),
+                  ? Semantics(
+                      value: filters.where((f) => f.$1 == filter).firstOrNull?.$2,
+                      child: DecoratedBox(
+                        decoration: BoxDecoration(color: c.accentSoft, shape: BoxShape.circle),
+                        child: Padding(
+                          padding: const EdgeInsets.all(4),
+                          child: Icon(Symbols.filter_list_rounded, color: c.accent),
+                        ),
                       ),
                     )
                   : const Icon(Symbols.filter_list_rounded),
@@ -560,22 +567,26 @@ class _MonthTitle extends ConsumerWidget {
     final c = AppColors.of(context);
     final months = ref.read(calendarMonthProvider.notifier);
     final style = AppText.title2.copyWith(fontWeight: FontWeight.w700);
+    Future<void> pick() async {
+      final picked = await showAppSheet<DateTime>(
+        context,
+        builder: (_) => _MonthSheet(month: month, today: ref.read(todayProvider)),
+      );
+      if (picked != null) months.show(picked);
+    }
+
     return Semantics(
       button: true,
       label: DateFormat.yMMMM().format(month),
       hint: l10n.calPickMonth,
       onIncrease: () => months.shift(1),
       onDecrease: () => months.shift(-1),
+      // Its own tap: the gesture's below is left out with the words.
+      onTap: pick,
       excludeSemantics: true,
       child: GestureDetector(
         behavior: HitTestBehavior.opaque,
-        onTap: () async {
-          final picked = await showAppSheet<DateTime>(
-            context,
-            builder: (_) => _MonthSheet(month: month, today: ref.read(todayProvider)),
-          );
-          if (picked != null) months.show(picked);
-        },
+        onTap: pick,
         child: ConstrainedBox(
           constraints: BoxConstraints(minHeight: Space.minTap(Theme.of(context).platform)),
           child: Row(
@@ -643,6 +654,9 @@ class _MonthSheetState extends State<_MonthSheet> {
             child: CupertinoDatePicker(
               mode: CupertinoDatePickerMode.monthYear,
               initialDateTime: DateTime(widget.month.year, widget.month.month),
+              // A few years back and on, and wherever a swipe has gone.
+              minimumYear: min(widget.today.year - 3, widget.month.year),
+              maximumYear: max(widget.today.year + 2, widget.month.year),
               onDateTimeChanged: (d) => _month = DateTime(d.year, d.month),
             ),
           ),

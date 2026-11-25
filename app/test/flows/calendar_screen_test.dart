@@ -321,6 +321,12 @@ void main() {
     await settle(tester);
     await tapText(tester, '這個月');
     expect(calendarMonth('10月 2026'), findsOneWidget);
+
+    final semantics = tester.ensureSemantics();
+    tester.semantics.tap(find.semantics.byLabel('2026年10月'));
+    await settle(tester);
+    expect(find.text('選月份'), findsOneWidget, reason: 'a screen reader opens it too');
+    semantics.dispose();
   });
 
   testWidgets('顯示與篩選 stands out while not every event shows', (tester) async {

@@ -1510,7 +1510,8 @@ Future<bool> _askFromBelow(
 /// the middle, [actions] trailing, the last the one that keeps what was
 /// done (完成, 儲存). Every sheet with a form or a choice to confirm has one.
 class SheetBar extends StatelessWidget {
-  const SheetBar({super.key, required this.title, this.cancel = true, this.leading, required this.actions});
+  const SheetBar({super.key, required this.title, this.cancel = true, this.leading, required this.actions})
+    : assert(leading == null || cancel, 'leading takes 取消\'s place: leave cancel as it is');
 
   final String title;
   final bool cancel;

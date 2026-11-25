@@ -2764,7 +2764,7 @@ abstract class L10n {
   /// **'下個月'**
   String get calNextMonth;
 
-  /// No description provided for @calMonthAndList.
+  /// Calendar menu choice: the month grid above the list of events (the other is calHideMonth, the list only)
   ///
   /// In zh, this message translates to:
   /// **'月曆和列表'**
@@ -2776,13 +2776,13 @@ abstract class L10n {
   /// **'只看列表'**
   String get calHideMonth;
 
-  /// No description provided for @calPickMonth.
+  /// Title of the sheet the calendar's month name opens: wheels for the year and month
   ///
   /// In zh, this message translates to:
   /// **'選月份'**
   String get calPickMonth;
 
-  /// No description provided for @calThisMonth.
+  /// Button at the leading edge of the month sheet: back to the current month at once
   ///
   /// In zh, this message translates to:
   /// **'這個月'**
