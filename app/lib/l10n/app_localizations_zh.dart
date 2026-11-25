@@ -753,7 +753,7 @@ class L10nZh extends L10n {
   String get addMinistry => '新增事工';
 
   @override
-  String get ministriesChurchWide => '全教會的事工';
+  String get ministriesFooter => '跨聚會或不屬於任何聚會的事工，例如多媒體、關懷探訪。';
 
   @override
   String get ministryName => '事工名稱';
@@ -2970,14 +2970,6 @@ class L10nZh extends L10n {
   String get meetsEveryMonth => '每月';
 
   @override
-  String get meetsByRoster => '照服事表';
-
-  @override
-  String meetsWithRoster(String weekday) {
-    return '有服事表的$weekday';
-  }
-
-  @override
   String meetsMonthly(String weeks, String weekday) {
     return '每月第 $weeks 個$weekday';
   }
@@ -4624,7 +4616,7 @@ class L10nZhHans extends L10nZh {
   String get addMinistry => '新增事工';
 
   @override
-  String get ministriesChurchWide => '全教会的事工';
+  String get ministriesFooter => '跨聚会或不属于任何聚会的事工，例如多媒体、关怀探访。';
 
   @override
   String get ministryName => '事工名称';
@@ -6839,14 +6831,6 @@ class L10nZhHans extends L10nZh {
 
   @override
   String get meetsEveryMonth => '每月';
-
-  @override
-  String get meetsByRoster => '照事奉表';
-
-  @override
-  String meetsWithRoster(String weekday) {
-    return '有事奉表的$weekday';
-  }
 
   @override
   String meetsMonthly(String weeks, String weekday) {

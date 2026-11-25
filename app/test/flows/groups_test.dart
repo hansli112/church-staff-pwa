@@ -89,6 +89,17 @@ void main() {
     expect(find.text('青年崇拜 · 敬拜團'), findsOneWidget, reason: 'beside 主日崇拜\'s, named with its service');
   });
 
+  testWidgets('with none yet, 事工 still shows on 聚會與事工, saying what goes there, with 新增事工', (tester) async {
+    final b = seededChurch();
+    b.ministries['grace'] = const MinistrySettings();
+    await pumpApp(tester, b);
+    await go(tester, '/me/groups');
+    final footer = find.byWidgetPredicate((w) => w is BalancedText && w.text == '跨聚會或不屬於任何聚會的事工，例如多媒體、關懷探訪。');
+    await tester.scrollUntilVisible(footer, 200, scrollable: find.byType(Scrollable).last);
+    expect(find.text('事工'), findsOneWidget);
+    expect(find.text('新增事工'), findsOneWidget);
+  });
+
   testWidgets('a 事工 made with its 負責人 left for later says what is missing', (tester) async {
     final b = seededChurch();
     await pumpApp(tester, b);

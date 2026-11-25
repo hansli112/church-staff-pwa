@@ -411,13 +411,14 @@ describe('負責回報, 聚會時間 and 其他聚會', () => {
     assert.deepEqual(sent.map((s) => [...s.tokens].sort()), [['tok-mei', 'tok-sundayLead']]);
   });
 
-  test('a service set to meet every other week is asked on its weeks, roster or not', async () => {
+  test('from 2026-11-26 a service is asked every time it meets, roster or not, but not on a 沒有聚會', async () => {
     await church();
     await db.doc('churches/C1/attendance/service:sunday').set({ every: 2, startsOn: '2026-10-11' });
     const { sent, messaging } = fakePush();
-    await sendAttendanceReminders({ db, messaging, now: sundayEvening, appUrl });
-    assert.equal(sent.length, 0);
-    await sendAttendanceReminders({ db, messaging, now: at('2026-10-25T21:00:00+08:00'), appUrl });
+    await sendAttendanceReminders({ db, messaging, now: at('2026-11-29T21:00:00+08:00'), appUrl });
+    assert.equal(sent.length, 1, 'no roster, and off its own every other week');
+    await db.doc('churches/C1/rosters/2026-12-06_sunday').set({ type: 'sunday', dateKey: '2026-12-06', duties: [], noService: true });
+    await sendAttendanceReminders({ db, messaging, now: at('2026-12-06T21:00:00+08:00'), appUrl });
     assert.equal(sent.length, 1);
   });
 

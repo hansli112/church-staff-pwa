@@ -74,26 +74,42 @@ class MeetingTime {
   int get hashCode => Object.hash(weekday, every, startsOn, Object.hashAll(monthWeeks));
 }
 
+/// From this day on a service is asked every time it meets, roster or
+/// not (2026-11-25: whether a meeting had a roster says nothing of
+/// whether it met); before it, as it was: by its rosters, or by a 聚會時間
+/// of its own. functions/src/attendance.ts EVERY_MEETING_FROM is the same.
+final everyMeetingFrom = Day(2026, 11, 26);
+
 /// When a service meeting on [weekdays] meets on a day, [roster] whether
-/// that day has one: by its rosters; or, with a 聚會時間 of its own
-/// ([time], AttendanceRecord.time), by it from its [MeetingTime.startsOn],
-/// by its rosters before. Its [weekdays] either way.
+/// that day has one, [noService] whether it is marked 沒有聚會: every time
+/// it meets, on its [weekdays] and its weeks ([weeks], Service.weeks:
+/// every other, or some of each month), but not on a 沒有聚會; and on a
+/// day off its weeks it still has a roster for (one saved before it
+/// changed). Before [everyMeetingFrom], by its rosters, or every week from
+/// a 聚會時間 of every week of its own ([time], AttendanceRecord.time:
+/// 每週都填人數, #93) when that began first.
 /// functions/src/attendance.ts serviceMeets is the same
 /// (testdata/church_rules.json, serviceMeets).
-///
-/// One that meets every other week or on some weeks of each month
-/// ([weeks], Service.weeks) is asked on those weeks only, as its own
-/// 聚會時間 says every time it meets, and on a day off them it still has a
-/// roster for (one saved before it changed).
-Meets serviceMeets(List<int> weekdays, {required bool roster, MeetingTime? time, MeetingWeeks? weeks}) {
+Meets serviceMeets(
+  List<int> weekdays, {
+  required bool roster,
+  bool noService = false,
+  MeetingTime? time,
+  MeetingWeeks? weeks,
+}) {
+  if (noService) return Meets(weekdays: weekdays, roster: false);
   final repeats = weeks != null && (weeks.every == 2 || weeks.monthWeeks.isNotEmpty);
-  if (time == null) return Meets(weekdays: weekdays, roster: roster);
+  final everyWeek = time != null && time.every == 1 && time.monthWeeks.isEmpty;
+  // Null: every time it meets, from always.
+  final Day? from = switch (time?.startsOn) {
+    _ when !everyWeek => everyMeetingFrom,
+    null => null,
+    final began => began.isBefore(everyMeetingFrom) ? began : everyMeetingFrom,
+  };
   return Meets(
     weekdays: weekdays,
-    every: repeats ? 1 : time.every,
-    startsOn: time.startsOn,
-    monthWeeks: repeats ? const [] : time.monthWeeks,
-    roster: time.startsOn == null ? null : roster,
+    startsOn: from,
+    roster: from == null ? null : roster,
     weeks: repeats && !roster ? weeks : null,
   );
 }

@@ -48,22 +48,16 @@ void main() {
     expect(c.read(meetingTimeProvider(const GatheringGroup('prayer'))).time, _fridays);
   });
 
-  test("a service's is kept with its 人數, on the service's weekdays; none is by its rosters", () async {
+  test("a service's is when it meets, on the service's weekdays: not one of its own", () async {
     final b = seededChurch();
     final c = await opened(b);
     const sunday = ServiceGroup('sunday');
     expect(c.read(meetingTimeProvider(sunday)).time, isNull);
     expect(c.read(meetingTimeProvider(sunday)).serviceWeekdays, [DateTime.sunday]);
-
-    final every = MeetingTime(startsOn: Day(2026, 11, 1));
-    await c.read(meetingTimesProvider).set(sunday, every);
-    await pumpEventQueue();
-    expect(b.attendance['grace']!['service:sunday']!.time, every);
-    expect(c.read(meetingTimeProvider(sunday)).time, every);
-
-    await c.read(meetingTimesProvider).set(sunday, null);
-    await pumpEventQueue();
-    expect(c.read(meetingTimeProvider(sunday)).time, isNull);
+    expect(
+      () => c.read(meetingTimesProvider).set(sunday, MeetingTime(startsOn: Day(2026, 11, 1))),
+      throwsArgumentError,
+    );
   });
 
   test('who sets it: a 小組 by its 小組長 and its service, the rest by who sets its 人數', () {

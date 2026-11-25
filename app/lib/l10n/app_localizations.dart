@@ -1432,11 +1432,11 @@ abstract class L10n {
   /// **'新增事工'**
   String get addMinistry;
 
-  /// Header on 聚會與事工 over the 事工 of no one service: in several, or none
+  /// Under the 事工 on 聚會與事工: what goes there (the 事工 of no one service), with examples
   ///
   /// In zh, this message translates to:
-  /// **'全教會的事工'**
-  String get ministriesChurchWide;
+  /// **'跨聚會或不屬於任何聚會的事工，例如多媒體、關懷探訪。'**
+  String get ministriesFooter;
 
   /// Field hint: a ministry's name, e.g. 敬拜團
   ///
@@ -5283,18 +5283,6 @@ abstract class L10n {
   /// In zh, this message translates to:
   /// **'每月'**
   String get meetsEveryMonth;
-
-  /// 聚會時間 of a service: on its weekday when that day has a roster
-  ///
-  /// In zh, this message translates to:
-  /// **'照服事表'**
-  String get meetsByRoster;
-
-  /// A service meeting when its day has a roster; weekday is its days (週日, 週三、週日, 週一到週五)
-  ///
-  /// In zh, this message translates to:
-  /// **'有服事表的{weekday}'**
-  String meetsWithRoster(String weekday);
 
   /// Meeting on those weeks of each month; weeks is a list like 1、3
   ///

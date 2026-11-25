@@ -192,25 +192,47 @@ const weekdaysOf = (s: Service): number[] =>
   Array.isArray(s.weekdays) && s.weekdays.length > 0 ? s.weekdays : typeof s.weekday === 'number' ? [s.weekday] : [];
 
 /**
- * When a service meeting on [weekdays] meets on a day, [roster] whether
- * that day has one: by its rosters; or, with a 聚會時間 of its own
- * ([time], attendance/service:<id>: every other week, those weeks of each
- * month, or every week, `everyWeek`, 每週都填人數, #93), by it from its
- * `startsOn`, by its rosters before. Its [weekdays] either way. The app's
- * domain/attendance.dart serviceMeets is the same (testdata/church_rules.json,
- * serviceMeets).
+ * From this day on a service is asked every time it meets, roster or not
+ * (2026-11-25: whether a meeting had a roster says nothing of whether it
+ * met); before it, as it was. The app's domain/attendance.dart
+ * everyMeetingFrom is the same.
  */
-export function serviceMeets(weekdays: number[], roster: boolean, time: Record<string, unknown> | undefined, weeks?: Weeks): Meets {
+export const EVERY_MEETING_FROM = '2026-11-26';
+
+/**
+ * When a service meeting on [weekdays] meets on a day, [roster] whether
+ * that day has one, [noService] whether it is marked 沒有聚會: every time
+ * it meets, on its [weekdays] and its weeks ([weeks]: every other, or some
+ * of each month), but not on a 沒有聚會; and on a day off its weeks it
+ * still has a roster for (one saved before it changed). Before
+ * [EVERY_MEETING_FROM], by its rosters, or every week from a 聚會時間 of
+ * every week of its own ([time], attendance/service:<id> `everyWeek`,
+ * 每週都填人數, #93) when that began first. The app's
+ * domain/attendance.dart serviceMeets is the same
+ * (testdata/church_rules.json, serviceMeets).
+ */
+export function serviceMeets(
+  weekdays: number[],
+  roster: boolean,
+  time: Record<string, unknown> | undefined,
+  weeks?: Weeks,
+  noService = false,
+): Meets {
+  if (noService) return { weekdays, roster: false };
   const own = meetsFrom(time);
-  if (own.monthWeeks || own.every === 2 || time?.everyWeek === true) {
-    // A service every other week or on some weeks of each month: every time it meets, those weeks,
-    // and a day off them it still has a roster for (one saved before it changed).
-    const repeats = weeks && (weeks.every === 2 || (weeks.monthWeeks?.length ?? 0) > 0);
-    const kept = repeats ? { startsOn: own.startsOn, ...(roster ? {} : { weeks }) } : own;
-    // Before it began, by its rosters as before.
-    return { ...kept, weekdays, ...(own.startsOn ? { roster } : {}) };
-  }
-  return { weekdays, roster };
+  const repeats = weeks && (weeks.every === 2 || (weeks.monthWeeks?.length ?? 0) > 0);
+  const everyWeek = time?.everyWeek === true && !own.monthWeeks && own.every !== 2;
+  // Undefined: every time it meets, from always.
+  const from = !everyWeek
+    ? EVERY_MEETING_FROM
+    : own.startsOn === undefined
+      ? undefined
+      : own.startsOn < EVERY_MEETING_FROM ? own.startsOn : EVERY_MEETING_FROM;
+  return {
+    weekdays,
+    ...(from === undefined ? {} : { startsOn: from, roster }),
+    ...(repeats && !roster ? { weeks } : {}),
+  };
 }
 
 /** The services, 小組 and 其他聚會 of church [cid] meeting on [day], before pauses and what was filled in. */
@@ -235,7 +257,7 @@ async function dueOn(deps: { db: PushDeps['db'] }, cid: string, day: string): Pr
       name: s.name ?? '',
       leads: { field: 'leadTypes' as const, id: s.id },
       // 沒有聚會 (noService): no 人數 to fill in.
-      meets: serviceMeets(weekdaysOf(s), rosters[i].exists && rosters[i].get('noService') !== true, states[i]?.data(), s),
+      meets: serviceMeets(weekdaysOf(s), rosters[i].exists, states[i]?.data(), s, rosters[i].get('noService') === true),
     })),
     // A deleted service's 小組 went with it.
     ...smallGroups.docs.filter((g) => kept.some((s) => s.id === g.get('service'))).map((g) => ({

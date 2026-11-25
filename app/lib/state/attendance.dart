@@ -40,9 +40,8 @@ final _recentRostersProvider = StreamProvider.autoDispose<List<Roster>>((ref) {
 typedef AttendanceGroup = ({ChurchGroup group, String name, Meets Function(Day day, {MeetingTime? time}) meetsOn});
 
 /// The groups of the church that meet (its services, 小組 by when they
-/// meet, and 其他聚會), in that order, as [AttendanceGroup]s; a service meets on its weekdays
-/// when that day has a roster, unless its 聚會時間 says otherwise
-/// (AttendanceRecord.time).
+/// meet, and 其他聚會), in that order, as [AttendanceGroup]s; a service
+/// meets as [serviceMeets] says.
 final attendanceGroupsProvider = Provider.autoDispose<List<AttendanceGroup>>(
   (ref) => attendanceGroupsOf(
     services: ref.watch(servicesProvider).value?.services ?? const <Service>[],
@@ -62,16 +61,25 @@ List<AttendanceGroup> attendanceGroupsOf({
 }) {
   final held = {
     for (final r in rosters)
-      // 沒有聚會: no 人數 to fill in.
-      if (!r.isEvent && !r.noService) (r.type, r.day),
+      if (!r.isEvent) (r.type, r.day),
+  };
+  // 沒有聚會: no 人數 to fill in.
+  final off = {
+    for (final r in rosters)
+      if (!r.isEvent && r.noService) (r.type, r.day),
   };
   return [
     for (final s in services)
       (
         group: ServiceGroup(s.id),
         name: s.name,
-        meetsOn: (Day day, {MeetingTime? time}) =>
-            serviceMeets(s.weekdays, roster: held.contains((s.id, day)), time: time, weeks: s.weeks),
+        meetsOn: (Day day, {MeetingTime? time}) => serviceMeets(
+          s.weekdays,
+          roster: held.contains((s.id, day)),
+          noService: off.contains((s.id, day)),
+          time: time,
+          weeks: s.weeks,
+        ),
       ),
     for (final g in smallGroups.inMeetingOrder([for (final s in services) s.id]))
       (group: g.group, name: g.name, meetsOn: (Day _, {MeetingTime? time}) => g.meets),

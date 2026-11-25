@@ -754,7 +754,7 @@ class L10nKo extends L10n {
   String get addMinistry => '사역팀 추가';
 
   @override
-  String get ministriesChurchWide => '교회 전체 사역팀';
+  String get ministriesFooter => '여러 모임에 걸치거나 어느 모임에도 속하지 않는 사역팀, 예: 미디어, 심방';
 
   @override
   String get ministryName => '사역팀 이름';
@@ -2971,14 +2971,6 @@ class L10nKo extends L10n {
 
   @override
   String get meetsEveryMonth => '매월';
-
-  @override
-  String get meetsByRoster => '봉사표대로';
-
-  @override
-  String meetsWithRoster(String weekday) {
-    return '봉사표가 있는 $weekday';
-  }
 
   @override
   String meetsMonthly(String weeks, String weekday) {

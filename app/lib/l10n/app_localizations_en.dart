@@ -769,7 +769,7 @@ class L10nEn extends L10n {
   String get addMinistry => 'Add a ministry';
 
   @override
-  String get ministriesChurchWide => 'Church-wide ministries';
+  String get ministriesFooter => 'Ministries in several gatherings or in none, like media or visitation.';
 
   @override
   String get ministryName => 'Ministry name';
@@ -3124,14 +3124,6 @@ class L10nEn extends L10n {
 
   @override
   String get meetsEveryMonth => 'Monthly';
-
-  @override
-  String get meetsByRoster => 'By schedule';
-
-  @override
-  String meetsWithRoster(String weekday) {
-    return '$weekday with a schedule';
-  }
 
   @override
   String meetsMonthly(String weeks, String weekday) {

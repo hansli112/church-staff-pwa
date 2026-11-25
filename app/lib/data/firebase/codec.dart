@@ -212,15 +212,6 @@ MeetingTime? serviceTimeFromJson(Json? data) => switch (meetingTimeFromJson(data
   _ => null,
 };
 
-/// Service [t] as attendance/{key} keeps it, every field written, so a
-/// change takes the others away.
-Json serviceTimeToJson(MeetingTime? t) => {
-  'everyWeek': t != null && t.monthWeeks.isEmpty && t.every == 1,
-  'every': t != null && t.monthWeeks.isEmpty && t.every == 2 ? 2 : FieldValue.delete(),
-  'startsOn': t?.startsOn?.key ?? FieldValue.delete(),
-  'monthWeeks': t != null && t.monthWeeks.isNotEmpty ? t.monthWeeks : FieldValue.delete(),
-};
-
 /// Who else fills in a group's 人數, attendance/{key}.fillers.
 List<String> attendanceFillersFromJson(Json? data) => [
   if (data?['fillers'] is List)

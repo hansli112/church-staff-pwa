@@ -106,7 +106,8 @@ class GroupsScreen extends ConsumerWidget {
           const ServiceListSection(),
           SliverToBoxAdapter(
             child: ListSection(
-              header: l10n.ministriesChurchWide,
+              header: l10n.ministries,
+              footer: l10n.ministriesFooter,
               children: [
                 for (final m in ministries?.ministries ?? const <Ministry>[])
                   if (m.service == null || services?.byId(m.service!) == null)

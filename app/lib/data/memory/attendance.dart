@@ -105,19 +105,6 @@ class _MemoryAttendance implements AttendanceData {
     await _c._b.write(() => _all[key] = (_all[key] ?? const AttendanceRecord()).copyWith(fillers: [...fillers]));
   }
 
-  @override
-  Future<void> saveTime(String key, MeetingTime? time) async {
-    _c._requireAttendanceWriter(key);
-    if (_c._group(key) is! ServiceGroup) throw const CloudException(CloudErrorCode.unknown);
-    _requireValidTime(time);
-    await _c._b.write(
-      () => _all[key] = (_all[key] ?? const AttendanceRecord()).copyWith(
-        time: () =>
-            time == null ? null : MeetingTime(every: time.every, startsOn: time.startsOn, monthWeeks: time.monthWeeks),
-      ),
-    );
-  }
-
   void _requireValidTime(MeetingTime? time) {
     if (time != null &&
         (!(time.every == 1 || time.every == 2) ||
@@ -191,7 +178,8 @@ class _MemoryAttendance implements AttendanceData {
       ServiceGroup(:final id) => switch (b.services[cid]!.byId(id)) {
         final s? => serviceMeets(
           s.weekdays,
-          roster: b.rosters[cid]![Roster.idFor(id, day)]?.noService == false,
+          roster: b.rosters[cid]![Roster.idFor(id, day)] != null,
+          noService: b.rosters[cid]![Roster.idFor(id, day)]?.noService ?? false,
           time: record.time,
           weeks: s.weeks,
         ),

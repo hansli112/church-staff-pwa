@@ -646,12 +646,6 @@ class _EchoingAttendance implements AttendanceData {
   );
 
   @override
-  Future<void> saveTime(String key, MeetingTime? time) => _d._send(
-    _Echo(at: {_at(key): _record((r) => r.copyWith(time: () => time), (r) => r.time == time)}),
-    () => _inner.saveTime(key, time),
-  );
-
-  @override
   Future<void> savePauses(String key, List<AttendancePause> pauses) => _d._send(
     _Echo(at: {_at(key): _record((r) => r.copyWith(pauses: pauses), (r) => listEquals(r.pauses, pauses))}),
     () => _inner.savePauses(key, pauses),

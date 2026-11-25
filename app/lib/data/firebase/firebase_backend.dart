@@ -1634,12 +1634,6 @@ class _FirestoreAttendance implements AttendanceData {
   }
 
   @override
-  Future<void> saveTime(String key, MeetingTime? time) {
-    final ref = _c._col('attendance').doc(key);
-    return _c._write(ref, (tx) => tx.set(ref, serviceTimeToJson(time), SetOptions(merge: true)));
-  }
-
-  @override
   Stream<List<Gathering>> gatherings() => _c
       ._col('gatherings')
       .live()

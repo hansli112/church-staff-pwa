@@ -362,6 +362,7 @@ void main() {
         final meets = serviceMeets(
           (r['weekdays'] as List).cast<int>(),
           roster: r['roster'] as bool,
+          noService: r['noService'] as bool? ?? false,
           time: serviceTimeFromJson(r['time'] as Map<String, dynamic>?),
           weeks: switch (r['service']) {
             final Map<String, dynamic> w => (

@@ -574,11 +574,6 @@ abstract interface class AttendanceData {
   /// sets it (Member.writesAttendance).
   Future<void> saveFillers(String key, List<String> fillers);
 
-  /// Sets service [key]'s 聚會時間 (Member.writesAttendance): null meets
-  /// on its weekday when that day has a roster; [MeetingTime.every] 1
-  /// every week (每週都填人數, #93).
-  Future<void> saveTime(String key, MeetingTime? time);
-
   /// The church's 其他聚會, in the order dragged (byOrder).
   Stream<List<Gathering>> gatherings();
 

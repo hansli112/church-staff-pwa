@@ -753,7 +753,7 @@ class L10nJa extends L10n {
   String get addMinistry => 'ミニストリーを追加';
 
   @override
-  String get ministriesChurchWide => '教会全体のミニストリー';
+  String get ministriesFooter => '複数の集会にまたがる、またはどの集会にも属さないミニストリー。例：メディア、訪問';
 
   @override
   String get ministryName => 'ミニストリー名';
@@ -2973,14 +2973,6 @@ class L10nJa extends L10n {
 
   @override
   String get meetsEveryMonth => '毎月';
-
-  @override
-  String get meetsByRoster => '奉仕表どおり';
-
-  @override
-  String meetsWithRoster(String weekday) {
-    return '奉仕表がある$weekday';
-  }
 
   @override
   String meetsMonthly(String weeks, String weekday) {

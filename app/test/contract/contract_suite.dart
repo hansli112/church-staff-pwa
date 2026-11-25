@@ -1029,22 +1029,16 @@ void contractTests(Future<ContractWorld> Function() open) {
       expect((await g.church.attendance.watch('service:sunday').first).days.keys, [Day(2026, 10, 4)]);
     });
 
-    test("a service's 聚會時間 and 負責回報 stay beside the pauses; 小組 that met together are kept so (#93)", () async {
+    test("a service's 負責回報 stay beside the pauses; 小組 that met together are kept so (#93)", () async {
       final g = await Grace.open(w);
       await g.church.attendance.saveSince(Day(2026, 10, 1));
       final pauses = [AttendancePause(from: Day(2026, 10, 5), until: Day(2026, 11, 1))];
       await g.church.attendance.savePauses('service:youth', pauses);
-      final monthly = MeetingTime(monthWeeks: const [1, 3], startsOn: Day(2026, 10, 3));
-      await g.church.attendance.saveTime('service:youth', monthly);
       await g.church.attendance.saveFillers('service:youth', [g.mei]);
       await g.church.attendance.savePauses('service:youth', pauses);
-      var youth = await g.church.attendance.watch('service:youth').firstWhere((r) => r.time != null);
+      final youth = await g.church.attendance.watch('service:youth').firstWhere((r) => r.fillers.isNotEmpty);
       expect(youth.pauses, pauses);
-      expect(youth.time, monthly);
       expect(youth.fillers, [g.mei]);
-      await g.church.attendance.saveTime('service:youth', const MeetingTime());
-      youth = await g.church.attendance.watch('service:youth').firstWhere((r) => r.time?.monthWeeks.isEmpty ?? false);
-      expect(youth.time, const MeetingTime());
 
       const friday = SmallGroupDetails(id: '', name: '喜樂小組', service: 'sunday', weekday: DateTime.friday);
       final joy = await g.church.saveSmallGroup(friday);

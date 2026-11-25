@@ -123,17 +123,14 @@ class GroupAttendanceScreen extends ConsumerWidget {
                   value: gathering.name,
                   onTap: () => _renameGathering(context, ref, gathering),
                 ),
-              ListRow(
-                title: l10n.smallGroupMeets,
-                value: meetingTimeLabel(
-                  l10n,
-                  time.time,
-                  serviceWeekdays: time.serviceWeekdays,
-                  serviceWeeks: time.serviceWeeks,
+              // A service's is when it meets, set on its own page.
+              if (group.group is! ServiceGroup)
+                ListRow(
+                  title: l10n.smallGroupMeets,
+                  value: meetingTimeLabel(l10n, time.time),
+                  chevron: schedules,
+                  onTap: schedules ? () => changeMeetingTime(context, ref, group.group) : null,
                 ),
-                chevron: schedules,
-                onTap: schedules ? () => changeMeetingTime(context, ref, group.group) : null,
-              ),
               ListRow(
                 title: l10n.attendanceFillers,
                 value: fillers.isEmpty ? l10n.meetsNotSet : fillers.map((m) => m.name).join(l10n.listSeparator),
@@ -682,30 +679,20 @@ class _FillersSheetState extends ConsumerState<_FillersSheet> {
 }
 
 /// A 聚會時間 as a page says it: 每週五, 隔週五, 每月第 1、3 個週五, or
-/// 未設定; a service's, on its [serviceWeekdays], by its rosters (null
-/// [time]): 有服事表的週日.
-///
-/// One every other week or on some weeks of each month ([serviceWeeks])
-/// says those (隔週三, 有服事表的隔週三): its own 聚會時間 is every time
-/// it meets.
+/// 未設定; a service's, every time it meets, on its [serviceWeekdays] and
+/// its weeks ([serviceWeeks]): 每週日, 隔週三.
 String meetingTimeLabel(L10n l10n, MeetingTime? time, {List<int>? serviceWeekdays, MeetingWeeks? serviceWeeks}) {
-  final weekday = time?.weekday;
-  final String w;
   if (serviceWeekdays != null) {
-    w = weekdaysLabel(l10n, serviceWeekdays);
-  } else if (weekday != null) {
-    w = weekdayLabel(l10n, weekday);
-  } else {
-    return l10n.meetsNotSet;
-  }
-  if (serviceWeeks != null) {
-    final on = serviceWeeks.monthWeeks.isNotEmpty
+    final w = weekdaysLabel(l10n, serviceWeekdays);
+    if (serviceWeeks == null) return l10n.meetsWeekly(w);
+    return serviceWeeks.monthWeeks.isNotEmpty
         ? l10n.meetsMonthly(serviceWeeks.monthWeeks.join(l10n.listSeparator), w)
         : l10n.meetsBiweekly(w);
-    return time == null ? l10n.meetsWithRoster(on) : on;
   }
+  final weekday = time?.weekday;
+  if (time == null || weekday == null) return l10n.meetsNotSet;
+  final w = weekdayLabel(l10n, weekday);
   return switch (time) {
-    null => l10n.meetsWithRoster(w),
     MeetingTime(:final monthWeeks) when monthWeeks.isNotEmpty => l10n.meetsMonthly(
       monthWeeks.join(l10n.listSeparator),
       w,
@@ -722,13 +709,7 @@ String smallGroupMeetsLabel(L10n l10n, SmallGroupDetails g) => meetingTimeLabel(
 /// said.
 Future<void> changeMeetingTime(BuildContext context, WidgetRef ref, ChurchGroup group) async {
   final now = ref.read(meetingTimeProvider(group));
-  final picked = await pickMeetingTime(
-    context,
-    time: now.time,
-    serviceWeekdays: now.serviceWeekdays,
-    serviceWeeks: now.serviceWeeks,
-    today: ref.read(todayProvider),
-  );
+  final picked = await pickMeetingTime(context, time: now.time, today: ref.read(todayProvider));
   if (picked == null || !context.mounted) return;
   final l10n = L10n.of(context);
   try {
@@ -738,33 +719,25 @@ Future<void> changeMeetingTime(BuildContext context, WidgetRef ref, ChurchGroup 
   }
 }
 
-/// Picks a 聚會時間: every week or every other, or those weeks of each
-/// month, on which weekday ([serviceWeekdays], a service's, its own), and,
-/// every other week, the next day it meets. A service's may also meet by
-/// its rosters, a null time; one on several weekdays, only by them or every
-/// week; one every other week or on some weeks of each month
-/// ([serviceWeeks]), only by them or every time it meets. Null when
-/// cancelled.
+/// Picks a 小組's or a 其他聚會's 聚會時間: every week or every other, or
+/// those weeks of each month, on which weekday, and, every other week, the
+/// next day it meets. Null when cancelled.
 Future<({MeetingTime? time})?> pickMeetingTime(
   BuildContext context, {
   required MeetingTime? time,
-  List<int>? serviceWeekdays,
-  MeetingWeeks? serviceWeeks,
   required Day today,
 }) => showAppSheet<({MeetingTime? time})>(
   context,
-  builder: (_) => _MeetsSheet(time: time, serviceWeekdays: serviceWeekdays, serviceWeeks: serviceWeeks, today: today),
+  builder: (_) => _MeetsSheet(time: time, today: today),
 );
 
 /// How a 聚會時間 repeats, as the sheet picks it.
-enum _Repeat { roster, weekly, biweekly, monthly }
+enum _Repeat { weekly, biweekly, monthly }
 
 class _MeetsSheet extends StatefulWidget {
-  const _MeetsSheet({required this.time, required this.serviceWeekdays, this.serviceWeeks, required this.today});
+  const _MeetsSheet({required this.time, required this.today});
 
   final MeetingTime? time;
-  final List<int>? serviceWeekdays;
-  final MeetingWeeks? serviceWeeks;
   final Day today;
 
   @override
@@ -773,32 +746,14 @@ class _MeetsSheet extends StatefulWidget {
 
 class _MeetsSheetState extends State<_MeetsSheet> {
   late var _repeat = switch (widget.time) {
-    null when widget.serviceWeekdays != null => _Repeat.roster,
-    _ when _severalDays => _Repeat.weekly,
     MeetingTime(:final monthWeeks) when monthWeeks.isNotEmpty => _Repeat.monthly,
     MeetingTime(every: 2) => _Repeat.biweekly,
     _ => _Repeat.weekly,
   };
-  late int? _weekday = widget.serviceWeekdays?.first ?? widget.time?.weekday;
+  late int? _weekday = widget.time?.weekday;
 
-  /// A service's on several weekdays: by its rosters or every week, as
-  /// every other week or month would want a day to count from.
-  bool get _severalDays => (widget.serviceWeekdays?.length ?? 0) > 1 || widget.serviceWeeks != null;
-
-  /// The first day from today on it meets: on [weekday], or, a service's,
-  /// on any of its weekdays.
-  Day _firstOn(int weekday) {
-    var first = [
-      for (final w in widget.serviceWeekdays ?? [weekday]) widget.today.nextOnOrAfter(w),
-    ].reduce((a, b) => b.isBefore(a) ? b : a);
-    // One on its weeks only: the first of them.
-    if (widget.serviceWeeks case final weeks?) {
-      while (!onMeetingWeeks(weeks, first)) {
-        first = first.addDays(7);
-      }
-    }
-    return first;
-  }
+  /// The first day from today on it meets, on [weekday].
+  Day _firstOn(int weekday) => widget.today.nextOnOrAfter(weekday);
 
   late final _weeks = {...?widget.time?.monthWeeks};
 
@@ -836,24 +791,19 @@ class _MeetsSheetState extends State<_MeetsSheet> {
     return d;
   }
 
-  /// What was picked, null for by its rosters; null [MeetingTime] while
-  /// it is not whole (no weekday, no week of the month).
+  /// What was picked; null while it is not whole (no weekday, no week of
+  /// the month).
   ({MeetingTime? time})? get _picked {
     final weekday = _weekday;
-    if (_repeat == _Repeat.roster) return (time: null);
     if (weekday == null || (_repeat == _Repeat.monthly && _weeks.isEmpty)) return null;
     final had = widget.time;
     final first = _firstOn(weekday);
-    final service = widget.serviceWeekdays != null;
-    // As it was while it still meets so: the weeks it met keep asking. A
-    // service that meets on some weeks only is asked on those whatever
-    // its own says (serviceMeets), so an every other week or monthly one
-    // set before is every time it meets too.
-    final anyWeeks = widget.serviceWeeks != null;
+    // As it was while it still meets so: the weeks it met keep asking.
     bool same(MeetingTime t) =>
         had != null &&
-        (had.weekday ?? widget.serviceWeekdays?.first) == t.weekday &&
-        (anyWeeks || (had.every == t.every && setEquals({...had.monthWeeks}, {...t.monthWeeks}))) &&
+        had.weekday == t.weekday &&
+        had.every == t.every &&
+        setEquals({...had.monthWeeks}, {...t.monthWeeks}) &&
         (had.startsOn == null || !had.startsOn!.isAfter(t.startsOn ?? first));
     final MeetingTime picked = switch (_repeat) {
       _Repeat.monthly => MeetingTime(
@@ -871,17 +821,13 @@ class _MeetsSheetState extends State<_MeetsSheet> {
     final kept = same(picked)
         ? MeetingTime(weekday: weekday, every: picked.every, monthWeeks: picked.monthWeeks, startsOn: had!.startsOn)
         : picked;
-    // A service's weekday is its own.
-    return (
-      time: service ? MeetingTime(every: kept.every, startsOn: kept.startsOn, monthWeeks: kept.monthWeeks) : kept,
-    );
+    return (time: kept);
   }
 
   @override
   Widget build(BuildContext context) {
     final l10n = L10n.of(context);
     final weekday = _weekday;
-    final service = widget.serviceWeekdays != null;
     final first = weekday == null ? null : _firstOn(weekday);
     final next = first == null ? null : (_next != null && _next!.weekday == weekday ? _next! : first);
     final picked = _picked;
@@ -912,44 +858,27 @@ class _MeetsSheetState extends State<_MeetsSheet> {
                       child: SegmentedButton<_Repeat>(
                         showSelectedIcon: false,
                         segments: [
-                          if (service) ButtonSegment(value: _Repeat.roster, label: Text(l10n.meetsByRoster)),
-                          ButtonSegment(
-                            value: _Repeat.weekly,
-                            // Every time it meets: 隔週三.
-                            label: Text(
-                              widget.serviceWeeks == null
-                                  ? l10n.meetsEveryWeek
-                                  : meetingTimeLabel(
-                                      l10n,
-                                      const MeetingTime(),
-                                      serviceWeekdays: widget.serviceWeekdays,
-                                      serviceWeeks: widget.serviceWeeks,
-                                    ),
-                            ),
-                          ),
-                          if (!_severalDays) ...[
-                            ButtonSegment(value: _Repeat.biweekly, label: Text(l10n.meetsEveryOtherWeek)),
-                            ButtonSegment(value: _Repeat.monthly, label: Text(l10n.meetsEveryMonth)),
-                          ],
+                          ButtonSegment(value: _Repeat.weekly, label: Text(l10n.meetsEveryWeek)),
+                          ButtonSegment(value: _Repeat.biweekly, label: Text(l10n.meetsEveryOtherWeek)),
+                          ButtonSegment(value: _Repeat.monthly, label: Text(l10n.meetsEveryMonth)),
                         ],
                         selected: {_repeat},
                         onSelectionChanged: (v) => setState(() => _repeat = v.first),
                       ),
                     ),
-                    if (!service)
-                      ListSection(
-                        children: [
-                          for (var w = 1; w <= 7; w++)
-                            ListRow(
-                              title: weekdayLabel(l10n, w),
-                              selected: weekday == w,
-                              onTap: () => setState(() {
-                                _weekday = w;
-                                _next = widget.today.nextOnOrAfter(w);
-                              }),
-                            ),
-                        ],
-                      ),
+                    ListSection(
+                      children: [
+                        for (var w = 1; w <= 7; w++)
+                          ListRow(
+                            title: weekdayLabel(l10n, w),
+                            selected: weekday == w,
+                            onTap: () => setState(() {
+                              _weekday = w;
+                              _next = widget.today.nextOnOrAfter(w);
+                            }),
+                          ),
+                      ],
+                    ),
                     if (_repeat == _Repeat.biweekly && next != null)
                       ListSection(
                         children: [

@@ -100,31 +100,38 @@ void main() {
     expect(find.text('新增一次聚會'), findsOneWidget);
   });
 
+  testWidgets('a service on several weekdays asks for 人數 on each with a roster', (tester) async {
+    final b = withAttendance(seededChurch(as: editor, clock: eveningOf(Day(2026, 10, 11))));
+    b.setServices('grace', [
+      sundayService.copyWith(weekdays: [DateTime.wednesday, DateTime.sunday]),
+      youthService,
+    ]);
+    b.rosters['grace']![Roster.idFor('sunday', Day(2026, 10, 7))] = Roster(type: 'sunday', day: Day(2026, 10, 7));
+    await pumpApp(tester, b);
+    await go(tester, '/home');
+    expect(find.textContaining('10月11日'), findsWidgets, reason: "Sunday's");
+    expect(find.textContaining('10月7日'), findsWidgets, reason: "Wednesday's, which has a roster too");
+  });
+
   testWidgets(
-    'a service on several weekdays asks for 人數 on each with a roster; its 聚會時間 is by its rosters or every week',
-    (
-      tester,
-    ) async {
-      final b = withAttendance(seededChurch(as: editor, clock: eveningOf(Day(2026, 10, 11))));
+    'from 2026-11-26 a service asks for 人數 every time it meets, roster or not, but not on a 沒有聚會; its page has no 聚會時間',
+    (tester) async {
+      final b = withAttendance(seededChurch(as: editor, clock: eveningOf(Day(2026, 12, 6))));
       b.setServices('grace', [
         sundayService.copyWith(weekdays: [DateTime.wednesday, DateTime.sunday]),
         youthService,
       ]);
-      b.rosters['grace']![Roster.idFor('sunday', Day(2026, 10, 7))] = Roster(type: 'sunday', day: Day(2026, 10, 7));
+      b.rosters['grace']![Roster.idFor('sunday', Day(2026, 11, 29))] = Roster(
+        type: 'sunday',
+        day: Day(2026, 11, 29),
+        noService: true,
+      );
       await pumpApp(tester, b);
-      await go(tester, '/home');
-      expect(find.textContaining('10月11日'), findsWidgets, reason: "Sunday's");
-      expect(find.textContaining('10月7日'), findsWidgets, reason: "Wednesday's, which has a roster too");
-
       await go(tester, '/me/groups/service/sunday/attendance');
-      expect(inRow('聚會時間', '有服事表的週三、週日'), findsOneWidget);
-      await tapText(tester, '聚會時間');
-      expect(find.text('隔週'), findsNothing, reason: 'every other week or month is for one day');
-      expect(find.text('每月'), findsNothing);
-      await tapText(tester, '每週');
-      await tapText(tester, '儲存');
-      expect(b.attendance['grace']!['service:sunday']!.time, MeetingTime(startsOn: Day(2026, 10, 11)));
-      expect(inRow('聚會時間', '每週三、週日'), findsOneWidget);
+      expect(find.text('聚會時間'), findsNothing, reason: 'when it meets is set on the service');
+      expect(find.textContaining('12月2日'), findsOneWidget, reason: 'a Wednesday with no roster');
+      expect(find.textContaining('11月29日'), findsNothing, reason: '沒有聚會');
+      expect(find.textContaining('11月25日'), findsNothing, reason: 'before then, by its rosters');
     },
   );
 
@@ -720,64 +727,6 @@ void main() {
       expect(b.attendance['grace']!['small:peace']!.days[Day(2026, 10, 9)], const AttendanceDay.count(12));
     });
 
-    testWidgets('聚會時間: a service with no roster asks for its 人數 every week from then on', (tester) async {
-      final b = church(as: pastor);
-      await pumpApp(tester, b);
-      await go(tester, '/me/groups/service/youth/attendance');
-      expect(inRow('聚會時間', '有服事表的週六'), findsOneWidget);
-      await tapText(tester, '聚會時間');
-      await tapText(tester, '每週');
-      await tapText(tester, '儲存');
-      expect(b.attendance['grace']!['service:youth']!.time, MeetingTime(startsOn: Day(2026, 10, 17)));
-      expect(inRow('聚會時間', '每週六'), findsOneWidget);
-      expect(find.text('未填'), findsNothing, reason: 'the weeks before, without a roster, ask for nothing');
-    });
-
-    testWidgets('聚會時間 of a service every other week: by its rosters, or every time it meets, those weeks', (
-      tester,
-    ) async {
-      final b = church(as: pastor);
-      b.setServices('grace', [
-        for (final s in b.services['grace']!.services)
-          s.id == 'youth' ? s.meetingOn(s.weekdays, every: 2, startsOn: Day(2026, 10, 24)) : s,
-      ]);
-      await pumpApp(tester, b);
-      await go(tester, '/me/groups/service/youth/attendance');
-      expect(inRow('聚會時間', '有服事表的隔週六'), findsOneWidget);
-      await tapText(tester, '聚會時間');
-      expect(find.text('每週'), findsNothing, reason: 'it meets every other week: every time it meets');
-      expect(find.text('每月'), findsNothing);
-      await tapText(tester, '隔週六');
-      await tapText(tester, '儲存');
-      expect(
-        b.attendance['grace']!['service:youth']!.time,
-        MeetingTime(startsOn: Day(2026, 10, 24)),
-        reason: 'from the first day it meets, not 10/17, the week it is off',
-      );
-      expect(inRow('聚會時間', '隔週六'), findsOneWidget);
-    });
-
-    testWidgets('聚會時間 of a service every other week set so before keeps the weeks it asked', (tester) async {
-      final b = church(as: pastor);
-      b.setServices('grace', [
-        for (final s in b.services['grace']!.services)
-          s.id == 'youth' ? s.meetingOn(s.weekdays, every: 2, startsOn: Day(2026, 10, 3)) : s,
-      ]);
-      b.attendance['grace']!['service:youth'] = AttendanceRecord(
-        time: MeetingTime(every: 2, startsOn: Day(2026, 10, 3)),
-      );
-      await pumpApp(tester, b);
-      await go(tester, '/me/groups/service/youth/attendance');
-      expect(inRow('聚會時間', '隔週六'), findsOneWidget);
-      await tapText(tester, '聚會時間');
-      await tapText(tester, '儲存');
-      expect(
-        b.attendance['grace']!['service:youth']!.time?.startsOn,
-        Day(2026, 10, 3),
-        reason: 'saved as it was: 10/03 still asks',
-      );
-    });
-
     testWidgets("a reminder's link opens that meeting's 填寫人數", (tester) async {
       final b = church(as: staffHao);
       await pumpApp(tester, b);
@@ -878,26 +827,6 @@ void main() {
       expect(find.byIcon(Symbols.drag_handle_rounded), findsNothing);
     });
 
-    testWidgets("a service's own 聚會時間 keeps the meetings it had by its rosters before", (tester) async {
-      final b = withAttendance(seededChurch(as: editor, clock: eveningOf(Day(2026, 10, 11))));
-      await pumpApp(tester, b);
-      await go(tester, '/me/groups/service/sunday/attendance');
-      await tapText(tester, '聚會時間');
-      await tapText(tester, '每週');
-      await tapText(tester, '儲存');
-      expect(b.attendance['grace']!['service:sunday']!.time, MeetingTime(startsOn: Day(2026, 10, 11)));
-      expect(find.textContaining('10月4日'), findsOneWidget, reason: 'it had a roster: still asks for its 人數');
-      await tapText(tester, '聚會時間');
-      await tapText(tester, '每月');
-      await tapText(tester, '第 2 個週日');
-      await tapText(tester, '儲存');
-      expect(
-        b.attendance['grace']!['service:sunday']!.time?.startsOn,
-        Day(2026, 10, 11),
-        reason: '10/11 is the second',
-      );
-    });
-
     testWidgets('who is asked fills them in from 首頁, and sets nothing else', (tester) async {
       final b = withAttendance(seededChurch(as: staffMei, clock: eveningOf(Day(2026, 10, 4))));
       b.attendance['grace'] = {
@@ -917,7 +846,7 @@ void main() {
       ListRow row(String title) =>
           tester.widget<ListRow>(find.ancestor(of: find.text(title), matching: find.byType(ListRow)));
       expect(row('負責回報').onTap, isNull, reason: 'seen, not set');
-      expect(row('聚會時間').onTap, isNull);
+      expect(find.text('聚會時間'), findsNothing);
       expect(find.byType(Switch), findsNothing);
     });
 
