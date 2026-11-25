@@ -666,9 +666,20 @@ class _PlanWeeksScreenState extends ConsumerState<PlanWeeksScreen> with SingleTi
     } else if (service == null || saved == null || !ready || !arranges.any) {
       body = const SizedBox.shrink();
     } else {
-      final months = planMonths(service: service, saved: saved, today: today, month: thisMonth, months: _months);
       // Through next December, so all of next year can be arranged.
-      _room = math.max(0, monthsThroughNextYear(thisMonth, today: today) - _months);
+      final most = monthsThroughNextYear(thisMonth, today: today);
+      var months = planMonths(service: service, saved: saved, today: today, month: thisMonth, months: _months);
+      // Opening, enough months to fill the screen twice over: fewer, and
+      // the first layout joins more on, building the table again while
+      // the page still slides in.
+      final fill = MediaQuery.sizeOf(context).height * 2;
+      double tall(List<({Day month, List<Roster> days})> ms) =>
+          ms.length * _monthHeight(context) + ms.fold(0, (n, m) => n + m.days.length) * _rowHeight(context);
+      while (_months < most && tall(months) < fill) {
+        _months = math.min(most, _months + _monthsAtATime);
+        months = planMonths(service: service, saved: saved, today: today, month: thisMonth, months: _months);
+      }
+      _room = math.max(0, most - _months);
       _joined = false;
       duties = planDuties(service, months.expand((m) => m.days), arranges);
       // Every day saved ahead, not only the months joined on so far: the
@@ -831,6 +842,21 @@ class _PlanWeeksScreenState extends ConsumerState<PlanWeeksScreen> with SingleTi
     return (widest + Space.s * 2 + 1).clamp(_narrowest, _widest);
   }
 
+  /// A day's row: two lines of names; a day's number and two lines under
+  /// it.
+  static double _rowHeight(BuildContext context) {
+    final scale = MediaQuery.textScalerOf(context);
+    return [
+      Space.minTap(Theme.of(context).platform) + Space.s,
+      scale.scale(15) * 1.3 * 2 + Space.m,
+      _DateCell.heightAt(scale),
+    ].reduce(math.max);
+  }
+
+  /// A month's name's row.
+  static double _monthHeight(BuildContext context) =>
+      MediaQuery.textScalerOf(context).scale(17) * 1.3 + Space.m + Space.s;
+
   /// The table: the duties' names stay at the top and the dates at the
   /// start, the rest scrolls both ways; each month starts under its name.
   /// Only the cells on screen are built, however many months there are.
@@ -842,15 +868,9 @@ class _PlanWeeksScreenState extends ConsumerState<PlanWeeksScreen> with SingleTi
   ) {
     final c = AppColors.of(context);
     final scale = MediaQuery.textScalerOf(context);
-    final platform = Theme.of(context).platform;
     final today = ref.watch(todayProvider);
-    // Two lines of names; a day's number and two lines under it.
-    final rowHeight = [
-      Space.minTap(platform) + Space.s,
-      scale.scale(15) * 1.3 * 2 + Space.m,
-      _DateCell.heightAt(scale),
-    ].reduce(math.max);
-    final monthHeight = scale.scale(17) * 1.3 + Space.m + Space.s;
+    final rowHeight = _rowHeight(context);
+    final monthHeight = _monthHeight(context);
     final line = BorderSide(color: c.separator, width: 0.5);
 
     final everyone = widget.readOnly

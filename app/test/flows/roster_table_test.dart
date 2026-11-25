@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 import 'package:material_symbols_icons/symbols.dart';
 import 'package:martha/domain/models.dart';
 import 'package:martha/features/rosters/roster_image.dart';
+import 'package:two_dimensional_scrollables/two_dimensional_scrollables.dart';
 
 import '../support/harness.dart';
 import '../support/seed.dart';
@@ -68,6 +69,22 @@ void main() {
       reason: 'every duty too',
     );
     expect(find.descendant(of: picture, matching: find.text('招待')), findsOneWidget);
+  });
+
+  testWidgets('opening, the table has the months that fill the screen at once, not built again as it slides in', (
+    tester,
+  ) async {
+    await pumpApp(tester, seededChurch(as: staffHao));
+    await go(tester, '/rosters');
+    await tester.tap(find.text('表格').last);
+    // Built first offstage, as a page being pushed is.
+    final table = find.byType(TableView, skipOffstage: false);
+    do {
+      await tester.pump(const Duration(milliseconds: 16));
+    } while (table.evaluate().isEmpty);
+    final first = tester.widget(table);
+    await settle(tester);
+    expect(tester.widget(table), same(first), reason: 'no months joined on after the first layout');
   });
 
   testWidgets('a date opens its day', (tester) async {
