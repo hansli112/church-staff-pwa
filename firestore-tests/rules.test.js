@@ -1143,6 +1143,15 @@ describe('全域個資 (users)', () => {
     await assertFails(updateDoc(doc(as(MEMBER_A), `users/${STRANGER}`), { appLocale: 'en' }));
   });
 
+  it('本人記下今天打開過 App，給平台統計：只能是日期', async () => {
+    const ref = doc(as(STRANGER), `users/${STRANGER}`);
+    await assertSucceeds(setDoc(ref, { name: '新人', email: 's@example.com' }));
+    await assertSucceeds(updateDoc(ref, { seenOn: '2026-10-01' }));
+    await assertFails(updateDoc(ref, { seenOn: 'yesterday' }));
+    await assertFails(updateDoc(ref, { seenOn: 20261001 }));
+    await assertFails(updateDoc(doc(as(MEMBER_A), `users/${STRANGER}`), { seenOn: '2026-10-01' }));
+  });
+
   it('本人記下同意照片辨識送到 Gemini：只能是時間', async () => {
     const ref = doc(as(STRANGER), `users/${STRANGER}`);
     await assertSucceeds(setDoc(ref, { name: '新人', email: 's@example.com' }));

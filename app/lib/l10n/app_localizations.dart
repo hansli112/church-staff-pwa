@@ -2032,11 +2032,17 @@ abstract class L10n {
   /// **'成員'**
   String get statsMembers;
 
-  /// No description provided for @statsRosters.
+  /// Stats card: accounts that opened the app in the 7 days to the day shown
   ///
   /// In zh, this message translates to:
-  /// **'服事表'**
-  String get statsRosters;
+  /// **'7 天內打開過的人'**
+  String get statsActiveUsers;
+
+  /// Stats card: churches where someone (not the calendar sync) changed a roster in the 7 days to the day shown
+  ///
+  /// In zh, this message translates to:
+  /// **'7 天內改過服事表的教會'**
+  String get statsChurchesEditing;
 
   /// No description provided for @statsReads.
   ///

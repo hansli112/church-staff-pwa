@@ -234,6 +234,16 @@ void contractTests(Future<ContractWorld> Function() open) {
       await expectLater(profiles.setAppLocale(uid, 'x' * 40), denied());
     });
 
+    test('the day the app is open is kept, saving keeps it, and only a day is taken', () async {
+      final uid = await w.signUp('a@example.com');
+      final profiles = w.backend.profiles;
+      await profiles.ensure(UserProfile(uid: uid, name: '小明', email: 'a@example.com'));
+      await profiles.markSeen(uid, '2026-10-01');
+      await profiles.save(UserProfile(uid: uid, name: '王小明', email: 'a@example.com'));
+      expect((await profiles.watch(uid).first)!.seenOn, '2026-10-01');
+      await expectLater(profiles.markSeen(uid, 'today'), denied());
+    });
+
     test('a profile name holds 40 characters; far past it is refused', () async {
       // Between 40 characters and 160 UTF-16 units the rules let it through
       // and the app stops it; outside that band both say the same.

@@ -383,6 +383,7 @@ Chrome 小幅改善；桌面 WebKit 差距小且教會資訊冷開反而較慢�
   - `support_paid` 不用 GA4 的 `purchase`：手機版商店購買 GA4 可能自己記 `in_app_purchase`，兩個都記營收會重複。網站上的線上支持在綠界付，App 看不到，看後台的經費頁。
 - 平台統計：每日排程 Cloud Function 寫 `stats/{date}`：
   - `count()` 聚合：使用者、教會（依 status）、members、rosters。
+  - 有沒有人在用（2026-11-25）：7 天內打開過 App 的人（App 每天第一次打開時在 `users/{uid}.seenOn` 寫下 UTC+8 的日期，一人一天一次寫入），7 天內有人改過服事表的教會（`rosters` 的 `updatedAt`，不算後端跟著 Google 日曆、時區、復原刪除、搬家改的）。統計頁顯示這兩個，不再顯示成員和服事表的總數：總數只會往上加，看不出有沒有人在用（快照裡照樣記）。
   - Cloud Monitoring API：前一日 Firestore reads/writes/deletes、儲存量、Functions 呼叫次數。
   - 費用：用量 × 公開單價估算，不開 billing export（要 BigQuery，多一套東西）。
   - 限制：Firestore 無法拆出每間教會的讀寫量；重度教會靠 GA4 活躍度與後端既有計數（照片額度）推估。

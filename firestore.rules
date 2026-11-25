@@ -298,7 +298,7 @@ service cloud.firestore {
       function validProfile() {
         return request.resource.data.keys().hasOnly(
             ['name', 'email', 'locale', 'appLocale', 'fcm', 'photoAiConsentAt', 'notificationsSeenAt',
-             'createdAt', 'updatedAt'])
+             'seenOn', 'createdAt', 'updatedAt'])
           && hasValidName()
           // Push tokens, {deviceId: token}: one per install, dropped by the
           // backend once FCM says they are dead.
@@ -315,7 +315,12 @@ service cloud.firestore {
           // newest notification seen}. Only their own unread count reads it.
           && (!('notificationsSeenAt' in request.resource.data)
               || (request.resource.data.notificationsSeenAt is map
-                  && request.resource.data.notificationsSeenAt.size() <= 100));
+                  && request.resource.data.notificationsSeenAt.size() <= 100))
+          // The last day the app was open (UTC+8), for the platform's
+          // weekly count of who opened it.
+          && (!('seenOn' in request.resource.data)
+              || (request.resource.data.seenOn is string
+                  && request.resource.data.seenOn.matches('[0-9]{4}-[0-9]{2}-[0-9]{2}')));
       }
 
       allow read: if isSelf(uid);

@@ -1,6 +1,8 @@
 import assert from 'node:assert/strict';
 import { beforeEach, describe, test } from 'node:test';
 
+import { Timestamp } from 'firebase-admin/firestore';
+
 import { logClientError } from '../src/logging.js';
 import {
   adminChurchMembers,
@@ -139,6 +141,22 @@ describe('daily stats', () => {
     assert.equal(doc.get('rosters'), 1);
     assert.equal(doc.get('firestore_reads'), 150_000);
     assert.ok(doc.get('cost_usd') > 0);
+  });
+
+  test('who opened the app in the 7 days to the day, and the churches whose rosters changed in them', async () => {
+    // The day counted is 2026-10-01 (UTC+8): from 09-25 on.
+    for (const [uid, seenOn] of [['a', '2026-10-01'], ['b', '2026-09-25'], ['c', '2026-09-24'], ['d', undefined]] as const) {
+      await db.doc(`users/${uid}`).set(seenOn ? { name: uid, seenOn } : { name: uid });
+    }
+    const at = (iso: string) => Timestamp.fromDate(new Date(iso));
+    await db.doc('churches/C1/rosters/r1').set({ dateKey: '2026-10-04', updatedAt: at('2026-09-25T00:30:00+08:00') });
+    await db.doc('churches/C1/rosters/r2').set({ dateKey: '2026-10-11', updatedAt: at('2026-10-01T23:00:00+08:00') });
+    await db.doc('churches/C2/rosters/r1').set({ dateKey: '2026-10-04', updatedAt: at('2026-09-24T23:59:00+08:00') });
+    await db.doc('churches/C3/rosters/r1').set({ dateKey: '2026-10-04', updatedAt: at('2026-10-02T00:10:00+08:00') });
+    await db.doc('churches/C4/rosters/ev_x').set({ dateKey: '2026-10-04', via: 'calendar', updatedAt: at('2026-09-30T12:00:00+08:00') });
+    const s = await writeDailyStats(deps, usage);
+    assert.equal(s.users_active_7d, 2);
+    assert.equal(s.churches_editing_7d, 1, 'C1 twice; C2 before, C3 after, C4 only Google Calendar');
   });
 
   test('running twice for the same day replaces, never doubles', async () => {

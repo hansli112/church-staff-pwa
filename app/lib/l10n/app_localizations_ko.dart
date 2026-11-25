@@ -1107,7 +1107,10 @@ class L10nKo extends L10n {
   String get statsMembers => '멤버';
 
   @override
-  String get statsRosters => '봉사표';
+  String get statsActiveUsers => '7일 내 연 사람';
+
+  @override
+  String get statsChurchesEditing => '7일 내 봉사표를 바꾼 교회';
 
   @override
   String get statsReads => 'Firestore 읽기';

@@ -1106,7 +1106,10 @@ class L10nZh extends L10n {
   String get statsMembers => '成員';
 
   @override
-  String get statsRosters => '服事表';
+  String get statsActiveUsers => '7 天內打開過的人';
+
+  @override
+  String get statsChurchesEditing => '7 天內改過服事表的教會';
 
   @override
   String get statsReads => 'Firestore 讀取';
@@ -4996,7 +4999,10 @@ class L10nZhHans extends L10nZh {
   String get statsMembers => '成员';
 
   @override
-  String get statsRosters => '事奉表';
+  String get statsActiveUsers => '7 天内打开过的人';
+
+  @override
+  String get statsChurchesEditing => '7 天内改过事奉表的教会';
 
   @override
   String get statsReads => 'Firestore 读取';

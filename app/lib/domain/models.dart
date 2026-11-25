@@ -931,6 +931,7 @@ class UserProfile {
     this.appLocale,
     this.photoAiConsent = false,
     this.notificationsSeen = const {},
+    this.seenOn,
   });
 
   final String uid;
@@ -955,16 +956,26 @@ class UserProfile {
   /// [ProfileRepository.markNotificationsSeen], not by saving the profile.
   final Map<String, DateTime> notificationsSeen;
 
-  UserProfile copyWith({String? appLocale, bool? photoAiConsent, Map<String, DateTime>? notificationsSeen}) =>
-      UserProfile(
-        uid: uid,
-        name: name,
-        email: email,
-        locale: locale,
-        appLocale: appLocale ?? this.appLocale,
-        photoAiConsent: photoAiConsent ?? this.photoAiConsent,
-        notificationsSeen: notificationsSeen ?? this.notificationsSeen,
-      );
+  /// The last day (UTC+8, `YYYY-MM-DD`) the app was open, for the
+  /// platform's count of who opened it in a week. Kept by
+  /// [ProfileRepository.markSeen].
+  final String? seenOn;
+
+  UserProfile copyWith({
+    String? appLocale,
+    bool? photoAiConsent,
+    Map<String, DateTime>? notificationsSeen,
+    String? seenOn,
+  }) => UserProfile(
+    uid: uid,
+    name: name,
+    email: email,
+    locale: locale,
+    appLocale: appLocale ?? this.appLocale,
+    photoAiConsent: photoAiConsent ?? this.photoAiConsent,
+    notificationsSeen: notificationsSeen ?? this.notificationsSeen,
+    seenOn: seenOn ?? this.seenOn,
+  );
 }
 
 /// A membership found by the collection-group query: which churches I am in.

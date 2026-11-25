@@ -501,7 +501,7 @@ class _AdminStatsScreenState extends ConsumerState<AdminStatsScreen> {
 
   /// Totals, which also show how much they changed from the day before;
   /// the rest are each day's own usage.
-  static const _totals = {'users', 'churches_active', 'members', 'rosters'};
+  static const _totals = {'users', 'churches_active'};
 
   @override
   Widget build(BuildContext context) {
@@ -511,8 +511,9 @@ class _AdminStatsScreenState extends ConsumerState<AdminStatsScreen> {
     final metrics = <(String, String)>[
       ('users', l10n.statsUsers),
       ('churches_active', l10n.statsChurches),
-      ('members', l10n.statsMembers),
-      ('rosters', l10n.statsRosters),
+      // Who is using it, not totals that only grow (成員 and 服事表 were).
+      ('users_active_7d', l10n.statsActiveUsers),
+      ('churches_editing_7d', l10n.statsChurchesEditing),
       ('firestore_reads', l10n.statsReads),
       ('firestore_writes', l10n.statsWrites),
       ('cost_usd', l10n.statsCost),

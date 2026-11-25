@@ -1106,7 +1106,10 @@ class L10nJa extends L10n {
   String get statsMembers => 'メンバー';
 
   @override
-  String get statsRosters => '奉仕表';
+  String get statsActiveUsers => '7日以内に開いた人';
+
+  @override
+  String get statsChurchesEditing => '7日以内に奉仕表を変えた教会';
 
   @override
   String get statsReads => 'Firestore 読み取り';

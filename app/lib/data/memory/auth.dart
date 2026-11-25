@@ -290,6 +290,7 @@ class _Profiles implements ProfileRepository {
         appLocale: old?.appLocale,
         photoAiConsent: old?.photoAiConsent,
         notificationsSeen: old?.notificationsSeen,
+        seenOn: old?.seenOn,
       ),
     );
   }
@@ -310,7 +311,18 @@ class _Profiles implements ProfileRepository {
     if (_b.auth.currentUser?.uid != uid || p == null || tag.length > Limits.appLocale) {
       throw const CloudException(CloudErrorCode.permissionDenied);
     }
-    await _b.write(() => _b.users[uid] = p.copyWith(appLocale: tag));
+    // Read again when written: another field may be written meanwhile.
+    await _b.write(() => _b.users[uid] = _b.users[uid]!.copyWith(appLocale: tag));
+  }
+
+  @override
+  Future<void> markSeen(String uid, String day) async {
+    // As firestore.rules: only on one's own profile, and a day.
+    final p = _b.users[uid];
+    if (_b.auth.currentUser?.uid != uid || p == null || !RegExp(r'^\d{4}-\d{2}-\d{2}$').hasMatch(day)) {
+      throw const CloudException(CloudErrorCode.permissionDenied);
+    }
+    await _b.write(() => _b.users[uid] = _b.users[uid]!.copyWith(seenOn: day));
   }
 
   @override

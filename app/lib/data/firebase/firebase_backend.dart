@@ -499,6 +499,9 @@ class _Profiles implements ProfileRepository {
   Future<void> setAppLocale(String uid, String tag) => _guard(() => _db.doc('users/$uid').update({'appLocale': tag}));
 
   @override
+  Future<void> markSeen(String uid, String day) => _guard(() => _db.doc('users/$uid').update({'seenOn': day}));
+
+  @override
   Future<void> agreeToPhotoAi(String uid) async {
     if (_auth.currentUser?.uid != uid) throw const CloudException(CloudErrorCode.permissionDenied);
     // In the cache at once, which is all the photo needs: the server's

@@ -175,6 +175,10 @@ abstract interface class ProfileRepository {
   /// existing users/{uid}.
   Future<void> setAppLocale(String uid, String tag);
 
+  /// Records on an existing users/{uid} the day the app is open, `YYYY-MM-DD`
+  /// on UTC+8 ([UserProfile.seenOn]).
+  Future<void> markSeen(String uid, String day);
+
   /// Records on users/{uid} that its owner agreed to photo recognition
   /// sending photos and the member list to Google's Gemini.
   Future<void> agreeToPhotoAi(String uid);

@@ -146,6 +146,23 @@ void main() {
     expect(find.text('+600'), findsNothing);
   });
 
+  testWidgets('stats show who opened the app and the churches editing in 7 days, not 成員 and 服事表', (tester) async {
+    final b = seededChurch();
+    b.auth.operators.add('pastor');
+    final values = {'users': 729, 'members': 670, 'rosters': 752, 'users_active_7d': 412, 'churches_editing_7d': 96};
+    b.cloud.stats
+      ..add(DailyStats(day: testToday, values: values))
+      ..add(DailyStats(day: testToday.addDays(-1), values: {...values, 'users_active_7d': 400}));
+    await pumpApp(tester, b);
+    await go(tester, '/admin/stats');
+    expect(find.text('7 天內打開過的人'), findsOneWidget);
+    expect(find.text('412'), findsOneWidget);
+    expect(find.text('+12'), findsNothing, reason: 'a week\'s count, not a total that grows');
+    expect(find.text('7 天內改過服事表的教會'), findsOneWidget);
+    expect(find.text('成員'), findsNothing);
+    expect(find.text('服事表'), findsNothing);
+  });
+
   testWidgets('a cost\'s name in the other languages is saved; one left empty is not', (tester) async {
     final b = seededChurch();
     b.auth.operators.add('pastor');

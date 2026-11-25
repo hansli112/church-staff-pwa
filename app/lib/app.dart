@@ -136,7 +136,9 @@ class _MarthaAppState extends ConsumerState<MarthaApp> {
       routerConfig: router,
       scaffoldMessengerKey: _messenger,
       builder: (context, child) => _LanguageShown(
-        child: _Column(child: UpdateRequiredGate(child: child!)),
+        child: _SeenToday(
+          child: _Column(child: UpdateRequiredGate(child: child!)),
+        ),
       ),
     );
   }
@@ -168,6 +170,57 @@ class _Column extends StatelessWidget {
         ),
       ),
     );
+  }
+}
+
+/// Writes on users/{uid} the day the app is open (`seenOn`, UTC+8, as the
+/// platform's daily stats count days), once a day: the stats page's count
+/// of who opened it in a week, which nothing else written tells.
+class _SeenToday extends ConsumerStatefulWidget {
+  const _SeenToday({required this.child});
+
+  final Widget child;
+
+  @override
+  ConsumerState<_SeenToday> createState() => _SeenTodayState();
+}
+
+class _SeenTodayState extends ConsumerState<_SeenToday> with WidgetsBindingObserver {
+  (String, String)? _sent;
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addObserver(this);
+  }
+
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    super.dispose();
+  }
+
+  /// Back to the app on another day: build again, to write that day.
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed && mounted) setState(() {});
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final profile = ref.watch(profileProvider).value;
+    final now = ref.read(clockProvider)().toUtc().add(const Duration(hours: 8));
+    final day =
+        '${now.year.toString().padLeft(4, '0')}-${now.month.toString().padLeft(2, '0')}-${now.day.toString().padLeft(2, '0')}';
+    if (profile != null && profile.seenOn != day && _sent != (profile.uid, day)) {
+      _sent = (profile.uid, day);
+      final profiles = ref.read(backendProvider).profiles;
+      // Best effort: on failure (offline), the next build tries again.
+      WidgetsBinding.instance.addPostFrameCallback(
+        (_) => unawaited(profiles.markSeen(profile.uid, day).catchError((_) => _sent = null)),
+      );
+    }
+    return widget.child;
   }
 }
 

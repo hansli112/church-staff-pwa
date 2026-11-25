@@ -624,6 +624,7 @@ UserProfile profileFromJson(String uid, Json data) => UserProfile(
   locale: data['locale'] as String?,
   appLocale: data['appLocale'] as String?,
   photoAiConsent: data['photoAiConsentAt'] != null,
+  seenOn: data['seenOn'] as String?,
   notificationsSeen: {
     if (data['notificationsSeenAt'] case final Map<dynamic, dynamic> seen)
       for (final e in seen.entries)
