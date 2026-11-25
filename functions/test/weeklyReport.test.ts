@@ -63,6 +63,7 @@ function googleRoutes() {
       if (dim === 'eventName') return { body: gaRows([[['church_create', 'date_range_0'], [9]], [['church_create', 'date_range_1'], [2]]]) };
       if (dim === 'languageCode') {
         assert.deepEqual(JSON.parse(req.body).dateRanges[1], { startDate: '2026-10-26', endDate: '2026-11-22' }, 'the last 4 weeks');
+        assert.deepEqual(JSON.parse(req.body).metrics, [{ name: 'activeUsers' }], 'everyone who used it, not only the new');
         return { body: gaRows([
           [['zh-tw', 'date_range_0'], [20]], [['zh-hant-hk', 'date_range_0'], [5]], [['zh-tw', 'date_range_1'], [60]],
           [['zh-cn', 'date_range_1'], [30]], [['en-us', 'date_range_0'], [3]], [['en-gb', 'date_range_1'], [8]],

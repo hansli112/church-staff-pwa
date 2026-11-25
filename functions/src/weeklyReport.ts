@@ -64,7 +64,7 @@ interface Ga {
   events: { label: string; count: Pair }[];
   countries: { name: string; n: number }[];
   sources: { name: string; n: number }[];
-  /** New users by phone language, this week and the last 4 weeks; most first. */
+  /** Active users by phone language, this week and the last 4 weeks (each person once); most first. */
   languages: { name: string; supported: boolean; n: Pair }[];
 }
 interface Gsc {
@@ -253,7 +253,7 @@ async function readAnalytics(d: Deps, a: Analytics, now: Week, before: Week): Pr
     ga('countryId', ['newUsers']),
     ga('sessionSource', ['newUsers']),
     // [this week, the last 4 weeks] in place of [this week, last week]
-    ga('languageCode', ['newUsers'], { dateRanges: [{ startDate: now.from, endDate: now.to }, fourWeeks] }),
+    ga('languageCode', ['activeUsers'], { dateRanges: [{ startDate: now.from, endDate: now.to }, fourWeeks] }),
     gsc(now),
     gsc(before),
     gsc(now, ['query'], 8),
@@ -420,7 +420,7 @@ function gaSections(ga: Ga) {
 <div style="height:12px"></div>${table(['', '活躍', '新使用者'], platformRows)}`, `上週 ${num(ga.active[1])}`),
     card('大家做了什麼', table(['', '這週', '上週'], ga.events.map((e) => [e.label, num(e.count[0]), `<span style="color:${C.label3}">${num(e.count[1])}</span>`]))),
     card('新使用者從哪來', `${sub('國家', 0)}${hbars(ga.countries)}${sub('來源')}${hbars(ga.sources)}`),
-    ga.languages.length ? card('新使用者的手機語言', languageRows(ga.languages)) : '',
+    ga.languages.length ? card('使用者的手機語言', languageRows(ga.languages)) : '',
   ].join('');
 }
 
