@@ -1137,7 +1137,7 @@ class L10nKo extends L10n {
   String get notifReminderBothSub => '매주 월요일과 봉사 전날';
 
   @override
-  String get notifReminderTime => '봉사 알림 시간';
+  String get notifReminderTime => '알림 받을 날';
 
   @override
   String get notifReminderWeekly => '매주 월요일';

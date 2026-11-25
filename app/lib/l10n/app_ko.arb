@@ -349,7 +349,7 @@
   "notifReminderWeeklySub": "매주 월요일, 이번 주 봉사 목록",
   "notifReminderDayBeforeSub": "봉사 전날 알려 드려요",
   "notifReminderBothSub": "매주 월요일과 봉사 전날",
-  "notifReminderTime": "봉사 알림 시간",
+  "notifReminderTime": "알림 받을 날",
   "notifReminderWeekly": "매주 월요일",
   "notifReminderDayBefore": "전날",
   "notifReminderBoth": "둘 다",

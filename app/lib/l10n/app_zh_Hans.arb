@@ -349,7 +349,7 @@
   "notifReminderWeeklySub": "每周一，列出这周的事奉",
   "notifReminderDayBeforeSub": "事奉前一天提醒你",
   "notifReminderBothSub": "每周一，和事奉前一天",
-  "notifReminderTime": "事奉提醒时间",
+  "notifReminderTime": "提醒哪一天",
   "notifReminderWeekly": "每周一",
   "notifReminderDayBefore": "前一天",
   "notifReminderBoth": "两个都要",

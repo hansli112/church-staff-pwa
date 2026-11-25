@@ -349,7 +349,7 @@
   "notifReminderWeeklySub": "毎週月曜に、その週の奉仕をお知らせします",
   "notifReminderDayBeforeSub": "奉仕の前日にお知らせします",
   "notifReminderBothSub": "毎週月曜と、奉仕の前日",
-  "notifReminderTime": "リマインダーの時間",
+  "notifReminderTime": "通知する日",
   "notifReminderWeekly": "毎週月曜",
   "notifReminderDayBefore": "前日",
   "notifReminderBoth": "両方",

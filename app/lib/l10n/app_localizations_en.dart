@@ -1172,7 +1172,7 @@ class L10nEn extends L10n {
   String get notifReminderBothSub => 'Mondays and the day before you serve';
 
   @override
-  String get notifReminderTime => 'Reminder time';
+  String get notifReminderTime => 'Remind me on';
 
   @override
   String get notifReminderWeekly => 'Mondays';

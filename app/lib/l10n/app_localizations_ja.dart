@@ -1136,7 +1136,7 @@ class L10nJa extends L10n {
   String get notifReminderBothSub => '毎週月曜と、奉仕の前日';
 
   @override
-  String get notifReminderTime => 'リマインダーの時間';
+  String get notifReminderTime => '通知する日';
 
   @override
   String get notifReminderWeekly => '毎週月曜';

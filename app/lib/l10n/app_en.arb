@@ -349,7 +349,7 @@
   "notifReminderWeeklySub": "Mondays, a list of this week’s serving",
   "notifReminderDayBeforeSub": "The day before you serve",
   "notifReminderBothSub": "Mondays and the day before you serve",
-  "notifReminderTime": "Reminder time",
+  "notifReminderTime": "Remind me on",
   "notifReminderWeekly": "Mondays",
   "notifReminderDayBefore": "The day before",
   "notifReminderBoth": "Both",
