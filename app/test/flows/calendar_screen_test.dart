@@ -329,16 +329,32 @@ void main() {
     semantics.dispose();
   });
 
-  testWidgets('顯示與篩選 stands out while not every event shows', (tester) async {
+  Finder soft() => find.descendant(of: find.byTooltip('顯示與篩選'), matching: find.byType(DecoratedBox));
+
+  testWidgets('顯示與篩選 stands out only while the filter is not the one I start on', (tester) async {
     final b = seededChurch(as: staffMei);
     b.connectCalendar('grace', calendarName: '教會行事曆');
     await pumpApp(tester, b);
     await openCalendar(tester);
-    Finder soft() => find.descendant(of: find.byTooltip('顯示與篩選'), matching: find.byType(DecoratedBox));
     expect(await calendarFilterShown(tester), '跟我有關的');
-    expect(soft(), findsOneWidget);
+    expect(soft(), findsNothing, reason: 'where 同工 start');
     await pickInCalendarMenu(tester, '全部');
     await settle(tester);
+    expect(soft(), findsOneWidget);
+    await pickInCalendarMenu(tester, '跟我有關的');
+    await settle(tester);
     expect(soft(), findsNothing);
+  });
+
+  testWidgets('an admin starts on 全部: one service picked stands out', (tester) async {
+    final b = seededChurch(as: pastor);
+    b.connectCalendar('grace', calendarName: '教會行事曆');
+    await pumpApp(tester, b);
+    await openCalendar(tester);
+    expect(await calendarFilterShown(tester), '全部');
+    expect(soft(), findsNothing);
+    await pickInCalendarMenu(tester, '跟我有關的');
+    await settle(tester);
+    expect(soft(), findsOneWidget);
   });
 }

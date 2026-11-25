@@ -179,8 +179,11 @@ class CalendarScreen extends ConsumerWidget {
     ];
     final ready = settings?.ready ?? false;
     final c = AppColors.of(context);
-    // Narrowed: not every event shows, said by the button's colour.
-    final narrowed = filter != 'all';
+    // Not the filter this member starts on (跟我有關的, or 全部 for those who
+    // look after the whole church): the button stands out, so a calendar
+    // missing events is not taken for the usual one. Where they start
+    // is not marked, as a default sort is not (SAP Fiori's filter bar).
+    final narrowed = filter != ref.read(calendarFilterProvider.notifier).first;
     return Scaffold(
       appBar: AppBar(
         centerTitle: false,
