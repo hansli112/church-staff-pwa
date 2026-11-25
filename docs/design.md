@@ -384,8 +384,7 @@ Chrome 小幅改善；桌面 WebKit 差距小且教會資訊冷開反而較慢�
 - 平台統計：每日排程 Cloud Function 寫 `stats/{date}`：
   - `count()` 聚合：使用者、教會（依 status）、members、rosters。
   - 有沒有人在用（2026-11-25）：7 天內打開過 App 的人（App 每天第一次打開時在 `users/{uid}.seenOn` 寫下 UTC+8 的日期，一人一天一次寫入），7 天內有人改過服事表的教會（`rosters` 的 `updatedAt`，不算後端跟著 Google 日曆、時區、復原刪除、搬家改的）。統計頁顯示這兩個，不再顯示成員和服事表的總數：總數只會往上加，看不出有沒有人在用（快照裡照樣記）。
-  - Cloud Monitoring API：前一日 Firestore reads/writes/deletes、儲存量、Functions 呼叫次數。
-  - 費用：用量 × 公開單價估算，不開 billing export（要 BigQuery，多一套東西）。
+  - 不記 Firebase 用量和費用（2026-11-25 拿掉原本從 Cloud Monitoring 讀的讀寫次數和估計費用）：花費靠 prod、dev 各一個每月預算提醒（50%、90%、100% 寄信），細項看 Firebase console 的用量頁。
   - 限制：Firestore 無法拆出每間教會的讀寫量；重度教會靠 GA4 活躍度與後端既有計數（照片額度）推估。
 - 錯誤 log：
   - App：Crashlytics（當機、未處理例外）。

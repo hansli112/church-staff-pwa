@@ -2044,24 +2044,6 @@ abstract class L10n {
   /// **'7 天內改過服事表的教會'**
   String get statsChurchesEditing;
 
-  /// No description provided for @statsReads.
-  ///
-  /// In zh, this message translates to:
-  /// **'Firestore 讀取'**
-  String get statsReads;
-
-  /// No description provided for @statsWrites.
-  ///
-  /// In zh, this message translates to:
-  /// **'Firestore 寫入'**
-  String get statsWrites;
-
-  /// No description provided for @statsCost.
-  ///
-  /// In zh, this message translates to:
-  /// **'估計費用（USD）'**
-  String get statsCost;
-
   /// No description provided for @statsNone.
   ///
   /// In zh, this message translates to:

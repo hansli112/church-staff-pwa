@@ -128,14 +128,14 @@ void main() {
     b.auth.operators.add('pastor');
     final yesterday = testToday.addDays(-1);
     b.cloud.stats
-      ..add(DailyStats(day: testToday, values: const {'users': 729, 'firestore_reads': 324861}))
-      ..add(DailyStats(day: yesterday, values: const {'users': 129, 'firestore_reads': 16727}));
+      ..add(DailyStats(day: testToday, values: const {'users': 729, 'users_active_7d': 32486}))
+      ..add(DailyStats(day: yesterday, values: const {'users': 129, 'users_active_7d': 16727}));
     await pumpApp(tester, b);
     await go(tester, '/admin/stats');
     expect(find.text(DateFormat.MMMEd().format(testToday.midnight)), findsOneWidget);
     expect(find.text('729'), findsOneWidget);
     expect(find.text('+600'), findsOneWidget, reason: 'a total says how much it grew');
-    expect(find.text('325K'), findsOneWidget);
+    expect(find.text('32.5K'), findsOneWidget);
 
     final chart = find.byKey(const Key('statsChart-users'));
     await tester.tapAt(tester.getTopLeft(chart) + const Offset(4, 36));

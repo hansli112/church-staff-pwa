@@ -1112,15 +1112,6 @@ class L10nJa extends L10n {
   String get statsChurchesEditing => '7日以内に奉仕表を変えた教会';
 
   @override
-  String get statsReads => 'Firestore 読み取り';
-
-  @override
-  String get statsWrites => 'Firestore 書き込み';
-
-  @override
-  String get statsCost => '推定費用（USD）';
-
-  @override
   String get statsNone => '統計データはまだありません';
 
   @override

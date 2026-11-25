@@ -1113,15 +1113,6 @@ class L10nKo extends L10n {
   String get statsChurchesEditing => '7일 내 봉사표를 바꾼 교회';
 
   @override
-  String get statsReads => 'Firestore 읽기';
-
-  @override
-  String get statsWrites => 'Firestore 쓰기';
-
-  @override
-  String get statsCost => '예상 비용(USD)';
-
-  @override
   String get statsNone => '아직 통계가 없어요';
 
   @override

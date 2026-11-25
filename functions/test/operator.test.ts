@@ -13,7 +13,7 @@ import {
   adminStats,
   adminTransferAdmin,
 } from '../src/operator.js';
-import { estimateCostUsd, writeDailyStats } from '../src/stats.js';
+import { writeDailyStats } from '../src/stats.js';
 import { caller, clearFirestore, db, deps, rejectsWith, seedChurch, setNow } from './support.js';
 
 const op = caller('hans', { operator: true });
@@ -116,21 +116,13 @@ describe('operator back office', () => {
 });
 
 describe('daily stats', () => {
-  const usage = async () => ({
-    firestoreReads: 150_000,
-    firestoreWrites: 1_000,
-    firestoreDeletes: 0,
-    storageBytes: 1_500_000,
-    functionCalls: 42,
-  });
-
-  test('writes yesterday (UTC+8) with counts and usage', async () => {
+  test('writes yesterday (UTC+8) with its counts', async () => {
     await seedChurch('C1', { alice: 'admin', bob: 'staff' });
     await seedChurch('C2', { carol: 'admin' }, { status: 'suspended' });
     await db.doc('users/alice').set({ name: 'a' });
     await db.doc('churches/C1/rosters/r1').set({ type: 'sunday', dateKey: '2026-10-04' });
 
-    const s = await writeDailyStats(deps, usage);
+    const s = await writeDailyStats(deps);
 
     assert.equal(s.date, '2026-10-01');
     const doc = await db.doc('stats/2026-10-01').get();
@@ -139,8 +131,6 @@ describe('daily stats', () => {
     assert.equal(doc.get('churches_suspended'), 1);
     assert.equal(doc.get('members'), 3);
     assert.equal(doc.get('rosters'), 1);
-    assert.equal(doc.get('firestore_reads'), 150_000);
-    assert.ok(doc.get('cost_usd') > 0);
   });
 
   test('who opened the app in the 7 days to the day, and the churches whose rosters changed in them', async () => {
@@ -154,27 +144,18 @@ describe('daily stats', () => {
     await db.doc('churches/C2/rosters/r1').set({ dateKey: '2026-10-04', updatedAt: at('2026-09-24T23:59:00+08:00') });
     await db.doc('churches/C3/rosters/r1').set({ dateKey: '2026-10-04', updatedAt: at('2026-10-02T00:10:00+08:00') });
     await db.doc('churches/C4/rosters/ev_x').set({ dateKey: '2026-10-04', via: 'calendar', updatedAt: at('2026-09-30T12:00:00+08:00') });
-    const s = await writeDailyStats(deps, usage);
+    const s = await writeDailyStats(deps);
     assert.equal(s.users_active_7d, 2);
     assert.equal(s.churches_editing_7d, 1, 'C1 twice; C2 before, C3 after, C4 only Google Calendar');
   });
 
   test('running twice for the same day replaces, never doubles', async () => {
     await seedChurch('C1', { alice: 'admin' });
-    await writeDailyStats(deps, usage);
-    await writeDailyStats(deps, usage);
+    await writeDailyStats(deps);
+    await writeDailyStats(deps);
     const all = await db.collection('stats').get();
     assert.equal(all.size, 1);
     assert.equal(all.docs[0].get('members'), 1);
-  });
-
-  test('a monitoring failure still records the counts', async () => {
-    await writeDailyStats(deps, async () => {
-      throw new Error('monitoring down');
-    });
-    const doc = await db.doc('stats/2026-10-01').get();
-    assert.equal(doc.get('churches_active'), 0);
-    assert.equal(doc.get('firestore_reads'), undefined);
   });
 
   test('adminStats returns newest first, at most the asked number', async () => {
@@ -183,13 +164,6 @@ describe('daily stats', () => {
     }
     const { days } = await adminStats(deps, op, { days: 2 });
     assert.deepEqual(days.map((d) => d.date), ['2026-10-01', '2026-09-30']);
-  });
-
-  test('cost is zero inside the free tier', () => {
-    assert.equal(
-      estimateCostUsd({ firestoreReads: 1000, firestoreWrites: 10, firestoreDeletes: 0, storageBytes: 1e6, functionCalls: 1 }),
-      0,
-    );
   });
 });
 

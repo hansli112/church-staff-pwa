@@ -500,7 +500,7 @@ class _AdminStatsScreenState extends ConsumerState<AdminStatsScreen> {
   int? _picked;
 
   /// Totals, which also show how much they changed from the day before;
-  /// the rest are each day's own usage.
+  /// the rest count the 7 days to the day.
   static const _totals = {'users', 'churches_active'};
 
   @override
@@ -514,9 +514,6 @@ class _AdminStatsScreenState extends ConsumerState<AdminStatsScreen> {
       // Who is using it, not totals that only grow (成員 and 服事表 were).
       ('users_active_7d', l10n.statsActiveUsers),
       ('churches_editing_7d', l10n.statsChurchesEditing),
-      ('firestore_reads', l10n.statsReads),
-      ('firestore_writes', l10n.statsWrites),
-      ('cost_usd', l10n.statsCost),
     ];
     return Scaffold(
       appBar: AppBar(title: Text(l10n.adminStats)),
@@ -589,8 +586,8 @@ class _MetricCard extends StatelessWidget {
 
   static final _compact = NumberFormat.compact(locale: 'en');
 
-  /// 325K, 18.1K, 729 (as Firebase's console counts); the cost in dollars.
-  String _fmt(num v) => metric == 'cost_usd' ? v.toStringAsFixed(2) : _compact.format(v);
+  /// 32.5K, 729.
+  String _fmt(num v) => _compact.format(v);
 
   /// A round number at or above [max], for the top of the bars.
   static double _ceiling(double max) {

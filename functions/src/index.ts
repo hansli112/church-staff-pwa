@@ -53,7 +53,7 @@ import { logClientError as logClientErrorHandler } from './logging.js';
 import * as notifications from './notifications.js';
 import * as operator from './operator.js';
 import * as photo from './photo.js';
-import { monitoringUsageReader, writeDailyStats } from './stats.js';
+import { writeDailyStats } from './stats.js';
 import * as rosterChange from './rosterChange.js';
 import * as rosterNotes from './rosterNotes.js';
 import * as serviceSettings from './serviceSettings.js';
@@ -288,8 +288,7 @@ export const adminChurchMembers = callable(operator.adminChurchMembers);
 export const dailyStats = onSchedule(
   { region: REGION, schedule: 'every day 01:30', timeZone: 'Asia/Taipei' },
   async () => {
-    const projectId = process.env.GCLOUD_PROJECT ?? '';
-    await writeDailyStats(deps(), monitoringUsageReader(projectId));
+    await writeDailyStats(deps());
   },
 );
 

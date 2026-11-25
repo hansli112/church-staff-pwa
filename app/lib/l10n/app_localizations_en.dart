@@ -1148,15 +1148,6 @@ class L10nEn extends L10n {
   String get statsChurchesEditing => 'Churches editing in 7 days';
 
   @override
-  String get statsReads => 'Firestore reads';
-
-  @override
-  String get statsWrites => 'Firestore writes';
-
-  @override
-  String get statsCost => 'Estimated cost (USD)';
-
-  @override
   String get statsNone => 'No stats yet';
 
   @override

@@ -1112,15 +1112,6 @@ class L10nZh extends L10n {
   String get statsChurchesEditing => '7 天內改過服事表的教會';
 
   @override
-  String get statsReads => 'Firestore 讀取';
-
-  @override
-  String get statsWrites => 'Firestore 寫入';
-
-  @override
-  String get statsCost => '估計費用（USD）';
-
-  @override
   String get statsNone => '還沒有統計資料';
 
   @override
@@ -5003,15 +4994,6 @@ class L10nZhHans extends L10nZh {
 
   @override
   String get statsChurchesEditing => '7 天内改过事奉表的教会';
-
-  @override
-  String get statsReads => 'Firestore 读取';
-
-  @override
-  String get statsWrites => 'Firestore 写入';
-
-  @override
-  String get statsCost => '估计费用（USD）';
 
   @override
   String get statsNone => '还没有统计数据';
