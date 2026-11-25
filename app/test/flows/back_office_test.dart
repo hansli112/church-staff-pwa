@@ -84,6 +84,15 @@ void main() {
         month: '2026-09',
         at: DateTime(2026, 9, 16, 17, 18),
       ),
+      SupportPayment(
+        store: PaymentStore.apple,
+        productId: 'tip_large',
+        amount: 40.8,
+        currency: 'HKD',
+        amountTwd: 172,
+        month: '2026-08',
+        at: DateTime(2026, 8, 24, 20, 37),
+      ),
     ];
     await pumpApp(tester, b);
     await go(tester, '/admin/funding');
@@ -92,8 +101,10 @@ void main() {
     await settle(tester);
 
     expect(findShown('2026年10月 · NT\$143'), findsOneWidget);
-    expect(findShown('NT\$62  RM 7.79'), findsOneWidget);
-    expect(findShown('一次性 · App Store'), findsOneWidget);
+    // What was paid, by its currency's code: HK\$ would show as \$ alone.
+    expect(findShown('NT\$62  MYR 7.79'), findsOneWidget);
+    expect(findShown('NT\$172  HKD 40.80'), findsOneWidget);
+    expect(findShown('一次性 · App Store'), findsNWidgets(2));
     expect(findShown('每月 · Google Play'), findsOneWidget);
     expect(findShown('10/1 09:15'), findsOneWidget);
     expect(findShown('一次性 NT\$62 · 每月 NT\$81'), findsOneWidget);

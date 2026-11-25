@@ -995,10 +995,12 @@ enum _SupportKind { all, once, monthly }
 class _AdminSupportRecordsScreenState extends ConsumerState<AdminSupportRecordsScreen> {
   var _kind = _SupportKind.all;
 
+  /// What was paid in another currency, by its code (HKD 40.80): its
+  /// symbol may be \$ alone, as Hong Kong's is here, and the stores'
+  /// reports have the code too.
   String _paid(SupportPayment p) {
     if (p.currency == 'TWD') return '';
-    final symbol = NumberFormat.simpleCurrency(name: p.currency).currencySymbol;
-    return '$symbol ${NumberFormat('#,##0.##').format(p.amount)}';
+    return NumberFormat.currency(locale: 'en', name: p.currency, symbol: '${p.currency} ').format(p.amount);
   }
 
   String _store(L10n l10n, PaymentStore store) => switch (store) {
