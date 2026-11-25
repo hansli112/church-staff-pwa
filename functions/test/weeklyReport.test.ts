@@ -61,6 +61,15 @@ function googleRoutes() {
       if (!dim) return { body: gaRows([[['date_range_0'], [120]], [['date_range_1'], [40]]]) };
       if (dim === 'platform') return { body: gaRows([[['iOS', 'date_range_0'], [70, 30]], [['web', 'date_range_0'], [50, 20]], [['iOS', 'date_range_1'], [30, 5]]]) };
       if (dim === 'eventName') return { body: gaRows([[['church_create', 'date_range_0'], [9]], [['church_create', 'date_range_1'], [2]]]) };
+      if (dim === 'languageCode') {
+        assert.deepEqual(JSON.parse(req.body).dateRanges[1], { startDate: '2026-10-26', endDate: '2026-11-22' }, 'the last 4 weeks');
+        return { body: gaRows([
+          [['zh-tw', 'date_range_0'], [20]], [['zh-hant-hk', 'date_range_0'], [5]], [['zh-tw', 'date_range_1'], [60]],
+          [['zh-cn', 'date_range_1'], [30]], [['en-us', 'date_range_0'], [3]], [['en-gb', 'date_range_1'], [8]],
+          [['it-it', 'date_range_0'], [1]], [['it-it', 'date_range_1'], [4]], [['ja-jp', 'date_range_1'], [2]],
+          [['(not set)', 'date_range_1'], [1]],
+        ]) };
+      }
       if (dim === 'countryId') return { body: gaRows([[['TW', 'date_range_0'], [30]], [['HK', 'date_range_0'], [12]], [['(not set)', 'date_range_0'], [1]]]) };
       return { body: gaRows([[['(direct)', 'date_range_0'], [40]], [['m.facebook.com', 'date_range_0'], [3]], [['facebook.com', 'date_range_0'], [2]]]) };
     },
@@ -116,6 +125,15 @@ describe('週報', () => {
     assert.deepEqual(r.ga!.events[0], { label: '建立教會', count: [9, 2] });
     assert.deepEqual(r.ga!.countries, [{ name: '台灣', n: 30 }, { name: '香港', n: 12 }, { name: '其他', n: 1 }]);
     assert.deepEqual(r.ga!.sources, [{ name: '直接開啟', n: 40 }, { name: 'Facebook', n: 5 }]);
+    assert.deepEqual(r.ga!.languages, [
+      { name: '繁體中文', supported: true, n: [25, 60] },
+      { name: '簡體中文', supported: true, n: [0, 30] },
+      { name: '英文', supported: true, n: [3, 8] },
+      { name: '義大利文', supported: false, n: [1, 4] },
+      { name: '日文', supported: true, n: [0, 2] },
+      { name: '其他', supported: true, n: [0, 1] },
+    ]);
+    assert.match(weeklyMail(r).html, /義大利文<span[^>]*>App 沒有/);
     assert.deepEqual(r.gsc!.now, { clicks: 80, impressions: 130, ctr: 0.62, position: 2.9 });
     assert.equal(r.gsc!.before.clicks, 1);
     assert.deepEqual(r.gsc!.queries, [{ query: '馬大別忙', clicks: 20, impressions: 25, position: 1.2 }]);

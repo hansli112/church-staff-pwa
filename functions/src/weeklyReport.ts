@@ -64,6 +64,8 @@ interface Ga {
   events: { label: string; count: Pair }[];
   countries: { name: string; n: number }[];
   sources: { name: string; n: number }[];
+  /** New users by phone language, this week and the last 4 weeks; most first. */
+  languages: { name: string; supported: boolean; n: Pair }[];
 }
 interface Gsc {
   now: GscTotals;
@@ -179,6 +181,26 @@ const SOURCES: [RegExp, string][] = [
   [/youtube/, 'YouTube'], [/^\(not set\)$/, '其他'],
 ];
 const SHORT_REGIONS: Record<string, string> = { HK: '香港', MO: '澳門', TW: '台灣', CN: '中國' };
+/** Languages the app speaks, by the first part of the code. */
+const APP_LANGUAGES = new Set(['zh', 'en', 'ja', 'ko']);
+const LANGUAGE_NAMES = new Intl.DisplayNames(['zh-Hant'], { type: 'language' });
+/** zh-tw and zh-hant-hk are one language, en-us and en-gb another. */
+function languageOf(code: string): { name: string; supported: boolean } | null {
+  const c = code.toLowerCase();
+  if (!c || c === '(not set)') return null;
+  const base = c.split(/[-_]/)[0];
+  // As the app reads it (AppLanguage.of): Simplified when it says so or comes
+  // from China, Singapore or Malaysia without saying Traditional; else
+  // Traditional, plain zh too.
+  if (base === 'zh') return { name: /hans/.test(c) || (!/hant/.test(c) && /-(cn|sg|my)\b/.test(c)) ? '簡體中文' : '繁體中文', supported: true };
+  let name = base;
+  try {
+    name = LANGUAGE_NAMES.of(base) ?? base;
+  } catch {
+    // not a language code GA4 should send; show it as it is
+  }
+  return { name, supported: APP_LANGUAGES.has(base) };
+}
 
 async function readAnalytics(d: Deps, a: Analytics, now: Week, before: Week): Promise<{ ga: Ga; gsc: Gsc }> {
   const post = async <T>(url: string, token: string, body: unknown): Promise<T> => {
@@ -223,12 +245,15 @@ async function readAnalytics(d: Deps, a: Analytics, now: Week, before: Week): Pr
       startDate: w.from, endDate: w.to, dimensions, rowLimit,
     }).then((r) => r.rows ?? []);
 
-  const [total, platform, events, country, source, gNow, gBefore, queries] = await Promise.all([
+  const fourWeeks = { startDate: shift(now.to, -27), endDate: now.to };
+  const [total, platform, events, country, source, language, gNow, gBefore, queries] = await Promise.all([
     ga(null, ['activeUsers']),
     ga('platform', ['activeUsers', 'newUsers']),
     ga('eventName', ['eventCount'], { dimensionFilter: { filter: { fieldName: 'eventName', inListFilter: { values: KEY_EVENTS.map(([e]) => e) } } } }),
     ga('countryId', ['newUsers']),
     ga('sessionSource', ['newUsers']),
+    // [this week, the last 4 weeks] in place of [this week, last week]
+    ga('languageCode', ['newUsers'], { dateRanges: [{ startDate: now.from, endDate: now.to }, fourWeeks] }),
     gsc(now),
     gsc(before),
     gsc(now, ['query'], 8),
@@ -247,6 +272,15 @@ async function readAnalytics(d: Deps, a: Analytics, now: Week, before: Week): Pr
     const name = SOURCES.find(([re]) => re.test(src))?.[1] ?? src;
     sources.set(name, (sources.get(name) ?? 0) + n);
   }
+  const languages = new Map<string, { name: string; supported: boolean; n: Pair }>();
+  for (const [code, [[n, n4]]] of language) {
+    const l = languageOf(code) ?? { name: '其他', supported: true };
+    const e = languages.get(l.name) ?? { ...l, n: [0, 0] as Pair };
+    e.n = [e.n[0] + n, e.n[1] + n4];
+    languages.set(l.name, e);
+  }
+  const ranked = [...languages.values()].filter((l) => l.n[1] > 0 && l.name !== '其他').sort((x, y) => y.n[1] - x.n[1]);
+  const rest = [...ranked.slice(8), ...(languages.has('其他') ? [languages.get('其他')!] : [])];
   const totals = (rows: GscRow[]): GscTotals => rows[0] ?? { clicks: 0, impressions: 0, ctr: 0, position: 0 };
   return {
     ga: {
@@ -258,6 +292,10 @@ async function readAnalytics(d: Deps, a: Analytics, now: Week, before: Week): Pr
       events: KEY_EVENTS.map(([e, label]) => ({ label, count: events.get(e)?.[0] ?? [0, 0] })),
       countries: top(countries, 8),
       sources: top(sources, 6),
+      languages: [
+        ...ranked.slice(0, 8),
+        ...(rest.length ? [{ name: '其他', supported: true, n: [sum(rest.map((l) => l.n[0])), sum(rest.map((l) => l.n[1]))] as Pair }] : []),
+      ],
     },
     gsc: {
       now: totals(gNow),
@@ -382,7 +420,18 @@ function gaSections(ga: Ga) {
 <div style="height:12px"></div>${table(['', '活躍', '新使用者'], platformRows)}`, `上週 ${num(ga.active[1])}`),
     card('大家做了什麼', table(['', '這週', '上週'], ga.events.map((e) => [e.label, num(e.count[0]), `<span style="color:${C.label3}">${num(e.count[1])}</span>`]))),
     card('新使用者從哪來', `${sub('國家', 0)}${hbars(ga.countries)}${sub('來源')}${hbars(ga.sources)}`),
+    ga.languages.length ? card('新使用者的手機語言', languageRows(ga.languages)) : '',
   ].join('');
+}
+
+function languageRows(list: Ga['languages']) {
+  const max = Math.max(1, ...list.map((l) => l.n[1]));
+  const tag = `<span style="font-size:11px;color:${C.label2};background:${C.fill};border-radius:4px;padding:1px 5px;margin-left:6px;vertical-align:1px">App 沒有</span>`;
+  const head = `<tr><td></td><td></td><td align="right" style="font-size:13px;color:${C.label3};padding:0 0 6px 12px;white-space:nowrap">這週</td><td align="right" style="font-size:13px;color:${C.label3};padding:0 0 6px 12px;white-space:nowrap">近 4 週</td></tr>`;
+  return T('', head + list.map((l) => `<tr><td style="font-size:15px;padding:5px 12px 5px 0;white-space:nowrap">${esc(l.name)}${l.supported ? '' : tag}</td>
+<td width="30%" style="padding:5px 0">${bar(l.n[1] / max)}</td>
+<td width="48" align="right" style="font-weight:600;font-size:15px;padding:5px 0">${num(l.n[0])}</td>
+<td width="60" align="right" style="font-size:15px;color:${C.label2};padding:5px 0">${num(l.n[1])}</td></tr>`).join(''));
 }
 
 function gscSection(g: Gsc) {
