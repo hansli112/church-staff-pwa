@@ -1136,7 +1136,7 @@ class L10nZh extends L10n {
   String get notifReminderBothSub => '每週一，和服事前一天';
 
   @override
-  String get notifReminderTime => '提醒哪一天';
+  String get notifReminderTime => '哪一天提醒';
 
   @override
   String get notifReminderWeekly => '每週一';
@@ -5020,7 +5020,7 @@ class L10nZhHans extends L10nZh {
   String get notifReminderBothSub => '每周一，和事奉前一天';
 
   @override
-  String get notifReminderTime => '提醒哪一天';
+  String get notifReminderTime => '哪一天提醒';
 
   @override
   String get notifReminderWeekly => '每周一';

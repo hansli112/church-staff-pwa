@@ -5,8 +5,8 @@
  * goes to one person on another day, who says 接受 or 不方便. Until then
  * who asked stays on the roster. Taken, the rosters change here (`via:
  * 'swap'`: the webhook hears, the two are told by these pushes), and the
- * service's leads hear who has it now (at 7:00, when it is night at the
- * church). 找一位同工代 is a 請人代 of one person (`to`), ended by their
+ * service's leads hear who has it now. In the night (22:00 to 7:00 on the
+ * church's clock) none of these pushes go out until 7:00. 找一位同工代 is a 請人代 of one person (`to`), ended by their
  * 不方便 as 交換 is. app/lib/domain/swap.dart keeps the
  * same rules; both run testdata/swaps.json.
  */
@@ -379,12 +379,13 @@ async function tellLeads(deps: PushDeps, church: DocumentSnapshot, ref: Firebase
 
 /**
  * Answers request `data.id`: `data.yes` takes it (我來, 接受), changing the
- * rosters, and tells who asked, and the leads (at 7:00 when it is night);
- * otherwise 不方便, which for 交換 tells who asked and closes it, and for
+ * rosters, and tells who asked, and the leads; otherwise 不方便, which for
+ * 交換 tells who asked and closes it, and for
  * 請人代 only leaves it to the others. Fails when it is no longer open or no
  * longer holds (the roster changed: it is void), when the caller was not
  * asked, or for 請人代 is no longer on the duty's list, marked the day as one
- * they cannot serve, or is on it already.
+ * they cannot serve, or is on it already. In the night who asked and the
+ * leads hear at 7:00 (`fromAt`, `leadsAt`).
  */
 export async function answerSwap(deps: Deps & PushDeps, caller: Caller | null, data: unknown) {
   const input = record(data);
@@ -392,6 +393,8 @@ export async function answerSwap(deps: Deps & PushDeps, caller: Caller | null, d
   const a = await churchAccess(deps, caller, data, 'member');
   const me = a.caller.uid;
   const today = dateKeyIn(timeZoneOf(a.church), deps.now());
+  const until = quietUntil(timeZoneOf(a.church), deps.now());
+  const fromAt = until ? Timestamp.fromDate(until) : null;
   const done = await deps.db.runTransaction(async (tx) => {
     const r = await requestIn(tx, deps, a.cid, input);
     const req = r.data()!;
@@ -400,8 +403,8 @@ export async function answerSwap(deps: Deps & PushDeps, caller: Caller | null, d
     if (req.status !== 'open') fail('failed-precondition', 'unknown', 'swapClosed');
     if (!input.yes) {
       // 請人代 leaves it to the others; one person asked (交換, 找一位同工代) ends it.
-      tx.update(r.ref, req.kind === 'cover' && !req.to ? { passed: FieldValue.arrayUnion(me) } : { status: 'declined', answeredAt: Timestamp.fromDate(deps.now()) });
-      return { req, took: false, leadsNow: false, ref: r.ref };
+      tx.update(r.ref, req.kind === 'cover' && !req.to ? { passed: FieldValue.arrayUnion(me) } : { status: 'declined', answeredAt: Timestamp.fromDate(deps.now()), fromAt });
+      return { req: { ...req, status: 'declined' } as FirebaseFirestore.DocumentData, took: false, ref: r.ref };
     }
     const roster = await tx.get(rosterOf(deps, a.cid, req.rosterId));
     const other = req.kind === 'swap' ? await tx.get(rosterOf(deps, a.cid, req.toRosterId)) : null;
@@ -422,38 +425,38 @@ export async function answerSwap(deps: Deps & PushDeps, caller: Caller | null, d
       }
     }
     trade(tx, req.duty, roster, other, { uid: req.from, name: req.fromName }, { uid: me, name: takerName });
-    const until = quietUntil(timeZoneOf(a.church), deps.now());
     tx.update(r.ref, {
       status: 'taken',
       taker: me,
       takerName,
       answeredAt: Timestamp.fromDate(deps.now()),
-      leadsAt: until ? Timestamp.fromDate(until) : null,
+      fromAt,
+      leadsAt: fromAt,
       leadsTold: false,
     });
-    return { req: { ...req, taker: me, takerName } as FirebaseFirestore.DocumentData, took: true, leadsNow: !until, ref: r.ref };
+    return { req: { ...req, status: 'taken', taker: me, takerName } as FirebaseFirestore.DocumentData, took: true, ref: r.ref };
   });
   if (!done) fail('failed-precondition', 'unknown', 'swapClosed');
-  const req = done.req;
-  const say = await readable(deps, a.cid, req);
-  const title = a.church.get('name') as string;
-  if (done.took) {
-    await notifyMembers(deps, a.cid, [req.from], 'swap', (w) => ({
-      title,
-      body: req.kind === 'cover'
-        ? w.coverTaken(req.takerName, say(w).day, say(w).line)
-        : w.swapTaken(req.takerName, say(w).toDay, say(w).line),
-      link: `/rosters/${req.serviceId}/${req.kind === 'swap' ? req.toDateKey : req.dateKey}`,
-    }));
-    if (done.leadsNow) await tellLeads(deps, a.church, done.ref!, req);
-  } else if (req.kind === 'swap' || req.to) {
-    await notifyMembers(deps, a.cid, [req.from], 'swap', (w) => ({
-      title,
-      body: req.kind === 'swap' ? w.swapDeclined(req.toName, say(w).day, say(w).line) : w.coverDeclined(req.toName, say(w).day, say(w).line),
-      link: `/rosters/${req.serviceId}/${req.dateKey}`,
-    }));
-  }
+  if (until || (!done.took && done.req.kind === 'cover' && !done.req.to)) return {};
+  await tellFrom(deps, a.church, done.req);
+  if (done.took) await tellLeads(deps, a.church, done.ref, done.req);
   return {};
+}
+
+/**
+ * Tells who asked how [r] was answered: taken (我來, 接受) or, when one
+ * person was asked, 不方便.
+ */
+async function tellFrom(deps: PushDeps, church: DocumentSnapshot, r: FirebaseFirestore.DocumentData) {
+  const say = await readable(deps, church.id, r);
+  const taken = r.status === 'taken';
+  return notifyMembers(deps, church.id, [r.from], 'swap', (w) => ({
+    title: church.get('name') as string,
+    body: taken
+      ? (r.kind === 'cover' ? w.coverTaken(r.takerName, say(w).day, say(w).line) : w.swapTaken(r.takerName, say(w).toDay, say(w).line))
+      : (r.kind === 'swap' ? w.swapDeclined(r.toName, say(w).day, say(w).line) : w.coverDeclined(r.toName, say(w).day, say(w).line)),
+    link: `/rosters/${r.serviceId}/${taken && r.kind === 'swap' ? r.toDateKey : r.dateKey}`,
+  }));
 }
 
 /**
@@ -461,14 +464,16 @@ export async function answerSwap(deps: Deps & PushDeps, caller: Caller | null, d
  * and while the rosters are still as it left them: they go back. 請人代 is
  * open again and asks the others once more; 交換 ends as if they had said
  * 不方便. Who asked hears so, and the leads when they had heard it was
- * taken.
+ * taken. Undone in the night before who asked heard it was taken (`fromAt`
+ * still waiting), they hear nothing now: for 請人代 there is no news, and
+ * otherwise at 7:00 they hear the one asked could not.
  */
 export async function undoSwap(deps: Deps & PushDeps, caller: Caller | null, data: unknown) {
   const input = record(data);
   if (Object.keys(input).some((k) => !['churchId', 'id'].includes(k))) fail('invalid-argument', 'unknown');
   const a = await churchAccess(deps, caller, data, 'member');
   const me = a.caller.uid;
-  const { req, ref } = await deps.db.runTransaction(async (tx) => {
+  const { req, ref, waiting } = await deps.db.runTransaction(async (tx) => {
     const r = await requestIn(tx, deps, a.cid, input);
     const req = r.data()!;
     if (req.taker !== me) fail('permission-denied', 'permissionDenied');
@@ -484,11 +489,12 @@ export async function undoSwap(deps: Deps & PushDeps, caller: Caller | null, dat
     if (!asLeft) fail('failed-precondition', 'conflict');
     trade(tx, req.duty, roster, other, { uid: me, name: req.takerName }, { uid: req.from, name: req.fromName });
     const gone = { taker: FieldValue.delete(), takerName: FieldValue.delete(), leadsAt: FieldValue.delete(), leadsTold: FieldValue.delete() };
+    const waiting = req.fromAt instanceof Timestamp;
     // 請人代 opens again for the others; one person asked ends as if they had said 不方便.
     tx.update(r.ref, req.kind === 'cover' && !req.to
-      ? { ...gone, status: 'open', answeredAt: FieldValue.delete(), passed: FieldValue.arrayUnion(me) }
+      ? { ...gone, status: 'open', answeredAt: FieldValue.delete(), passed: FieldValue.arrayUnion(me), fromAt: null }
       : { ...gone, status: 'declined', answeredAt: Timestamp.fromDate(deps.now()) });
-    return { req, ref: r.ref };
+    return { req, ref: r.ref, waiting };
   });
   const say = await readable(deps, a.cid, req);
   const title = a.church.get('name') as string;
@@ -496,7 +502,7 @@ export async function undoSwap(deps: Deps & PushDeps, caller: Caller | null, dat
     req.kind === 'swap' ? w.swapUndone(req.takerName, say(w).day, say(w).line)
     : req.to ? w.coverUndone(req.takerName, say(w).day, say(w).line)
     : w.takenBack(req.takerName, say(w).day, say(w).line);
-  await notifyMembers(deps, a.cid, [req.from], 'swap', (w) => ({ title, body: back(w), link: `/rosters/${req.serviceId}/${req.dateKey}` }));
+  if (!waiting) await notifyMembers(deps, a.cid, [req.from], 'swap', (w) => ({ title, body: back(w), link: `/rosters/${req.serviceId}/${req.dateKey}` }));
   if (req.leadsTold) {
     const leads = (await leadsFor(deps, a.cid, req.serviceId, req.duty)).filter((u) => u !== req.from && u !== me);
     // Not 「還是你」: the day is who asked's again, not the leads'.
@@ -506,7 +512,7 @@ export async function undoSwap(deps: Deps & PushDeps, caller: Caller | null, dat
       : back(w);
     await notifyMembers(deps, a.cid, leads, 'swap', (w) => ({ title, body: toLeads(w), link: `/rosters/${req.serviceId}/${req.dateKey}` }));
   }
-  if (req.kind === 'cover' && !req.to) await sendRequest(deps, a.church, await ref.get());
+  if (req.kind === 'cover' && !req.to) await sendOrHold(deps, a.church, ref);
   return {};
 }
 
@@ -554,7 +560,8 @@ export async function voidStaleSwaps(deps: Pick<Deps, 'db'>, cid: string, roster
 
 /**
  * Every hour: requests asked in the night go out once morning comes, and
- * so do the leads' news of one taken in the night; open ones whose day has
+ * so does the news of one answered in the night, to who asked and the
+ * leads; open ones whose day has
  * gone by everywhere are void; and at [NUDGE_HOUR] on a church's clock, a
  * 請人代 nobody took [NUDGE_DAYS] days before its day is told to the leads,
  * once.
@@ -572,6 +579,11 @@ export async function sendSwapPushes(deps: PushDeps & Pick<Deps, 'now'>) {
   for (const r of due.docs) {
     await r.ref.update({ sendAt: null });
     if (r.get('status') === 'open') told += await sendRequest(deps, await churchOf(r), r);
+  }
+  const answered = await deps.db.collectionGroup('swapRequests').where('fromAt', '<=', Timestamp.fromDate(now)).get();
+  for (const r of answered.docs) {
+    await r.ref.update({ fromAt: null });
+    if (['taken', 'declined'].includes(r.get('status'))) told += await tellFrom(deps, await churchOf(r), r.data());
   }
   const leads = await deps.db.collectionGroup('swapRequests').where('leadsAt', '<=', Timestamp.fromDate(now)).get();
   for (const r of leads.docs) {

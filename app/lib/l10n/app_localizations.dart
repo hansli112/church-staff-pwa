@@ -2095,7 +2095,7 @@ abstract class L10n {
   /// No description provided for @notifReminderTime.
   ///
   /// In zh, this message translates to:
-  /// **'提醒哪一天'**
+  /// **'哪一天提醒'**
   String get notifReminderTime;
 
   /// No description provided for @notifReminderWeekly.
@@ -2116,7 +2116,7 @@ abstract class L10n {
   /// **'兩個都要'**
   String get notifReminderBoth;
 
-  /// Row under 提醒哪一天: the hour reminders come at, on the church's clock
+  /// Row under 哪一天提醒: the hour reminders come at, on the church's clock
   ///
   /// In zh, this message translates to:
   /// **'時間'**

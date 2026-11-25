@@ -171,16 +171,34 @@ describe('請人代 (askCover)', () => {
     assert.equal(pushed.length, 1);
   });
 
-  test('taken in the night: who asked hears at once, the lead at 7:00', async () => {
+  test('taken in the night: who asked and the lead hear at 7:00', async () => {
     await church();
     const { id } = await cover();
     setNow(new Date('2026-11-02T23:00:00+08:00'));
     pushed.length = 0;
     await answer(id, 'mei', true);
-    assert.deepEqual(said().map(([t]) => t), ['tok-wang']);
+    assert.deepEqual(pushed, []);
+    setNow(new Date('2026-11-03T06:00:00+08:00'));
+    await sendSwapPushes(d());
+    assert.deepEqual(pushed, []);
     setNow(new Date('2026-11-03T07:00:00+08:00'));
     await sendSwapPushes(d());
-    assert.deepEqual(said().map(([t]) => t), ['tok-lead', 'tok-wang']);
+    assert.deepEqual(said().map(([t]) => t).sort(), ['tok-lead', 'tok-wang']);
+    pushed.length = 0;
+    await sendSwapPushes(d());
+    assert.deepEqual(pushed, [], 'once');
+  });
+
+  test('taken and given back in the night: who asked hears nothing, the others are asked at 7:00', async () => {
+    await church();
+    const { id } = await cover();
+    setNow(new Date('2026-11-02T23:00:00+08:00'));
+    pushed.length = 0;
+    await answer(id, 'mei', true);
+    await undoSwap(d(), caller('mei'), { churchId: 'C1', id });
+    setNow(new Date('2026-11-03T07:00:00+08:00'));
+    await sendSwapPushes(d());
+    assert.ok(!said().some(([t]) => t === 'tok-wang' || t === 'tok-lead'));
   });
 
   test('only someone still on the list and free that day takes it', async () => {
@@ -350,6 +368,18 @@ describe('和別週交換 (askSwap)', () => {
     pushed.length = 0;
     await answer(id, 'hao', false);
     assert.equal((await request(id)).status, 'declined');
+    assert.deepEqual(said(), [['tok-wang', '「陳志豪」不方便和你交換 11/15（週日）主日崇拜 司琴', '/c/C1?to=%2Frosters%2Fsunday%2F2026-11-15']]);
+  });
+
+  test('不方便 in the night, who asked hears at 7:00', async () => {
+    await church();
+    const { id } = await swap();
+    setNow(new Date('2026-11-02T23:00:00+08:00'));
+    pushed.length = 0;
+    await answer(id, 'hao', false);
+    assert.deepEqual(pushed, []);
+    setNow(new Date('2026-11-03T07:00:00+08:00'));
+    await sendSwapPushes(d());
     assert.deepEqual(said(), [['tok-wang', '「陳志豪」不方便和你交換 11/15（週日）主日崇拜 司琴', '/c/C1?to=%2Frosters%2Fsunday%2F2026-11-15']]);
   });
 

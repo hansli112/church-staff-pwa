@@ -240,6 +240,20 @@
     },
     {
       "collectionGroup": "swapRequests",
+      "fieldPath": "fromAt",
+      "indexes": [
+        {
+          "order": "ASCENDING",
+          "queryScope": "COLLECTION"
+        },
+        {
+          "order": "ASCENDING",
+          "queryScope": "COLLECTION_GROUP"
+        }
+      ]
+    },
+    {
+      "collectionGroup": "swapRequests",
       "fieldPath": "leadsAt",
       "indexes": [
         {
