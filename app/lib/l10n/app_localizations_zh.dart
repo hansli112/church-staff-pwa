@@ -3894,6 +3894,9 @@ class L10nZh extends L10n {
 
   @override
   String get restoreService => '恢復聚會';
+
+  @override
+  String get servicesHoldToMove => '按住拖曳排序，服事表照這個順序';
 }
 
 /// The translations for Chinese, using the Han script (`zh_Hans`).
@@ -7786,4 +7789,7 @@ class L10nZhHans extends L10nZh {
 
   @override
   String get restoreService => '恢复聚会';
+
+  @override
+  String get servicesHoldToMove => '按住拖动排序，服事表按这个顺序';
 }

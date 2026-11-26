@@ -3896,4 +3896,7 @@ class L10nKo extends L10n {
 
   @override
   String get restoreService => '모임 되돌리기';
+
+  @override
+  String get servicesHoldToMove => '길게 눌러 순서 변경. 봉사표도 이 순서를 따릅니다';
 }

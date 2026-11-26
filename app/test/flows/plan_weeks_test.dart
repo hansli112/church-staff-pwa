@@ -755,7 +755,9 @@ void main() {
     expect(waiting(b), isEmpty);
   });
 
-  testWidgets('a duty taken off a day shows a dash, and opens nothing', (tester) async {
+  testWidgets('a duty taken off a day shows a dash, centered; tapped, it opens the picker and comes back', (
+    tester,
+  ) async {
     final b = seededChurch();
     await pumpApp(tester, b);
     await go(tester, '/rosters/plan/sunday');
@@ -763,12 +765,37 @@ void main() {
     await settle(tester);
     await tester.tap(find.text('這一天沒有這項服事'));
     await settle(tester);
-    expect(find.descendant(of: cell('司琴', 11), matching: find.text('—')), findsOneWidget);
+    final dash = find.descendant(of: cell('司琴', 11), matching: find.text('—'));
+    expect(dash, findsOneWidget);
+    expect(
+      tester.getCenter(dash).dx,
+      moreOrLessEquals(tester.getCenter(cell('司琴', 11)).dx, epsilon: 1),
+      reason: 'in the middle, where ＋ is',
+    );
     await tester.tap(cell('司琴', 11));
     await settle(tester);
-    expect(find.text('這一天沒有這項服事'), findsNothing);
+    expect(find.text('這一天沒有這項服事'), findsNothing, reason: 'already off');
+    await tester.tap(find.text('李美玉').last);
+    await settle(tester);
+    expect(find.descendant(of: cell('司琴', 11), matching: find.text('李美玉')), findsOneWidget);
     await finish(tester);
-    expect(savedDay(b, 11).duties.map((d) => d.role), ['司會', '招待']);
+    expect(peopleOn(b, 11, '司琴'), ['李美玉']);
+  });
+
+  testWidgets('先空著 on a dash puts the duty back with nobody yet', (tester) async {
+    final b = seededChurch();
+    await pumpApp(tester, b);
+    await go(tester, '/rosters/plan/sunday');
+    await tester.tap(cell('司琴', 11));
+    await settle(tester);
+    await tester.tap(find.text('這一天沒有這項服事'));
+    await settle(tester);
+    await tester.tap(cell('司琴', 11));
+    await settle(tester);
+    await tester.tap(find.text('先空著'));
+    await settle(tester);
+    await finish(tester);
+    expect(savedDay(b, 11).duties.map((d) => d.role), contains('司琴'));
   });
 
   testWidgets('a date is its day’s number over its weekday or its 特別活動, each a line, in a column as narrow as can be', (

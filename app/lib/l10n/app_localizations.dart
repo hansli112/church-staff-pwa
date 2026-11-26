@@ -6777,6 +6777,12 @@ abstract class L10n {
   /// In zh, this message translates to:
   /// **'恢復聚會'**
   String get restoreService;
+
+  /// Under 聚會 in 聚會與事工, two or more: held, a row moves; the 服事表 tab lists services in this order
+  ///
+  /// In zh, this message translates to:
+  /// **'按住拖曳排序，服事表照這個順序'**
+  String get servicesHoldToMove;
 }
 
 class _L10nDelegate extends LocalizationsDelegate<L10n> {

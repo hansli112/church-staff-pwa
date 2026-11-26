@@ -1136,5 +1136,6 @@
   "noServiceAsk": "{day}没有聚会？",
   "noServiceTold": "已经排的 {count} 位会收到通知",
   "noServiceDone": "{day}没有聚会",
-  "restoreService": "恢复聚会"
+  "restoreService": "恢复聚会",
+  "servicesHoldToMove": "按住拖动排序，服事表按这个顺序"
 }

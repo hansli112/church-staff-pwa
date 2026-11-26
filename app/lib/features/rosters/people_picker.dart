@@ -68,6 +68,7 @@ class PeoplePicker extends StatefulWidget {
     required this.rights,
     this.canRemove = false,
     this.canSwapDay = false,
+    this.offDay = false,
     this.onePerson = false,
     this.initialGuests = const {},
     this.guestSuggestions = const [],
@@ -98,6 +99,10 @@ class PeoplePicker extends StatefulWidget {
   /// Offer 「和別週交換」 there: the dragless way to what dragging a cell
   /// in 安排服事 does (#90).
   final bool canSwapDay;
+
+  /// The duty is not on the day (taken off it): 先空著 puts it back with
+  /// nobody yet.
+  final bool offDay;
 
   /// The duty takes one person (RosterActions.takesOnePerson).
   final bool onePerson;
@@ -507,7 +512,7 @@ class _PeoplePickerState extends State<PeoplePicker> {
     // Only before anyone is picked here: a swap does not keep picks.
     final swaps = widget.canSwapDay && !searching && listEquals(_selected, widget.initial);
     // Someone on it as it opened: the duty kept, nobody on it for now.
-    final empties = widget.initial.isNotEmpty && !searching;
+    final empties = (widget.initial.isNotEmpty || widget.offDay) && !searching;
     if (swaps || empties || (widget.canRemove && !searching)) {
       rows.add(_Entry('gap', (_) => const SizedBox(height: Space.l)));
     }

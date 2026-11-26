@@ -90,6 +90,43 @@ void main() {
     );
   });
 
+  testWidgets('home lists only the activities that are mine: the church’s, my services’, and those I serve at', (
+    tester,
+  ) async {
+    final b = CountingCalendarBackend(clock: () => DateTime.utc(2026, 10, 31, 1));
+    b.addChurch('恩典堂', id: 'grace');
+    b.setServices('grace', const [
+      sundayService,
+      Service(id: 'youth', name: '青年崇拜', weekdays: [DateTime.saturday]),
+    ]);
+    b.addMember('grace', pastor);
+    b.addMember('grace', staffMei);
+    b.auth.signInAs('mei@example.com', uid: staffMei.uid);
+    b.users[staffMei.uid] = const UserProfile(uid: 'mei', name: '李美玉');
+    b.connectCalendar('grace', calendarName: '教會行事曆');
+    b.calendarEvents['grace'] = [
+      CalendarEvent(id: 'church', title: '全教會禱告會', start: DateTime(2026, 11, 1, 19), end: DateTime(2026, 11, 1, 20)),
+      CalendarEvent(
+        id: 'sunday',
+        title: '主日同工會',
+        start: DateTime(2026, 11, 2, 19),
+        end: DateTime(2026, 11, 2, 20),
+        group: 'service:sunday',
+      ),
+      CalendarEvent(
+        id: 'youth',
+        title: '青年退修會',
+        start: DateTime(2026, 11, 1, 9),
+        end: DateTime(2026, 11, 1, 18),
+        group: 'service:youth',
+      ),
+    ];
+    await pumpApp(tester, b);
+    expect(find.text('全教會禱告會'), findsOneWidget);
+    expect(find.text('主日同工會'), findsOneWidget);
+    expect(find.text('青年退修會'), findsNothing, reason: 'another service’s, in the calendar under 全部');
+  });
+
   testWidgets('an upcoming activity says when it starts; an all-day one, and one already under way, only the day', (
     tester,
   ) async {

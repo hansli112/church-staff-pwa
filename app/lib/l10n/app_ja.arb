@@ -1136,5 +1136,6 @@
   "noServiceAsk": "{day}は集会なし？",
   "noServiceTold": "割り当て済みの {count} 人に通知されます",
   "noServiceDone": "{day}は集会なし",
-  "restoreService": "集会を戻す"
+  "restoreService": "集会を戻す",
+  "servicesHoldToMove": "長押しで並べ替え。奉仕表もこの順に並びます"
 }

@@ -75,6 +75,7 @@ Future<void> pickPeople(
   final guestSuggestions = actions.guestSuggestions(roster.isEvent ? null : roster.type, duty.role);
   final onePerson = actions.takesOnePerson(roster, duty.role);
   final rights = ref.read(dutyPickingProvider).rightsOn(roster, duty.role);
+  final absent = !roster.duties.any((d) => d.role == duty.role);
   final result = await showAppSheet<PickerResult>(
     context,
     expand: true,
@@ -90,8 +91,10 @@ Future<void> pickPeople(
       staff: staff,
       order: order,
       rights: rights,
-      canRemove: true,
-      canSwapDay: swapDays.any((d) => canSwapDuty(duty.role, roster, d)),
+      // Not on the day: picking puts it back (安排服事's 「—」).
+      canRemove: !absent,
+      offDay: absent,
+      canSwapDay: !absent && swapDays.any((d) => canSwapDuty(duty.role, roster, d)),
       onePerson: onePerson,
       notes: notes,
       busy: busyNames,

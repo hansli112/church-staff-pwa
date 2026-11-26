@@ -3898,4 +3898,7 @@ class L10nJa extends L10n {
 
   @override
   String get restoreService => '集会を戻す';
+
+  @override
+  String get servicesHoldToMove => '長押しで並べ替え。奉仕表もこの順に並びます';
 }

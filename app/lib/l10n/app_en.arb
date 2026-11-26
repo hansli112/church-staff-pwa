@@ -1136,5 +1136,6 @@
   "noServiceAsk": "No service on {day}?",
   "noServiceTold": "{count, plural, =1{The 1 person on it will be notified} other{The {count} people on it will be notified}}",
   "noServiceDone": "No service on {day}",
-  "restoreService": "Restore service"
+  "restoreService": "Restore service",
+  "servicesHoldToMove": "Hold and drag to reorder. Rosters follow this order."
 }

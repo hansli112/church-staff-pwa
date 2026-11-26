@@ -2581,5 +2581,7 @@
   "@noServiceTold": {"placeholders": {"count": {"type": "int"}}},
   "noServiceDone": "{day}沒有聚會",
   "@noServiceDone": {"placeholders": {"day": {"type": "String"}}},
-  "restoreService": "恢復聚會"
+  "restoreService": "恢復聚會",
+  "servicesHoldToMove": "按住拖曳排序，服事表照這個順序",
+  "@servicesHoldToMove": {"description": "Under 聚會 in 聚會與事工, two or more: held, a row moves; the 服事表 tab lists services in this order"}
 }

@@ -18,6 +18,7 @@ import '../../state/providers.dart';
 import '../church/add_to_home.dart';
 import '../church/church_logo.dart';
 import '../church/claims.dart';
+import '../calendar/calendar_screen.dart';
 import '../calendar/event_sheet.dart';
 import '../me/attendance.dart';
 import '../me/no_account_picker.dart';
@@ -97,10 +98,18 @@ class HomeScreen extends ConsumerWidget {
       for (final month in activityMonths) month: ref.watch(calendarReadStatusProvider(month)),
     };
     final now = ref.watch(churchTimeZoneProvider).clock(ref.watch(clockProvider)());
-    final activities = upcomingEvents([
-      for (final state in activityStates)
-        if (!state.hasError) state.value ?? const <CalendarEvent>[],
-    ], now: now);
+    // Only mine, as 行事曆's 跟我有關的: a church with many groups' events
+    // would fill it otherwise.
+    final me = ref.watch(meProvider).value;
+    final servedAt = ref.watch(servedAtProvider(false));
+    final ministries = ref.watch(ministriesProvider).value?.ministries ?? const <Ministry>[];
+    final activities = [
+      for (final e in upcomingEvents([
+        for (final state in activityStates)
+          if (!state.hasError) state.value ?? const <CalendarEvent>[],
+      ], now: now))
+        if (calendarShows('mine', e, me, servedAt, ministries: ministries)) e,
+    ];
     final activityError = activityStates.any((state) => state.hasError);
     final activityLoading = activityStates.any((state) => state.isLoading);
     return Scaffold(

@@ -115,7 +115,9 @@ class DutyPicking {
       for (final m in pick.putOnList) actions.grantDuty(m, type, role),
       for (final m in pick.takeOffList) actions.revokeDuty(m, type, role),
     ]);
-    final changed = pickChanges(duty, pick.people, guestNames: pick.guestNames);
+    // A duty not on the day (taken off it) comes back even with nobody.
+    final changed =
+        !roster.duties.any((d) => d.role == role) || pickChanges(duty, pick.people, guestNames: pick.guestNames);
     final taken = pick.takeOffList;
     return DutyPickSave(
       day: changed || pick.ranking != null

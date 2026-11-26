@@ -1302,7 +1302,7 @@ class _DutyCell extends StatelessWidget {
                   for (final n in people) unavailable.contains(n) ? '$n, ${l10n.pickerUnavailable}' : n,
                 ].join(l10n.listSeparator));
     return Semantics(
-      button: duty != null,
+      button: true,
       label: '$role, ${dayLabel(l10n, roster.day, today)}',
       value: text,
       customSemanticsActions: {
@@ -1319,10 +1319,11 @@ class _DutyCell extends StatelessWidget {
           builder: (context, faded, lit, content) => FadeTransition(
             opacity: faded ? fade : kAlwaysCompleteAnimation,
             child: InkWell(
-              onTap: duty == null ? null : () => onTap(duty),
+              // A duty taken off the day: tapped, it is put back.
+              onTap: () => onTap(duty ?? Duty(role: role)),
               child: Container(
                 padding: const EdgeInsets.symmetric(horizontal: Space.s, vertical: Space.xs),
-                alignment: AlignmentDirectional.centerStart,
+                alignment: duty == null ? Alignment.center : AlignmentDirectional.centerStart,
                 decoration: BoxDecoration(
                   color: lit == 0 ? null : Color.lerp(c.accentSoft.withValues(alpha: 0), c.accentSoft, lit),
                   border: Border(bottom: border),

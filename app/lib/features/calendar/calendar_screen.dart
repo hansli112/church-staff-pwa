@@ -139,7 +139,7 @@ final _eventRostersProvider = FutureProvider<List<Roster>>((ref) {
 
 /// The events whose roster I am on, by event id: for 跟我有關的. With
 /// [past], those gone by as well.
-final _servedAtProvider = Provider.family<Set<String>, bool>((ref, past) {
+final servedAtProvider = Provider.family<Set<String>, bool>((ref, past) {
   final uid = ref.watch(uidProvider);
   final rosters = [
     ...?ref.watch(savedRostersProvider).value,
@@ -380,7 +380,7 @@ class _AgendaState extends ConsumerState<_Agenda> {
     final me = ref.watch(meProvider).value;
     final filter = ref.watch(shownCalendarFilterProvider);
     final servedAt = ref.watch(
-      _servedAtProvider(filter == 'mine' && month.isBefore(DateTime(today.year, today.month))),
+      servedAtProvider(filter == 'mine' && month.isBefore(DateTime(today.year, today.month))),
     );
     final ministries = ref.watch(ministriesProvider).value?.ministries ?? const <Ministry>[];
     final loaded = [
