@@ -1335,16 +1335,36 @@ Future<T?> showAppSheet<T>(BuildContext context, {required WidgetBuilder builder
   // As showModalBottomSheet has it, with a route that can ask.
   return navigator.push(
     _AppSheetRoute<T>(
-      builder: (context) => LayoutBuilder(
-        builder: (context, box) {
-          final tallest = box.maxHeight * _sheetHeight;
-          return expand
-              ? SizedBox(height: tallest, child: builder(context))
-              : ConstrainedBox(
-                  constraints: BoxConstraints(maxHeight: tallest),
-                  child: builder(context),
-                );
+      builder: (context) => PopScope(
+        // A sheet is a popup route, and Android's predictive back (the edge
+        // swipe, enableOnBackInvokedCallback in the manifest) gives the
+        // gesture to the nearest page route instead: the page under the
+        // sheet slid away and the sheet stayed floating over it (#110). The
+        // plain back button already closed the sheet, because it goes
+        // through Navigator.maybePop. Refusing the pop here makes the
+        // gesture stop at the sheet too — the page under it stays put — and
+        // closes the sheet the same way the back button does, through
+        // didPop, so unsaved changes are still asked about.
+        canPop: false,
+        onPopInvokedWithResult: (didPop, _) {
+          if (didPop) return;
+          // The phone may send a back twice; the second must not pop the
+          // page the sheet was over.
+          final route = ModalRoute.of(context);
+          if (route == null || !route.isCurrent) return;
+          Navigator.of(context).pop();
         },
+        child: LayoutBuilder(
+          builder: (context, box) {
+            final tallest = box.maxHeight * _sheetHeight;
+            return expand
+                ? SizedBox(height: tallest, child: builder(context))
+                : ConstrainedBox(
+                    constraints: BoxConstraints(maxHeight: tallest),
+                    child: builder(context),
+                  );
+          },
+        ),
       ),
       capturedThemes: InheritedTheme.capture(from: context, to: navigator.context),
       isScrollControlled: true,
