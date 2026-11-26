@@ -29,7 +29,8 @@ export async function planDutyLeads(db: Firestore, churches: string[] = []) {
   for (const cid of ids) {
     const settings = await db.doc(`churches/${cid}/settings/ministries`).get();
     const list = settings.get('ministries');
-    if (!Array.isArray(list) || !list.some((m) => 'duties' in (m ?? {}) || 'addedIn' in (m ?? {}))) continue;
+    const isObject = (m: unknown): m is Record<string, unknown> => typeof m === 'object' && m !== null;
+    if (!Array.isArray(list) || !list.some((m) => isObject(m) && ('duties' in m || 'addedIn' in m))) continue;
     const services = await db.doc(`churches/${cid}/settings/services`).get();
     const has = (service: string, duty: string) =>
       ((services.get('services') as { id: string; duties?: string[] }[] | undefined) ?? [])

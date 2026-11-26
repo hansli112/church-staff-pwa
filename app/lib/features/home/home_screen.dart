@@ -102,11 +102,12 @@ class HomeScreen extends ConsumerWidget {
     // would fill it otherwise.
     final me = ref.watch(meProvider).value;
     final uid = ref.watch(uidProvider);
+    final myGroups = ref.watch(mySmallGroupsProvider);
     // Not servedAtProvider: watched here, it rebuilds during a church
     // switch's build (church_url_test).
     final servedAt = {
       for (final r in ref.watch(savedRostersProvider).value ?? const <Roster>[])
-        if (r.forEvent case final e? when uid != null && r.duties.any((d) => d.uids.containsValue(uid))) e.eventId,
+        if (r.forEvent case final e? when uid != null && r.duties.any((d) => holds(d, uid, myGroups))) e.eventId,
     };
     final activities = [
       for (final e in upcomingEvents([

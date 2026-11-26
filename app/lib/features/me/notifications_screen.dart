@@ -111,10 +111,13 @@ class _NotificationsScreenState extends ConsumerState<NotificationsScreen> {
 
     // Null, from turning off the one left on, changes nothing: the switch
     // above turns reminders off.
+    // Read now: a number typed is saved as focus leaves it, which may be
+    // as this page goes, its ref with it.
+    final churchData = ref.churchData;
     Future<bool> setTiming(ReminderTiming? next) async {
       if (next == null || next == timing) return true;
       try {
-        await ref.churchData.setReminderTiming(me.uid, next);
+        await churchData.setReminderTiming(me.uid, next);
         return true;
       } catch (e) {
         if (context.mounted) showToast(context, saveErrorText(l10n, e));
@@ -124,9 +127,8 @@ class _NotificationsScreenState extends ConsumerState<NotificationsScreen> {
 
     // A number typed is the one chosen: that row turns on too.
     Future<bool> setDays(int days) async {
-      final data = ref.churchData;
       try {
-        await data.setReminderDays(me.uid, days);
+        await churchData.setReminderDays(me.uid, days);
       } catch (e) {
         if (context.mounted) showToast(context, saveErrorText(l10n, e));
         return false;

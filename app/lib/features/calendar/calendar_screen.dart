@@ -134,13 +134,14 @@ final _eventRostersProvider = FutureProvider<List<Roster>>((ref) {
 /// [past], those gone by as well.
 final servedAtProvider = Provider.family<Set<String>, bool>((ref, past) {
   final uid = ref.watch(uidProvider);
+  final mine = ref.watch(mySmallGroupsProvider);
   final rosters = [
     ...?ref.watch(savedRostersProvider).value,
     if (past) ...?ref.watch(_eventRostersProvider).value,
   ];
   return {
     for (final r in rosters)
-      if (r.forEvent case final e? when uid != null && r.duties.any((d) => d.uids.containsValue(uid))) e.eventId,
+      if (r.forEvent case final e? when uid != null && r.duties.any((d) => holds(d, uid, mine))) e.eventId,
   };
 });
 
@@ -746,3 +747,8 @@ String _when(L10n l10n, CalendarEvent e) {
   if (e.allDay) return '${day.format(e.start)} – ${day.format(e.lastDay.midnight)}';
   return '${day.format(e.start)} ${time.format(e.start)} – ${day.format(e.end)} ${time.format(e.end)}';
 }
+
+/// Whether [uid] holds [d]: by name, or through one of [smallGroups]
+/// (服事交給小組) still on it.
+bool holds(Duty d, String uid, Set<String> smallGroups) =>
+    d.uids.containsValue(uid) || d.groups.entries.any((g) => d.people.contains(g.key) && smallGroups.contains(g.value));

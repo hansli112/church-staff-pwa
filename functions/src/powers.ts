@@ -113,9 +113,6 @@ export function powersOf(m: MemberFields) {
     /** A plain 同工: no 身分, whatever the rules read for one. */
     plain: identities.length === 0,
 
-    /** Whether they arrange anything: admins, 行政, and the 負責人 of a service or a duty. */
-    arrangesAny: inGroup('roster-editors') || services.length > 0 || duties.length > 0,
-
     /** Whether they make any events: admins, 行政, and whoever leads a group, its own (Member.makesEvents). */
     makesEvents: writesAnyEvent || services.length > 0 || ministries.length > 0 || smallGroups.length > 0,
 
