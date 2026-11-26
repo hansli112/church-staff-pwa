@@ -1326,55 +1326,105 @@ Widget _dialogAction(
 /// [expand] makes it as tall as a sheet gets; others are as tall as their
 /// content, up to that, so the page behind still shows above every sheet.
 /// A sheet with a form says so with [UnsavedChanges].
-Future<T?> showAppSheet<T>(BuildContext context, {required WidgetBuilder builder, bool expand = false}) {
+Future<T?> showAppSheet<T>(
+  BuildContext context, {
+  required WidgetBuilder builder,
+  bool expand = false,
+}) async {
   FocusManager.instance.primaryFocus?.unfocus();
   // Over the tab bar too, like a system sheet; the tab navigator alone
   // left the bar bright and tappable below the dimmed page.
   final navigator = Navigator.of(context, rootNavigator: true);
   final localizations = MaterialLocalizations.of(context);
-  // As showModalBottomSheet has it, with a route that can ask.
-  return navigator.push(
-    _AppSheetRoute<T>(
-      builder: (context) => PopScope(
-        // A sheet is a popup route, and Android's predictive back (the edge
-        // swipe, enableOnBackInvokedCallback in the manifest) gives the
-        // gesture to the nearest page route instead: the page under the
-        // sheet slid away and the sheet stayed floating over it (#110). The
-        // plain back button already closed the sheet, because it goes
-        // through Navigator.maybePop. Refusing the pop here makes the
-        // gesture stop at the sheet too — the page under it stays put — and
-        // closes the sheet the same way the back button does, through
-        // didPop, so unsaved changes are still asked about.
-        canPop: false,
-        onPopInvokedWithResult: (didPop, _) {
-          if (didPop) return;
-          // The phone may send a back twice; the second must not pop the
-          // page the sheet was over.
-          final route = ModalRoute.of(context);
-          if (route == null || !route.isCurrent) return;
-          Navigator.of(context).pop();
-        },
-        child: LayoutBuilder(
-          builder: (context, box) {
-            final tallest = box.maxHeight * _sheetHeight;
-            return expand
-                ? SizedBox(height: tallest, child: builder(context))
-                : ConstrainedBox(
-                    constraints: BoxConstraints(maxHeight: tallest),
-                    child: builder(context),
-                  );
+  // Android's edge-swipe back asks every page route whether it is current and
+  // may pop, and the page a sheet was opened from sits on a tab's own
+  // navigator, where it is still the top route: the swipe popped that page
+  // inside its navigator, and the sheet kept floating over the menu it went
+  // back to (#110). A sheet on another navigator cannot claim the gesture
+  // itself, so while it is up a transparent route holds the top of the tab's
+  // navigator: the page is no longer current, nothing takes the gesture, and
+  // it falls back to an ordinary back, which lands on the sheet as the back
+  // button already did.
+  final below = Navigator.of(context);
+  final guard = below != navigator && below.canPop() ? _SheetBackGuard() : null;
+  if (guard != null) {
+    unawaited(below.push(guard));
+  }
+  try {
+    // As showModalBottomSheet has it, with a route that can ask.
+    return await navigator.push(
+      _AppSheetRoute<T>(
+        builder: (context) => PopScope(
+          // A sheet is a popup route, and Android's predictive back (the edge
+          // swipe, enableOnBackInvokedCallback in the manifest) gives the
+          // gesture to the nearest page route instead: the page under the
+          // sheet slid away and the sheet stayed floating over it (#110). The
+          // plain back button already closed the sheet, because it goes
+          // through Navigator.maybePop. Refusing the pop here makes the
+          // gesture stop at the sheet too — the page under it stays put — and
+          // closes the sheet the same way the back button does, through
+          // didPop, so unsaved changes are still asked about.
+          canPop: false,
+          onPopInvokedWithResult: (didPop, _) {
+            if (didPop) return;
+            // The phone may send a back twice; the second must not pop the
+            // page the sheet was over.
+            final route = ModalRoute.of(context);
+            if (route == null || !route.isCurrent) return;
+            Navigator.of(context).pop();
           },
+          child: LayoutBuilder(
+            builder: (context, box) {
+              final tallest = box.maxHeight * _sheetHeight;
+              return expand
+                  ? SizedBox(height: tallest, child: builder(context))
+                  : ConstrainedBox(
+                      constraints: BoxConstraints(maxHeight: tallest),
+                      child: builder(context),
+                    );
+            },
+          ),
         ),
+        capturedThemes: InheritedTheme.capture(from: context, to: navigator.context),
+        isScrollControlled: true,
+        barrierLabel: localizations.scrimLabel,
+        barrierOnTapHint: localizations.scrimOnTapHint(localizations.bottomSheetLabel),
+        modalBarrierColor: Theme.of(context).bottomSheetTheme.modalBarrierColor,
+        showDragHandle: true,
+        useSafeArea: true,
       ),
-      capturedThemes: InheritedTheme.capture(from: context, to: navigator.context),
-      isScrollControlled: true,
-      barrierLabel: localizations.scrimLabel,
-      barrierOnTapHint: localizations.scrimOnTapHint(localizations.bottomSheetLabel),
-      modalBarrierColor: Theme.of(context).bottomSheetTheme.modalBarrierColor,
-      showDragHandle: true,
-      useSafeArea: true,
-    ),
-  );
+    );
+  } finally {
+    // The guard goes with the sheet, however the sheet was closed.
+    if (guard != null && below.mounted && guard.isActive) {
+      below.removeRoute(guard);
+    }
+  }
+}
+
+/// Holds the top of a tab's navigator while a sheet from [showAppSheet] is up,
+/// so that the page under the sheet is not the current route there and cannot
+/// take Android's predictive back gesture (#110). Paints nothing and blocks
+/// nothing: the sheet's own barrier is what stops taps on the page.
+class _SheetBackGuard extends PopupRoute<void> {
+  @override
+  bool get opaque => false;
+
+  @override
+  Color? get barrierColor => null;
+
+  @override
+  String? get barrierLabel => null;
+
+  @override
+  bool get barrierDismissible => false;
+
+  @override
+  Duration get transitionDuration => Duration.zero;
+
+  @override
+  Widget buildPage(BuildContext context, Animation<double> animation, Animation<double> secondaryAnimation) =>
+      const SizedBox.shrink();
 }
 
 /// The most of the screen a sheet takes, as an iPhone's tallest sheet.
