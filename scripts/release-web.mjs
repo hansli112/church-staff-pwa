@@ -1,5 +1,6 @@
 // Packages a strict app release after fingerprint-web. The archive is
-// additive and project-scoped: never rotate away a published boot/chunk URL.
+// additive and project-scoped: never rotate away a published boot/chunk URL
+// (scripts/prune-web-archive.mjs drops releases after 14 days).
 import { createHash } from 'node:crypto';
 import { existsSync, lstatSync, mkdirSync, readFileSync, readdirSync, writeFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';

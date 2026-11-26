@@ -23,10 +23,15 @@ fi
 # with an old cached font (scripts/fingerprint-fonts.mjs).
 node "$root/scripts/fingerprint-fonts.mjs" "$web"
 
+# Releases older than 14 days (the newest 10 always stay) leave the archive,
+# or every deploy uploads every release ever published
+# (scripts/prune-web-archive.mjs says what an old app loses).
+node "$root/scripts/prune-web-archive.mjs" "$root/.firebase/web-assets" --project "$GCLOUD_PROJECT"
+
 # Hash JS and snapshot assets only after build-time asset rewriting. Keep
-# previous immutable JS/asset bundles and loose fonts in the project archive,
-# so an older/in-flight bootstrap still resolves its matching manifest/fonts.
-# Preparing a failed deploy never prunes that archive.
+# the retained releases' immutable JS/asset bundles and loose fonts in the
+# project archive, so an older/in-flight bootstrap still resolves its
+# matching manifest/fonts.
 node "$root/scripts/fingerprint-web.mjs" "$web" \
   --archive "$root/.firebase/web-assets" --project "$GCLOUD_PROJECT"
 
@@ -60,6 +65,6 @@ fi
 
 # Freeze this boot's shell/engine/runtime and strict hashes. Initial offline
 # install leaves deferred modules optional; only an explicit update stages
-# the complete release. Old published releases remain additive in the archive.
+# the complete release. Old published releases stay in the archive until pruned above.
 node "$root/scripts/release-web.mjs" "$web" \
   --archive "$root/.firebase/web-assets" --project "$GCLOUD_PROJECT"

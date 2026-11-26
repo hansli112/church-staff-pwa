@@ -15,7 +15,7 @@ function deployment(t) {
   const dir = mkdtempSync(join(tmpdir(), 'martha-hosting-'));
   t.after(() => rmSync(dir, { recursive: true, force: true }));
   mkdirSync(join(dir, 'scripts'));
-  for (const script of ['hosting-predeploy.sh', 'fingerprint-fonts.mjs', 'fingerprint-web.mjs', 'release-web.mjs', 'build-site.mjs']) {
+  for (const script of ['hosting-predeploy.sh', 'prune-web-archive.mjs', 'fingerprint-fonts.mjs', 'fingerprint-web.mjs', 'release-web.mjs', 'build-site.mjs']) {
     copyFileSync(join(root, 'scripts', script), join(dir, 'scripts', script));
   }
   assert.ok(existsSync(join(root, 'landing/node_modules/marked')), 'use existing website dependencies; do not install in tests');

@@ -12,7 +12,8 @@
 //
 // --check-build only validates build metadata, before any output changes.
 //
-// The project archive is additive: failed deploys must never rotate away
+// The project archive is additive (only scripts/prune-web-archive.mjs drops
+// releases, after 14 days): failed deploys must never rotate away
 // published assets. Preserve/transfer it when changing deployment machines.
 import { createHash } from 'node:crypto';
 import { copyFileSync, existsSync, lstatSync, mkdirSync, mkdtempSync, readFileSync, readdirSync, renameSync, rmSync, writeFileSync } from 'node:fs';
