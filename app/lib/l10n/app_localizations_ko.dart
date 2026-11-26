@@ -1121,10 +1121,26 @@ class L10nKo extends L10n {
   String get notifReminderWeeklySub => '매주 월요일, 이번 주 봉사 목록';
 
   @override
-  String get notifReminderDayBeforeSub => '봉사 전날 알려 드려요';
+  String notifReminderDayBeforeSub(int days) {
+    String _temp0 = intl.Intl.pluralLogic(
+      days,
+      locale: localeName,
+      other: '봉사 $days일 전에 알려 드려요',
+      one: '봉사 전날 알려 드려요',
+    );
+    return '$_temp0';
+  }
 
   @override
-  String get notifReminderBothSub => '매주 월요일과 봉사 전날';
+  String notifReminderBothSub(int days) {
+    String _temp0 = intl.Intl.pluralLogic(
+      days,
+      locale: localeName,
+      other: '매주 월요일과 봉사 $days일 전',
+      one: '매주 월요일과 봉사 전날',
+    );
+    return '$_temp0';
+  }
 
   @override
   String get notifReminderTime => '알림 받을 날';
@@ -1133,10 +1149,22 @@ class L10nKo extends L10n {
   String get notifReminderWeekly => '매주 월요일';
 
   @override
-  String get notifReminderDayBefore => '전날';
+  String get notifReminderDaysLead => '봉사';
 
   @override
-  String get notifReminderBoth => '둘 다';
+  String notifReminderDaysTrail(int days) {
+    String _temp0 = intl.Intl.pluralLogic(
+      days,
+      locale: localeName,
+      other: '일 전',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String notifReminderTimeFooter(int first, int last) {
+    return '둘 다 고를 수 있어요. $first~$last일';
+  }
 
   @override
   String get notifReminderHour => '시간';

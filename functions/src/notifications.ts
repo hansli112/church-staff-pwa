@@ -18,8 +18,16 @@ import { dateKeyIn, timeZoneOf, timeZonesAt, type ChurchTimeZone } from './timeZ
 export const REMINDER_HOURS: { first: number; last: number; usual: number } = { first: 6, last: 22, usual: 19 };
 
 /**
- * Which days a member is reminded: Monday, of the week's duties, the day
- * before each, or both. Matches ReminderTiming in
+ * How many days before a duty a member is reminded, when they are
+ * (`notificationPrefs.reminderDays`), and the number unless they pick
+ * another. Matches ReminderDays in app/lib/domain/models.dart and
+ * firestore.rules (test/parity.test.ts).
+ */
+export const REMINDER_DAYS: { first: number; last: number; usual: number } = { first: 1, last: 14, usual: 1 };
+
+/**
+ * Which days a member is reminded: Monday, of the week's duties, some days
+ * ([REMINDER_DAYS]) before each, or both. Matches ReminderTiming in
  * app/lib/domain/models.dart and firestore.rules (test/parity.test.ts).
  */
 export const REMINDER_TIMINGS = ['weekly', 'dayBefore', 'both'] as const;
@@ -29,6 +37,15 @@ function reminderTiming(member: DocumentSnapshot): ReminderTiming {
   const t = member.get('notificationPrefs.reminderTiming');
   return t === 'dayBefore' || t === 'both' ? t : 'weekly';
 }
+
+function reminderDays(member: DocumentSnapshot): number {
+  const d = member.get('notificationPrefs.reminderDays');
+  return Number.isInteger(d) && d >= REMINDER_DAYS.first && d <= REMINDER_DAYS.last ? d : REMINDER_DAYS.usual;
+}
+
+/** The day [days] after [dateKey]. */
+const daysAfter = (dateKey: string, days: number) =>
+  new Date(Date.parse(`${dateKey}T00:00:00Z`) + days * DAY_MS).toISOString().slice(0, 10);
 
 function reminderHour(member: DocumentSnapshot): number {
   const h = member.get('notificationPrefs.reminderHour');
@@ -57,13 +74,21 @@ const reminderLink = (lines: DutyLine[]) => (lines.length === 1 ? lines[0].link 
  * duty of an active church whose clock says the hour they picked
  * ([REMINDER_HOURS], 19 unless they picked another), as each chose: on
  * Monday one message listing their duties from that Monday to Sunday, and
- * every day one listing tomorrow's (except Monday for those getting both,
- * whose weekly list has tomorrow); one about a single roster opens it.
+ * every day one listing those some days ahead ([REMINDER_DAYS], tomorrow's
+ * unless they picked more; not on Monday for those getting both when the
+ * weekly list has that day); one about a single roster opens it.
  * An event's roster counts on the day it starts, by its title; not once
  * its event is cancelled.
  */
 export async function sendReminders(deps: PushDeps & { now: () => Date }) {
   const now = deps.now().getTime();
+  // Days before other than tomorrow, only as many as someone picked.
+  const pickedDays = await deps.db
+    .collectionGroup('members')
+    .where('notificationPrefs.reminderDays', '>', REMINDER_DAYS.usual)
+    .select('notificationPrefs.reminderDays')
+    .get();
+  const ahead = new Set([REMINDER_DAYS.usual, ...pickedDays.docs.map(reminderDays)]);
   let sent = 0;
   for (let hour = REMINDER_HOURS.first; hour <= REMINDER_HOURS.last; hour++) {
     const due = timeZonesAt([hour], new Date(now));
@@ -75,7 +100,7 @@ export async function sendReminders(deps: PushDeps & { now: () => Date }) {
       if (picked.empty) continue;
       pickedIn = new Set(picked.docs.map((d) => d.ref.parent.parent!.id));
     }
-    sent += await remindAt(deps, now, due, hour, pickedIn);
+    sent += await remindAt(deps, now, due, hour, pickedIn, ahead);
   }
   return sent;
 }
@@ -87,18 +112,19 @@ async function remindAt(
   due: Set<ChurchTimeZone>,
   hour: number,
   pickedIn: Set<string> | null,
+  ahead: Set<number>,
 ) {
-  // Those due now share one offset, so one today, tomorrow and Monday.
+  // Those due now share one offset, so one today and Monday.
   const timeZone = [...due][0];
   const today = dateKeyIn(timeZone, new Date(now));
-  const tomorrow = dateKeyIn(timeZone, new Date(now + DAY_MS));
   const isMonday = new Date(`${today}T00:00:00Z`).getUTCDay() === 1;
-  const from = isMonday ? today : tomorrow;
-  const until = isMonday ? dateKeyIn(timeZone, new Date(now + 6 * DAY_MS)) : tomorrow;
+  const sunday = daysAfter(today, 6);
+  // The week's on Monday, and each number of days ahead someone picked:
+  // at most 7 + 14 days, under the 30 `in` takes.
+  const days = new Set([...(isMonday ? [0, 1, 2, 3, 4, 5, 6] : []), ...ahead].map((d) => daysAfter(today, d)));
   const rosters = await deps.db
     .collectionGroup('rosters')
-    .where('dateKey', '>=', from)
-    .where('dateKey', '<=', until)
+    .where('dateKey', 'in', [...days])
     .get();
   const byChurch = new Map<string, DocumentSnapshot[]>();
   for (const r of rosters.docs) {
@@ -138,24 +164,34 @@ async function remindAt(
     for (const member of members) {
       if (!member.exists || reminderHour(member) !== hour) continue;
       const timing = reminderTiming(member);
+      const inDays = reminderDays(member);
+      const target = daysAfter(today, inDays);
       // One's own first on a day, then the family's.
       const items = [...(perUid.get(member.id) ?? []), ...(theirs.get(member.id) ?? [])];
       const name = (member.get('name') as string | undefined)?.trim() || null;
-      // Monday's list has tomorrow in it, so those choosing both get one message.
+      // Monday's list has the week in it, so those choosing both get one
+      // message unless the day ahead is past Sunday.
       const weekly = isMonday && timing !== 'dayBefore';
-      if (weekly) {
-        const week = [...items].sort((a, b) => a.dateKey.localeCompare(b.dateKey));
+      // Days past Sunday are read for those reminded further ahead.
+      const week = items.filter((i) => i.dateKey <= sunday).sort((a, b) => a.dateKey.localeCompare(b.dateKey));
+      if (weekly && week.length > 0) {
         sent += await notifyMembers(deps, cid, [member.id], 'reminder', (w) => ({
           title: w.weekReminder(name),
           body: week.map((i) => whose(w, i, w.datedDutyLine(w.dateWithWeekday(i.dateKey), w.dutyLine(i.name, i.roles)))).join(w.lineSeparator),
           link: reminderLink(week),
         }));
       }
-      const next = items.filter((i) => i.dateKey === tomorrow);
-      if (!weekly && timing !== 'weekly' && next.length > 0) {
+      const next = items.filter((i) => i.dateKey === target);
+      if (timing !== 'weekly' && !(weekly && target <= sunday) && next.length > 0) {
         sent += await notifyMembers(deps, cid, [member.id], 'reminder', (w) => ({
-          title: w.tomorrowReminder(name),
-          body: next.map((i) => whose(w, i, w.dutyLine(i.name, i.roles))).join(w.lineSeparator),
+          title: inDays === 1 ? w.tomorrowReminder(name) : w.daysAheadReminder(name, inDays),
+          // Further than tomorrow, the day is said.
+          body: next
+            .map((i) => {
+              const line = w.dutyLine(i.name, i.roles);
+              return whose(w, i, inDays === 1 ? line : w.datedDutyLine(w.dateWithWeekday(i.dateKey), line));
+            })
+            .join(w.lineSeparator),
           link: reminderLink(next),
         }));
       }

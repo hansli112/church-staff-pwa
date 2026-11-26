@@ -749,6 +749,13 @@ void contractTests(Future<ContractWorld> Function() open) {
       expect(eight.reminderTiming, ReminderTiming.both);
       await expectLater(g.church.setReminderHour(g.mei, 23), denied());
       await expectLater(g.church.setReminderHour(g.editor, 8), denied());
+      expect(eight.reminderDays, ReminderDays.usual);
+      await g.church.setReminderDays(g.mei, 3);
+      final three = (await g.church.member(g.mei).first)!;
+      expect(three.reminderDays, 3);
+      expect(three.reminderHour, 8);
+      await expectLater(g.church.setReminderDays(g.mei, 15), denied());
+      await expectLater(g.church.setReminderDays(g.editor, 3), denied());
     });
   });
 

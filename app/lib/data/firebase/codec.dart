@@ -91,6 +91,10 @@ Member memberFromJson(String uid, Json data) {
       final int h when ReminderHours.valid(h) => h,
       _ => ReminderHours.usual,
     },
+    reminderDays: switch (prefs is Map ? prefs['reminderDays'] : null) {
+      final int d when ReminderDays.valid(d) => d,
+      _ => ReminderDays.usual,
+    },
     joinedAt: readTime(data['joinedAt']),
   );
 }

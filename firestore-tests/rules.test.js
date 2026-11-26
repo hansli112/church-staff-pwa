@@ -312,6 +312,12 @@ describe('同工 (members)', () => {
     await assertFails(updateDoc(ref, { 'notificationPrefs.reminderHour': 5 }));
     await assertFails(updateDoc(ref, { 'notificationPrefs.reminderHour': 23 }));
     await assertFails(updateDoc(ref, { 'notificationPrefs.reminderHour': '8' }));
+    await assertSucceeds(updateDoc(ref, { 'notificationPrefs.reminderDays': 1 }));
+    await assertSucceeds(updateDoc(ref, { 'notificationPrefs.reminderDays': 14 }));
+    await assertFails(updateDoc(ref, { 'notificationPrefs.reminderDays': 0 }));
+    await assertFails(updateDoc(ref, { 'notificationPrefs.reminderDays': 15 }));
+    await assertFails(updateDoc(ref, { 'notificationPrefs.reminderDays': 2.5 }));
+    await assertFails(updateDoc(ref, { 'notificationPrefs.reminderDays': '3' }));
     await assertFails(updateDoc(ref, { notificationPrefs: 'off' }));
   });
 

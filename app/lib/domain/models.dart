@@ -167,10 +167,27 @@ enum NotificationKind {
   family,
 }
 
-/// When a member is reminded of their duties: Monday evening of the week's
-/// duties (Monday to Sunday), the evening before each, or both. Matches
-/// ReminderTiming in functions/src/notifications.ts.
-enum ReminderTiming { weekly, dayBefore, both }
+/// When a member is reminded of their duties: Monday of the week's duties
+/// (Monday to Sunday), some days before each ([ReminderDays]; the name is
+/// from when it was the day before), or both. Matches ReminderTiming in
+/// functions/src/notifications.ts.
+enum ReminderTiming {
+  weekly,
+  dayBefore,
+  both;
+
+  /// The two choices, either or both on.
+  bool get onMonday => this != dayBefore;
+  bool get daysBefore => this != weekly;
+
+  /// With [onMonday] or [daysBefore] turned as given; null when that leaves
+  /// neither on.
+  ReminderTiming? turned({bool? onMonday, bool? daysBefore}) {
+    final monday = onMonday ?? this.onMonday;
+    final before = daysBefore ?? this.daysBefore;
+    return monday && before ? both : (monday ? weekly : (before ? dayBefore : null));
+  }
+}
 
 /// The hours a member may be reminded at, on the church's clock, and the
 /// one unless they pick another. Matches REMINDER_HOURS in
@@ -181,6 +198,23 @@ abstract final class ReminderHours {
   static const usual = 19;
 
   static bool valid(Object? hour) => hour is int && hour >= first && hour <= last;
+}
+
+/// How many days before a duty a member may be reminded, and the number
+/// unless they pick another. Matches REMINDER_DAYS in
+/// functions/src/notifications.ts and firestore.rules.
+abstract final class ReminderDays {
+  static const first = 1;
+  static const last = 14;
+  static const usual = 1;
+
+  static bool valid(Object? days) => days is int && days >= first && days <= last;
+
+  /// [text] as typed, or null when it is no number from [first] to [last].
+  static int? parse(String text) => switch (int.tryParse(text.trim())) {
+    final int d when valid(d) => d,
+    _ => null,
+  };
 }
 
 @immutable
@@ -197,6 +231,7 @@ class Member {
     this.mutedNotifications = const {},
     this.reminderTiming = ReminderTiming.weekly,
     this.reminderHour = ReminderHours.usual,
+    this.reminderDays = ReminderDays.usual,
     this.joinedAt,
   }) : _identities = identities;
 
@@ -215,6 +250,9 @@ class Member {
 
   /// The hour reminders come at ([ReminderHours]), on the church's clock.
   final int reminderHour;
+
+  /// How many days before a duty the days-before reminder comes ([ReminderDays]).
+  final int reminderDays;
   final DateTime? joinedAt;
 
   /// 管理員, or a whole church's 牧者: role admin, as the rules read it.
@@ -291,6 +329,7 @@ class Member {
       mutedNotifications: mutedNotifications,
       reminderTiming: reminderTiming,
       reminderHour: reminderHour,
+      reminderDays: reminderDays,
       joinedAt: joinedAt,
     );
   }
@@ -428,6 +467,7 @@ class Member {
     Set<NotificationKind>? mutedNotifications,
     ReminderTiming? reminderTiming,
     int? reminderHour,
+    int? reminderDays,
   }) => Member(
     uid: uid,
     name: name ?? this.name,
@@ -440,6 +480,7 @@ class Member {
     mutedNotifications: mutedNotifications ?? this.mutedNotifications,
     reminderTiming: reminderTiming ?? this.reminderTiming,
     reminderHour: reminderHour ?? this.reminderHour,
+    reminderDays: reminderDays ?? this.reminderDays,
     joinedAt: joinedAt,
   );
 }

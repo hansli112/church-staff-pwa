@@ -1120,10 +1120,26 @@ class L10nJa extends L10n {
   String get notifReminderWeeklySub => '毎週月曜に、その週の奉仕をお知らせします';
 
   @override
-  String get notifReminderDayBeforeSub => '奉仕の前日にお知らせします';
+  String notifReminderDayBeforeSub(int days) {
+    String _temp0 = intl.Intl.pluralLogic(
+      days,
+      locale: localeName,
+      other: '奉仕の$days日前にお知らせします',
+      one: '奉仕の前日にお知らせします',
+    );
+    return '$_temp0';
+  }
 
   @override
-  String get notifReminderBothSub => '毎週月曜と、奉仕の前日';
+  String notifReminderBothSub(int days) {
+    String _temp0 = intl.Intl.pluralLogic(
+      days,
+      locale: localeName,
+      other: '毎週月曜と、奉仕の$days日前',
+      one: '毎週月曜と、奉仕の前日',
+    );
+    return '$_temp0';
+  }
 
   @override
   String get notifReminderTime => '通知する日';
@@ -1132,10 +1148,22 @@ class L10nJa extends L10n {
   String get notifReminderWeekly => '毎週月曜';
 
   @override
-  String get notifReminderDayBefore => '前日';
+  String get notifReminderDaysLead => '奉仕の';
 
   @override
-  String get notifReminderBoth => '両方';
+  String notifReminderDaysTrail(int days) {
+    String _temp0 = intl.Intl.pluralLogic(
+      days,
+      locale: localeName,
+      other: '日前',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String notifReminderTimeFooter(int first, int last) {
+    return '両方選べます。日数は$first〜$last日';
+  }
 
   @override
   String get notifReminderHour => '時間';

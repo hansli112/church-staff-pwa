@@ -1093,6 +1093,12 @@ class FirestoreChurchData implements ChurchData {
   }
 
   @override
+  Future<void> setReminderDays(String uid, int days) {
+    final ref = _col('members').doc(uid);
+    return _write(ref, (tx) => tx.update(ref, {'notificationPrefs.reminderDays': days}));
+  }
+
+  @override
   Future<void> setHomeName(String? name) =>
       _write(_church, (tx) => tx.update(_church, {'homeName': name ?? FieldValue.delete()}));
 

@@ -91,6 +91,8 @@ export interface Words {
    */
   weekReminder(name: string | null): string;
   tomorrowReminder(name: string | null): string;
+  /** Of the duties [days] (2–14) days ahead. */
+  daysAheadReminder(name: string | null, days: number): string;
   /** Someone's duties on one day; [name] is the service's or event's. */
   dutyLine(name: string, duties: string[]): string;
   /** [day] is dateWithWeekday's. */
@@ -220,6 +222,7 @@ const zhHant: Words = {
   dateWithWeekday: (k) => `${zhHant.shortDate(k)}（週${ZH_WEEKDAYS[weekday(k)]}）`,
   weekReminder: (name) => `平安${name ? ` ${name}` : ''}，這週的服事`,
   tomorrowReminder: (name) => `平安${name ? ` ${name}` : ''}，明天的服事`,
+  daysAheadReminder: (name, days) => `平安${name ? ` ${name}` : ''}，${days} 天後的服事`,
   dutyLine: (name, duties) => `${name} ${duties.join('、')}`,
   datedDutyLine: (day, line) => `${day}${line}`,
   lineSeparator: '\n',
@@ -292,6 +295,7 @@ const zhHans: Words = {
   dateWithWeekday: (k) => `${zhHans.shortDate(k)}（周${ZH_WEEKDAYS[weekday(k)]}）`,
   weekReminder: (name) => `平安${name ? ` ${name}` : ''}，这周的事奉`,
   tomorrowReminder: (name) => `平安${name ? ` ${name}` : ''}，明天的事奉`,
+  daysAheadReminder: (name, days) => `平安${name ? ` ${name}` : ''}，${days} 天后的事奉`,
   dutyLine: zhHant.dutyLine,
   datedDutyLine: zhHant.datedDutyLine,
   lineSeparator: '\n',
@@ -363,6 +367,7 @@ const en: Words = {
   dateWithWeekday: (k) => `${en.shortDate(k)} (${EN_WEEKDAYS[weekday(k)]})`,
   weekReminder: (name) => (name ? `Hi ${name}, your serving this week` : 'Your serving this week'),
   tomorrowReminder: (name) => (name ? `Hi ${name}, your serving tomorrow` : 'Your serving tomorrow'),
+  daysAheadReminder: (name, days) => (name ? `Hi ${name}, your serving in ${days} days` : `Your serving in ${days} days`),
   dutyLine: (name, duties) => `${name}: ${duties.join(', ')}`,
   datedDutyLine: (day, line) => `${day} ${line}`,
   lineSeparator: '\n',
@@ -438,6 +443,7 @@ const ja: Words = {
   dateWithWeekday: (k) => `${ja.shortDate(k)}(${JA_WEEKDAYS[weekday(k)]})`,
   weekReminder: (name) => (name ? `${name}さん、今週の奉仕` : '今週の奉仕'),
   tomorrowReminder: (name) => (name ? `${name}さん、明日の奉仕` : '明日の奉仕'),
+  daysAheadReminder: (name, days) => (name ? `${name}さん、${days}日後の奉仕` : `${days}日後の奉仕`),
   dutyLine: zhHant.dutyLine,
   datedDutyLine: (day, line) => `${day} ${line}`,
   lineSeparator: '\n',
@@ -508,6 +514,7 @@ const ko: Words = {
   dateWithWeekday: (k) => `${ko.shortDate(k)} (${KO_WEEKDAYS[weekday(k)]})`,
   weekReminder: (name) => (name ? `${name} 님, 이번 주 봉사` : '이번 주 봉사'),
   tomorrowReminder: (name) => (name ? `${name} 님, 내일 봉사` : '내일 봉사'),
+  daysAheadReminder: (name, days) => (name ? `${name} 님, ${days}일 후 봉사` : `${days}일 후 봉사`),
   dutyLine: en.dutyLine,
   datedDutyLine: (day, line) => `${day} ${line}`,
   lineSeparator: '\n',

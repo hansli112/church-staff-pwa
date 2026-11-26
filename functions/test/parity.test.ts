@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { test } from 'node:test';
 
-import { REMINDER_HOURS, REMINDER_TIMINGS } from '../src/notifications.js';
+import { REMINDER_DAYS, REMINDER_HOURS, REMINDER_TIMINGS } from '../src/notifications.js';
 import { GROUP_KEY } from '../src/powers.js';
 import { NOTIFICATION_KINDS } from '../src/push.js';
 
@@ -18,7 +18,8 @@ const rules = read('../../firestore.rules');
 function dartEnum(name: string) {
   const body = models.match(new RegExp(`enum ${name} \\{([^}]*)\\}`))?.[1];
   assert.ok(body, `enum ${name} in models.dart`);
-  return body.split(',').map((v) => v.trim()).filter(Boolean);
+  // Up to the first ';', for an enum with members.
+  return body.split(';')[0].split(',').map((v) => v.trim()).filter(Boolean);
 }
 
 /** The list firestore.rules checks [field] against: `[field].hasOnly([...])` or `[field] in [...]`. */
@@ -45,6 +46,16 @@ test('the hours a member may be reminded at', () => {
   assert.ok(
     rules.includes(`p.reminderHour >= ${REMINDER_HOURS.first} && p.reminderHour <= ${REMINDER_HOURS.last}`),
     'reminderHour in firestore.rules',
+  );
+});
+
+test('how many days before a member may be reminded', () => {
+  for (const [name, days] of Object.entries(REMINDER_DAYS)) {
+    assert.ok(new RegExp(`static const ${name} = ${days};`).test(models.split('abstract final class ReminderDays')[1] ?? ''), `ReminderDays.${name} in models.dart`);
+  }
+  assert.ok(
+    rules.includes(`p.reminderDays >= ${REMINDER_DAYS.first} && p.reminderDays <= ${REMINDER_DAYS.last}`),
+    'reminderDays in firestore.rules',
   );
 });
 

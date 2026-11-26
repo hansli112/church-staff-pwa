@@ -1162,10 +1162,26 @@ class L10nEn extends L10n {
   String get notifReminderWeeklySub => 'Mondays, a list of this week’s serving';
 
   @override
-  String get notifReminderDayBeforeSub => 'The day before you serve';
+  String notifReminderDayBeforeSub(int days) {
+    String _temp0 = intl.Intl.pluralLogic(
+      days,
+      locale: localeName,
+      other: '$days days before you serve',
+      one: 'The day before you serve',
+    );
+    return '$_temp0';
+  }
 
   @override
-  String get notifReminderBothSub => 'Mondays and the day before you serve';
+  String notifReminderBothSub(int days) {
+    String _temp0 = intl.Intl.pluralLogic(
+      days,
+      locale: localeName,
+      other: 'Mondays and $days days before you serve',
+      one: 'Mondays and the day before you serve',
+    );
+    return '$_temp0';
+  }
 
   @override
   String get notifReminderTime => 'Remind me on';
@@ -1174,10 +1190,23 @@ class L10nEn extends L10n {
   String get notifReminderWeekly => 'Mondays';
 
   @override
-  String get notifReminderDayBefore => 'The day before';
+  String get notifReminderDaysLead => '';
 
   @override
-  String get notifReminderBoth => 'Both';
+  String notifReminderDaysTrail(int days) {
+    String _temp0 = intl.Intl.pluralLogic(
+      days,
+      locale: localeName,
+      other: 'days before',
+      one: 'day before',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String notifReminderTimeFooter(int first, int last) {
+    return 'You can pick both. $first to $last days.';
+  }
 
   @override
   String get notifReminderHour => 'Time';

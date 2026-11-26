@@ -444,6 +444,12 @@ class EchoingChurchData implements ChurchData {
     () => _inner.setReminderHour(uid, hour),
   );
 
+  @override
+  Future<void> setReminderDays(String uid, int days) => _send(
+    _Echo(members: {uid: (m) => m.copyWith(reminderDays: days)}),
+    () => _inner.setReminderDays(uid, days),
+  );
+
   // Everything else as the backend has it.
 
   @override
@@ -951,4 +957,5 @@ bool _sameMember(Member? a, Member? b) =>
         a.email == b.email &&
         a.reminderTiming == b.reminderTiming &&
         a.reminderHour == b.reminderHour &&
+        a.reminderDays == b.reminderDays &&
         setEquals(a.mutedNotifications, b.mutedNotifications));

@@ -144,6 +144,20 @@
     },
     {
       "collectionGroup": "members",
+      "fieldPath": "notificationPrefs.reminderDays",
+      "indexes": [
+        {
+          "order": "ASCENDING",
+          "queryScope": "COLLECTION"
+        },
+        {
+          "order": "ASCENDING",
+          "queryScope": "COLLECTION_GROUP"
+        }
+      ]
+    },
+    {
+      "collectionGroup": "members",
       "fieldPath": "notificationPrefs.reminderHour",
       "indexes": [
         {

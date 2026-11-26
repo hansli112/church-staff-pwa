@@ -305,6 +305,45 @@ describe('weekly reminders', () => {
     assert.deepEqual(sat.sent.map((s) => [s.tokens, s.title, s.body]), [[['tok-hao'], '平安 hao，明天的服事', '主日崇拜 招待']]);
   });
 
+  test('days before: N days ahead, dated, at their hour; a day before keeps 明天', async () => {
+    await week();
+    await remindAt('hao', 'dayBefore');
+    await db.doc('churches/C1/members/hao').update({ 'notificationPrefs.reminderDays': 3 });
+    const thu = fakePush();
+    await sendReminders({ db, messaging: thu.messaging, now: () => new Date('2026-10-15T19:00:00+08:00'), appUrl });
+    assert.deepEqual(thu.sent.map((s) => [s.tokens, s.title, s.body, s.link]), [
+      [['tok-hao'], '平安 hao，3 天後的服事', '10/18（週日）主日崇拜 招待', '/c/C1?to=%2Frosters%2Fsunday%2F2026-10-18'],
+    ]);
+    const sat = fakePush();
+    assert.equal(await sendReminders({ db, messaging: sat.messaging, now: saturday, appUrl }), 0, 'not the day before too');
+  });
+
+  test('both, days before past Sunday: Monday sends the week and the day beyond it; within the week, the week only', async () => {
+    await week();
+    await remindAt('mei', 'both');
+    await db.doc('churches/C1/members/mei').update({ 'notificationPrefs.reminderDays': 7 });
+    const mon = fakePush();
+    await sendReminders({ db, messaging: mon.messaging, now: monday, appUrl });
+    assert.deepEqual(mon.sent.filter((s) => s.tokens.includes('tok-mei')).map((s) => [s.title, s.body]), [
+      ['平安 美玉，這週的服事', '10/12（週一）禱告會 司琴\n10/18（週日）主日崇拜 司琴、招待'],
+      ['平安 美玉，7 天後的服事', '10/19（週一）禱告會 司琴'],
+    ]);
+    assert.deepEqual(mon.sent.filter((s) => s.tokens.includes('tok-hao')).map((s) => s.body), ['10/13（週二）禱告會 招待\n10/18（週日）主日崇拜 招待'], 'next week is not in the weekly list');
+    await db.doc('churches/C1/members/mei').update({ 'notificationPrefs.reminderDays': 6 });
+    const again = fakePush();
+    await sendReminders({ db, messaging: again.messaging, now: monday, appUrl });
+    assert.deepEqual(again.sent.filter((s) => s.tokens.includes('tok-mei')).map((s) => s.title), ['平安 美玉，這週的服事']);
+  });
+
+  test('days before out of range count as one', async () => {
+    await week();
+    await remindAt('hao', 'dayBefore');
+    await db.doc('churches/C1/members/hao').update({ 'notificationPrefs.reminderDays': 30 });
+    const sat = fakePush();
+    await sendReminders({ db, messaging: sat.messaging, now: saturday, appUrl });
+    assert.deepEqual(sat.sent.map((s) => s.title), ['平安 hao，明天的服事']);
+  });
+
   test('an event is listed in the week it starts, by its title; a cancelled one is not', async () => {
     await church();
     await db.doc('churches/C1/rosters/ev_x1').set({

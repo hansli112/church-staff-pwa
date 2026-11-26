@@ -224,4 +224,11 @@ mixin _MemoryGroupMembers on _MemoryChurchBase {
     final m = _b.requireMember(churchId);
     await _b.write(() => _b.members[churchId]![uid] = m.copyWith(reminderHour: hour));
   }
+
+  @override
+  Future<void> setReminderDays(String uid, int days) async {
+    if (uid != _uid || !ReminderDays.valid(days)) throw const CloudException(CloudErrorCode.permissionDenied);
+    final m = _b.requireMember(churchId);
+    await _b.write(() => _b.members[churchId]![uid] = m.copyWith(reminderDays: days));
+  }
 }

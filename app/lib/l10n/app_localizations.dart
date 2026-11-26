@@ -2056,17 +2056,17 @@ abstract class L10n {
   /// **'每週一，列出這週的服事'**
   String get notifReminderWeeklySub;
 
-  /// No description provided for @notifReminderDayBeforeSub.
+  /// Under 服事提醒 while the days choice is hidden: reminded [days] days before each duty
   ///
   /// In zh, this message translates to:
-  /// **'服事前一天提醒你'**
-  String get notifReminderDayBeforeSub;
+  /// **'{days, plural, =1{服事前一天提醒你} other{服事前 {days} 天提醒你}}'**
+  String notifReminderDayBeforeSub(int days);
 
-  /// No description provided for @notifReminderBothSub.
+  /// Under 服事提醒 while the days choice is hidden: Mondays and [days] days before each duty
   ///
   /// In zh, this message translates to:
-  /// **'每週一，和服事前一天'**
-  String get notifReminderBothSub;
+  /// **'{days, plural, =1{每週一，和服事前一天} other{每週一，和服事前 {days} 天}}'**
+  String notifReminderBothSub(int days);
 
   /// No description provided for @notifReminderTime.
   ///
@@ -2080,17 +2080,23 @@ abstract class L10n {
   /// **'每週一'**
   String get notifReminderWeekly;
 
-  /// No description provided for @notifReminderDayBefore.
+  /// Choice row under 哪一天提醒: the words before the days field (服事前 [3] 天); may be empty
   ///
   /// In zh, this message translates to:
-  /// **'前一天'**
-  String get notifReminderDayBefore;
+  /// **'服事前'**
+  String get notifReminderDaysLead;
 
-  /// No description provided for @notifReminderBoth.
+  /// Choice row under 哪一天提醒: the words after the days field (服事前 [3] 天)
   ///
   /// In zh, this message translates to:
-  /// **'兩個都要'**
-  String get notifReminderBoth;
+  /// **'{days, plural, other{天}}'**
+  String notifReminderDaysTrail(int days);
+
+  /// Under the 哪一天提醒 choices: both may be on; the days allowed
+  ///
+  /// In zh, this message translates to:
+  /// **'可以兩個都選。天數 {first} 到 {last}'**
+  String notifReminderTimeFooter(int first, int last);
 
   /// Row under 哪一天提醒: the hour reminders come at, on the church's clock
   ///

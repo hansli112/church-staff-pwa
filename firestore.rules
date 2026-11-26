@@ -396,13 +396,15 @@ service cloud.firestore {
           let changed = p is map ? p.diff(resource.data.get('notificationPrefs', {})).affectedKeys() : null;
           return !request.resource.data.diff(resource.data).affectedKeys().hasAny(['notificationPrefs'])
             || (p is map
-              && changed.hasOnly(['muted', 'reminderTiming', 'reminderHour'])
+              && changed.hasOnly(['muted', 'reminderTiming', 'reminderHour', 'reminderDays'])
               && (!changed.hasAny(['muted']) || !('muted' in p)
                   || (p.muted is list && p.muted.hasOnly(['reminder', 'rosterChange', 'memberLeft', 'attendance', 'joinRequest', 'identity', 'swap', 'memberJoined', 'family'])))
               && (!changed.hasAny(['reminderTiming']) || !('reminderTiming' in p)
                   || p.reminderTiming in ['weekly', 'dayBefore', 'both'])
               && (!changed.hasAny(['reminderHour']) || !('reminderHour' in p)
-                  || (p.reminderHour is int && p.reminderHour >= 6 && p.reminderHour <= 22)));
+                  || (p.reminderHour is int && p.reminderHour >= 6 && p.reminderHour <= 22))
+              && (!changed.hasAny(['reminderDays']) || !('reminderDays' in p)
+                  || (p.reminderDays is int && p.reminderDays >= 1 && p.reminderDays <= 14)));
         }
 
         // A non-admin may leave on their own. An admin must be demoted by

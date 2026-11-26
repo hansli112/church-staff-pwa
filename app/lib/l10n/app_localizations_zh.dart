@@ -1120,10 +1120,26 @@ class L10nZh extends L10n {
   String get notifReminderWeeklySub => '每週一，列出這週的服事';
 
   @override
-  String get notifReminderDayBeforeSub => '服事前一天提醒你';
+  String notifReminderDayBeforeSub(int days) {
+    String _temp0 = intl.Intl.pluralLogic(
+      days,
+      locale: localeName,
+      other: '服事前 $days 天提醒你',
+      one: '服事前一天提醒你',
+    );
+    return '$_temp0';
+  }
 
   @override
-  String get notifReminderBothSub => '每週一，和服事前一天';
+  String notifReminderBothSub(int days) {
+    String _temp0 = intl.Intl.pluralLogic(
+      days,
+      locale: localeName,
+      other: '每週一，和服事前 $days 天',
+      one: '每週一，和服事前一天',
+    );
+    return '$_temp0';
+  }
 
   @override
   String get notifReminderTime => '哪一天提醒';
@@ -1132,10 +1148,22 @@ class L10nZh extends L10n {
   String get notifReminderWeekly => '每週一';
 
   @override
-  String get notifReminderDayBefore => '前一天';
+  String get notifReminderDaysLead => '服事前';
 
   @override
-  String get notifReminderBoth => '兩個都要';
+  String notifReminderDaysTrail(int days) {
+    String _temp0 = intl.Intl.pluralLogic(
+      days,
+      locale: localeName,
+      other: '天',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String notifReminderTimeFooter(int first, int last) {
+    return '可以兩個都選。天數 $first 到 $last';
+  }
 
   @override
   String get notifReminderHour => '時間';
@@ -5021,10 +5049,26 @@ class L10nZhHans extends L10nZh {
   String get notifReminderWeeklySub => '每周一，列出这周的事奉';
 
   @override
-  String get notifReminderDayBeforeSub => '事奉前一天提醒你';
+  String notifReminderDayBeforeSub(int days) {
+    String _temp0 = intl.Intl.pluralLogic(
+      days,
+      locale: localeName,
+      other: '事奉前 $days 天提醒你',
+      one: '事奉前一天提醒你',
+    );
+    return '$_temp0';
+  }
 
   @override
-  String get notifReminderBothSub => '每周一，和事奉前一天';
+  String notifReminderBothSub(int days) {
+    String _temp0 = intl.Intl.pluralLogic(
+      days,
+      locale: localeName,
+      other: '每周一，和事奉前 $days 天',
+      one: '每周一，和事奉前一天',
+    );
+    return '$_temp0';
+  }
 
   @override
   String get notifReminderTime => '哪一天提醒';
@@ -5033,10 +5077,22 @@ class L10nZhHans extends L10nZh {
   String get notifReminderWeekly => '每周一';
 
   @override
-  String get notifReminderDayBefore => '前一天';
+  String get notifReminderDaysLead => '事奉前';
 
   @override
-  String get notifReminderBoth => '两个都要';
+  String notifReminderDaysTrail(int days) {
+    String _temp0 = intl.Intl.pluralLogic(
+      days,
+      locale: localeName,
+      other: '天',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String notifReminderTimeFooter(int first, int last) {
+    return '可以两个都选。天数 $first 到 $last';
+  }
 
   @override
   String get notifReminderHour => '时间';

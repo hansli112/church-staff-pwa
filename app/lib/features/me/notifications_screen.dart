@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:material_symbols_icons/symbols.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../core/design/components.dart';
+import '../../core/design/tokens.dart';
 import '../../domain/models.dart';
 import '../../l10n/app_localizations.dart';
 import '../../state/providers.dart';
@@ -44,14 +46,16 @@ class _NotificationsScreenState extends ConsumerState<NotificationsScreen> {
     final shownOff = blocked || permission == PushPermission.notAsked;
     final churchId = ref.watch(currentChurchIdProvider);
 
-    final timings = [
-      (ReminderTiming.weekly, l10n.notifReminderWeekly, l10n.notifReminderWeeklySub),
-      (ReminderTiming.dayBefore, l10n.notifReminderDayBefore, l10n.notifReminderDayBeforeSub),
-      (ReminderTiming.both, l10n.notifReminderBoth, l10n.notifReminderBothSub),
-    ];
+    final timing = me.reminderTiming;
     // While the timing choice shows below, the switch does not repeat it.
     final timingShown = !shownOff && !muted.contains(NotificationKind.reminder);
-    final reminderSub = timingShown ? null : timings.firstWhere((t) => t.$1 == me.reminderTiming).$3;
+    final reminderSub = timingShown
+        ? null
+        : switch (timing) {
+            ReminderTiming.weekly => l10n.notifReminderWeeklySub,
+            ReminderTiming.dayBefore => l10n.notifReminderDayBeforeSub(me.reminderDays),
+            ReminderTiming.both => l10n.notifReminderBothSub(me.reminderDays),
+          };
     final kinds = [
       (NotificationKind.reminder, l10n.notifReminder, reminderSub),
       (
@@ -105,12 +109,29 @@ class _NotificationsScreenState extends ConsumerState<NotificationsScreen> {
       }
     }
 
-    Future<void> setTiming(ReminderTiming timing) async {
+    // Null, from turning off the one left on, changes nothing: the switch
+    // above turns reminders off.
+    Future<bool> setTiming(ReminderTiming? next) async {
+      if (next == null || next == timing) return true;
       try {
-        await ref.churchData.setReminderTiming(me.uid, timing);
+        await ref.churchData.setReminderTiming(me.uid, next);
+        return true;
       } catch (e) {
         if (context.mounted) showToast(context, saveErrorText(l10n, e));
+        return false;
       }
+    }
+
+    // A number typed is the one chosen: that row turns on too.
+    Future<bool> setDays(int days) async {
+      final data = ref.churchData;
+      try {
+        await data.setReminderDays(me.uid, days);
+      } catch (e) {
+        if (context.mounted) showToast(context, saveErrorText(l10n, e));
+        return false;
+      }
+      return setTiming(timing.turned(daysBefore: true));
     }
 
     Future<void> pickHour() async {
@@ -169,13 +190,19 @@ class _NotificationsScreenState extends ConsumerState<NotificationsScreen> {
           if (timingShown)
             ListSection(
               header: l10n.notifReminderTime,
+              footer: l10n.notifReminderTimeFooter(ReminderDays.first, ReminderDays.last),
               children: [
-                for (final (timing, title, _) in timings)
-                  ListRow(
-                    title: title,
-                    selected: me.reminderTiming == timing,
-                    onTap: () => setTiming(timing),
-                  ),
+                ListRow(
+                  title: l10n.notifReminderWeekly,
+                  selected: timing.onMonday,
+                  onTap: () => setTiming(timing.turned(onMonday: !timing.onMonday)),
+                ),
+                _DaysBeforeRow(
+                  days: me.reminderDays,
+                  selected: timing.daysBefore,
+                  onTap: () => setTiming(timing.turned(daysBefore: !timing.daysBefore)),
+                  onDays: setDays,
+                ),
               ],
             ),
           if (timingShown)
@@ -197,6 +224,110 @@ String hourLabel(L10n l10n, int hour) => switch (hour) {
   < 18 => l10n.hourAfternoon(hour - 12),
   _ => l10n.hourEvening(hour - 12),
 };
+
+/// 服事前 [N] 天: a choice row, as [ListRow] with [ListRow.selected], with
+/// the number typed in it. Saved when typing is done; a number not from
+/// [ReminderDays.first] to [ReminderDays.last], or none, goes back to
+/// [days].
+class _DaysBeforeRow extends StatefulWidget {
+  const _DaysBeforeRow({required this.days, required this.selected, required this.onTap, required this.onDays});
+
+  final int days;
+  final bool selected;
+  final VoidCallback onTap;
+
+  /// Saves a new number; false when it could not be.
+  final Future<bool> Function(int days) onDays;
+
+  @override
+  State<_DaysBeforeRow> createState() => _DaysBeforeRowState();
+}
+
+class _DaysBeforeRowState extends State<_DaysBeforeRow> {
+  late final _text = TextEditingController(text: '${widget.days}');
+  final _focus = FocusNode();
+
+  @override
+  void initState() {
+    super.initState();
+    _focus.addListener(() {
+      if (!_focus.hasFocus) _done();
+    });
+  }
+
+  @override
+  void didUpdateWidget(_DaysBeforeRow old) {
+    super.didUpdateWidget(old);
+    if (widget.days != old.days && !_focus.hasFocus) _text.text = '${widget.days}';
+  }
+
+  @override
+  void dispose() {
+    _text.dispose();
+    _focus.dispose();
+    super.dispose();
+  }
+
+  Future<void> _done() async {
+    final days = ReminderDays.parse(_text.text);
+    if (days == null || days == widget.days) {
+      _text.text = '${widget.days}';
+      return;
+    }
+    if (!await widget.onDays(days) && mounted && !_focus.hasFocus) _text.text = '${widget.days}';
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = L10n.of(context);
+    final c = AppColors.of(context);
+    final lead = l10n.notifReminderDaysLead;
+    final row = InkWell(
+      onTap: widget.onTap,
+      child: ConstrainedBox(
+        constraints: BoxConstraints(minHeight: Space.minTap(Theme.of(context).platform)),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: Space.m, vertical: 6),
+          child: Row(
+            children: [
+              if (lead.isNotEmpty) ...[
+                Text(lead, style: AppText.body.copyWith(color: c.label)),
+                const SizedBox(width: Space.s),
+              ],
+              SizedBox(
+                width: 48,
+                child: TextField(
+                  controller: _text,
+                  focusNode: _focus,
+                  textAlign: TextAlign.center,
+                  keyboardType: TextInputType.number,
+                  textInputAction: TextInputAction.done,
+                  inputFormatters: [FilteringTextInputFormatter.digitsOnly, LengthLimitingTextInputFormatter(2)],
+                  style: AppText.body.copyWith(color: c.label),
+                  decoration: const InputDecoration(
+                    isDense: true,
+                    contentPadding: EdgeInsets.symmetric(horizontal: Space.xs, vertical: 6),
+                  ),
+                  onTapOutside: (_) => _focus.unfocus(),
+                ),
+              ),
+              const SizedBox(width: Space.s),
+              Expanded(
+                child: Text(l10n.notifReminderDaysTrail(widget.days), style: AppText.body.copyWith(color: c.label)),
+              ),
+              if (widget.selected)
+                Padding(
+                  padding: const EdgeInsetsDirectional.only(start: Space.s),
+                  child: Icon(Symbols.check_rounded, color: c.accent, size: 22, semanticLabel: l10n.selected),
+                ),
+            ],
+          ),
+        ),
+      ),
+    );
+    return Semantics(selected: widget.selected, child: row);
+  }
+}
 
 /// The hours reminders may come at ([ReminderHours]), [hour] ticked; the
 /// one tapped closes it.

@@ -94,7 +94,7 @@ void main() {
       expect(s.value, isFalse, reason: 'nothing comes yet');
       expect(s.onChanged, isNotNull);
     }
-    expect(find.text('前一天'), findsNothing);
+    expect(find.text('服事前'), findsNothing);
 
     await tester.tap(find.text('服事提醒'));
     await settle(tester);
@@ -108,7 +108,7 @@ void main() {
       NotificationKind.memberLeft,
       NotificationKind.joinRequest,
     });
-    expect(find.text('前一天'), findsOneWidget);
+    expect(find.text('服事前'), findsOneWidget);
   });
 
   testWidgets('turning one on, then leaving 通知 before the prompt answers: the choice still saves', (tester) async {
