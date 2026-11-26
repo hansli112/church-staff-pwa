@@ -583,11 +583,11 @@ void main() {
     expect(tester.widget<Semantics>(cell('司琴', 11)).properties.value, '待定');
   });
 
-  testWidgets('a 事工’s 負責人 sees only the duties it leads', (tester) async {
-    const worship = Ministry(id: 'worship', name: '敬拜團', duties: [MinistryDuty('sunday', '司琴')]);
+  testWidgets('a duty’s 負責人 sees only the duties they lead', (tester) async {
+    const worship = Ministry(id: 'worship', name: '敬拜團');
     final b = seededChurch(
       extra: [
-        staffMei.withIdentities(const [MinistryLead('worship')]),
+        staffMei.withIdentities(const [DutyLead('sunday', '司琴')]),
       ],
       as: staffMei,
     );
@@ -1096,11 +1096,11 @@ void main() {
     expect(landed.duties.firstWhere((d) => d.role == '司琴').people, ['李美玉']);
     expect(peopleOn(b, 4, '司琴'), isEmpty);
   });
-  testWidgets('a 事工’s 負責人 moves a duty onto a day not saved yet, and 復原 puts it back', (tester) async {
-    const worship = Ministry(id: 'worship', name: '敬拜團', duties: [MinistryDuty('sunday', '司琴')]);
+  testWidgets('a duty’s 負責人 moves a duty onto a day not saved yet, and 復原 puts it back', (tester) async {
+    const worship = Ministry(id: 'worship', name: '敬拜團');
     final b = seededChurch(
       extra: [
-        staffMei.withIdentities(const [MinistryLead('worship')]),
+        staffMei.withIdentities(const [DutyLead('sunday', '司琴')]),
       ],
       as: staffMei,
     );

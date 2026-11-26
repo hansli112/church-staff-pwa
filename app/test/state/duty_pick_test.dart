@@ -11,7 +11,7 @@ import 'package:martha/state/roster_actions.dart';
 import '../support/harness.dart';
 import '../support/seed.dart';
 
-const _worship = Ministry(id: 'worship', name: '敬拜團', duties: [MinistryDuty('sunday', '司琴')]);
+const _worship = Ministry(id: 'worship', name: '敬拜團');
 
 Future<ProviderContainer> opened(MemoryBackend b) async {
   final container = ProviderContainer(overrides: await testOverrides(b));
@@ -49,7 +49,7 @@ void main() {
     test("a 事工's 負責人 takes off the list of a duty it leads, and nothing more", () async {
       final b = seededChurch(
         extra: [
-          staffMei.withIdentities(const [MinistryLead('worship')]),
+          staffMei.withIdentities(const [DutyLead('sunday', '司琴')]),
         ],
         as: staffMei,
       );

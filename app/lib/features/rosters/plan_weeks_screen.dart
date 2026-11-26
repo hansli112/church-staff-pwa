@@ -624,11 +624,10 @@ class _PlanWeeksScreenState extends ConsumerState<PlanWeeksScreen> with SingleTi
     final thisMonth = Day(today.year, today.month, 1);
     final settings = ref.watch(servicesProvider).value;
     final me = ref.watch(meProvider).value;
-    final ministries = ref.watch(ministriesProvider).value?.ministries ?? const <Ministry>[];
     final view = widget.readOnly;
     final mine = [
-      for (final s in me?.rosterServices(settings?.services ?? const [], ministries: ministries) ?? const <Service>[])
-        if (view || me!.arranges(ministries, s.id).any) s,
+      for (final s in me?.rosterServices(settings?.services ?? const []) ?? const <Service>[])
+        if (view || me!.arranges(s.id).any) s,
     ];
     final service = settings?.byId(_type);
     final arranges = view ? const Arranges.all() : ref.watch(arrangesProvider(_type));

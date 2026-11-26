@@ -25,15 +25,11 @@ beforeEach(async () => {
   await clearFirestore();
   await bucket.deleteFiles({ prefix: 'churches/' });
   setNow(new Date('2026-11-20T10:00:00+08:00'));
-  // 陳負責人 leads 主日崇拜; 美玉 leads 敬拜事工, linked to its 司琴; 志豪 serves.
+  // 陳負責人 leads 主日崇拜; 美玉 its 司琴; 志豪 serves.
   await seedChurch('C1', { lead: 'staff', mei: 'staff', hao: 'staff', admin: 'admin' }, { name: '恩典堂' });
   await db.doc('churches/C1/settings/services').set({ services: [], ids: ['sunday', 'youth'] });
-  await db.doc('churches/C1/settings/ministries').set({
-    ministries: [{ id: 'worship', name: '敬拜', duties: [{ service: 'sunday', duty: '司琴' }] }],
-    ids: ['worship'],
-  });
   await db.doc('churches/C1/members/lead').update({ leadTypes: ['sunday'] });
-  await db.doc('churches/C1/members/mei').update({ leadMinistries: ['worship'] });
+  await db.doc('churches/C1/members/mei').update({ leadDuties: ['sunday/司琴'] });
 });
 
 describe('備註 (saveRosterNote)', () => {
@@ -47,7 +43,7 @@ describe('備註 (saveRosterNote)', () => {
     assert.deepEqual(note.get('files'), [{ ...pdf, type: 'application/pdf', size: 5 }]);
   });
 
-  test("a 事工's 負責人 writes it on a day of a service they arrange in; others do not", async () => {
+  test("a duty's 負責人 writes it on a day of a service they arrange in; others do not", async () => {
     await saveRosterNote(d, caller('mei'), { churchId: 'C1', rosterId: ROSTER, text: '7:30 到', files: [] });
     await rejectsWith(saveRosterNote(d, caller('mei'), { churchId: 'C1', rosterId: '2026-11-22_youth', text: 'x', files: [] }), 'permissionDenied');
     await rejectsWith(saveRosterNote(d, caller('hao'), { churchId: 'C1', rosterId: ROSTER, text: 'x', files: [] }), 'permissionDenied');

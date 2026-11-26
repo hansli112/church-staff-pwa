@@ -9,7 +9,7 @@ import 'package:martha/state/roster_day.dart';
 import '../support/harness.dart';
 import '../support/seed.dart';
 
-const _worship = Ministry(id: 'worship', name: '敬拜團', duties: [MinistryDuty('sunday', '司琴')]);
+const _worship = Ministry(id: 'worship', name: '敬拜團');
 
 /// 10/20: the days of the seeded month gone by.
 final _later = ChurchTimeZone.taipei.instantOf(DateTime.utc(2026, 10, 20, 9));
@@ -53,7 +53,7 @@ void main() {
   });
 
   test("a 事工's 負責人 changes only the duties it leads, and adds only those", () async {
-    final lead = staffHao.withIdentities(const [MinistryLead('worship')]);
+    final lead = staffHao.withIdentities(const [DutyLead('sunday', '司琴')]);
     final b = seededChurch(extra: [lead], as: lead);
     b.ministries['grace'] = const MinistrySettings(ministries: [_worship], ids: ['worship']);
     final day = Day(2026, 10, 25);

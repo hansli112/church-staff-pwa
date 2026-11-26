@@ -734,7 +734,7 @@ class L10nEn extends L10n {
 
   @override
   String canMinistryLead(String ministry) {
-    return 'Arranges $ministry\'s roles and adds or removes its team members';
+    return 'Runs $ministry\'s events and arranges their schedules';
   }
 
   @override
@@ -769,28 +769,16 @@ class L10nEn extends L10n {
   String get addMinistry => 'Add a ministry';
 
   @override
-  String get ministriesFooter => 'Ministries in several gatherings or in none, like media or visitation.';
+  String get ministriesFooter => 'Teams whose events go on the calendar at no fixed time, such as media or decorating.';
 
   @override
   String get ministryName => 'Ministry name';
 
   @override
-  String get ministryDuties => 'Roles';
-
-  @override
   String get dutyOthers => 'Everyone else';
 
   @override
-  String get dutyMinistry => 'Ministry';
-
-  @override
   String get dutyTakesMany => 'Several people';
-
-  @override
-  String get ministryPickDuties => 'Choose roles';
-
-  @override
-  String get ministryDutiesNone => 'None';
 
   @override
   String get deleteMinistry => 'Delete ministry';
@@ -3189,9 +3177,6 @@ class L10nEn extends L10n {
   String get smallGroupLeadUnassigned => 'None';
 
   @override
-  String get smallGroupLeadClear => 'Unassign';
-
-  @override
   String get deleteSmallGroup => 'Delete small group';
 
   @override
@@ -3636,34 +3621,7 @@ class L10nEn extends L10n {
   String get keepEditing => 'Keep editing';
 
   @override
-  String get ministryNeedsDuties => 'Pick its roles, and its leads can arrange them in services and at events';
-
-  @override
-  String ministryLeadsCan(int count, String leads, String duties) {
-    String _temp0 = intl.Intl.pluralLogic(
-      count,
-      locale: localeName,
-      other: '$leads can each arrange $duties, and change who is on their lists',
-      one: '$leads can arrange $duties, and change who is on their lists',
-    );
-    return '$_temp0';
-  }
-
-  @override
-  String ministryOnceLeads(String duties) {
-    return 'Once assigned, its leads can arrange $duties, and change who is on their lists';
-  }
-
-  @override
-  String dutiesOfServices(String services, String duties) {
-    return '$duties in $services';
-  }
-
-  @override
-  String get dutyGroupSeparator => '; ';
-
-  @override
-  String get ministryEvents => 'events';
+  String get ministryEvents => 'Events';
 
   @override
   String get addAnotherLead => 'Add another lead';
@@ -4139,4 +4097,53 @@ class L10nEn extends L10n {
 
   @override
   String get servicesHoldToMove => 'Hold and drag to reorder. Rosters follow this order.';
+
+  @override
+  String dutyLeadName(String service, String duty) {
+    return '$service $duty';
+  }
+
+  @override
+  String canDutyLead(String service, String duty) {
+    return 'Arranges $duty in $service, and changes who is on its list';
+  }
+
+  @override
+  String dutyLeadsCan(int count, String leads, String service, String duty) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$leads can each arrange $duty in $service, and change who is on its list',
+      one: '$leads can arrange $duty in $service, and change who is on its list',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String dutyOnceLeads(String service, String duty) {
+    return 'Once assigned, its leads can arrange $duty in $service, and change who is on its list';
+  }
+
+  @override
+  String dutyLeadsLine(String leads) {
+    return 'Led by $leads';
+  }
+
+  @override
+  String ministryLeadsCanEvents(int count, String leads) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$leads can each add and change these events, and arrange their schedules',
+      one: '$leads can add and change these events, and arrange their schedules',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get ministryOnceLeadsEvents =>
+      'Once assigned, its leads can add and change these events, and arrange their schedules';
+
+  @override
+  String get addAnotherSmallGroupLead => 'Add another leader';
 }

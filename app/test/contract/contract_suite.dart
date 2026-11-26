@@ -753,13 +753,13 @@ void contractTests(Future<ContractWorld> Function() open) {
   });
 
   group('groups (#82)', () {
-    const worship = Ministry(id: 'worship', name: '敬拜團', duties: [MinistryDuty('sunday', '司琴')]);
+    const worship = Ministry(id: 'worship', name: '敬拜團');
 
-    /// 敬拜團, with 李美玉 its 負責人.
+    /// 敬拜團, and 李美玉 主日崇拜's 司琴's 負責人.
     Future<Grace> withWorship() async {
       final g = await Grace.open(w);
       await g.church.compareAndSetMinistries(before: const [], after: const [worship]);
-      await g.church.putMember((await g.church.member(g.mei).first)!.withIdentities(const [MinistryLead('worship')]));
+      await g.church.putMember((await g.church.member(g.mei).first)!.withIdentities(const [DutyLead('sunday', '司琴')]));
       return g;
     }
 
@@ -778,15 +778,11 @@ void contractTests(Future<ContractWorld> Function() open) {
       await expectLater(g.church.compareAndSetMinistries(before: const [], after: const [worship]), denied());
     });
 
-    test('a 事工 added on a service keeps where, before it leads any duty there', () async {
+    test("a duty's 負責人 arranges only the duties they lead", () async {
       final g = await Grace.open(w);
-      const youth = Ministry(id: 'youthWorship', name: '敬拜團', addedIn: 'youth');
-      await g.church.compareAndSetMinistries(before: const [], after: const [youth]);
-      expect((await g.church.ministries().first).ministries, const [youth]);
-    });
-
-    test("a 事工's 負責人 arranges only the duties it leads", () async {
-      final g = await withWorship();
+      await g.church.putMember(
+        (await g.church.member(g.mei).first)!.withIdentities(const [DutyLead('sunday', '司琴')]),
+      );
       final day = sundayOn(
         4,
         duties: const [
@@ -876,8 +872,8 @@ void contractTests(Future<ContractWorld> Function() open) {
     test("a group's 負責人 adds and takes out plain 同工 of it; the rest is the admin's", () async {
       final g = await withWorship();
       await w.signIn(Grace.meiEmail);
-      // 林同工 leads 主日崇拜, a 身分; a list gives nothing, so 敬拜團's
-      // 負責人 puts him on the duty it leads (#94), and on no other.
+      // 林同工 leads 主日崇拜, a 身分; a list gives nothing, so 司琴's
+      // 負責人 puts him on it (#94), and on no other.
       await g.church.grantDuty(g.editor, 'sunday', '司琴');
       expect((await g.church.member(g.editor).first)!.serves('sunday', '司琴'), isTrue);
       await expectLater(g.church.grantDuty(g.editor, 'sunday', '招待'), denied());

@@ -242,20 +242,24 @@ test('an admin edits only the compared service, keeping unrelated services, hist
   assert.deepEqual((await db.doc('churches/C1/rosters/2026-10-04_sunday').get()).data(), assigned, 'configured option deletion never changes saved assignments');
 });
 
-test('a duty rename moves the 事工 that link it too (#82)', async () => {
+test("a duty rename moves its 負責人 too: they keep leading it under its new name", async () => {
   await church();
-  const ministries = [
-    { id: 'worship', name: '敬拜團', duties: [{ service: 'sunday', duty: '司會' }, { service: 'youth', duty: '司會' }] },
-    { id: 'care', name: '關懷', duties: [] },
+  const leads = [
+    { kind: 'dutyLead', service: 'sunday', duty: '司會' },
+    { kind: 'dutyLead', service: 'youth', duty: '司會' },
   ];
-  await db.doc('churches/C1/settings/ministries').set({ ministries, ids: ['worship', 'care'] });
+  await db.doc('churches/C1/members/admin').update({ identities: [{ kind: 'admin' }, ...leads], leadDuties: ['sunday/司會', 'youth/司會'] });
   await editService(deps, caller('admin'), {
     churchId: 'C1', before: sunday, after: { ...sunday, duties: ['主持', '司琴'] }, dutyRename: { from: '司會', to: '主持' },
   });
-  assert.deepEqual((await db.doc('churches/C1/settings/ministries').get()).get('ministries'), [
-    { id: 'worship', name: '敬拜團', duties: [{ service: 'sunday', duty: '主持' }, { service: 'youth', duty: '司會' }] },
-    { id: 'care', name: '關懷', duties: [] },
+  const admin = await db.doc('churches/C1/members/admin').get();
+  assert.deepEqual(admin.get('identities'), [
+    { kind: 'admin' },
+    { kind: 'dutyLead', service: 'sunday', duty: '主持' },
+    { kind: 'dutyLead', service: 'youth', duty: '司會' },
   ]);
+  assert.deepEqual(admin.get('leadDuties'), ['sunday/主持', 'youth/司會']);
+  assert.deepEqual(admin.get('leadTypes'), []);
 });
 
 test('可以排好幾位 is kept on the service, and goes with a duty renamed', async () => {

@@ -52,6 +52,7 @@ function memberDoc(uid, role, groups, zoneTypes, leads = {}) {
   if (leads.types !== undefined) document.leadTypes = leads.types;
   if (leads.ministries !== undefined) document.leadMinistries = leads.ministries;
   if (leads.smallGroups !== undefined) document.leadSmallGroups = leads.smallGroups;
+  if (leads.duties !== undefined) document.leadDuties = leads.duties;
   return document;
 }
 
@@ -290,6 +291,11 @@ describe('同工 (members)', () => {
     await assertFails(updateDoc(ref(as(EDITOR_A)), { leadTypes: ['sunday'] }), 'a lead grants no lead');
     await assertFails(updateDoc(ref(as('to-lead')), { leadTypes: ['youth'] }), 'nor oneself');
     await assertFails(updateDoc(ref(as('to-lead')), { ministries: [] }));
+    await assertSucceeds(updateDoc(ref(as(ADMIN_A)), {
+      identities: [{ kind: 'dutyLead', service: 'sunday', duty: '攝影' }], leadDuties: ['sunday/攝影'],
+    }));
+    await assertFails(updateDoc(ref(as(ADMIN_A)), { leadDuties: 'sunday/攝影' }));
+    await assertFails(updateDoc(ref(as('to-lead')), { leadDuties: ['sunday/司琴'] }), 'nor oneself');
   });
 
   it('notificationPrefs 只能是已知的通知種類和提醒時間', async () => {
@@ -442,7 +448,7 @@ describe('rosterEditing (testdata/church_rules.json)', () => {
     it(r.why, async () => {
       const uid = `table-${i}`;
       await seed(`churches/${A}/members/${uid}`, memberDoc(uid, r.role, r.groups, r.zoneTypes, {
-        types: r.leadTypes, ministries: r.leadMinistries, smallGroups: r.leadSmallGroups,
+        types: r.leadTypes, ministries: r.leadMinistries, smallGroups: r.leadSmallGroups, duties: r.leadDuties,
       }));
       const write = r.roster === 'event'
         ? setDoc(doc(as(uid), `churches/${A}/rosters/ev_t${i}`), {
@@ -481,7 +487,7 @@ describe('memberListReading (testdata/church_rules.json)', () => {
       const uid = `reader-${i}`;
       const m = r.member;
       await seed(`churches/${A}/members/${uid}`, memberDoc(uid, m.role ?? 'staff', m.groups, undefined, {
-        types: m.leadTypes, ministries: m.leadMinistries, smallGroups: m.leadSmallGroups,
+        types: m.leadTypes, ministries: m.leadMinistries, smallGroups: m.leadSmallGroups, duties: m.leadDuties,
       }));
       const read = getDocs(collection(as(uid), `churches/${A}/members`));
       await (r.reads ? assertSucceeds(read) : assertFails(read));
@@ -497,7 +503,7 @@ describe('unavailableReading (testdata/church_rules.json)', () => {
       const uid = `away-reader-${i}`;
       const m = r.member;
       await seed(`churches/${A}/members/${uid}`, memberDoc(uid, m.role ?? 'staff', m.groups, undefined, {
-        types: m.leadTypes, ministries: m.leadMinistries, smallGroups: m.leadSmallGroups,
+        types: m.leadTypes, ministries: m.leadMinistries, smallGroups: m.leadSmallGroups, duties: m.leadDuties,
       }));
       await seed(`churches/${A}/unavailable/${MEMBER_A}`, { spans: [{ from: '2030-12-20', to: '2030-12-27', note: '' }] });
       const read = getDocs(collection(as(uid), `churches/${A}/unavailable`));
@@ -591,7 +597,7 @@ describe('attendanceAccess (testdata/church_rules.json)', () => {
       const uid = `att-${i}`;
       const m = r.member;
       await seed(`churches/${A}/members/${uid}`, memberDoc(uid, m.role ?? 'staff', m.groups, undefined, {
-        types: m.leadTypes, ministries: m.leadMinistries, smallGroups: m.leadSmallGroups,
+        types: m.leadTypes, ministries: m.leadMinistries, smallGroups: m.leadSmallGroups, duties: m.leadDuties,
       }));
       const [kind, id] = r.group.split(':');
       if (kind === 'small') await seed(`churches/${A}/smallGroups/${id}`, { name: id, service: r.smallGroupService });

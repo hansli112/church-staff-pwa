@@ -206,8 +206,7 @@ final churchGroupsProvider = Provider<ChurchGroups?>((ref) {
 final arrangesProvider = Provider.family<Arranges, String>((ref, serviceType) {
   final me = ref.watch(meProvider).value;
   if (me == null) return Arranges.none;
-  final ministries = ref.watch(ministriesProvider).value?.ministries ?? const <Ministry>[];
-  return me.arranges(ministries, serviceType);
+  return me.arranges(serviceType);
 });
 
 /// As [arrangesProvider], on the roster of an event of [group] (null: the
@@ -215,8 +214,7 @@ final arrangesProvider = Provider.family<Arranges, String>((ref, serviceType) {
 final eventArrangesProvider = Provider.family<Arranges, String?>((ref, group) {
   final me = ref.watch(meProvider).value;
   if (me == null) return Arranges.none;
-  final ministries = ref.watch(ministriesProvider).value?.ministries ?? const <Ministry>[];
-  return me.arrangesEvent(ministries, group);
+  return me.arrangesEvent(group);
 });
 
 /// Every roster's 備註 in the church, by roster ID.

@@ -19,7 +19,7 @@ import '../support/seed.dart';
 // of the day, read by everyone.
 
 const _id = '2026-10-11_sunday';
-const worship = Ministry(id: 'worship', name: '敬拜團', duties: [MinistryDuty('sunday', '司琴')]);
+const worship = Ministry(id: 'worship', name: '敬拜團');
 
 Future<void> go(WidgetTester tester, String path) async {
   GoRouter.of(tester.element(find.byType(Scaffold).first)).go(path);
@@ -117,7 +117,7 @@ void main() {
   testWidgets("a 事工's 負責人 writes the note of a day they arrange some of", (tester) async {
     final b = seededChurch(
       extra: [
-        staffMei.withIdentities(const [MinistryLead('worship')]),
+        staffMei.withIdentities(const [DutyLead('sunday', '司琴')]),
       ],
       as: staffMei,
     );

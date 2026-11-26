@@ -718,7 +718,7 @@ class L10nJa extends L10n {
 
   @override
   String canMinistryLead(String ministry) {
-    return '$ministryの担当を割り当て、メンバーを加えたり外したりできる';
+    return '$ministryの活動を管理し、その奉仕を組む';
   }
 
   @override
@@ -753,28 +753,16 @@ class L10nJa extends L10n {
   String get addMinistry => 'ミニストリーを追加';
 
   @override
-  String get ministriesFooter => '複数の集会にまたがる、またはどの集会にも属さないミニストリー。例：メディア、訪問';
+  String get ministriesFooter => '決まった時間がなく、カレンダーに活動を入れるもの。例：メディア、装飾。';
 
   @override
   String get ministryName => 'ミニストリー名';
 
   @override
-  String get ministryDuties => '担当';
-
-  @override
   String get dutyOthers => 'ほかの人';
 
   @override
-  String get dutyMinistry => 'ミニストリー';
-
-  @override
   String get dutyTakesMany => '複数人で担当';
-
-  @override
-  String get ministryPickDuties => '担当を選ぶ';
-
-  @override
-  String get ministryDutiesNone => 'なし';
 
   @override
   String get deleteMinistry => 'ミニストリーを削除';
@@ -3032,9 +3020,6 @@ class L10nJa extends L10n {
   String get smallGroupLeadUnassigned => '未指名';
 
   @override
-  String get smallGroupLeadClear => '指名を取り消す';
-
-  @override
   String get deleteSmallGroup => '小グループを削除';
 
   @override
@@ -3437,34 +3422,7 @@ class L10nJa extends L10n {
   String get keepEditing => '編集を続ける';
 
   @override
-  String get ministryNeedsDuties => '担当を選ぶと、リーダーが集会や行事でそれを割り当てられます';
-
-  @override
-  String ministryLeadsCan(int count, String leads, String duties) {
-    String _temp0 = intl.Intl.pluralLogic(
-      count,
-      locale: localeName,
-      other: '$leadsはそれぞれ$dutiesを割り当て、その担当の名簿を変えられます',
-      one: '$leadsは$dutiesを割り当て、その担当の名簿を変えられます',
-    );
-    return '$_temp0';
-  }
-
-  @override
-  String ministryOnceLeads(String duties) {
-    return 'リーダーを指名すると、$dutiesを割り当て、その担当の名簿を変えられます';
-  }
-
-  @override
-  String dutiesOfServices(String services, String duties) {
-    return '$servicesの$duties';
-  }
-
-  @override
-  String get dutyGroupSeparator => '；';
-
-  @override
-  String get ministryEvents => '行事';
+  String get ministryEvents => '活動';
 
   @override
   String get addAnotherLead => 'リーダーをもう一人指名';
@@ -3901,4 +3859,50 @@ class L10nJa extends L10n {
 
   @override
   String get servicesHoldToMove => '長押しで並べ替え。奉仕表もこの順に並びます';
+
+  @override
+  String dutyLeadName(String service, String duty) {
+    return '$serviceの$duty';
+  }
+
+  @override
+  String canDutyLead(String service, String duty) {
+    return '$serviceの$dutyを組み、そのリストも変更できる';
+  }
+
+  @override
+  String dutyLeadsCan(int count, String leads, String service, String duty) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$leadsは$serviceの$dutyを組み、そのリストも変更できます',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String dutyOnceLeads(String service, String duty) {
+    return '指名すると、リーダーは$serviceの$dutyを組み、そのリストも変更できます';
+  }
+
+  @override
+  String dutyLeadsLine(String leads) {
+    return 'リーダー：$leads';
+  }
+
+  @override
+  String ministryLeadsCanEvents(int count, String leads) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$leadsはこれらの活動を追加・変更し、奉仕を組めます',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get ministryOnceLeadsEvents => '指名すると、リーダーはこれらの活動を追加・変更し、奉仕を組めます';
+
+  @override
+  String get addAnotherSmallGroupLead => 'リーダーをもう一人指名';
 }

@@ -3,6 +3,7 @@ import { isDeepStrictEqual } from 'node:util';
 import { churchAccess, churchClosed, isChurchOpen } from './access.js';
 import { weekdayOf } from './attendance.js';
 import { fail, id, record, serverTime, type Caller, type Deps } from './common.js';
+import { identitiesOf, withIdentities, type Identity } from './identities.js';
 import { LIMITS } from './limits.js';
 
 interface Service {
@@ -161,17 +162,17 @@ export async function editService(deps: Deps, caller: Caller | null, data: unkno
         || !Array.isArray(ids) || ids.length > 100) fail('failed-precondition', 'unknown', 'invalidServiceSettings');
     if (!isDeepStrictEqual(services.find((s) => s.id === before.id), before)) fail('aborted', 'conflict');
     if (dutyRename) {
-      const [members, pending, order, ministries] = await Promise.all([
+      const [members, pending, order] = await Promise.all([
         tx.get(deps.db.collection(`churches/${cid}/members`)),
         tx.get(deps.db.collection(`churches/${cid}/pendingMembers`)),
         tx.get(deps.db.doc(`churches/${cid}/staff_orders/${before.id}`)),
-        tx.get(deps.db.doc(`churches/${cid}/settings/ministries`)),
       ]);
       const roles = order.get('roles') as Record<string, string[]> | undefined;
       if (roles && Object.hasOwn(roles, dutyRename.to)) fail('aborted', 'conflict');
       // Count settings and staff order too. A refused transaction commits none
       // of its queued updates; never split one rename into partial batches.
       let writeCount = 1 + (roles && Object.hasOwn(roles, dutyRename.from) ? 1 : 0);
+      const renamedLead = (i: Identity) => i.kind === 'dutyLead' && i.service === before.id && i.duty === dutyRename.from;
       for (const member of [...members.docs, ...pending.docs]) {
         const zones = (member.get('zones') ?? []) as { serviceType: string; duties: string[] }[];
         let changed = false;
@@ -180,22 +181,19 @@ export async function editService(deps: Deps, caller: Caller | null, data: unkno
           changed = true;
           return { ...z, duties: [...new Set(z.duties.map((d) => d === dutyRename.from ? dutyRename.to : d))] };
         });
-        if (changed) {
+        // The duty's 負責人 keep leading it under its new name.
+        const held = identitiesOf(member.data());
+        const leads = held.some(renamedLead);
+        if (changed || leads) {
           if (++writeCount > 500) fail('resource-exhausted', 'quotaExceeded', 'tooManyChanges');
-          tx.update(member.ref, { zones: next });
+          tx.update(member.ref, {
+            ...(changed ? { zones: next } : {}),
+            ...(leads ? withIdentities(
+              member.data(),
+              held.map((i) => (renamedLead(i) ? { kind: 'dutyLead', service: before.id, duty: dutyRename.to } as const : i)),
+            ) : {}),
+          });
         }
-      }
-      // The 事工 that link the duty (#82) keep leading it under its new name.
-      const linked = ministries.get('ministries') as { duties?: { service: string; duty: string }[] }[] | undefined;
-      const renamed = (d: { service: string; duty: string }) => d.service === before.id && d.duty === dutyRename.from;
-      if (Array.isArray(linked) && linked.some((m) => (m.duties ?? []).some(renamed))) {
-        if (++writeCount > 500) fail('resource-exhausted', 'quotaExceeded', 'tooManyChanges');
-        tx.update(ministries.ref, {
-          ministries: linked.map((m) => ({
-            ...m,
-            ...(m.duties && { duties: m.duties.map((d) => (renamed(d) ? { ...d, duty: dutyRename.to } : d)) }),
-          })),
-        });
       }
       if (roles && Object.hasOwn(roles, dutyRename.from)) {
         const next = { ...roles, [dutyRename.to]: roles[dutyRename.from] };

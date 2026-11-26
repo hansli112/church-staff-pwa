@@ -38,7 +38,8 @@ String identityLabel(
     PastorIdentity(services: null) => l10n.identityPastorChurch,
     PastorIdentity(services: final ids?) => l10n.identityPastorOf(_serviceNames(l10n, ids, services)),
     ServiceLead(service: final id) => l10n.identityLeadOf(service(id)),
-    MinistryLead(:final ministry) => l10n.identityLeadOf(ministries?.nameOf(ministry, services) ?? ministry),
+    MinistryLead(:final ministry) => l10n.identityLeadOf(ministries?.nameOf(ministry) ?? ministry),
+    DutyLead(service: final id, :final duty) => l10n.identityLeadOf(l10n.dutyLeadName(service(id), duty)),
     SmallGroupLead(:final smallGroup) => l10n.identitySmallGroupLeadOf(smallGroupName(smallGroups, smallGroup)),
   };
 }
@@ -60,7 +61,8 @@ String identityCan(
     OfficeIdentity() => l10n.canOffice,
     PastorIdentity(services: final ids?) => l10n.canServiceLead(_serviceNames(l10n, ids, services)),
     ServiceLead(service: final id) => l10n.canServiceLead(service(id)),
-    MinistryLead(:final ministry) => l10n.canMinistryLead(ministries?.nameOf(ministry, services) ?? ministry),
+    MinistryLead(:final ministry) => l10n.canMinistryLead(ministries?.nameOf(ministry) ?? ministry),
+    DutyLead(service: final id, :final duty) => l10n.canDutyLead(service(id), duty),
     SmallGroupLead(:final smallGroup) => l10n.canSmallGroupLead(smallGroupName(smallGroups, smallGroup)),
   };
 }

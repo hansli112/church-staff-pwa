@@ -4,12 +4,12 @@ import { beforeEach, test } from 'node:test';
 import { editLedDuties } from '../src/ledDuties.js';
 import { caller, clearFirestore, db, deps, rejectsWith, seedChurch } from './support.js';
 
-// 事工負責人 (#82): 敬拜團 leads 司琴 and 敬拜 in 主日崇拜, and 敬拜 in 青年崇拜.
-const worship = {
-  id: 'worship',
-  name: '敬拜團',
-  duties: [{ service: 'sunday', duty: '司琴' }, { service: 'sunday', duty: '敬拜' }, { service: 'youth', duty: '敬拜' }],
-};
+// 服事項目的負責人: lead leads 司琴 and 敬拜 in 主日崇拜, and 敬拜 in 青年崇拜.
+const leads = [
+  { kind: 'dutyLead', service: 'sunday', duty: '司琴' },
+  { kind: 'dutyLead', service: 'sunday', duty: '敬拜' },
+  { kind: 'dutyLead', service: 'youth', duty: '敬拜' },
+];
 
 const duty = (role: string, people: string[] = [], uids: Record<string, string> = {}) => ({ role, people, uids });
 const day = (duties: ReturnType<typeof duty>[], events: unknown[] = []) => ({ type: 'sunday', dateKey: '2030-10-06', duties, events });
@@ -18,13 +18,12 @@ const ID = '2030-10-06_sunday';
 async function church() {
   await seedChurch('C1', { admin: 'admin', lead: 'staff', staff: 'staff' });
   await db.doc('churches/C1/settings/services').set({ services: [], ids: ['sunday', 'youth'] });
-  await db.doc('churches/C1/settings/ministries').set({ ministries: [worship], ids: ['worship'] });
-  await db.doc('churches/C1/members/lead').update({ leadMinistries: ['worship'], identities: [{ kind: 'lead', ministry: 'worship' }] });
+  await db.doc('churches/C1/members/lead').update({ leadDuties: ['sunday/司琴', 'sunday/敬拜', 'youth/敬拜'], identities: leads });
 }
 
 beforeEach(clearFirestore);
 
-test("a 事工's 負責人 arranges the duties it leads, and only those", async () => {
+test("a duty's 負責人 arranges the duties they lead, and only those", async () => {
   await church();
   const before = day([duty('司會', ['老王'], { 老王: 'admin' }), duty('司琴')]);
   await db.doc(`churches/C1/rosters/${ID}`).set(before);
@@ -71,23 +70,19 @@ test('nor the day itself: its 特別活動 stay as they are, and it is not delet
   );
 });
 
-test("on an event's roster, in no service, the duties it leads by name", async () => {
+test("an event's roster, in no service, is its group's 負責人's: a duty's 負責人 arranges nothing of it", async () => {
   await church();
   const ev = { kind: 'event', eventId: 'xmas', title: '聖誕晚會', dateKey: '2030-12-24', endDateKey: '2030-12-24', events: [] };
   const before = { ...ev, duties: [duty('敬拜'), duty('招待')] };
   await db.doc('churches/C1/rosters/ev_xmas').set(before);
   const after = { ...ev, duties: [duty('敬拜', ['美玉'], { 美玉: 'staff' }), duty('招待')] };
-  await editLedDuties(deps, caller('lead'), { churchId: 'C1', before: { ev_xmas: before }, after: { ev_xmas: after }, via: 'app' });
-  assert.deepEqual((await db.doc('churches/C1/rosters/ev_xmas').get()).get('duties'), after.duties);
-
-  await db.doc('churches/C1/rosters/ev_xmas').update({ cancelledAt: new Date() });
   await rejectsWith(
-    editLedDuties(deps, caller('lead'), { churchId: 'C1', before: { ev_xmas: after }, after: { ev_xmas: before }, via: 'app' }),
+    editLedDuties(deps, caller('lead'), { churchId: 'C1', before: { ev_xmas: before }, after: { ev_xmas: after }, via: 'app' }),
     'permissionDenied',
   );
 });
 
-test('someone who leads no 事工 arranges nothing here', async () => {
+test('someone who leads no duty arranges nothing here', async () => {
   await church();
   const before = day([duty('司琴')]);
   await db.doc(`churches/C1/rosters/${ID}`).set(before);
@@ -96,8 +91,12 @@ test('someone who leads no 事工 arranges nothing here', async () => {
     editLedDuties(deps, caller('staff'), { churchId: 'C1', before: { [ID]: before }, after: { [ID]: after }, via: 'app' }),
     'permissionDenied',
   );
-  // A 事工 that no longer links the duty leads it no more.
-  await db.doc('churches/C1/settings/ministries').set({ ministries: [{ ...worship, duties: [] }], ids: ['worship'] });
+  // Nor a 事工's 負責人: a 事工 links no duty.
+  await db.doc('churches/C1/settings/ministries').set({
+    ministries: [{ id: 'worship', name: '敬拜團', duties: [{ service: 'sunday', duty: '司琴' }] }],
+    ids: ['worship'],
+  });
+  await db.doc('churches/C1/members/lead').update({ leadDuties: [], identities: [], leadMinistries: ['worship'] });
   await rejectsWith(
     editLedDuties(deps, caller('lead'), { churchId: 'C1', before: { [ID]: before }, after: { [ID]: after }, via: 'app' }),
     'permissionDenied',

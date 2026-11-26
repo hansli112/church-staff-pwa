@@ -719,7 +719,7 @@ class L10nKo extends L10n {
 
   @override
   String canMinistryLead(String ministry) {
-    return '$ministry의 담당을 배정하고 멤버를 추가하거나 뺄 수 있어요';
+    return '$ministry의 활동을 관리하고 그 봉사를 배정';
   }
 
   @override
@@ -754,28 +754,16 @@ class L10nKo extends L10n {
   String get addMinistry => '사역팀 추가';
 
   @override
-  String get ministriesFooter => '여러 모임에 걸치거나 어느 모임에도 속하지 않는 사역팀, 예: 미디어, 심방';
+  String get ministriesFooter => '정해진 시간 없이 캘린더에 활동을 잡는 팀. 예: 미디어, 장식.';
 
   @override
   String get ministryName => '사역팀 이름';
 
   @override
-  String get ministryDuties => '담당';
-
-  @override
   String get dutyOthers => '그 밖의 사람';
 
   @override
-  String get dutyMinistry => '사역팀';
-
-  @override
   String get dutyTakesMany => '여러 명이 봉사';
-
-  @override
-  String get ministryPickDuties => '담당 선택';
-
-  @override
-  String get ministryDutiesNone => '없음';
 
   @override
   String get deleteMinistry => '사역팀 삭제';
@@ -3030,9 +3018,6 @@ class L10nKo extends L10n {
   String get smallGroupLeadUnassigned => '없음';
 
   @override
-  String get smallGroupLeadClear => '지정 취소';
-
-  @override
   String get deleteSmallGroup => '소그룹 삭제';
 
   @override
@@ -3433,33 +3418,6 @@ class L10nKo extends L10n {
 
   @override
   String get keepEditing => '계속 편집';
-
-  @override
-  String get ministryNeedsDuties => '담당을 고르면 리더가 예배와 행사에서 배정할 수 있어요';
-
-  @override
-  String ministryLeadsCan(int count, String leads, String duties) {
-    String _temp0 = intl.Intl.pluralLogic(
-      count,
-      locale: localeName,
-      other: '$leads 리더 모두 $duties 담당을 배정하고 명단을 바꿀 수 있어요',
-      one: '$leads 리더는 $duties 담당을 배정하고 명단을 바꿀 수 있어요',
-    );
-    return '$_temp0';
-  }
-
-  @override
-  String ministryOnceLeads(String duties) {
-    return '리더를 지정하면 $duties 담당을 배정하고 명단을 바꿀 수 있어요';
-  }
-
-  @override
-  String dutiesOfServices(String services, String duties) {
-    return '$services의 $duties';
-  }
-
-  @override
-  String get dutyGroupSeparator => '; ';
 
   @override
   String get ministryEvents => '행사';
@@ -3899,4 +3857,50 @@ class L10nKo extends L10n {
 
   @override
   String get servicesHoldToMove => '길게 눌러 순서 변경. 봉사표도 이 순서를 따릅니다';
+
+  @override
+  String dutyLeadName(String service, String duty) {
+    return '$service $duty';
+  }
+
+  @override
+  String canDutyLead(String service, String duty) {
+    return '$service의 $duty을(를) 배정하고 명단도 바꿀 수 있음';
+  }
+
+  @override
+  String dutyLeadsCan(int count, String leads, String service, String duty) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$leads은(는) $service의 $duty을(를) 배정하고 명단도 바꿀 수 있습니다',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String dutyOnceLeads(String service, String duty) {
+    return '지정하면 리더가 $service의 $duty을(를) 배정하고 명단도 바꿀 수 있습니다';
+  }
+
+  @override
+  String dutyLeadsLine(String leads) {
+    return '리더: $leads';
+  }
+
+  @override
+  String ministryLeadsCanEvents(int count, String leads) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$leads은(는) 이 활동들을 추가·수정하고 봉사를 배정할 수 있습니다',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get ministryOnceLeadsEvents => '지정하면 리더가 이 활동들을 추가·수정하고 봉사를 배정할 수 있습니다';
+
+  @override
+  String get addAnotherSmallGroupLead => '리더 한 명 더 지정';
 }

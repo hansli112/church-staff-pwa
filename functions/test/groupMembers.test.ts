@@ -14,12 +14,8 @@ async function church() {
     services: [{ id: 'sunday', name: '主日崇拜', duties: ['司琴', '招待'] }, { id: 'youth', name: '青年崇拜', duties: ['敬拜'] }],
     ids: ['sunday', 'youth'],
   });
-  await db.doc('churches/C1/settings/ministries').set({
-    ministries: [{ id: 'worship', name: '敬拜團', duties: [{ service: 'sunday', duty: '司琴' }] }],
-    ids: ['worship'],
-  });
   await db.doc('churches/C1/members/sundayLead').update({ leadTypes: ['sunday'], identities: [{ kind: 'lead', service: 'sunday' }] });
-  await db.doc('churches/C1/members/worshipLead').update({ leadMinistries: ['worship'], identities: [{ kind: 'lead', ministry: 'worship' }] });
+  await db.doc('churches/C1/members/worshipLead').update({ leadDuties: ['sunday/司琴'], identities: [{ kind: 'dutyLead', service: 'sunday', duty: '司琴' }] });
   await db.doc('churches/C1/members/mei').update({ zones: [{ serviceType: 'youth', duties: ['敬拜'], smallGroups: [] }], zoneTypes: ['youth'] });
 }
 

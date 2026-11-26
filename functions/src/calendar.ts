@@ -11,6 +11,7 @@ import { seal, unseal } from './sealing.js';
 import { notify, type WebhookDeps } from './webhook.js';
 import { dateKeyIn, instantOf, instantOfTime, LOCAL_TIME, localIso, timeZoneOf, type ChurchTimeZone } from './timeZones.js';
 import { loggable } from './redact.js';
+import { eventActingAs, logEventWrite } from './usage.js';
 
 /**
  * 行事曆: a church admin connects one Google Calendar. The backend keeps the
@@ -548,6 +549,8 @@ export async function calendarWrite(deps: CalDeps, caller: Caller | null, data: 
   const months = new Set(spans.flatMap((s) => (s ? monthsOf(s.start, s.end, timeZone) : [])));
   await clearCache(deps, churchId, months.size > MAX_CLEARED_MONTHS ? undefined : months);
   if (notice) {
+    const group = (notice.event.group as string | undefined) ?? '';
+    logEventWrite(churchId, me.caller.uid, notice.action, group, eventActingAs(me.powers, group));
     // After Google has it. A webhook failure is recorded, never thrown.
     await notify(deps, me.church, `calendar.${notice.action}`, eventDetails(notice.event, {
       actorUid: me.caller.uid,

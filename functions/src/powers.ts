@@ -1,15 +1,14 @@
 /**
  * What a member may do in their church (#82–#85), from the fields of their
  * member doc the security rules read (`role`, `groups`, `leadTypes`,
- * `leadMinistries`, `leadSmallGroups`, and the 身分 stored). The app's
+ * `leadMinistries`, `leadSmallGroups`, `leadDuties`, and the 身分 stored). The app's
  * Member answers the same questions: testdata/church_rules.json holds
  * both to every row. A callable asks [powersOf] its caller, never the
  * fields themselves.
  */
 
 import { strings } from './common.js';
-import { identitiesOf } from './identities.js';
-import { ledDuties, type Ministry } from './ministries.js';
+import { dutyOfKey, identitiesOf } from './identities.js';
 
 /** The member fields what they may do is worked out from. */
 export interface MemberFields {
@@ -20,6 +19,7 @@ export interface MemberFields {
   leadTypes?: unknown;
   leadMinistries?: unknown;
   leadSmallGroups?: unknown;
+  leadDuties?: unknown;
 }
 
 /**
@@ -78,6 +78,7 @@ export function powersOf(m: MemberFields) {
   const services = strings(m.leadTypes);
   const ministries = strings(m.leadMinistries);
   const smallGroups = strings(m.leadSmallGroups);
+  const duties = strings(m.leadDuties).flatMap((k) => dutyOfKey(k) ?? []);
   const identities = identitiesOf(m as Record<string, unknown>);
   /** Admin, or in permission group [g] (行政 is both). */
   const inGroup = (g: 'roster-editors' | 'calendar-editors') => admin || groups.includes(g);
@@ -101,8 +102,19 @@ export function powersOf(m: MemberFields) {
     /** The 事工 they lead. */
     ministries,
 
+    /**
+     * The duties they arrange on a day of [serviceType] without arranging
+     * all of it, as those duties' 負責人 (`leadDuties`); none on an event's
+     * roster (null), which its group's 負責人 arrange.
+     */
+    ledDuties: (serviceType: string | null) =>
+      new Set(serviceType === null ? [] : duties.filter((d) => d.service === serviceType).map((d) => d.duty)),
+
     /** A plain 同工: no 身分, whatever the rules read for one. */
     plain: identities.length === 0,
+
+    /** Whether they arrange anything: admins, 行政, and the 負責人 of a service or a duty. */
+    arrangesAny: inGroup('roster-editors') || services.length > 0 || duties.length > 0,
 
     /** Whether they make any events: admins, 行政, and whoever leads a group, its own (Member.makesEvents). */
     makesEvents: writesAnyEvent || services.length > 0 || ministries.length > 0 || smallGroups.length > 0,
@@ -153,12 +165,11 @@ export function powersOf(m: MemberFields) {
     /**
      * Whether they may put anyone on the list of [duty] in service
      * [service], or take them off it (dutyListEditing, #94): admins and 行政
-     * any; a service's 負責人 and 牧者 its duties; a 事工's 負責人 the duties
-     * [linked] 事工 they lead link there. Being on a list gives nothing, so
-     * whoever is put on it may hold a 身分.
+     * any; a service's 負責人 and 牧者 its duties; a duty's 負責人 that duty.
+     * Being on a list gives nothing, so whoever is put on it may hold a 身分.
      */
-    editsDutyList: (linked: Ministry[], service: string, duty: string) =>
-      self.editsRosters(service) || ledDuties(linked, ministries, service).has(duty),
+    editsDutyList: (service: string, duty: string) =>
+      self.editsRosters(service) || duties.some((d) => d.service === service && d.duty === duty),
 
     /**
      * Whether they see every group's 人數 and put them together (人數總覽,
@@ -193,7 +204,7 @@ export function powersOf(m: MemberFields) {
       (typeof m.uid === 'string' && group.kind !== 'ministry' && fillers.includes(m.uid))
       || (group.kind === 'small'
         ? smallGroups.includes(group.id)
-        : group.kind === 'service' && identities.some((i) => 'service' in i && i.service === group.id)),
+        : group.kind === 'service' && identities.some((i) => i.kind === 'lead' && 'service' in i && i.service === group.id)),
   };
   return self;
 }

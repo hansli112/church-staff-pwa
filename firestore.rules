@@ -83,13 +83,14 @@ service cloud.firestore {
         || (isMember(cid) && name in member(cid).get('groups', []));
     }
 
-    // Leads something (#82): a service, as its 負責人 or 牧者, or a 事工.
+    // Leads something (#82): a service, as its 負責人 or 牧者, a 事工, a
+    // 小組 or a duty (leadDuties).
     // Leads pick people for rosters and add 同工 to their group, so they
     // read the member list as 行政 and admins do.
     function isLead(cid) {
       return isMember(cid)
         && (member(cid).get('leadTypes', []).size() > 0 || member(cid).get('leadMinistries', []).size() > 0
-            || member(cid).get('leadSmallGroups', []).size() > 0);
+            || member(cid).get('leadSmallGroups', []).size() > 0 || member(cid).get('leadDuties', []).size() > 0);
     }
 
     // Reads the member list: admins, 行政 (roster-editors) and leads.
@@ -99,11 +100,12 @@ service cloud.firestore {
 
     // Arranges a roster, and so sees who cannot serve when (不能服事的日子,
     // #91; testdata/church_rules.json, unavailableReading): admins, 行政,
-    // and the 負責人 and 牧者 of a service or a 事工. They may pick anyone
-    // in the church, so they see everyone's.
+    // and the 負責人 of a service (and its 牧者), a 事工 (its events') or a
+    // duty. They may pick anyone in the church, so they see everyone's.
     function arrangesRosters(cid) {
       return inGroup(cid, 'roster-editors')
-        || (isMember(cid) && (member(cid).get('leadTypes', []).size() > 0 || member(cid).get('leadMinistries', []).size() > 0));
+        || (isMember(cid) && (member(cid).get('leadTypes', []).size() > 0 || member(cid).get('leadMinistries', []).size() > 0
+            || member(cid).get('leadDuties', []).size() > 0));
     }
 
     function hasValidGroups() {
@@ -169,7 +171,9 @@ service cloud.firestore {
     // led (leadMinistries), and the 事工 they were a 同工 of (ministries; no
     // longer written since a 事工's people are its duties' lists, #94); the
     // 小組 led (leadSmallGroups, by a 小組長) and those they are in
-    // (smallGroups, #85).
+    // (smallGroups, #85); the duties led (leadDuties, `<service>/<duty>`,
+    // by their 負責人; 2026-11-26), which the backend checks
+    // (editLedDuties).
     // 管理員 is still role 'admin' and 行政 the roster-editors and
     // calendar-editors groups, which older apps read.
     function hasValidIdentities(cid) {
@@ -181,7 +185,8 @@ service cloud.firestore {
         && (!('ministries' in data) || (data.ministries is list && data.ministries.hasOnly(ministryIds(cid))))
         && (!('leadSmallGroups' in data)
             || (data.leadSmallGroups is list && data.leadSmallGroups.hasOnly(smallGroupIds(cid))))
-        && (!('smallGroups' in data) || (data.smallGroups is list && data.smallGroups.hasOnly(smallGroupIds(cid))));
+        && (!('smallGroups' in data) || (data.smallGroups is list && data.smallGroups.hasOnly(smallGroupIds(cid))))
+        && (!('leadDuties' in data) || (data.leadDuties is list && data.leadDuties.size() <= 100));
     }
 
     // zones on a member doc is a list of maps, and the rules language has no
@@ -194,9 +199,9 @@ service cloud.firestore {
 
     // 行政 (roster-editors) and admins edit every service's rosters; a
     // service's 負責人 or 牧者 its own (leadTypes, #82). A 牧區 alone grants
-    // nothing. A 事工's 負責人 edits only their duties, which the rules
-    // cannot tell apart in a roster's duties list: that goes through the
-    // backend (editLedDuties).
+    // nothing. A duty's 負責人 edits only that duty, which the rules cannot
+    // tell apart in a roster's duties list: that goes through the backend
+    // (editLedDuties).
     function canEditRosterType(cid, type) {
       return type in serviceTypes(cid) && (inGroup(cid, 'roster-editors')
         || type in member(cid).get('leadTypes', []));

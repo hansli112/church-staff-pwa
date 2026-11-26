@@ -45,23 +45,17 @@ void main() {
     }
   });
 
-  testWidgets("a 事工's 負責人, whose changes the backend checks, warms that up where they arrange; an admin does not", (
+  testWidgets("a duty's 負責人, whose changes the backend checks, warms that up where they arrange; an admin does not", (
     tester,
   ) async {
     final b = seededChurch(
       extra: [
-        staffMei.withIdentities(const [MinistryLead('worship')]),
+        staffMei.withIdentities(const [DutyLead('sunday', '司琴')]),
       ],
       as: staffMei,
     );
-    b.ministries['grace'] = const MinistrySettings(
-      ministries: [
-        Ministry(id: 'worship', name: '敬拜團', duties: [MinistryDuty('sunday', '司琴')]),
-      ],
-      ids: ['worship'],
-    );
     await pumpApp(tester, b);
-    for (final path in ['/rosters/plan/sunday', '/rosters/sunday/2026-10-04', '/rosters/event/e1']) {
+    for (final path in ['/rosters/plan/sunday', '/rosters/sunday/2026-10-04']) {
       b.warmedUp.clear();
       await go(tester, path);
       expect(b.warmedUp, contains(WarmUp.ledDuties), reason: path);

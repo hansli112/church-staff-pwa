@@ -11,19 +11,13 @@ import 'package:material_symbols_icons/symbols.dart';
 import '../support/harness.dart';
 import '../support/seed.dart';
 
-// A 事工's 負責人 (#82): 敬拜團 links 主日崇拜's 司琴, and 李美玉 leads it.
-const worship = Ministry(id: 'worship', name: '敬拜團', duties: [MinistryDuty('sunday', '司琴')]);
-
-MemoryBackend withWorship() {
-  final b = seededChurch(
-    extra: [
-      staffMei.withIdentities(const [MinistryLead('worship')]),
-    ],
-    as: staffMei,
-  );
-  b.ministries['grace'] = const MinistrySettings(ministries: [worship], ids: ['worship']);
-  return b;
-}
+// A duty's 負責人: 李美玉 leads 主日崇拜's 司琴.
+MemoryBackend withWorship() => seededChurch(
+  extra: [
+    staffMei.withIdentities(const [DutyLead('sunday', '司琴')]),
+  ],
+  as: staffMei,
+);
 
 Future<void> tapText(WidgetTester tester, String text) async {
   await tester.tap(find.text(text).last);
@@ -36,7 +30,7 @@ Future<void> go(WidgetTester tester, String path) async {
 }
 
 void main() {
-  testWidgets('arranges the duties the 事工 leads; the rest of the day only shows', (tester) async {
+  testWidgets('arranges the duty they lead; the rest of the day only shows', (tester) async {
     final b = withWorship();
     await pumpApp(tester, b);
     await go(tester, '/rosters/sunday/2026-10-11');
@@ -69,7 +63,7 @@ void main() {
     expect(find.text('已把李美玉移出司琴名單'), findsOneWidget);
   });
 
-  testWidgets('adds only the duties it leads, and does not tag the day', (tester) async {
+  testWidgets('adds only the duty they lead, and does not tag the day', (tester) async {
     final b = withWorship();
     b.rosters['grace']![Roster.idFor('sunday', Day(2026, 10, 11))] = savedDay(b, 11).copyWith(
       duties: [
@@ -86,7 +80,7 @@ void main() {
     expect(savedDay(b, 11).duties.map((d) => d.role), contains('司琴'));
   });
 
-  testWidgets('sees the services its duties are in on the 服事表 tab', (tester) async {
+  testWidgets('sees the service its duty is in on the 服事表 tab', (tester) async {
     final b = withWorship();
     b.members['grace']!['mei'] = b.members['grace']!['mei']!.copyWith(zones: const []);
     await pumpApp(tester, b);
@@ -125,7 +119,7 @@ void main() {
     expect(b.pendingMembers['grace'] ?? const {}, isEmpty);
   });
 
-  testWidgets('imports only the duties it leads, merged into the day', (tester) async {
+  testWidgets('imports only the duty they lead, merged into the day', (tester) async {
     final b = withWorship();
     b.users['mei'] = b.users['mei']!.copyWith(photoAiConsent: true);
     await pumpApp(tester, b);

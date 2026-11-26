@@ -96,7 +96,7 @@ Member memberFromJson(String uid, Json data) {
 }
 
 /// A member doc's 身分. Whoever the rules let lead something
-/// (`leadTypes`, `leadMinistries`, `leadSmallGroups`) with no 身分 stored
+/// (`leadTypes`, `leadMinistries`, `leadSmallGroups`, `leadDuties`) with no 身分 stored
 /// saying so still leads, after what they hold: a doc from before 身分, or
 /// a 小組長 an app from before #85 saved without it, not knowing the kind
 /// (testdata/church_rules.json, memberIdentities).
@@ -115,6 +115,8 @@ List<Identity> _identitiesOf(Json data) {
       if (!stored.contains(MinistryLead(id))) MinistryLead(id),
     for (final id in _strings(data['leadSmallGroups']))
       if (!stored.contains(SmallGroupLead(id))) SmallGroupLead(id),
+    for (final key in _strings(data['leadDuties']))
+      if (DutyLead.parse(key) case final lead? when !stored.contains(lead)) lead,
   ];
 }
 
@@ -136,6 +138,7 @@ Json memberToJson(Member m) => {
   'leadTypes': m.leadTypes,
   'leadMinistries': m.leadMinistries,
   'leadSmallGroups': m.leadSmallGroups,
+  'leadDuties': m.leadDuties,
   'smallGroups': m.smallGroups.toList(),
 };
 
@@ -260,17 +263,8 @@ MinistrySettings ministrySettingsFromJson(Json? data) => MinistrySettings(
     if (data?['ministries'] is List)
       for (final m in data!['ministries'] as List<dynamic>)
         if (m is Map && m['id'] is String && m['name'] is String)
-          Ministry(
-            id: m['id'] as String,
-            name: m['name'] as String,
-            duties: [
-              if (m['duties'] is List)
-                for (final d in m['duties'] as List<dynamic>)
-                  if (d is Map && d['service'] is String && d['duty'] is String)
-                    MinistryDuty(d['service'] as String, d['duty'] as String),
-            ],
-            addedIn: m['addedIn'] is String ? m['addedIn'] as String : null,
-          ),
+          // `duties` and `addedIn`, saved before 2026-11-26, mean nothing now.
+          Ministry(id: m['id'] as String, name: m['name'] as String),
   ],
   ids: _strings(data?['ids']),
 );
@@ -281,10 +275,6 @@ Json ministrySettingsToJson(MinistrySettings s) => {
       {
         'id': m.id,
         'name': m.name,
-        'duties': [
-          for (final d in m.duties) {'service': d.service, 'duty': d.duty},
-        ],
-        if (m.addedIn != null) 'addedIn': m.addedIn,
       },
   ],
   'ids': s.ids,

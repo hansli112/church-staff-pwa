@@ -3,7 +3,6 @@ import { FieldValue, Timestamp, type DocumentReference } from 'firebase-admin/fi
 import { churchAccess } from './access.js';
 import { fail, record, type Caller, type Deps } from './common.js';
 import { LIMITS, TEXT_LIMITS, withinTextLimit } from './limits.js';
-import { ledDuties, ministriesOf, type Ministry } from './ministries.js';
 import { powersOf, type MemberFields } from './powers.js';
 import { notifyMembers, type PushDeps } from './push.js';
 import { dateKeyIn, timeZoneOf } from './timeZones.js';
@@ -19,9 +18,9 @@ interface Listed {
  * them on the list of a duty there they arrange
  * (testdata/church_rules.json, askedToFill).
  */
-export function askedToFill(caller: MemberFields & { uid: string }, ministries: Ministry[], serviceId: string, members: Listed[]) {
+export function askedToFill(caller: MemberFields & { uid: string }, serviceId: string, members: Listed[]) {
   const powers = powersOf(caller);
-  const led = ledDuties(ministries, powers.ministries, serviceId);
+  const led = powers.ledDuties(serviceId);
   const arranges = (duty: string) => powers.editsRosters(serviceId) || led.has(duty);
   return members
     .filter(
@@ -52,13 +51,9 @@ export async function askUnavailable(deps: Deps & PushDeps, caller: Caller | nul
       || typeof from !== 'string' || !MONTH.test(from) || typeof to !== 'string' || !MONTH.test(to) || to < from
       || Object.keys(input).some((k) => !['churchId', 'serviceId', 'from', 'to'].includes(k))) fail('invalid-argument', 'unknown');
   const { cid, church, member } = await churchAccess(deps, caller, data, { arranges: serviceId });
-  const [ministries, members] = await Promise.all([
-    deps.db.doc(`churches/${cid}/settings/ministries`).get(),
-    deps.db.collection(`churches/${cid}/members`).get(),
-  ]);
+  const members = await deps.db.collection(`churches/${cid}/members`).get();
   const asked = askedToFill(
     { ...(member.data() as MemberFields), uid: member.id },
-    ministriesOf(ministries),
     serviceId,
     members.docs.map((m) => ({ ...(m.data() as Listed), uid: m.id })),
   );

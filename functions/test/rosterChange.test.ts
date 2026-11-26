@@ -477,13 +477,9 @@ describe('安排服事 (#90)', () => {
     assert.deepEqual(await planned(), []);
   });
 
-  test('a 事工’s 負責人 may press it for a service its duties are in', async () => {
+  test('a duty’s 負責人 may press it for the service the duty is in', async () => {
     await church();
-    await db.doc('churches/C1/settings/ministries').set({
-      ministries: [{ id: 'worship', name: '敬拜團', duties: [{ service: 'sunday', duty: '司琴' }] }],
-      ids: ['worship'],
-    });
-    await db.doc('churches/C1/members/hao').update({ leadMinistries: ['worship'] });
+    await db.doc('churches/C1/members/hao').update({ leadDuties: ['sunday/司琴'] });
     await plan('2026-10-11', [duty('司琴', ['美玉'])], 'hao');
     assert.deepEqual(await notify('hao'), { people: 1, later: false });
   });

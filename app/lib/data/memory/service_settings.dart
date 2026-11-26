@@ -72,8 +72,17 @@ mixin _MemoryServiceSettings on _MemoryChurchBase {
                 : zone,
         ];
         final members = _b.members[churchId]!;
+        // The duty's 負責人 keep leading it under its new name.
+        final leadOf = DutyLead(before.id, rename.from);
         for (final entry in members.entries.toList()) {
-          if (affected(entry.value.zones)) members[entry.key] = entry.value.copyWith(zones: renamed(entry.value.zones));
+          var m = entry.value;
+          if (affected(m.zones)) m = m.copyWith(zones: renamed(m.zones));
+          if (m.identities.contains(leadOf)) {
+            m = m.withIdentities([
+              for (final i in m.identities) i == leadOf ? DutyLead(before.id, rename.to) : i,
+            ]);
+          }
+          members[entry.key] = m;
         }
         final pending = _b.pendingMembers[churchId];
         if (pending != null) {
@@ -93,21 +102,6 @@ mixin _MemoryServiceSettings on _MemoryChurchBase {
         }
         if (order?.rankingsByRole.containsKey(rename.from) ?? false) {
           orders[before.id] = order!.withRolesRenamed({rename.from: rename.to});
-        }
-        // The 事工 that link the duty keep leading it (#82).
-        if (_b.ministries[churchId] case final m?) {
-          _b.ministries[churchId] = MinistrySettings(
-            ids: m.ids,
-            ministries: [
-              for (final ministry in m.ministries)
-                ministry.copyWith(
-                  duties: [
-                    for (final d in ministry.duties)
-                      d.service == before.id && d.duty == rename.from ? MinistryDuty(d.service, rename.to) : d,
-                  ],
-                ),
-            ],
-          );
         }
       }
       _b.services[churchId] = settings.withServices([

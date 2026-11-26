@@ -15,7 +15,6 @@ import { FieldValue, Timestamp, type DocumentSnapshot, type Transaction } from '
 import { churchAccess } from './access.js';
 import { DAY_MS, fail, record, strings, type Caller, type Deps } from './common.js';
 import type { Words } from './languages.js';
-import { ledDuties, ministriesOf, type Ministry } from './ministries.js';
 import { powersOf } from './powers.js';
 import { notifyMembers, type PushDeps } from './push.js';
 import { quietUntil } from './rosterChange.js';
@@ -105,13 +104,13 @@ export function stillHolds(kind: SwapKind, duty: string, from: string, to: strin
 
 /**
  * Who hears a request taken, or a cover nobody took: the service's 負責人
- * and 牧者 (`leadTypes`), and the 負責人 of a 事工 that links the duty;
- * with none, 行政 and the admins.
+ * and 牧者 (`leadTypes`), and the duty's 負責人 (`leadDuties`); with
+ * none, 行政 and the admins.
  */
-export function leadsOf(members: DocumentSnapshot[], ministries: Ministry[], serviceId: string, duty: string) {
+export function leadsOf(members: DocumentSnapshot[], serviceId: string, duty: string) {
   const leads = members.filter((m) => {
     const p = powersOf(m.data() ?? {});
-    return strings(m.get('leadTypes')).includes(serviceId) || ledDuties(ministries, p.ministries, serviceId).has(duty);
+    return strings(m.get('leadTypes')).includes(serviceId) || p.ledDuties(serviceId).has(duty);
   });
   const who = leads.length > 0 ? leads : members.filter((m) => powersOf(m.data() ?? {}).inGroup('roster-editors'));
   return who.map((m) => m.id);
@@ -141,11 +140,8 @@ async function readable(deps: Pick<Deps, 'db'>, cid: string, r: FirebaseFirestor
 
 /** The leads of [serviceId]'s [duty] in church [cid] now ([leadsOf]). */
 async function leadsFor(deps: Pick<Deps, 'db'>, cid: string, serviceId: string, duty: string) {
-  const [members, ministries] = await Promise.all([
-    deps.db.collection(`churches/${cid}/members`).get(),
-    deps.db.doc(`churches/${cid}/settings/ministries`).get(),
-  ]);
-  return leadsOf(members.docs, ministriesOf(ministries), serviceId, duty);
+  const members = await deps.db.collection(`churches/${cid}/members`).get();
+  return leadsOf(members.docs, serviceId, duty);
 }
 
 /**

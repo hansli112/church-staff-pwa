@@ -161,8 +161,7 @@ mixin _MemoryGroupMembers on _MemoryChurchBase {
     await _b.write(() {
       final me = _b.requireMember(churchId);
       final service = _b.services[churchId]!.byId(serviceType);
-      final ministries = (_b.ministries[churchId] ?? const MinistrySettings()).ministries;
-      if (service == null || !me.editsDutyList(ministries, serviceType, duty)) {
+      if (service == null || !me.editsDutyList(serviceType, duty)) {
         throw const CloudException(CloudErrorCode.permissionDenied);
       }
       final pending = _b.pendingMembers[churchId]?[uid];

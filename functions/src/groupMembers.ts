@@ -3,7 +3,6 @@ import type { DocumentReference, DocumentSnapshot, Transaction } from 'firebase-
 import { accessIn, churchAccess } from './access.js';
 import { fail, record, serverTime, strings, text, type Caller, type Deps } from './common.js';
 import { TEXT_LIMITS } from './limits.js';
-import { ministriesOf } from './ministries.js';
 import type { ChurchGroup } from './powers.js';
 import { nameKey } from './text.js';
 
@@ -110,19 +109,18 @@ export async function setDuty(deps: Deps, caller: Caller | null, data: unknown) 
       || typeof duty !== 'string' || duty.length === 0 || duty.length > 100) fail('invalid-argument', 'unknown');
 
   await deps.db.runTransaction(async (tx) => {
-    const { powers, docs: [member, pending, services, ministries] } = await accessIn(
+    const { powers, docs: [member, pending, services] } = await accessIn(
       tx,
       deps,
       access,
       deps.db.doc(`churches/${cid}/members/${uid}`),
       deps.db.doc(`churches/${cid}/pendingMembers/${uid}`),
       deps.db.doc(`churches/${cid}/settings/services`),
-      deps.db.doc(`churches/${cid}/settings/ministries`),
     );
     const them = member.exists ? member : pending;
     const target = them.ref;
     const known = serviceIn(services, service);
-    if (!known || !powers.editsDutyList(ministriesOf(ministries), service, duty)) fail('permission-denied', 'permissionDenied');
+    if (!known || !powers.editsDutyList(service, duty)) fail('permission-denied', 'permissionDenied');
     if (!them.exists) fail('not-found', 'notFound');
     if (on && !(known.duties ?? []).includes(duty)) fail('invalid-argument', 'unknown');
     const zones = (them.get('zones') as Zone[] | undefined) ?? [];

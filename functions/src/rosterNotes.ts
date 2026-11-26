@@ -5,7 +5,6 @@ import { churchAccess } from './access.js';
 import { DAY_MS, fail, record, type Caller, type Deps } from './common.js';
 import { LIMITS, TEXT_LIMITS, withinTextLimit } from './limits.js';
 import { isCancelled, isEvent } from './eventRosters.js';
-import { ledDuties, ministriesOf } from './ministries.js';
 import { groupOf } from './powers.js';
 
 /**
@@ -95,18 +94,13 @@ export async function saveRosterNote(deps: NoteDeps, caller: Caller | null, data
   if (service) {
     lastDay = service[1];
   } else {
-    // An event's roster: whoever arranges all of it, or a 事工's 負責人
-    // with a duty to arrange on events (Member.arrangesEvent).
+    // An event's roster: whoever arranges all of it (Member.arrangesEvent).
     const roster = await deps.db.doc(`churches/${cid}/rosters/${rosterId}`).get();
     if (!isEvent(roster) || isCancelled(roster)) {
       fail('permission-denied', 'permissionDenied');
     }
     const g = groupOf(roster.get('group'));
-    let arranges = access.powers.inGroup('roster-editors') || (g !== null && access.powers.leads(g));
-    if (!arranges && access.powers.ministries.length > 0) {
-      const ministries = ministriesOf(await deps.db.doc(`churches/${cid}/settings/ministries`).get());
-      arranges = ledDuties(ministries, access.powers.ministries, null).size > 0;
-    }
+    const arranges = access.powers.inGroup('roster-editors') || (g !== null && access.powers.leads(g));
     if (!arranges) fail('permission-denied', 'permissionDenied');
     lastDay = roster.get('endDateKey') as string;
   }

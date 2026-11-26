@@ -718,7 +718,7 @@ class L10nZh extends L10n {
 
   @override
   String canMinistryLead(String ministry) {
-    return '排$ministry的服事項目、加入和移出它的同工';
+    return '管$ministry的活動，排它們的服事';
   }
 
   @override
@@ -753,28 +753,16 @@ class L10nZh extends L10n {
   String get addMinistry => '新增事工';
 
   @override
-  String get ministriesFooter => '跨聚會或不屬於任何聚會的事工，例如多媒體、關懷探訪。';
+  String get ministriesFooter => '時間不固定、在行事曆上排活動的，例如多媒體、佈置。';
 
   @override
   String get ministryName => '事工名稱';
 
   @override
-  String get ministryDuties => '服事項目';
-
-  @override
   String get dutyOthers => '其他人';
 
   @override
-  String get dutyMinistry => '事工';
-
-  @override
   String get dutyTakesMany => '多人服事';
-
-  @override
-  String get ministryPickDuties => '選服事項目';
-
-  @override
-  String get ministryDutiesNone => '沒有';
 
   @override
   String get deleteMinistry => '刪除事工';
@@ -3027,9 +3015,6 @@ class L10nZh extends L10n {
   String get smallGroupLeadUnassigned => '未指派';
 
   @override
-  String get smallGroupLeadClear => '取消指派';
-
-  @override
   String get deleteSmallGroup => '刪除小組';
 
   @override
@@ -3430,33 +3415,6 @@ class L10nZh extends L10n {
 
   @override
   String get keepEditing => '繼續編輯';
-
-  @override
-  String get ministryNeedsDuties => '選好服事項目，負責人就能在聚會和活動排這些項目';
-
-  @override
-  String ministryLeadsCan(int count, String leads, String duties) {
-    String _temp0 = intl.Intl.pluralLogic(
-      count,
-      locale: localeName,
-      other: '$leads都可以排$duties，也可以改這幾項的名單',
-      one: '$leads可以排$duties，也可以改這幾項的名單',
-    );
-    return '$_temp0';
-  }
-
-  @override
-  String ministryOnceLeads(String duties) {
-    return '指派之後，負責人可以排$duties，也可以改這幾項的名單';
-  }
-
-  @override
-  String dutiesOfServices(String services, String duties) {
-    return '$services的$duties';
-  }
-
-  @override
-  String get dutyGroupSeparator => '；';
 
   @override
   String get ministryEvents => '活動';
@@ -3897,6 +3855,54 @@ class L10nZh extends L10n {
 
   @override
   String get servicesHoldToMove => '按住拖曳排序，服事表照這個順序';
+
+  @override
+  String dutyLeadName(String service, String duty) {
+    return '$service$duty';
+  }
+
+  @override
+  String canDutyLead(String service, String duty) {
+    return '排$service的$duty，也可以改這一項的名單';
+  }
+
+  @override
+  String dutyLeadsCan(int count, String leads, String service, String duty) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$leads都可以排$service的$duty，也可以改這一項的名單',
+      one: '$leads可以排$service的$duty，也可以改這一項的名單',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String dutyOnceLeads(String service, String duty) {
+    return '指派之後，負責人可以排$service的$duty，也可以改這一項的名單';
+  }
+
+  @override
+  String dutyLeadsLine(String leads) {
+    return '$leads 負責';
+  }
+
+  @override
+  String ministryLeadsCanEvents(int count, String leads) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$leads都可以新增、修改這些活動，排它們的服事',
+      one: '$leads可以新增、修改這些活動，排它們的服事',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get ministryOnceLeadsEvents => '指派之後，負責人可以新增、修改這些活動，排它們的服事';
+
+  @override
+  String get addAnotherSmallGroupLead => '再加一位小組長';
 }
 
 /// The translations for Chinese, using the Han script (`zh_Hans`).
@@ -4613,7 +4619,7 @@ class L10nZhHans extends L10nZh {
 
   @override
   String canMinistryLead(String ministry) {
-    return '排$ministry的事奉项目、加入和移出它的同工';
+    return '管$ministry的活动，排它们的事奉';
   }
 
   @override
@@ -4648,28 +4654,16 @@ class L10nZhHans extends L10nZh {
   String get addMinistry => '新增事工';
 
   @override
-  String get ministriesFooter => '跨聚会或不属于任何聚会的事工，例如多媒体、关怀探访。';
+  String get ministriesFooter => '时间不固定、在行事历上排活动的，例如多媒体、布置。';
 
   @override
   String get ministryName => '事工名称';
 
   @override
-  String get ministryDuties => '事奉项目';
-
-  @override
   String get dutyOthers => '其他人';
 
   @override
-  String get dutyMinistry => '事工';
-
-  @override
   String get dutyTakesMany => '多人事奉';
-
-  @override
-  String get ministryPickDuties => '选事奉项目';
-
-  @override
-  String get ministryDutiesNone => '没有';
 
   @override
   String get deleteMinistry => '删除事工';
@@ -6922,9 +6916,6 @@ class L10nZhHans extends L10nZh {
   String get smallGroupLeadUnassigned => '未指派';
 
   @override
-  String get smallGroupLeadClear => '取消指派';
-
-  @override
   String get deleteSmallGroup => '删除小组';
 
   @override
@@ -7325,33 +7316,6 @@ class L10nZhHans extends L10nZh {
 
   @override
   String get keepEditing => '继续编辑';
-
-  @override
-  String get ministryNeedsDuties => '选好事奉项目，负责人就能在聚会和活动排这些项目';
-
-  @override
-  String ministryLeadsCan(int count, String leads, String duties) {
-    String _temp0 = intl.Intl.pluralLogic(
-      count,
-      locale: localeName,
-      other: '$leads都可以排$duties，也可以改这几项的名单',
-      one: '$leads可以排$duties，也可以改这几项的名单',
-    );
-    return '$_temp0';
-  }
-
-  @override
-  String ministryOnceLeads(String duties) {
-    return '指派之后，负责人可以排$duties，也可以改这几项的名单';
-  }
-
-  @override
-  String dutiesOfServices(String services, String duties) {
-    return '$services的$duties';
-  }
-
-  @override
-  String get dutyGroupSeparator => '；';
 
   @override
   String get ministryEvents => '活动';
@@ -7792,4 +7756,52 @@ class L10nZhHans extends L10nZh {
 
   @override
   String get servicesHoldToMove => '按住拖动排序，服事表按这个顺序';
+
+  @override
+  String dutyLeadName(String service, String duty) {
+    return '$service$duty';
+  }
+
+  @override
+  String canDutyLead(String service, String duty) {
+    return '排$service的$duty，也可以改这一项的名单';
+  }
+
+  @override
+  String dutyLeadsCan(int count, String leads, String service, String duty) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$leads都可以排$service的$duty，也可以改这一项的名单',
+      one: '$leads可以排$service的$duty，也可以改这一项的名单',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String dutyOnceLeads(String service, String duty) {
+    return '指派之后，负责人可以排$service的$duty，也可以改这一项的名单';
+  }
+
+  @override
+  String dutyLeadsLine(String leads) {
+    return '$leads 负责';
+  }
+
+  @override
+  String ministryLeadsCanEvents(int count, String leads) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$leads都可以新增、修改这些活动，排它们的事奉',
+      one: '$leads可以新增、修改这些活动，排它们的事奉',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get ministryOnceLeadsEvents => '指派之后，负责人可以新增、修改这些活动，排它们的事奉';
+
+  @override
+  String get addAnotherSmallGroupLead => '再加一位小组长';
 }

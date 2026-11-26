@@ -101,14 +101,19 @@ class HomeScreen extends ConsumerWidget {
     // Only mine, as 行事曆's 跟我有關的: a church with many groups' events
     // would fill it otherwise.
     final me = ref.watch(meProvider).value;
-    final servedAt = ref.watch(servedAtProvider(false));
-    final ministries = ref.watch(ministriesProvider).value?.ministries ?? const <Ministry>[];
+    final uid = ref.watch(uidProvider);
+    // Not servedAtProvider: watched here, it rebuilds during a church
+    // switch's build (church_url_test).
+    final servedAt = {
+      for (final r in ref.watch(savedRostersProvider).value ?? const <Roster>[])
+        if (r.forEvent case final e? when uid != null && r.duties.any((d) => d.uids.containsValue(uid))) e.eventId,
+    };
     final activities = [
       for (final e in upcomingEvents([
         for (final state in activityStates)
           if (!state.hasError) state.value ?? const <CalendarEvent>[],
       ], now: now))
-        if (calendarShows('mine', e, me, servedAt, ministries: ministries)) e,
+        if (calendarShows('mine', e, me, servedAt)) e,
     ];
     final activityError = activityStates.any((state) => state.hasError);
     final activityLoading = activityStates.any((state) => state.isLoading);

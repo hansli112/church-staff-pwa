@@ -17,19 +17,18 @@ class _MemoryRosterNotes implements RosterNoteData {
   /// Member.arrangesEvent), while its last day is not gone everywhere.
   void _requireArranges(String rosterId) {
     final me = _c._b.requireMember(_c.churchId);
-    final ministries = (_c._b.ministries[_c.churchId] ?? const MinistrySettings()).ministries;
     final day = _serviceDay.firstMatch(rosterId);
     final Arranges arranges;
     Day? lastDay;
     if (day != null) {
       final type = day.group(2)!;
-      arranges = _c._b.services[_c.churchId]!.ids.contains(type) ? me.arranges(ministries, type) : Arranges.none;
+      arranges = _c._b.services[_c.churchId]!.ids.contains(type) ? me.arranges(type) : Arranges.none;
       lastDay = Day.parse(day.group(1)!);
     } else {
       final roster = _c._b.rosters[_c.churchId]![rosterId];
       arranges = roster?.forEvent == null || roster!.forEvent!.cancelled
           ? Arranges.none
-          : me.arrangesEvent(ministries, roster.forEvent!.group);
+          : me.arrangesEvent(roster.forEvent!.group);
       lastDay = roster?.forEvent?.lastDay;
     }
     if (!arranges.any) throw const CloudException(CloudErrorCode.permissionDenied);

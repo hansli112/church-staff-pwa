@@ -1,11 +1,12 @@
 import 'dart:async';
 import 'dart:math';
 
-import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:material_symbols_icons/symbols.dart';
+
+import 'package:intl/intl.dart';
 
 import '../../core/design/components.dart';
 import '../../core/design/tokens.dart';
@@ -13,14 +14,19 @@ import '../../domain/limits.dart';
 import '../../domain/models.dart';
 import '../../domain/staff.dart';
 import '../../domain/text.dart';
+import '../../domain/upcoming_events.dart';
 import '../../l10n/app_localizations.dart';
 import '../../state/attendance.dart';
+import '../../state/calendar.dart';
 import '../../state/church_writes.dart';
 import '../../state/providers.dart';
 import '../../state/staff_actions.dart';
+import '../calendar/event_sheet.dart';
 import '../common/errors.dart';
 import '../common/site_pages.dart';
 import '../common/saving_indicator.dart';
+import '../rosters/day_block.dart';
+import '../rosters/format.dart';
 import '../rosters/future_changes.dart';
 import 'attendance.dart';
 import 'service_settings.dart';
@@ -30,7 +36,6 @@ import 'unread_page.dart';
 /// What of a service has a page of its own, a row on the service's.
 enum ServicePart {
   duties('duties'),
-  ministries('ministries'),
   events('events'),
   smallGroups('small-groups');
 
@@ -42,7 +47,6 @@ enum ServicePart {
   /// Its row's on the service's page, and its own page's.
   String title(L10n l10n) => switch (this) {
     duties => l10n.templateDuties,
-    ministries => l10n.ministries,
     events => l10n.commonEvents,
     smallGroups => l10n.smallGroups,
   };
@@ -87,9 +91,7 @@ String groupStaffPage(ChurchGroup group) => switch (group) {
 };
 
 /// 聚會與事工 (#82, #94), for admins: every service, put in order and
-/// added here, and the 事工 of no one service, with who leads them and
-/// what; each opens its page. A service's own 事工 (most: each its own
-/// 敬拜團) are on its page, as 服事設定 is.
+/// added here, and every 事工, with who leads it; each opens its page.
 class GroupsScreen extends ConsumerWidget {
   const GroupsScreen({super.key});
 
@@ -98,7 +100,6 @@ class GroupsScreen extends ConsumerWidget {
     final l10n = L10n.of(context);
     final ministries = ref.watch(ministriesProvider).value;
     final members = ref.watch(membersProvider).value ?? const <Member>[];
-    final services = ref.watch(servicesProvider).value;
     return Scaffold(
       appBar: AppBar(title: Text(l10n.groupsTitle), actions: const [SavingIndicator()]),
       body: CustomScrollView(
@@ -110,12 +111,11 @@ class GroupsScreen extends ConsumerWidget {
               footer: l10n.ministriesFooter,
               children: [
                 for (final m in ministries?.ministries ?? const <Ministry>[])
-                  if (m.service == null || services?.byId(m.service!) == null)
-                    ListRow(
-                      title: m.name,
-                      subtitle: ministryLine(l10n, m, services?.services ?? const [], members),
-                      onTap: () => context.push('/me/groups/ministry/${m.id}'),
-                    ),
+                  ListRow(
+                    title: m.name,
+                    subtitle: ministryLine(l10n, m, members),
+                    onTap: () => context.push('/me/groups/ministry/${m.id}'),
+                  ),
                 ListRow(
                   title: l10n.addMinistry,
                   leading: const Icon(Symbols.add_rounded),
@@ -132,10 +132,9 @@ class GroupsScreen extends ConsumerWidget {
   }
 }
 
-/// 新增事工, on 聚會與事工 or on the page of the service it is [addedIn]:
-/// named, its 負責人 assigned, then its page, where its duties are picked.
-/// 取消 leaves the 負責人 for its page too.
-Future<void> addMinistry(BuildContext context, WidgetRef ref, MinistrySettings settings, {String? addedIn}) async {
+/// 新增事工 on 聚會與事工: named, its 負責人 assigned, then its page, where
+/// its events are made. 取消 leaves the 負責人 for its page too.
+Future<void> addMinistry(BuildContext context, WidgetRef ref, MinistrySettings settings) async {
   final l10n = L10n.of(context);
   final name = await promptText(
     context,
@@ -151,12 +150,12 @@ Future<void> addMinistry(BuildContext context, WidgetRef ref, MinistrySettings s
     l10n.saved,
     () => ref.read(churchWritesProvider).ministries(before, [
       ...before,
-      Ministry(id: id, name: name, addedIn: addedIn),
+      Ministry(id: id, name: name),
     ]),
   );
   if (!ok || !context.mounted) return;
   final members = ref.read(membersProvider).value ?? const <Member>[];
-  await assignLead(context, ref, MinistryGroup(id), name, members);
+  await assignLead(context, ref, MinistryLead(id), l10n.identityLeadOf(name), members);
   if (context.mounted) unawaited(context.push('/me/groups/ministry/$id'));
 }
 
@@ -169,19 +168,14 @@ String newMinistryId(List<String> taken) {
   }
 }
 
-/// Under a 事工 in 聚會與事工: who leads it and the duties it leads, as
-/// 「芳伶 · 敬拜、Vocal、司琴、鼓」; null when it has neither.
-String? ministryLine(L10n l10n, Ministry ministry, List<Service> services, List<Member> members) {
+/// Under a 事工 in 聚會與事工: who leads it, 「林豪佳、何宗婷」; null for
+/// nobody yet.
+String? ministryLine(L10n l10n, Ministry ministry, List<Member> members) {
   final leads = [
     for (final m in members)
       if (m.leadMinistries.contains(ministry.id)) m.name,
   ]..sort();
-  final duties = {for (final d in ministry.duties) d.duty};
-  final line = [
-    if (leads.isNotEmpty) leads.join(l10n.listSeparator),
-    if (duties.isNotEmpty) duties.join(l10n.listSeparator),
-  ];
-  return line.isEmpty ? null : line.join(l10n.dotSeparator);
+  return leads.isEmpty ? null : leads.join(l10n.listSeparator);
 }
 
 /// Every roster saved, read once when a group's page opens: who served
@@ -192,21 +186,15 @@ final _allRostersProvider = FutureProvider.autoDispose<List<Roster>>((ref) => re
 /// duty and how many times.
 typedef Candidate = ({Member member, Map<String, int> served});
 
-/// Who served [group] on [rosters] and is not one of its 同工, most served
-/// first. A service's duties are its days'; a 事工's, the duties it links,
-/// on services' days and, by name, on events'.
-List<Candidate> groupCandidates(ChurchGroup group, List<Roster> rosters, List<Member> members, Ministry? ministry) {
+/// Who served service [group] on [rosters] and is not one of its 同工,
+/// most served first.
+List<Candidate> groupCandidates(ServiceGroup group, List<Roster> rosters, List<Member> members) {
   final byUid = {for (final m in members) m.uid: m};
   final served = <String, Map<String, int>>{};
   for (final r in rosters) {
     if (r.forEvent?.cancelled ?? false) continue;
     for (final d in r.duties) {
-      final counts = switch (group) {
-        ServiceGroup(:final id) => !r.isEvent && r.type == id,
-        MinistryGroup() => ministry != null && ministry.dutiesIn(r.isEvent ? null : r.type).contains(d.role),
-        SmallGroup() || GatheringGroup() => false,
-      };
-      if (!counts) continue;
+      if (r.isEvent || r.type != group.id) continue;
       for (final uid in {for (final name in d.people) ?d.uids[name]}) {
         final m = byUid[uid];
         if (m == null || m.isIn(group)) continue;
@@ -241,7 +229,7 @@ List<Candidate> groupCandidates(ChurchGroup group, List<Roster> rosters, List<Me
     ]..sort(byName),
     candidates: group is ServiceGroup
         ? [
-            for (final c in groupCandidates(group, ref.watch(_allRostersProvider).value ?? const [], members, null))
+            for (final c in groupCandidates(group, ref.watch(_allRostersProvider).value ?? const [], members))
               if (me.mayMove(c.member, group)) c,
           ]
         : const <Candidate>[],
@@ -497,7 +485,6 @@ class ServicePartScreen extends ConsumerWidget {
     final l10n = L10n.of(context);
     final me = ref.watch(meProvider).value;
     final service = ref.watch(servicesProvider).value?.byId(serviceId);
-    final ministries = ref.watch(ministriesProvider).value;
     final members = ref.watch(staffProvider).value?.all;
     final group = ServiceGroup(serviceId);
     // Who sees the service's page, 行政 too (#93).
@@ -514,11 +501,6 @@ class ServicePartScreen extends ConsumerWidget {
         slivers: [
           switch (part) {
             ServicePart.duties => serviceDutiesSliver(context, ref, service, admin: editsSettings),
-            ServicePart.ministries => SliverToBoxAdapter(
-              child: ministries == null
-                  ? null
-                  : _ServiceMinistries(service: service, settings: ministries, members: members),
-            ),
             ServicePart.events => serviceEventsSliver(context, ref, service, admin: editsSettings),
             ServicePart.smallGroups => _SmallGroupsSection(
               service: serviceId,
@@ -590,13 +572,12 @@ class _AddStaffSheetState extends State<_AddStaffSheet> {
 }
 
 /// One group's page (#82, #94). A service's: its name and weekday, its
-/// 負責人, then a row each opening its 服事項目, 事工, 常用特別活動, 小組
-/// (#85), 同工 (and those who served it without being one) and 人數. A
-/// 事工's: its name, its 負責人 and the duties it leads with their lists;
-/// it has no 同工 of its own. A 小組's, managed
-/// also by its service's 負責人: when it meets, its 小組長, its 人數 and
-/// its 同工. Admins assign and 移出 a 負責人 here; a 牧者 only on their own
-/// page.
+/// 負責人, then a row each opening its 服事項目, 常用特別活動, 小組 (#85),
+/// 同工 (and those who served it without being one) and 人數. A 事工's:
+/// its name, its 負責人 and its events on the calendar; it has no 同工 of
+/// its own. A 小組's, managed also by its service's 負責人: when it meets,
+/// its 小組長 (as many as it has), its 人數 and its 同工. Admins assign and
+/// 移出 a 負責人 here; a 牧者 only on their own page.
 class GroupScreen extends ConsumerWidget {
   const GroupScreen({super.key, required this.group});
 
@@ -649,7 +630,6 @@ class GroupScreen extends ConsumerWidget {
       ServiceGroup(:final id) => [...smallGroups.where((g) => g.service == id)],
       _ => const <SmallGroupDetails>[],
     };
-    final serviceMinistries = service == null ? const <Ministry>[] : ministries?.of(service.id) ?? const <Ministry>[];
     final opensSmall = switch (group) {
       ServiceGroup(:final id) => me.mayEditSmallGroup(null, id),
       _ => false,
@@ -697,14 +677,6 @@ class GroupScreen extends ConsumerWidget {
                     chevron: editsSmall,
                     onTap: editsSmall ? () => _renameSmall(context, ref, small) : null,
                   ),
-                  ListRow(
-                    title: l10n.identitySmallGroupLead,
-                    value: leaders.isEmpty
-                        ? l10n.smallGroupLeadUnassigned
-                        : leaders.map((m) => m.name).join(l10n.listSeparator),
-                    chevron: editsSmall,
-                    onTap: editsSmall ? () => _assignSmallLead(context, ref, small, members, leaders, name) : null,
-                  ),
                   // When it meets matters only to 回報人數; its 小組長 set it too.
                   if (attendanceOn)
                     ListRow(
@@ -717,14 +689,48 @@ class GroupScreen extends ConsumerWidget {
                 ],
               ),
             ),
-          // A 小組 has one 小組長, a row above; a service or a 事工, its 負責人.
-          if (small == null)
+          // A 小組's 小組長, often a couple who lead it together; its
+          // service's 負責人 name them too, through the backend.
+          if (small != null)
+            box(
+              ListSection(
+                header: l10n.identitySmallGroupLead,
+                footer: leaders.isEmpty && !editsSmall ? l10n.smallGroupLeadUnassigned : null,
+                children: [
+                  for (final m in leaders)
+                    ListRow(
+                      title: m.name,
+                      chevron: false,
+                      trailing: editsSmall
+                          ? RowButton(
+                              label: l10n.moveOutShort,
+                              semanticsLabel: l10n.removeIdentityLabel(l10n.identitySmallGroupLeadOf(name)),
+                              onPressed: () => _setSmallLeads(context, ref, small, leaders, [
+                                for (final l in leaders)
+                                  if (l.uid != m.uid) l.uid,
+                              ], removed: true),
+                            )
+                          : null,
+                    ),
+                  if (editsSmall)
+                    ListRow(
+                      title: leaders.isEmpty ? l10n.assignSmallGroupLead : l10n.addAnotherSmallGroupLead,
+                      leading: const Icon(Symbols.add_rounded),
+                      chevron: false,
+                      onTap: () => _addSmallLead(context, ref, small, members, leaders),
+                    ),
+                ],
+              ),
+            )
+          // A service or a 事工, its 負責人.
+          else
             box(
               ListSection(
                 header: l10n.leads,
                 footer: leaders.isEmpty ? l10n.noLeads : null,
                 children: [
-                  for (final m in leaders) leadRow(context, ref, m, group, name, admin: admin),
+                  for (final m in leaders)
+                    leadRow(context, ref, m, leadOf(group), l10n.identityLeadOf(name), admin: admin),
                   // One is enough; more share it, all alike.
                   if (admin)
                     ListRow(
@@ -734,8 +740,8 @@ class GroupScreen extends ConsumerWidget {
                       onTap: () => assignLead(
                         context,
                         ref,
-                        group,
-                        name,
+                        leadOf(group),
+                        l10n.identityLeadOf(name),
                         members.where((m) => !isLead(m)).toList(),
                         another: leaders.isNotEmpty,
                       ),
@@ -743,15 +749,7 @@ class GroupScreen extends ConsumerWidget {
                 ],
               ),
             ),
-          if (ministry != null)
-            box(
-              _MinistryDuties(
-                ministry: ministry,
-                services: services?.services ?? const [],
-                leaders: leaders,
-                admin: admin,
-              ),
-            ),
+          if (ministry != null) box(MinistryEvents(ministry: ministry, leaders: leaders)),
           // A service's lists each a row, on their own pages, so its page
           // keeps to a screen however long they are (2026-11-23). Its 同工
           // may be a hundred: listed with who served it without being one.
@@ -760,8 +758,6 @@ class GroupScreen extends ConsumerWidget {
               ListSection(
                 children: [
                   _partRow(context, service, ServicePart.duties, service.duties.length, l10n.serviceDutyCount),
-                  if (admin || serviceMinistries.isNotEmpty)
-                    _partRow(context, service, ServicePart.ministries, serviceMinistries.length, l10n.serviceItemCount),
                   if (me.editsServiceSettings || service.events.isNotEmpty)
                     _partRow(context, service, ServicePart.events, service.events.length, l10n.serviceItemCount),
                   if (serviceSmallGroups.isNotEmpty || opensSmall)
@@ -864,59 +860,46 @@ class GroupScreen extends ConsumerWidget {
     await _saveSmall(context, ref, small, small.copyWith(name: name));
   }
 
-  /// 指派小組長: the one, anyone in the church, picked from a list.
-  /// Picking another takes the place of [leaders] (one, or from before,
-  /// several); 取消指派 leaves none.
-  Future<void> _assignSmallLead(
+  /// 指派小組長 or 再加一位: anyone in the church but [leaders], picked
+  /// from a list, beside them.
+  Future<void> _addSmallLead(
     BuildContext context,
     WidgetRef ref,
     SmallGroupDetails small,
     List<Member> members,
     List<Member> leaders,
-    String name,
   ) async {
     final l10n = L10n.of(context);
-    final everyone = [...members]..sort((a, b) => a.name.compareTo(b.name));
-    final was = [for (final l in leaders) l.uid];
-    // A uid, or '' for none.
-    final picked = await showAppSheet<String>(
+    final picked = await pickLead(
       context,
-      expand: everyone.length > 8,
-      builder: (context) => SafeArea(
-        child: SingleChildScrollView(
-          child: Column(
-            children: [
-              // Above the list, which may be long.
-              if (was.isNotEmpty)
-                ListSection(
-                  children: [
-                    ListRow(
-                      title: l10n.smallGroupLeadClear,
-                      destructive: true,
-                      onTap: () => Navigator.pop(context, ''),
-                    ),
-                  ],
-                ),
-              ListSection(
-                header: l10n.assignSmallGroupLead,
-                children: [
-                  for (final m in everyone)
-                    ListRow(title: m.name, selected: was.contains(m.uid), onTap: () => Navigator.pop(context, m.uid)),
-                ],
-              ),
-            ],
-          ),
-        ),
-      ),
+      ref,
+      [
+        for (final m in members)
+          if (!leaders.contains(m)) m,
+      ],
+      header: leaders.isEmpty ? l10n.assignSmallGroupLead : l10n.addAnotherSmallGroupLead,
     );
     if (picked == null || !context.mounted) return;
-    final leads = [if (picked.isNotEmpty) picked];
-    if (listEquals(leads, was)) return;
-    final identity = l10n.identitySmallGroupLeadOf(name);
+    await _setSmallLeads(context, ref, small, leaders, [for (final l in leaders) l.uid, picked.uid]);
+  }
+
+  /// [small]'s 小組長 from [leaders] to [next] (uids), with 復原.
+  Future<void> _setSmallLeads(
+    BuildContext context,
+    WidgetRef ref,
+    SmallGroupDetails small,
+    List<Member> leaders,
+    List<String> next, {
+    bool removed = false,
+  }) async {
+    final l10n = L10n.of(context);
+    final identity = l10n.identitySmallGroupLeadOf(small.name);
     await runWithUndo(
       context,
-      picked.isEmpty ? l10n.identityRemoved(identity) : l10n.identityAdded(identity),
-      () => ref.read(churchWritesProvider).smallGroup(small, small, leadsBefore: was, leads: leads),
+      removed ? l10n.identityRemoved(identity) : l10n.identityAdded(identity),
+      () => ref
+          .read(churchWritesProvider)
+          .smallGroup(small, small, leadsBefore: [for (final l in leaders) l.uid], leads: next),
     );
   }
 
@@ -981,45 +964,6 @@ class GroupScreen extends ConsumerWidget {
       () => ref.read(churchWritesProvider).ministries(before, [
         for (final m in before) m.id == was.id ? next : m,
       ]),
-    );
-  }
-}
-
-/// A service's own 事工 (Ministry.service), each with who leads it and
-/// what, opening its page for whoever manages it; an admin adds one here.
-class _ServiceMinistries extends ConsumerWidget {
-  const _ServiceMinistries({required this.service, required this.settings, required this.members});
-
-  final Service service;
-  final MinistrySettings settings;
-  final List<Member> members;
-
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final l10n = L10n.of(context);
-    final me = ref.watch(meProvider).value;
-    final admin = me?.isAdmin ?? false;
-    final own = settings.of(service.id);
-    if (own.isEmpty && !admin) return const SizedBox.shrink();
-    return ListSection(
-      children: [
-        for (final m in own)
-          ListRow(
-            title: m.name,
-            subtitle: ministryLine(l10n, m, [service], members),
-            chevron: me?.managesGroup(MinistryGroup(m.id)) ?? false,
-            onTap: me?.managesGroup(MinistryGroup(m.id)) ?? false
-                ? () => context.push('/me/groups/ministry/${m.id}')
-                : null,
-          ),
-        if (admin)
-          ListRow(
-            title: l10n.addMinistry,
-            leading: const Icon(Symbols.add_rounded),
-            chevron: false,
-            onTap: () => addMinistry(context, ref, settings, addedIn: service.id),
-          ),
-      ],
     );
   }
 }
@@ -1113,112 +1057,103 @@ class _SmallGroupsSectionState extends ConsumerState<_SmallGroupsSection> {
   }
 }
 
-/// What a 事工 leads (#94), said in a sentence; for its 負責人 each duty
-/// with who is on its list, opening the duty's page, the service named too
-/// when it leads duties in more than one. An admin picks the duties here
-/// and has their lists on the services' pages.
-class _MinistryDuties extends ConsumerWidget {
-  const _MinistryDuties({required this.ministry, required this.services, required this.leaders, required this.admin});
+/// A 事工's events on the calendar from today, a few months ahead, each
+/// opening it; 新增活動 for whoever may make its events; and what its
+/// 負責人 ([leaders]) can do with them.
+class MinistryEvents extends ConsumerWidget {
+  const MinistryEvents({super.key, required this.ministry, required this.leaders});
 
   final Ministry ministry;
-  final List<Service> services;
   final List<Member> leaders;
-  final bool admin;
+
+  /// How many months, this one included, its events are read for.
+  static const months = 3;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final l10n = L10n.of(context);
-    final duties = [
-      for (final s in services)
-        for (final d in s.duties)
-          if (ministry.duties.contains(MinistryDuty(s.id, d))) (service: s, duty: d),
-    ];
-    final places = {for (final d in duties) d.service.id}.length;
+    final ready = ref.watch(calendarSettingsProvider).value?.ready ?? false;
+    if (!ready) return const SizedBox.shrink();
+    final me = ref.watch(meProvider).value;
+    final group = MinistryGroup(ministry.id).key;
+    final today = ref.watch(todayProvider);
+    final now = ref.watch(churchTimeZoneProvider).clock(ref.watch(clockProvider)());
+    final events = upcomingEvents([
+      for (var i = 0; i < months; i++)
+        ref.watch(calendarEventsProvider(monthKey(DateTime.utc(today.year, today.month + i)))).value ??
+            const <CalendarEvent>[],
+    ], now: now).where((e) => e.group == group).toList();
+    final makes = me?.mayWriteEvent(null, group) ?? false;
+    final names = leaders.map((m) => m.name).join(l10n.listSeparator);
     return ListSection(
-      header: l10n.ministryDuties,
-      footer: ministrySummary(l10n, ministry, services, leaders),
+      header: l10n.ministryEvents,
+      footer: leaders.isEmpty ? l10n.ministryOnceLeadsEvents : l10n.ministryLeadsCanEvents(leaders.length, names),
       children: [
-        // An admin has each with its list on its service's page; its
-        // 負責人, who may not open that, here.
-        if (!admin)
-          for (final d in duties)
-            ListRow(
-              title: places > 1 ? l10n.claimServe(d.service.name, d.duty) : d.duty,
-              value: dutyPeopleLabel(ref, l10n, d.service.id, d.duty),
-              onTap: () => context.push(dutyPage(d.service.id, d.duty)),
-            ),
-        if (admin)
+        for (final e in events)
           ListRow(
-            title: l10n.ministryPickDuties,
-            leading: const Icon(Symbols.checklist_rounded),
+            // As 首頁's 近期活動: one already under way is on today.
+            leading: dayBlock(e.day.isBefore(today) ? today : e.day, today, color: e.color),
+            title: e.title,
+            subtitle: [
+              dayBesideBlock(l10n, e.day.isBefore(today) ? today : e.day, today),
+              if (!e.allDay && !e.day.isBefore(today)) DateFormat.Hm().format(e.start),
+            ].join(' · '),
+            onTap: () => (me?.editsEvent(e) ?? false)
+                ? editEvent(context, ref, e, month: DateTime(e.start.year, e.start.month))
+                : showEventDetail(context, e),
+          ),
+        if (makes)
+          ListRow(
+            title: l10n.calNewEvent,
+            leading: const Icon(Symbols.add_rounded),
             chevron: false,
-            onTap: () => _pick(context, ref),
+            onTap: () => editEvent(context, ref, null, month: DateTime(today.year, today.month), group: group),
           ),
       ],
     );
   }
-
-  Future<void> _pick(BuildContext context, WidgetRef ref) async {
-    final picked = await pickMinistryDuties(context, ministry.duties);
-    // Gone while picking, its ref is too.
-    if (picked == null || !context.mounted) return;
-    final before = ref.read(ministriesProvider).value?.ministries;
-    if (before == null) return;
-    await runWithUndo(
-      context,
-      L10n.of(context).saved,
-      () => ref.read(churchWritesProvider).ministries(before, [
-        for (final m in before) m.id == ministry.id ? m.copyWith(duties: picked) : m,
-      ]),
-    );
-  }
 }
 
-/// 指派負責人 of [group], named [name]: one of [others], picked from a
-/// list, made its 負責人 beside any it has ([another]).
+/// The 身分 of [group]'s 負責人: a service's, a 事工's or a 小組's.
+Identity leadOf(ChurchGroup group) => switch (group) {
+  ServiceGroup(:final id) => ServiceLead(id),
+  MinistryGroup(:final id) => MinistryLead(id),
+  SmallGroup(:final id) => SmallGroupLead(id),
+  GatheringGroup() => throw StateError('a 其他聚會 has no 負責人'),
+};
+
+/// 指派負責人 [lead] (shown as [identity], 「多媒體 負責人」): one of
+/// [others], picked from a list, given it beside any who hold it
+/// ([another]).
 Future<void> assignLead(
   BuildContext context,
   WidgetRef ref,
-  ChurchGroup group,
-  String name,
+  Identity lead,
+  String identity,
   List<Member> others, {
   bool another = false,
 }) async {
   final l10n = L10n.of(context);
-  final picked = await pickLead(context, others, another: another);
+  final picked = await pickLead(context, ref, others, header: another ? l10n.addAnotherLead : l10n.assignLead);
   if (picked == null || !context.mounted) return;
-  final identity = switch (group) {
-    ServiceGroup(:final id) => ServiceLead(id) as Identity,
-    MinistryGroup(:final id) => MinistryLead(id),
-    SmallGroup(:final id) => SmallGroupLead(id),
-    GatheringGroup() => throw StateError('a 其他聚會 has no 負責人'),
-  };
   await runWithUndo(
     context,
-    l10n.identityAdded(l10n.identityLeadOf(name)),
-    () => ref.read(churchWritesProvider).member(picked, picked.withIdentities([...picked.identities, identity])),
+    l10n.identityAdded(identity),
+    () => ref.read(churchWritesProvider).member(picked, picked.withIdentities([...picked.identities, lead])),
   );
 }
 
-/// One of the 負責人, [m], of [group], named [name]. A 牧者 of it says
-/// so and is changed only on their own page; a 負責人 an admin takes out
-/// here at once, with 復原 (#94). None left is fine.
-Widget leadRow(BuildContext context, WidgetRef ref, Member m, ChurchGroup group, String name, {required bool admin}) {
+/// One of the holders, [m], of [lead] (shown as [identity]). A service's
+/// 牧者 says so and is changed only on their own page; a 負責人 an admin
+/// takes out here at once, with 復原 (#94). None left is fine.
+Widget leadRow(BuildContext context, WidgetRef ref, Member m, Identity lead, String identity, {required bool admin}) {
   final l10n = L10n.of(context);
-  final lead = switch (group) {
-    ServiceGroup(:final id) => ServiceLead(id) as Identity,
-    MinistryGroup(:final id) => MinistryLead(id),
-    SmallGroup(:final id) => SmallGroupLead(id),
-    // No page of its own, nor 負責人.
-    GatheringGroup() => throw StateError('a 其他聚會 has no 負責人'),
-  };
-  final pastor = switch (group) {
-    ServiceGroup(:final id) => m.identities.any(
-      (i) => i is PastorIdentity && (i.services == null || i.services!.contains(id)),
+  final pastor = switch (lead) {
+    ServiceLead(:final service) => m.identities.any(
+      (i) => i is PastorIdentity && (i.services == null || i.services!.contains(service)),
     ),
     _ => false,
   };
-  final identity = l10n.identityLeadOf(name);
   return ListRow(
     title: m.name,
     subtitle: pastor ? l10n.identityPastor : null,
@@ -1237,151 +1172,63 @@ Widget leadRow(BuildContext context, WidgetRef ref, Member m, ChurchGroup group,
   );
 }
 
-/// 指派負責人's list: one of [others], by name; null if 取消.
-Future<Member?> pickLead(BuildContext context, List<Member> others, {bool another = false}) {
-  final l10n = L10n.of(context);
-  final sorted = [...others]..sort((a, b) => a.name.compareTo(b.name));
+/// A 負責人 or 小組長 picked from [others], searched by name; null if 取消.
+/// Not 同工 with no account: a 身分 is held by someone who signs in.
+Future<Member?> pickLead(BuildContext context, WidgetRef ref, List<Member> others, {required String header}) {
+  final noAccount = ref.read(staffProvider).value?.noAccount ?? const <String>{};
+  final sorted = [
+    for (final m in others)
+      if (!noAccount.contains(m.uid)) m,
+  ]..sort((a, b) => a.name.compareTo(b.name));
   return showAppSheet<Member>(
     context,
-    expand: sorted.length > 8,
-    builder: (context) => SafeArea(
-      child: SingleChildScrollView(
-        child: ListSection(
-          header: another ? l10n.addAnotherLead : l10n.assignLead,
-          children: [for (final m in sorted) ListRow(title: m.name, onTap: () => Navigator.pop(context, m))],
-        ),
-      ),
-    ),
-  );
-}
-
-/// The duties a 事工 links, ticked per service from [initial]; null if
-/// 取消.
-Future<List<MinistryDuty>?> pickMinistryDuties(BuildContext context, List<MinistryDuty> initial) {
-  return showAppSheet<List<MinistryDuty>>(
-    context,
     expand: true,
-    builder: (_) => _DutyPicker(initial: initial),
+    builder: (_) => _LeadPicker(header: header, people: sorted),
   );
 }
 
-/// What a 事工's 負責人 ([leads]) can do, told with its own settings, or
-/// what it still needs: its duties place by place, its [services]' and
-/// events', places with the same duties said together.
-String ministrySummary(L10n l10n, Ministry ministry, List<Service> services, List<Member> leads) {
-  if (ministry.duties.isEmpty) return l10n.ministryNeedsDuties;
-  final places = [
-    for (final s in services)
-      if (ministry.dutiesIn(s.id) case final d when d.isNotEmpty) (place: s.name, duties: d),
-    (place: l10n.ministryEvents, duties: ministry.dutiesIn(null)),
-  ];
-  final groups = <({List<String> places, Set<String> duties})>[];
-  for (final p in places) {
-    final same = groups.where((g) => setEquals(g.duties, p.duties)).firstOrNull;
-    if (same != null) {
-      same.places.add(p.place);
-    } else {
-      groups.add((places: [p.place], duties: p.duties));
-    }
-  }
-  final duties = [
-    for (final g in groups) l10n.dutiesOfServices(g.places.join(l10n.listSeparator), g.duties.join(l10n.listSeparator)),
-  ].join(l10n.dutyGroupSeparator);
-  return leads.isEmpty
-      ? l10n.ministryOnceLeads(duties)
-      : l10n.ministryLeadsCan(leads.length, leads.map((m) => m.name).join(l10n.listSeparator), duties);
-}
+class _LeadPicker extends StatefulWidget {
+  const _LeadPicker({required this.header, required this.people});
 
-/// The duties a 事工 links, ticked per service; one not there yet is
-/// added to its service and ticked.
-class _DutyPicker extends ConsumerStatefulWidget {
-  const _DutyPicker({required this.initial});
-
-  final List<MinistryDuty> initial;
+  final String header;
+  final List<Member> people;
 
   @override
-  ConsumerState<_DutyPicker> createState() => _DutyPickerState();
+  State<_LeadPicker> createState() => _LeadPickerState();
 }
 
-class _DutyPickerState extends ConsumerState<_DutyPicker> {
-  late final _picked = [...widget.initial];
-
-  void _toggle(MinistryDuty duty) => setState(() {
-    if (!_picked.remove(duty)) _picked.add(duty);
-  });
-
-  /// What is ticked, less a duty deleted here since: ticked still, so
-  /// 復原 brings it back ticked.
-  List<MinistryDuty> _done() {
-    final services = ref.read(servicesProvider).value;
-    return [
-      for (final d in _picked)
-        if (services?.byId(d.service)?.duties.contains(d.duty) ?? true) d,
-    ];
-  }
+class _LeadPickerState extends State<_LeadPicker> {
+  String _query = '';
 
   @override
   Widget build(BuildContext context) {
     final l10n = L10n.of(context);
-    final services = ref.watch(servicesProvider).value?.services ?? const <Service>[];
-    final anyDuty = services.any((s) => s.duties.isNotEmpty);
-    return UnsavedChanges(
-      changed: () => !setEquals(_done().toSet(), widget.initial.toSet()),
-      // A Scaffold of its own, so 已刪除 and its 復原 show over the sheet,
-      // not under it on the page.
-      child: Scaffold(
-        backgroundColor: Colors.transparent,
-        body: Column(
-          children: [
-            SheetBar(
-              title: l10n.ministryDuties,
-              actions: [SecondaryButton(label: l10n.done, onPressed: () => Navigator.pop(context, _done()))],
-            ),
-            Expanded(
-              child: ListView(
-                children: [
-                  for (final service in services)
-                    _section(context, l10n, service, footer: anyDuty && service == services.last),
-                ],
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  /// [service]'s duties to tick, each swiped left to delete it from the
-  /// service, as on its page: one added here by mistake (2026-11-20).
-  /// [footer]: says so, once, under the last.
-  Widget _section(BuildContext context, L10n l10n, Service service, {required bool footer}) {
-    final edits = ServiceEdits(context, ref, service);
-    return ListSection(
-      header: service.name,
-      footer: footer ? l10n.swipeToDelete : null,
-      children: [
-        for (final d in service.duties)
-          SwipeAction(
-            key: ValueKey('duty/${service.id}/$d'),
-            onAction: () => unawaited(edits.removeDuty(d)),
-            child: ListRow(
-              title: d,
-              selected: _picked.contains(MinistryDuty(service.id, d)),
-              onTap: () => _toggle(MinistryDuty(service.id, d)),
+    final q = _query.trim().toLowerCase();
+    final shown = [
+      for (final m in widget.people)
+        if (q.isEmpty || m.name.toLowerCase().contains(q)) m,
+    ];
+    return SafeArea(
+      child: Column(
+        children: [
+          Padding(
+            padding: const EdgeInsets.fromLTRB(Space.m, 0, Space.m, Space.s),
+            child: SearchField(hint: l10n.searchMembers, onChanged: (q) => setState(() => _query = q)),
+          ),
+          Expanded(
+            child: ListView(
+              keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
+              children: [
+                ListSection(
+                  header: widget.header,
+                  footer: shown.isEmpty ? l10n.noMembersFound : null,
+                  children: [for (final m in shown) ListRow(title: m.name, onTap: () => Navigator.pop(context, m))],
+                ),
+              ],
             ),
           ),
-        ListRow(
-          title: l10n.addDuty,
-          leading: const Icon(Symbols.add_rounded),
-          chevron: false,
-          onTap: () async {
-            final name = await edits.addDuty();
-            if (name != null && mounted && !_picked.contains(MinistryDuty(service.id, name))) {
-              _toggle(MinistryDuty(service.id, name));
-            }
-          },
-        ),
-      ],
+        ],
+      ),
     );
   }
 }

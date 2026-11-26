@@ -129,35 +129,11 @@ class ChurchWrites {
     ),
   );
 
-  /// Replaces the church's 事工 (#82): adding, renaming, linking duties or
-  /// deleting one.
+  /// Replaces the church's 事工 (#82): adding, renaming or deleting one.
   ChurchWrite ministries(List<Ministry> before, List<Ministry> after) => _reversible(
     (data) => data.compareAndSetMinistries(before: before, after: after),
     (data) => data.compareAndSetMinistries(before: after, after: before),
   );
-
-  /// 指派負責人 on a duty's page with no 事工 yet: [made], of that duty
-  /// alone, added to [before], then [lead] its 負責人. Undo takes back both.
-  ChurchWrite ministryWithLead(List<Ministry> before, Ministry made, Member lead) {
-    final after = [...before, made];
-    final leading = lead.withIdentities([...lead.identities, MinistryLead(made.id)]);
-    return _reversible(
-      (data) async {
-        await data.compareAndSetMinistries(before: before, after: after);
-        try {
-          await data.compareAndSetMember(before: lead, after: leading);
-        } catch (_) {
-          // No 事工 left behind with nobody leading it.
-          await data.compareAndSetMinistries(before: after, after: before);
-          rethrow;
-        }
-      },
-      (data) async {
-        await data.compareAndSetMember(before: leading, after: lead);
-        await data.compareAndSetMinistries(before: after, after: before);
-      },
-    );
-  }
 
   /// 加為同工 ([member] true) or 移出 [group], by its 負責人 or an admin; undo
   /// does the opposite, a service's 同工 coming back with the duties and

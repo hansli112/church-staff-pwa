@@ -28,7 +28,7 @@ class ChurchGroups {
   /// the 小組; not a 其他聚會, which is only for its 人數.
   List<NamedGroup> get all => [
     for (final s in _services.services) (group: ServiceGroup(s.id), name: s.name),
-    for (final m in _ministries.ministries) (group: MinistryGroup(m.id), name: _ministries.nameOf(m.id, _services)),
+    for (final m in _ministries.ministries) (group: MinistryGroup(m.id), name: _ministries.nameOf(m.id)),
     for (final g in _smallGroups) (group: g.group, name: g.name),
   ];
 
@@ -40,7 +40,7 @@ class ChurchGroups {
       null => null,
     },
     MinistryGroup(:final id) => switch (_ministries.byId(id)) {
-      final m? => (group: MinistryGroup(id), name: _ministries.nameOf(m.id, _services)),
+      final m? => (group: MinistryGroup(id), name: _ministries.nameOf(m.id)),
       null => null,
     },
     SmallGroup(:final id) => switch (_smallGroups.byId(id)) {
@@ -60,7 +60,7 @@ class ChurchGroups {
     for (final id in me.leadTypes)
       if (_services.byId(id) case final s?) (group: ServiceGroup(id), name: s.name),
     for (final id in me.leadMinistries)
-      if (_ministries.byId(id) != null) (group: MinistryGroup(id), name: _ministries.nameOf(id, _services)),
+      if (_ministries.byId(id) != null) (group: MinistryGroup(id), name: _ministries.nameOf(id)),
     for (final g in _smallGroups)
       if (me.leadSmallGroups.contains(g.id)) (group: g.group, name: g.name),
   ];

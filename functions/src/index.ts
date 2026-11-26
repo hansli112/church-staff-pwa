@@ -1,6 +1,8 @@
 // Entry point: declares the Cloud Functions and wires each to its handler.
 // Handlers take their dependencies as arguments, built here and only here,
 // so tests run them against the emulators without the Functions runtime.
+import { isDeepStrictEqual } from 'node:util';
+
 import { applicationDefault, initializeApp } from 'firebase-admin/app';
 import { getAuth } from 'firebase-admin/auth';
 import { getFirestore } from 'firebase-admin/firestore';
@@ -63,6 +65,7 @@ import * as smallGroups from './smallGroups.js';
 import * as triggers from './triggers.js';
 import * as webhook from './webhook.js';
 import { sendWeeklyReport } from './weeklyReport.js';
+import { logRosterEdit } from './usage.js';
 
 initializeApp();
 
@@ -466,6 +469,11 @@ export const onLogoUploaded = onObjectFinalized({ region: REGION, memory: '512Mi
 export const onRosterWritten = onDocumentWrittenWithAuthContext(
   { region: REGION, document: 'churches/{cid}/rosters/{rosterId}' },
   async (event) => {
+    // Written in the app (not by the backend): who arranged it.
+    const editor = triggers.editorOf(event);
+    if (editor && event.data?.after?.exists && !isDeepStrictEqual(event.data.before?.get('duties'), event.data.after.get('duties'))) {
+      logRosterEdit(event.params.cid, event.params.rosterId, editor, 'app');
+    }
     await rosterChange.onRosterWritten(
       pushDeps(),
       event.params.cid,

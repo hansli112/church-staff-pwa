@@ -198,7 +198,7 @@ String Function(ChurchGroup?) _groupNames(WidgetRef ref) {
   // church switch's build (onboarding_test).
   return (group) => switch (group) {
     ServiceGroup(:final id) => services?.byId(id)?.name ?? id,
-    MinistryGroup(:final id) => ministries?.nameOf(id, services) ?? id,
+    MinistryGroup(:final id) => ministries?.nameOf(id) ?? id,
     SmallGroup(:final id) => smallGroupName(smallGroups, id),
     GatheringGroup() || null => '',
   };

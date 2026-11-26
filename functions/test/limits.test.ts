@@ -56,6 +56,8 @@ const RULES_FIELDS: Record<string, { text?: keyof typeof TEXT_LIMITS; other?: ke
   'data.ministries': { rulesOnly: 50 },
   // members/{uid}.identities: a member's 身分 (#82).
   'data.identities': { rulesOnly: 20 },
+  // members/{uid}.leadDuties: the duties a member leads, `<service>/<duty>`.
+  'data.leadDuties': { rulesOnly: 100 },
   // users/{uid}.appLocale: the language the app shows, an AppLanguage tag.
   'request.resource.data.appLocale': { other: 'appLocale' },
   // users/{uid}.fcm: push tokens, one per install; the backend drops dead ones.

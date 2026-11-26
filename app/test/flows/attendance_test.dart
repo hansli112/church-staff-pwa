@@ -237,7 +237,7 @@ void main() {
     expect((made.name, made.service), ('喜樂小組', 'sunday'));
     expect(find.text('喜樂小組'), findsWidgets, reason: 'its page opened');
 
-    await tapText(tester, '未指派');
+    await tapText(tester, '指派小組長');
     await tapText(tester, '陳志豪');
     expect(b.members['grace']!['hao']!.leadSmallGroups, [made.id]);
     expect(b.members['grace']!['hao']!.identities, [SmallGroupLead(made.id)]);
@@ -272,20 +272,25 @@ void main() {
     expect(find.text('已刪除「喜樂小組」'), findsOneWidget);
   });
 
-  testWidgets('a 小組 has one 小組長: another picked takes the place, and 取消指派 leaves none', (tester) async {
+  testWidgets("a service's 負責人 names a 小組's 小組長 beside the one it has, and takes one out", (tester) async {
     final b = withJoy(seededChurch(as: editor));
     await pumpApp(tester, b);
     await go(tester, '/me/groups/small/joy');
-    expect(find.text('指派小組長'), findsNothing, reason: 'one row, 小組長, not a list to add to');
-    await tapText(tester, '陳志豪');
+    expect(find.text('陳志豪'), findsOneWidget);
+    await tapText(tester, '再加一位小組長');
     await tapText(tester, '李美玉');
-    expect(b.members['grace']!['hao']!.leadSmallGroups, isEmpty);
+    expect(b.members['grace']!['hao']!.leadSmallGroups, ['joy'], reason: 'both lead it');
     expect(b.members['grace']!['mei']!.leadSmallGroups, ['joy']);
 
-    await tapText(tester, '李美玉');
-    await tapText(tester, '取消指派');
-    expect(b.members['grace']!['mei']!.leadSmallGroups, isEmpty);
-    expect(find.text('未指派'), findsOneWidget);
+    await tester.tap(
+      find.descendant(
+        of: find.ancestor(of: find.text('陳志豪'), matching: find.byType(ListRow)),
+        matching: find.text('移出'),
+      ),
+    );
+    await settle(tester);
+    expect(b.members['grace']!['hao']!.leadSmallGroups, isEmpty);
+    expect(b.members['grace']!['mei']!.leadSmallGroups, ['joy']);
   });
 
   testWidgets("a service's 牧者 sees its 人數 but is not reminded: no 填寫人數 on 首頁, no 回報人數提醒", (tester) async {

@@ -34,7 +34,7 @@ Finder cell(String role, int date) => find.byWidgetPredicate(
 SemanticsProperties props(WidgetTester tester, Finder f) => tester.widget<Semantics>(f).properties;
 
 /// 敬拜團 links 主日崇拜's 司琴, and 李美玉 leads it.
-const worship = Ministry(id: 'worship', name: '敬拜團', duties: [MinistryDuty('sunday', '司琴')]);
+const worship = Ministry(id: 'worship', name: '敬拜團');
 
 void main() {
   testWidgets('who arranges none of it opens 表格 from 服事表: every duty, their own marked, nothing to pick', (
@@ -100,7 +100,7 @@ void main() {
   testWidgets("a 事工's 負責人 opens 看整張服事表 from 安排服事's ⋯, last, after what arranging does", (tester) async {
     final b = seededChurch(
       extra: [
-        staffMei.withIdentities(const [MinistryLead('worship')]),
+        staffMei.withIdentities(const [DutyLead('sunday', '司琴')]),
       ],
       as: staffMei,
     );

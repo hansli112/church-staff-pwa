@@ -41,8 +41,7 @@ class RostersScreen extends ConsumerWidget {
     final settings = ref.watch(servicesProvider);
     final meValue = ref.watch(meProvider);
     final me = meValue.value;
-    final ministries = ref.watch(ministriesProvider).value?.ministries ?? const <Ministry>[];
-    final mine = me?.rosterServices(settings.value?.services ?? const [], ministries: ministries) ?? const <Service>[];
+    final mine = me?.rosterServices(settings.value?.services ?? const []) ?? const <Service>[];
     final selectedId = ref.watch(selectedServiceProvider);
     final shown = mine.where((s) => s.id == selectedId).firstOrNull ?? mine.firstOrNull;
     final canImport = shown != null && ref.watch(arrangesProvider(shown.id)).any;

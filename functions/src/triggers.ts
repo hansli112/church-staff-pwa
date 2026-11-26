@@ -144,6 +144,7 @@ export async function onIdentitiesGiven(
   const named = (i: Identity): NamedIdentity => {
     if (i.kind === 'admin' || i.kind === 'office') return i;
     if (i.kind === 'pastor') return { kind: 'pastor', of: i.services?.map(service) ?? null };
+    if (i.kind === 'dutyLead') return { kind: 'lead', of: `${service(i.service)}${i.duty}` };
     if ('service' in i) return { kind: 'lead', of: service(i.service) };
     if ('ministry' in i) return { kind: 'lead', of: ministry(i.ministry) };
     return { kind: 'smallGroupLead', of: smallGroup(i.smallGroup) };

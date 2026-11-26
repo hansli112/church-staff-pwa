@@ -83,8 +83,7 @@ mixin _MemoryUnavailable on _MemoryChurchBase implements UnavailableData {
     var told = 0;
     await _b.write(() {
       final me = _b.requireMember(churchId);
-      final ministries = (_b.ministries[churchId] ?? const MinistrySettings()).ministries;
-      final arranges = me.arranges(ministries, serviceType);
+      final arranges = me.arranges(serviceType);
       if (!_b.services[churchId]!.ids.contains(serviceType) || !arranges.any || to.isBefore(from)) {
         throw const CloudException(CloudErrorCode.permissionDenied);
       }
@@ -124,8 +123,7 @@ mixin _MemoryUnavailable on _MemoryChurchBase implements UnavailableData {
     var told = 0;
     await _b.write(() {
       final me = _b.requireMember(churchId);
-      final ministries = (_b.ministries[churchId] ?? const MinistrySettings()).ministries;
-      if (!_b.services[churchId]!.ids.contains(serviceType) || !me.arranges(ministries, serviceType).any) {
+      if (!_b.services[churchId]!.ids.contains(serviceType) || !me.arranges(serviceType).any) {
         throw const CloudException(CloudErrorCode.permissionDenied);
       }
       final ask = _b.unavailableAsks[churchId]?[serviceType];

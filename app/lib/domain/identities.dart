@@ -2,7 +2,6 @@ import 'package:flutter/foundation.dart';
 
 import 'attendance.dart';
 import 'day.dart';
-import 'models.dart' show ServiceSettings;
 
 /// A 身分 (#82): what someone is in a church, which is also what they may
 /// do there. A member may hold several; most hold none and are a 同工.
@@ -29,6 +28,10 @@ sealed class Identity {
         (final String service, _, _) => ServiceLead(service),
         (_, final String ministry, _) => MinistryLead(ministry),
         (_, _, final String smallGroup) => SmallGroupLead(smallGroup),
+        _ => null,
+      },
+      'dutyLead' => switch ((json['service'], json['duty'])) {
+        (final String service, final String duty) when service.isNotEmpty && duty.isNotEmpty => DutyLead(service, duty),
         _ => null,
       },
       _ => null,
@@ -108,8 +111,8 @@ final class ServiceLead extends Identity {
   int get hashCode => Object.hash('service', service);
 }
 
-/// A 事工's 負責人: arranges the duties it links, in any service and on
-/// any event, and adds its 同工.
+/// A 事工's 負責人: makes the 事工's events on the calendar and arranges
+/// their rosters (a 事工 links no duties, 2026-11-26).
 final class MinistryLead extends Identity {
   const MinistryLead(this.ministry);
 
@@ -123,6 +126,35 @@ final class MinistryLead extends Identity {
 
   @override
   int get hashCode => Object.hash('ministry', ministry);
+}
+
+/// A 服事項目's 負責人, e.g. 主日崇拜's 攝影 (2026-11-26): arranges that
+/// duty on the service's days, and who is on its list. Stored with its own
+/// kind, which apps from before it do not read as a service's 負責人.
+final class DutyLead extends Identity {
+  const DutyLead(this.service, this.duty);
+
+  final String service;
+  final String duty;
+
+  /// As the rules and the backend read it, in `leadDuties`:
+  /// `<service>/<duty>` (a service's ID has no slash).
+  String get key => '$service/$duty';
+
+  /// [key] read back; null for anything else.
+  static DutyLead? parse(String key) {
+    final at = key.indexOf('/');
+    return at > 0 && at < key.length - 1 ? DutyLead(key.substring(0, at), key.substring(at + 1)) : null;
+  }
+
+  @override
+  Map<String, Object?> toJson() => {'kind': 'dutyLead', 'service': service, 'duty': duty};
+
+  @override
+  bool operator ==(Object other) => other is DutyLead && other.service == service && other.duty == duty;
+
+  @override
+  int get hashCode => Object.hash('duty', service, duty);
 }
 
 /// 小組長 (#85): fills in the 小組's 人數, makes its events, adds its 同工.
@@ -141,70 +173,29 @@ final class SmallGroupLead extends Identity {
   int get hashCode => Object.hash('smallGroup', smallGroup);
 }
 
-/// One duty of one service that a 事工 leads, e.g. 主日崇拜's 司琴.
-@immutable
-class MinistryDuty {
-  const MinistryDuty(this.service, this.duty);
-
-  final String service;
-  final String duty;
-
-  @override
-  bool operator ==(Object other) => other is MinistryDuty && other.service == service && other.duty == duty;
-
-  @override
-  int get hashCode => Object.hash(service, duty);
-}
-
-/// A 事工 (#82), e.g. 敬拜團: its 負責人 arrange the [duties] it links;
-/// one that links none (多媒體) is only what calendar events belong to.
-/// Most belong to one service, each with its own 敬拜團 ([service]); some
-/// serve several, or none, the church's (跨聚會的事工).
+/// A 事工 (#82), e.g. 多媒體: a team with its 負責人 and its own events on
+/// the calendar, at no fixed time (what meets every week is a service).
+/// It links no duties (2026-11-26): a duty's 負責人 is held on the duty
+/// ([DutyLead]).
 @immutable
 class Ministry {
-  const Ministry({required this.id, required this.name, this.duties = const [], this.addedIn});
+  const Ministry({required this.id, required this.name});
 
   /// Stable; never reused (settings/ministries `ids`).
   final String id;
   final String name;
-  final List<MinistryDuty> duties;
 
-  /// The service it was added on, before it links any duty there.
-  final String? addedIn;
-
-  /// The service it belongs to: the one every duty it links is in, or,
-  /// linking none, the one it was added on; null for one in several
-  /// services, or in none.
-  String? get service => switch ({for (final d in duties) d.service}) {
-    final s when s.isEmpty => addedIn,
-    final s when s.length == 1 => s.single,
-    _ => null,
-  };
-
-  /// The duties it leads on a day of [serviceType], or, for an event's
-  /// roster (in no service, [serviceType] null), every duty by name.
-  Set<String> dutiesIn(String? serviceType) => {
-    for (final d in duties)
-      if (serviceType == null || d.service == serviceType) d.duty,
-  };
-
-  Ministry copyWith({String? name, List<MinistryDuty>? duties}) =>
-      Ministry(id: id, name: name ?? this.name, duties: duties ?? this.duties, addedIn: addedIn);
+  Ministry copyWith({String? name}) => Ministry(id: id, name: name ?? this.name);
 
   @override
-  bool operator ==(Object other) =>
-      other is Ministry &&
-      other.id == id &&
-      other.name == name &&
-      listEquals(other.duties, duties) &&
-      other.addedIn == addedIn;
+  bool operator ==(Object other) => other is Ministry && other.id == id && other.name == name;
 
   @override
-  int get hashCode => Object.hash(id, name, Object.hashAll(duties), addedIn);
+  int get hashCode => Object.hash(id, name);
 }
 
 /// What someone arranges of a roster (#82): all of it, or only some of
-/// its duties, those the 事工 they lead link ([none]: nothing at all).
+/// its duties, those they are the 負責人 of ([none]: nothing at all).
 @immutable
 class Arranges {
   const Arranges.all() : _duties = null;
@@ -248,23 +239,8 @@ class MinistrySettings {
     return null;
   }
 
-  /// The 事工 of service [service] alone (Ministry.service), as its page
-  /// lists them.
-  List<Ministry> of(String service) => [
-    for (final m in ministries)
-      if (m.service == service) m,
-  ];
-
-  /// The name of 事工 [id] wherever those of every service show together:
-  /// with its service's, 「青年崇拜 · 敬拜團」, when another has the same
-  /// name (each service its own 敬拜團); [id] for one gone.
-  String nameOf(String id, ServiceSettings? services) {
-    final m = byId(id);
-    if (m == null) return id;
-    final service = m.service;
-    if (service == null || !ministries.any((o) => o.id != id && o.name == m.name)) return m.name;
-    return '${services?.byId(service)?.name ?? service} · ${m.name}';
-  }
+  /// The name of 事工 [id]; [id] for one gone.
+  String nameOf(String id) => byId(id)?.name ?? id;
 
   MinistrySettings withMinistries(List<Ministry> next) => MinistrySettings(
     ministries: next,

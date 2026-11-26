@@ -3,13 +3,12 @@ import { isDeepStrictEqual } from 'node:util';
 
 import { accessIn, churchAccess } from './access.js';
 import { fail, record, type Caller, type Deps } from './common.js';
-import { ledDuties, ministriesOf } from './ministries.js';
 import { APP_VIAS, type Via } from './rosterNews.js';
+import { logRosterEdit } from './usage.js';
 
 /**
- * A 事工's 負責人 (#82) arranging the duties it leads: 敬拜團's leader puts
- * people on 司琴 and 敬拜, in any service and on any event, and touches
- * nothing else on the day. The rules cannot tell one duty from another in
+ * A 服事項目's 負責人 arranging the duties they lead: 主日崇拜's 攝影's
+ * 負責人 puts people on it, and touches nothing else on the day. The rules cannot tell one duty from another in
  * a roster's duties list, so these writes come here instead of going to
  * Firestore.
  *
@@ -127,16 +126,13 @@ export async function editLedDuties(deps: Deps, caller: Caller | null, data: unk
 
   await deps.db.runTransaction(async (tx) => {
     const refs = ids.map((id) => deps.db.doc(`churches/${cid}/rosters/${id}`));
-    const { powers, docs: [settings, services, ...days] } = await accessIn(
+    const { powers, docs: [services, ...days] } = await accessIn(
       tx,
       deps,
       access,
-      deps.db.doc(`churches/${cid}/settings/ministries`),
       deps.db.doc(`churches/${cid}/settings/services`),
       ...refs,
     );
-    const led = powers.ministries;
-    const ministries = ministriesOf(settings);
     for (const [i, id] of ids.entries()) {
       const stored = days[i];
       const was = roster(before[id]);
@@ -146,7 +142,7 @@ export async function editLedDuties(deps: Deps, caller: Caller | null, data: unk
       }
       if (stored.get('cancelledAt') !== undefined) fail('permission-denied', 'permissionDenied');
       const day = next ?? was;
-      const roles = ledDuties(ministries, led, day?.kind === 'event' ? null : (day?.type as string));
+      const roles = powers.ledDuties(day?.kind === 'event' ? null : (day?.type as string));
       if (!ledChangeAllowed(roles, was, next)) fail('permission-denied', 'permissionDenied');
       if (was === null) {
         newDay(id, next!, (services.get('ids') as string[] | undefined) ?? []);
@@ -156,4 +152,5 @@ export async function editLedDuties(deps: Deps, caller: Caller | null, data: unk
       tx.update(refs[i], { duties: next!.duties, via, updatedAt: FieldValue.serverTimestamp() });
     }
   });
+  for (const id of ids) logRosterEdit(cid, id, access.caller.uid, 'dutyLead');
 }

@@ -19,74 +19,63 @@ Future<void> go(WidgetTester tester, String path) async {
   await settle(tester);
 }
 
-const worship = MinistrySettings(
-  ministries: [
-    Ministry(id: 'worship', name: '敬拜團', duties: [MinistryDuty('sunday', '司琴')]),
-  ],
-  ids: ['worship'],
+const media = MinistrySettings(
+  ministries: [Ministry(id: 'media', name: '多媒體')],
+  ids: ['media'],
 );
 
 void main() {
-  testWidgets("an admin makes a 事工 on its service's page, names its 負責人, then links its duties on its page (#82)", (
+  testWidgets('an admin makes a 事工 on 聚會與事工 and names its 負責人, searched; its page has its events (#82)', (
     tester,
   ) async {
     final b = seededChurch();
+    b.connectCalendar('grace', calendarName: '教會行事曆');
     await pumpApp(tester, b);
     await go(tester, '/me');
     await tapText(tester, '聚會與事工');
-    await tapText(tester, '主日崇拜');
-    await tapText(tester, '事工');
+    await tester.scrollUntilVisible(find.text('新增事工'), 200, scrollable: find.byType(Scrollable).last);
     await tapText(tester, '新增事工');
-    await tester.enterText(find.byType(TextField), '敬拜團');
+    await tester.enterText(find.byType(TextField), '多媒體');
     await tapText(tester, '儲存');
 
-    // Its 負責人 next, without looking for them; its duties are not asked.
+    // Its 負責人 next, searched for.
+    expect(find.text('李美玉'), findsOneWidget);
+    await tester.enterText(find.byType(TextField).last, '志豪');
+    await settle(tester);
+    expect(find.text('李美玉'), findsNothing);
     await tapText(tester, '陳志豪');
     final ministry = b.ministries['grace']!.ministries.single;
-    expect(ministry.name, '敬拜團');
-    expect(ministry.duties, isEmpty);
-    expect(ministry.service, 'sunday', reason: 'made on its page');
+    expect(ministry.name, '多媒體');
     expect(b.members['grace']!['hao']!.leadMinistries, [ministry.id]);
 
-    expect(find.text('敬拜團'), findsWidgets, reason: 'its page opened');
-    await tapText(tester, '選服事項目');
-    await tapText(tester, '司琴');
-    await tapText(tester, '完成');
-    expect(b.ministries['grace']!.ministries.single.duties, const [MinistryDuty('sunday', '司琴')]);
-    expect(findShown('陳志豪可以排主日崇拜、活動的司琴，也可以改這幾項的名單'), findsOneWidget);
+    expect(find.text('多媒體'), findsWidgets, reason: 'its page opened');
+    expect(find.text('活動'), findsOneWidget);
+    expect(findShown('陳志豪可以新增、修改這些活動，排它們的服事'), findsOneWidget);
     expect(find.text('再加一位負責人'), findsOneWidget, reason: 'one is enough, more are possible');
-    expect(find.text('李美玉'), findsNothing, reason: "司琴's list is on its service's page, not again here");
     expect(find.text('同工'), findsNothing, reason: 'a 事工 has no 同工 of its own (#94)');
-    expect(find.text('加入同工'), findsNothing);
+    expect(find.text('服事項目'), findsNothing, reason: 'it links no duties');
 
-    await go(tester, '/me/groups/service/sunday/ministries');
-    expect(find.text('陳志豪 · 司琴'), findsOneWidget, reason: 'who leads it and what, on its service\'s page');
     await go(tester, '/me/groups');
-    expect(find.text('敬拜團'), findsNothing, reason: "not church-wide: 主日崇拜's own");
+    await tester.scrollUntilVisible(find.text('多媒體'), 200, scrollable: find.byType(Scrollable).last);
+    expect(find.text('陳志豪'), findsOneWidget, reason: 'who leads it, under it');
   });
 
-  testWidgets('a 事工 of several services, or of none, is listed church-wide; each service its own 敬拜團, named with it', (
-    tester,
-  ) async {
+  testWidgets('every 事工 is listed on 聚會與事工, those from before that linked duties too', (tester) async {
     final b = seededChurch();
     b.ministries['grace'] = const MinistrySettings(
       ministries: [
-        Ministry(id: 'worship', name: '敬拜團', duties: [MinistryDuty('sunday', '司琴')]),
-        Ministry(id: 'youthWorship', name: '敬拜團', duties: [MinistryDuty('youth', '司會')]),
-        Ministry(id: 'sound', name: '音控組', duties: [MinistryDuty('sunday', '招待'), MinistryDuty('youth', '司會')]),
+        Ministry(id: 'worship', name: '敬拜團'),
         Ministry(id: 'media', name: '多媒體'),
       ],
-      ids: ['worship', 'youthWorship', 'sound', 'media'],
+      ids: ['worship', 'media'],
     );
     await pumpApp(tester, b);
     await go(tester, '/me/groups');
     await tester.scrollUntilVisible(find.text('多媒體'), 200, scrollable: find.byType(Scrollable).last);
-    expect(find.text('音控組'), findsOneWidget);
-    expect(find.text('多媒體'), findsOneWidget, reason: 'no duties: only what calendar events belong to');
-    expect(find.text('敬拜團'), findsNothing, reason: 'each on its own service\'s page');
-
-    await go(tester, '/me/groups/ministry/youthWorship');
-    expect(find.text('青年崇拜 · 敬拜團'), findsOneWidget, reason: 'beside 主日崇拜\'s, named with its service');
+    expect(find.text('敬拜團'), findsOneWidget);
+    expect(find.text('多媒體'), findsOneWidget);
+    await go(tester, '/me/groups/service/sunday');
+    expect(find.text('事工'), findsNothing, reason: 'a service has no 事工 of its own');
   });
 
   testWidgets('with none yet, 事工 still shows on 聚會與事工, saying what goes there, with 新增事工', (tester) async {
@@ -94,132 +83,70 @@ void main() {
     b.ministries['grace'] = const MinistrySettings();
     await pumpApp(tester, b);
     await go(tester, '/me/groups');
-    final footer = find.byWidgetPredicate((w) => w is BalancedText && w.text == '跨聚會或不屬於任何聚會的事工，例如多媒體、關懷探訪。');
+    final footer = find.byWidgetPredicate((w) => w is BalancedText && w.text == '時間不固定、在行事曆上排活動的，例如多媒體、佈置。');
     await tester.scrollUntilVisible(footer, 200, scrollable: find.byType(Scrollable).last);
     expect(find.text('事工'), findsOneWidget);
     expect(find.text('新增事工'), findsOneWidget);
   });
 
-  testWidgets('a 事工 made with its 負責人 left for later says what is missing', (tester) async {
+  testWidgets("a 事工's page lists its events ahead; 新增活動 makes one of it", (tester) async {
+    final b = seededChurch(
+      extra: [
+        staffHao.withIdentities(const [MinistryLead('media')]),
+      ],
+      as: staffHao,
+    );
+    b.ministries['grace'] = media;
+    b.connectCalendar('grace', calendarName: '教會行事曆');
+    b.calendarEvents['grace'] = [
+      CalendarEvent(
+        id: 'train',
+        title: '影音訓練',
+        start: DateTime(2026, 10, 10, 14),
+        end: DateTime(2026, 10, 10, 16),
+        group: 'ministry:media',
+      ),
+      CalendarEvent(id: 'church', title: '全教會禱告會', start: DateTime(2026, 10, 9, 19), end: DateTime(2026, 10, 9, 20)),
+    ];
+    await pumpApp(tester, b);
+    await go(tester, '/me/groups/ministry/media');
+    expect(find.text('影音訓練'), findsOneWidget);
+    expect(find.text('全教會禱告會'), findsNothing, reason: 'not its');
+    expect(findShown('陳志豪可以新增、修改這些活動，排它們的服事'), findsOneWidget);
+    await tapText(tester, '新增活動');
+    expect(find.text('多媒體'), findsWidgets, reason: 'the new event is its');
+  });
+
+  testWidgets('a 事工 made with its 負責人 left for later says what one will do', (tester) async {
     final b = seededChurch();
+    b.connectCalendar('grace', calendarName: '教會行事曆');
     await pumpApp(tester, b);
     await go(tester, '/me');
     await tapText(tester, '聚會與事工');
+    await tester.scrollUntilVisible(find.text('新增事工'), 200, scrollable: find.byType(Scrollable).last);
     await tapText(tester, '新增事工');
     await tester.enterText(find.byType(TextField), '關懷事工');
     await tapText(tester, '儲存');
     await tester.tapAt(const Offset(10, 10));
     await settle(tester);
-    expect(b.ministries['grace']!.ministries.single.duties, isEmpty);
     expect(find.text('指派負責人'), findsOneWidget, reason: 'on its page, not asked again');
-    expect(findShown('選好服事項目，負責人就能在聚會和活動排這些項目'), findsOneWidget);
-
-    await tapText(tester, '選服事項目');
-    await tapText(tester, '招待');
-    await tapText(tester, '完成');
-    expect(b.ministries['grace']!.ministries.single.duties, const [MinistryDuty('sunday', '招待')]);
-    expect(findShown('指派之後，負責人可以排主日崇拜、活動的招待，也可以改這幾項的名單'), findsOneWidget);
+    expect(findShown('指派之後，負責人可以新增、修改這些活動，排它們的服事'), findsOneWidget);
   });
 
-  testWidgets('a duty a 事工 leads that its service has not yet is added there and picked', (tester) async {
-    final b = seededChurch();
-    b.ministries['grace'] = const MinistrySettings(
-      ministries: [Ministry(id: 'worship', name: '敬拜團')],
-      ids: ['worship'],
-    );
-    await pumpApp(tester, b);
-    await go(tester, '/me/groups/ministry/worship');
-    await tapText(tester, '選服事項目');
-    await tester.tap(find.text('新增服事項目').first);
-    await settle(tester);
-    await tester.enterText(find.byType(TextField), 'Vocal');
-    await tapText(tester, '儲存');
-    expect(b.services['grace']!.byId('sunday')!.duties.last, 'Vocal');
-    await tapText(tester, '完成');
-    expect(b.ministries['grace']!.ministries.single.duties, const [MinistryDuty('sunday', 'Vocal')]);
-  });
-
-  testWidgets('a duty added there by mistake is swiped away, from its service too, and comes back with 復原', (
-    tester,
-  ) async {
-    final b = seededChurch();
-    b.ministries['grace'] = const MinistrySettings(
-      ministries: [
-        Ministry(id: 'worship', name: '敬拜團', duties: [MinistryDuty('sunday', '司琴')]),
-      ],
-      ids: ['worship'],
-    );
-    await pumpApp(tester, b);
-    await go(tester, '/me/groups/ministry/worship');
-    await tapText(tester, '選服事項目');
-    expect(findShown('左滑刪除'), findsOneWidget);
-    await tester.drag(find.text('司琴').last, const Offset(-500, 0));
-    await settle(tester);
-    expect(b.services['grace']!.byId('sunday')!.duties, ['司會', '招待']);
-    expect(find.text('司琴'), findsNothing);
-    await tapText(tester, '復原');
-    expect(b.services['grace']!.byId('sunday')!.duties, ['司會', '司琴', '招待']);
-    await tapText(tester, '完成');
-    expect(
-      b.ministries['grace']!.ministries.single.duties,
-      const [MinistryDuty('sunday', '司琴')],
-      reason: 'back ticked, as it was',
-    );
-    await tapText(tester, '選服事項目');
-
-    await tester.drag(find.text('司琴').last, const Offset(-500, 0));
-    await settle(tester);
-    await tapText(tester, '完成');
-    expect(b.ministries['grace']!.ministries.single.duties, isEmpty, reason: 'no longer ticked');
-  });
-
-  testWidgets("a 事工's duties that differ by service are said place by place, the same ones together; its 負責人 alike", (
-    tester,
-  ) async {
-    // Its 負責人, who has each duty's list here.
+  testWidgets("a duty's 負責人 puts anyone on the list of their duty, who becomes the service's 同工 (#94)", (tester) async {
     final b = seededChurch(
       as: staffHao,
       extra: [
-        staffHao.withIdentities(const [MinistryLead('worship')]),
-        staffMei.withIdentities(const [MinistryLead('worship')]),
+        staffHao.withIdentities(const [DutyLead('sunday', '司琴')]),
       ],
-    );
-    b.ministries['grace'] = const MinistrySettings(
-      ministries: [
-        Ministry(
-          id: 'worship',
-          name: '敬拜團',
-          duties: [MinistryDuty('sunday', '司琴'), MinistryDuty('sunday', '司會'), MinistryDuty('youth', '司會')],
-        ),
-      ],
-      ids: ['worship'],
     );
     await pumpApp(tester, b);
-    await go(tester, '/me/groups/ministry/worship');
-    expect(
-      findShown('李美玉、陳志豪都可以排主日崇拜、活動的司琴、司會；青年崇拜的司會，也可以改這幾項的名單'),
-      findsOneWidget,
-    );
-    expect(find.text('主日崇拜：司會'), findsOneWidget, reason: 'in more than one service: named with it');
-    expect(find.text('青年崇拜：司會'), findsOneWidget);
-  });
-
-  testWidgets("a 事工's 負責人 puts anyone on the list of its duty, who becomes the service's 同工 (#94)", (tester) async {
-    final b = seededChurch(
-      as: staffHao,
-      extra: [
-        staffHao.withIdentities(const [MinistryLead('worship')]),
-      ],
-    );
-    b.ministries['grace'] = worship;
-    await pumpApp(tester, b);
-    await go(tester, '/me');
-    await tapText(tester, '敬拜團');
-    await tapText(tester, '司琴');
+    await go(tester, '/me/groups/duty?service=sunday&name=%E5%8F%B8%E7%90%B4');
     expect(find.text('主日崇拜的同工'), findsOneWidget);
     expect(find.text('其他人'), findsOneWidget);
     expect(find.text('服事項目名稱'), findsNothing, reason: "the duty's name is the admin's");
     expect(find.text('刪除'), findsNothing);
+    expect(findShown('陳志豪可以排主日崇拜的司琴，也可以改這一項的名單'), findsOneWidget);
 
     await tapText(tester, 'John Chen');
     final john = b.members['grace']!['john']!;
@@ -238,14 +165,13 @@ void main() {
     expect(b.members['grace']!['mei']!.zoneTypes, ['sunday'], reason: 'still one of its 同工');
   });
 
-  testWidgets("but only the lists of the duties it leads; another's it only reads", (tester) async {
+  testWidgets("but only the list of the duty they lead; another's they only read", (tester) async {
     final b = seededChurch(
       as: staffHao,
       extra: [
-        staffHao.withIdentities(const [MinistryLead('worship')]),
+        staffHao.withIdentities(const [DutyLead('sunday', '司琴')]),
       ],
     );
-    b.ministries['grace'] = worship;
     await pumpApp(tester, b);
     await go(tester, '/me/groups/duty?service=sunday&name=%E6%8B%9B%E5%BE%85');
     expect(find.text('其他人'), findsNothing);
@@ -269,23 +195,18 @@ void main() {
     expect(b.members['grace']!['hao']!.serves('sunday', '招待'), isFalse);
   });
 
-  testWidgets('on its page an admin sees each duty with its list, and puts a duty in a 事工, or none', (tester) async {
-    final b = seededChurch();
-    b.ministries['grace'] = const MinistrySettings(
-      ministries: [Ministry(id: 'worship', name: '敬拜團')],
-      ids: ['worship'],
+  testWidgets('on its page an admin sees each duty with its list, and who leads it', (tester) async {
+    final b = seededChurch(
+      extra: [
+        staffMei.withIdentities(const [DutyLead('sunday', '司琴')]),
+      ],
     );
     await pumpApp(tester, b);
     await go(tester, '/me/groups/service/sunday/duties');
     expect(find.text('2 人'), findsOneWidget, reason: "how many are on 招待's list");
+    expect(find.text('李美玉 負責'), findsOneWidget, reason: 'under 司琴');
     await tapText(tester, '司琴');
-    expect(find.text('事工'), findsOneWidget);
-    await tapText(tester, '事工');
-    await tapText(tester, '敬拜團');
-    expect(b.ministries['grace']!.ministries.single.duties, const [MinistryDuty('sunday', '司琴')]);
-    await tapText(tester, '事工');
-    await tapText(tester, '沒有');
-    expect(b.ministries['grace']!.ministries.single.duties, isEmpty);
+    expect(find.text('事工'), findsNothing, reason: 'a duty is in no 事工');
   });
 
   testWidgets('an admin takes out a 負責人 on the page at once, and 復原; a 牧者 stays, said so (#94)', (tester) async {
@@ -458,7 +379,6 @@ void main() {
       matching: find.text(text),
     );
     expect(inRow('服事項目', '3 項'), findsOneWidget);
-    expect(inRow('事工', '沒有'), findsOneWidget);
     expect(inRow('常用特別活動', '1 個'), findsOneWidget);
     expect(inRow('小組', '1 個'), findsOneWidget);
     expect(inRow('同工', '3 人'), findsOneWidget);
@@ -483,60 +403,56 @@ void main() {
     await settle(tester);
     await tapText(tester, '小組');
     expect(find.text('喜樂小組'), findsOneWidget);
-    await tester.tap(find.byType(BackButton).last);
-    await settle(tester);
-    await tapText(tester, '事工');
-    expect(find.text('新增事工'), findsOneWidget);
   });
 
-  testWidgets("an admin assigns a duty's 負責人 on its page; with no 事工 yet, one of that duty alone is made", (
-    tester,
-  ) async {
+  testWidgets("an admin assigns a duty's 負責人 on its page, and 復原", (tester) async {
     final b = seededChurch();
     await pumpApp(tester, b);
     await go(tester, '/me/groups/duty?service=sunday&name=%E6%8B%9B%E5%BE%85');
-    expect(findShown('指派之後，負責人可以排主日崇拜、活動的招待，也可以改這幾項的名單'), findsOneWidget);
+    expect(findShown('指派之後，負責人可以排主日崇拜的招待，也可以改這一項的名單'), findsOneWidget);
     await tapText(tester, '指派負責人');
     await tapText(tester, '陳志豪');
-    final made = b.ministries['grace']!.ministries.single;
-    expect(made.name, '招待');
-    expect(made.duties, const [MinistryDuty('sunday', '招待')]);
-    expect(made.service, 'sunday');
-    expect(b.members['grace']!['hao']!.leadMinistries, [made.id]);
-    expect(findShown('陳志豪可以排主日崇拜、活動的招待，也可以改這幾項的名單'), findsOneWidget);
-    expect(find.text('再加一位負責人'), findsOneWidget);
+    expect(b.members['grace']!['hao']!.identities, const [DutyLead('sunday', '招待')]);
+    expect(b.members['grace']!['hao']!.leadTypes, isEmpty, reason: 'not the service’s 負責人');
+    expect(b.ministries['grace']?.ministries ?? const [], isEmpty, reason: 'no 事工 made for it');
+    expect(findShown('陳志豪可以排主日崇拜的招待，也可以改這一項的名單'), findsOneWidget);
+    expect(find.text('已加上「主日崇拜招待 負責人」'), findsOneWidget);
     await tapText(tester, '復原');
-    expect(b.ministries['grace']!.ministries, isEmpty, reason: 'one 復原 takes back both');
-    expect(b.members['grace']!['hao']!.leadMinistries, isEmpty);
+    expect(b.members['grace']!['hao']!.identities, isEmpty);
   });
 
-  testWidgets('a 負責人 refused on a duty\'s page leaves no 事工 behind', (tester) async {
+  testWidgets('someone with no account is not offered as a 負責人: a 身分 is held by who signs in', (tester) async {
     final b = seededChurch();
+    b.pendingMembers['grace'] = {
+      'old-ting': const PendingMember(
+        id: 'old-ting',
+        name: '林婷',
+        zones: [Zone(serviceType: 'sunday')],
+      ),
+    };
     await pumpApp(tester, b);
     await go(tester, '/me/groups/duty?service=sunday&name=%E6%8B%9B%E5%BE%85');
+    final onPage = find.text('林婷').evaluate().length;
+    final haoOnPage = find.text('陳志豪').evaluate().length;
     await tapText(tester, '指派負責人');
-    // Changed by someone else while the list is open.
-    b.members['grace']!['hao'] = b.members['grace']!['hao']!.copyWith(name: '陳志豪牧師');
-    await tapText(tester, '陳志豪');
-    expect(b.ministries['grace']?.ministries ?? const [], isEmpty);
-    expect(b.members['grace']!['hao']!.leadMinistries, isEmpty);
+    expect(find.text('陳志豪').evaluate().length, haoOnPage + 1);
+    expect(find.text('林婷').evaluate().length, onPage, reason: 'on the page, not in the 負責人 to pick');
   });
 
-  testWidgets("a duty in a 事工 shows that 事工's 負責人 on its page; one more added leads the 事工", (tester) async {
+  testWidgets("a duty's page shows its 負責人; one more added leads it too", (tester) async {
     final b = seededChurch(
       extra: [
-        staffMei.withIdentities(const [MinistryLead('worship')]),
+        staffMei.withIdentities(const [DutyLead('sunday', '司琴')]),
       ],
     );
-    b.ministries['grace'] = worship;
     await pumpApp(tester, b);
     await go(tester, '/me/groups/duty?service=sunday&name=%E5%8F%B8%E7%90%B4');
-    expect(findShown('李美玉可以排主日崇拜、活動的司琴，也可以改這幾項的名單'), findsOneWidget);
+    expect(findShown('李美玉可以排主日崇拜的司琴，也可以改這一項的名單'), findsOneWidget);
     expect(find.text('移出'), findsOneWidget);
     await tapText(tester, '再加一位負責人');
     await tapText(tester, '陳志豪');
-    expect(b.members['grace']!['hao']!.leadMinistries, ['worship']);
-    expect(b.ministries['grace']!.ministries, worship.ministries, reason: 'no other 事工 made');
+    expect(b.members['grace']!['hao']!.identities, const [DutyLead('sunday', '司琴')]);
+    expect(findShown('李美玉、陳志豪都可以排主日崇拜的司琴，也可以改這一項的名單'), findsOneWidget);
   });
 
   testWidgets("a service's 負責人 assigns no duty's 負責人", (tester) async {
@@ -544,6 +460,28 @@ void main() {
     await go(tester, '/me/groups/duty?service=sunday&name=%E6%8B%9B%E5%BE%85');
     expect(find.text('指派負責人'), findsNothing);
     expect(find.text('負責人'), findsNothing, reason: 'it has none to read');
+  });
+
+  testWidgets('a 小組 has as many 小組長 as lead it together: 再加一位, and 移出 with 復原', (tester) async {
+    final b = seededChurch(
+      extra: [
+        staffMei.withIdentities(const [SmallGroupLead('joy')]),
+      ],
+    );
+    b.smallGroups['grace'] = {'joy': const SmallGroupDetails(id: 'joy', name: '喜樂小組', service: 'sunday')};
+    await pumpApp(tester, b);
+    await go(tester, '/me/groups/small/joy');
+    expect(find.text('小組長'), findsOneWidget);
+    expect(find.text('李美玉'), findsOneWidget);
+    await tapText(tester, '再加一位小組長');
+    await tapText(tester, '陳志豪');
+    expect(b.members['grace']!['hao']!.leadSmallGroups, ['joy']);
+    expect(b.members['grace']!['mei']!.leadSmallGroups, ['joy'], reason: 'both lead it');
+    await tester.tap(find.bySemanticsLabel('移除「喜樂小組 小組長」').first);
+    await settle(tester);
+    expect(b.members['grace']!['mei']!.leadSmallGroups, isEmpty);
+    await tapText(tester, '復原');
+    expect(b.members['grace']!['mei']!.leadSmallGroups, ['joy']);
   });
 
   testWidgets("a 小組's name and 小組長 are under the service it is part of, with no row for it", (tester) async {

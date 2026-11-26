@@ -103,7 +103,7 @@ describe('ledDuties', () => {
 });
 
 describe('askedToFill', () => {
-  for (const r of rows('askedToFill')) test(r.why, () => assert.deepEqual(askedToFill(r.caller, r.ministries, r.service, r.members), r.asked));
+  for (const r of rows('askedToFill')) test(r.why, () => assert.deepEqual(askedToFill(r.caller, r.service, r.members), r.asked));
 });
 
 describe('groupMembership', () => {
@@ -114,7 +114,7 @@ describe('groupMembership', () => {
 
 describe('dutyListEditing', () => {
   for (const r of rows('dutyListEditing')) {
-    test(r.why, () => assert.equal(powersOf(r.caller).editsDutyList(r.ministries, r.service, r.duty), r.may));
+    test(r.why, () => assert.equal(powersOf(r.caller).editsDutyList(r.service, r.duty), r.may));
   }
 });
 

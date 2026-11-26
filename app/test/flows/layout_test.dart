@@ -37,7 +37,6 @@ const _pages = [
   '/me/groups/service/sunday',
   '/me/groups/service/sunday/staff',
   '/me/groups/service/sunday/duties',
-  '/me/groups/service/sunday/ministries',
   '/me/groups/service/sunday/events',
   '/me/groups/service/sunday/small-groups',
   '/me/groups/duty?service=sunday&name=%E5%8F%B8%E7%90%B4',
@@ -52,7 +51,7 @@ void main() {
         final b = seededChurch()
           ..ministries['grace'] = const MinistrySettings(
             ministries: [
-              Ministry(id: 'worship', name: '敬拜團', duties: [MinistryDuty('sunday', '司琴')]),
+              Ministry(id: 'worship', name: '敬拜團'),
             ],
             ids: ['worship'],
           );

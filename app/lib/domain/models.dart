@@ -259,8 +259,18 @@ class Member {
     },
   ];
 
+  /// The duties they lead as their 負責人, `<service>/<duty>`; stored as
+  /// `leadDuties`.
+  List<String> get leadDuties => [
+    ...{
+      for (final i in identities)
+        if (i case DutyLead(:final key)) key,
+    },
+  ];
+
   /// Whether they lead anything, so pick people and add 同工.
-  bool get leads => leadTypes.isNotEmpty || leadMinistries.isNotEmpty || leadSmallGroups.isNotEmpty;
+  bool get leads =>
+      leadTypes.isNotEmpty || leadMinistries.isNotEmpty || leadSmallGroups.isNotEmpty || leadDuties.isNotEmpty;
 
   /// This member holding [next] as their 身分, with what the rules and
   /// older apps read set to match: 管理員 and a whole church's 牧者 are
@@ -295,13 +305,13 @@ class Member {
   /// they belong to and the services they lead, or all of them for admins
   /// and 行政. Only tidies the tab; every member may still read every
   /// roster.
-  List<Service> rosterServices(List<Service> services, {List<Ministry> ministries = const []}) {
+  List<Service> rosterServices(List<Service> services) {
     if (seesAllServices) return services;
     final mine = {
       ...zoneTypes,
       ...leadTypes,
-      for (final s in services)
-        if (ledDuties(ministries, s.id).isNotEmpty) s.id,
+      for (final i in identities)
+        if (i case DutyLead(:final service)) service,
     };
     return [
       for (final s in services)
@@ -325,18 +335,13 @@ class Member {
       listEquals(identities, other.identities) &&
       setEquals(smallGroups, other.smallGroups);
 
-  /// Whether this member is a 同工 of [group]: of the service, of the
-  /// 小組, or, as a 事工 has none of its own (#94), on the list of a duty
-  /// it links, of those in [ministries].
-  bool isIn(ChurchGroup group, {List<Ministry> ministries = const []}) => switch (group) {
+  /// Whether this member is a 同工 of [group]: of the service, or of the
+  /// 小組. A 事工 has no 同工 of its own (#94), only its 負責人.
+  bool isIn(ChurchGroup group) => switch (group) {
     ServiceGroup(:final id) => zoneTypes.contains(id),
-    MinistryGroup(:final id) => ministries.any((m) => m.id == id && onListsOf(m)),
     SmallGroup(:final id) => smallGroups.contains(id),
-    GatheringGroup() => false,
+    MinistryGroup() || GatheringGroup() => false,
   };
-
-  /// Whether this member is on the list of any duty [ministry] links.
-  bool onListsOf(Ministry ministry) => ministry.duties.any((d) => serves(d.service, d.duty));
 
   /// This member added to [group] ([member] true; a service with [duties]
   /// and [smallGroups]) or taken out, as setGroupMember writes it; a 事工

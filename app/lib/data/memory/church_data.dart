@@ -254,8 +254,6 @@ abstract class _MemoryChurchBase implements ChurchData {
   /// arranges any of a service the church has.
   void _rosterEditorOf(String serviceType) => _b.functionAccess(
     churchId,
-    allowed: (me) =>
-        _b.services[churchId]!.ids.contains(serviceType) &&
-        me.arranges((_b.ministries[churchId] ?? const MinistrySettings()).ministries, serviceType).any,
+    allowed: (me) => _b.services[churchId]!.ids.contains(serviceType) && me.arranges(serviceType).any,
   );
 }

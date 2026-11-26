@@ -27,15 +27,18 @@ extension MemberPowers on Member {
 
   /// Whether this member arranges any roster, and so sees who cannot serve
   /// when (不能服事的日子, #91; firestore.rules arrangesRosters): admins,
-  /// 行政, and the 負責人 and 牧者 of a service or a 事工.
-  bool get arrangesRosters => inGroup(Group.rosterEditors) || leadTypes.isNotEmpty || leadMinistries.isNotEmpty;
+  /// 行政, and the 負責人 of a service (and its 牧者), a 事工 (its events')
+  /// or a duty.
+  bool get arrangesRosters =>
+      inGroup(Group.rosterEditors) || leadTypes.isNotEmpty || leadMinistries.isNotEmpty || leadDuties.isNotEmpty;
 
   /// The duties this member arranges on a day of [serviceType] (null: an
-  /// event's) without editing all of it, as a 負責人 of the 事工 in
-  /// [ministries] that link them; through the backend (editLedDuties).
-  Set<String> ledDuties(List<Ministry> ministries, String? serviceType) => {
-    for (final m in ministries)
-      if (leadMinistries.contains(m.id)) ...m.dutiesIn(serviceType),
+  /// event's, none) without editing all of it, as their 負責人; through
+  /// the backend (editLedDuties).
+  Set<String> ledDuties(String? serviceType) => {
+    if (serviceType != null)
+      for (final i in identities)
+        if (i case DutyLead(:final service, :final duty) when service == serviceType) duty,
   };
 
   /// Whether this member leads [group]: a service as its 負責人 or 牧者, a
@@ -144,20 +147,20 @@ extension MemberPowers on Member {
   /// Whether this member may put anyone on the list of [duty] in
   /// [serviceType], or take them off it (testdata/church_rules.json,
   /// dutyListEditing, #94): admins and 行政 any; a service's 負責人 and
-  /// 牧者 its duties; a 事工's 負責人 those the 事工 in [ministries] they lead link
-  /// there. Being on a list gives nothing, so anyone may be put on it.
-  bool editsDutyList(List<Ministry> ministries, String serviceType, String duty) =>
-      canEditRosters(serviceType) || ledDuties(ministries, serviceType).contains(duty);
+  /// 牧者 its duties; a duty's 負責人 that duty. Being on a list gives
+  /// nothing, so anyone may be put on it.
+  bool editsDutyList(String serviceType, String duty) =>
+      canEditRosters(serviceType) || ledDuties(serviceType).contains(duty);
 
   /// What this member arranges on a day of [serviceType]: all of it, or
-  /// only the duties the 事工 in [ministries] they lead link.
-  Arranges arranges(List<Ministry> ministries, String serviceType) =>
-      canEditRosters(serviceType) ? const Arranges.all() : Arranges.only(ledDuties(ministries, serviceType));
+  /// only the duties they are the 負責人 of.
+  Arranges arranges(String serviceType) =>
+      canEditRosters(serviceType) ? const Arranges.all() : Arranges.only(ledDuties(serviceType));
 
   /// As [arranges], on the roster of an event of [group] (null: the
-  /// church's): all of it for admins, 行政 and the group's 負責人.
-  Arranges arrangesEvent(List<Ministry> ministries, String? group) =>
-      canEditEventRoster(group) ? const Arranges.all() : Arranges.only(ledDuties(ministries, null));
+  /// church's): all of it for admins, 行政 and the group's 負責人; nothing
+  /// for anyone else.
+  Arranges arrangesEvent(String? group) => canEditEventRoster(group) ? const Arranges.all() : Arranges.none;
 
   /// Whether this member arranges all of an event's roster of [group]
   /// (null: the church's; testdata/church_rules.json, rosterEditing):
@@ -191,25 +194,20 @@ extension MemberPowers on Member {
   bool get readsMembers => inGroup(Group.rosterEditors) || leads;
 
   /// What picking people for [duty] on [roster] may change besides who is
-  /// on it that day, the church's [services] and [ministries] as they are.
-  DutyRights rightsOnDuty(
-    Roster roster,
-    String duty, {
-    ServiceSettings? services,
-    List<Ministry> ministries = const [],
-  }) {
+  /// on it that day, the church's [services] as they are.
+  DutyRights rightsOnDuty(Roster roster, String duty, {ServiceSettings? services}) {
     if (roster.isEvent) return const DutyRights();
     final type = roster.type;
-    final arrangesAll = arranges(ministries, type).all;
+    final arrangesAll = arranges(type).all;
     // A duty only this day has: no list.
-    final editsList = (services?.byId(type)?.duties.contains(duty) ?? false) && editsDutyList(ministries, type, duty);
+    final editsList = (services?.byId(type)?.duties.contains(duty) ?? false) && editsDutyList(type, duty);
     return DutyRights(
       // Putting someone on the list moves the staff order too: only whoever
       // arranges all of the day. A 事工's 負責人 only takes off, and puts
       // on from the duty's page (#94).
       putsOnList: arrangesAll && editsList,
       takesOffList: editsList,
-      // The staff order is the whole service's: not a 事工 leader's.
+      // The staff order is the whole service's: not a duty's 負責人's.
       reorders: arrangesAll,
       addsStaff: addsStaffTo(ServiceGroup(type)),
       dropsFutureGuests: true,

@@ -992,7 +992,7 @@ void main() {
     final b = seededChurch();
     b.ministries['grace'] = const MinistrySettings(
       ministries: [
-        Ministry(id: 'worship', name: '敬拜團', duties: [MinistryDuty('sunday', '司琴')]),
+        Ministry(id: 'worship', name: '敬拜團'),
       ],
       ids: ['worship'],
     );

@@ -27,6 +27,7 @@ Member _member(String uid, Map<String, dynamic> f) => Member(
     for (final t in _strings(f['leadTypes'] ?? const [])) ServiceLead(t),
     for (final m in _strings(f['leadMinistries'] ?? const [])) MinistryLead(m),
     for (final g in _strings(f['leadSmallGroups'] ?? const [])) SmallGroupLead(g),
+    for (final d in _strings(f['leadDuties'] ?? const [])) ?DutyLead.parse(d),
   ],
 );
 
@@ -124,6 +125,7 @@ void main() {
             for (final t in _strings(r['leadTypes'])) ServiceLead(t),
             for (final m in _strings(r['leadMinistries'])) MinistryLead(m),
             for (final g in _strings(r['leadSmallGroups'] ?? const [])) SmallGroupLead(g),
+            for (final d in _strings(r['leadDuties'] ?? const [])) ?DutyLead.parse(d),
           ],
         );
         final roster = r['roster'] as String;
@@ -161,7 +163,6 @@ void main() {
       test(r['why'] as String, () {
         final caller = r['caller'] as Map<String, dynamic>;
         final service = r['service'] as String;
-        final ministries = _ministries(r['ministries']);
         final members = [
           for (final m in r['members'] as List)
             Member(
@@ -173,7 +174,7 @@ void main() {
               ],
             ),
         ];
-        final arranges = _member(caller['uid'] as String, caller).arranges(ministries, service);
+        final arranges = _member(caller['uid'] as String, caller).arranges(service);
         expect([for (final m in askedToFill(members, service, arranges, caller['uid'] as String)) m.uid], r['asked']);
       });
     }
@@ -231,7 +232,7 @@ void main() {
       test(r['why'] as String, () {
         final caller = _member('caller', r['caller'] as Map<String, dynamic>);
         expect(
-          caller.editsDutyList(_ministries(r['ministries']), r['service'] as String, r['duty'] as String),
+          caller.editsDutyList(r['service'] as String, r['duty'] as String),
           r['may'],
         );
       });
@@ -412,13 +413,3 @@ void main() {
     }
   });
 }
-
-/// The church's 事工 in a row, each named by its ID.
-List<Ministry> _ministries(Object? rows) => [
-  for (final m in rows as List)
-    Ministry(
-      id: m['id'] as String,
-      name: m['id'] as String,
-      duties: [for (final d in m['duties'] as List) MinistryDuty(d['service'] as String, d['duty'] as String)],
-    ),
-];

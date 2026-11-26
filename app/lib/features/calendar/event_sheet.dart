@@ -104,7 +104,8 @@ Future<void> showEventDetail(BuildContext context, CalendarEvent e, {bool editIn
 
 /// Opens the editor for [event] (null for a new one) and saves through the
 /// backend. A new event starts on [day] when one is picked, else today in
-/// this month or the month's first. Deleting offers 復原, which creates the
+/// this month or the month's first, and is [group]'s when that is one I
+/// may make, else the first of those. Deleting offers 復原, which creates the
 /// event again.
 Future<void> editEvent(
   BuildContext context,
@@ -112,6 +113,7 @@ Future<void> editEvent(
   CalendarEvent? event, {
   required DateTime month,
   Day? day,
+  String? group,
 }) async {
   // Saving goes through the backend; start it while the editor is open.
   ref.read(backendProvider).warmUp(WarmUp.calendarWrite);
@@ -126,7 +128,11 @@ Future<void> editEvent(
           : month);
   var previous = event;
   final groups = eventGroupChoices(ref, l10n);
-  final group = event == null ? groups.firstOrNull?.key : event.group;
+  final initialGroup = event != null
+      ? event.group
+      : groups.any((g) => g.key == group)
+      ? group
+      : groups.firstOrNull?.key;
   var result = await showAppSheet<_EditResult>(
     context,
     expand: true,
@@ -135,7 +141,7 @@ Future<void> editEvent(
       initialDay: initialDay,
       thisYear: today.year,
       groups: groups,
-      initialGroup: group,
+      initialGroup: initialGroup,
     ),
   );
   if (result?.duplicate == true && context.mounted) {

@@ -108,7 +108,7 @@ List<GettingStarted> gettingStarted({
   bool someoneElseIn(ChurchGroup group) => [
     ...members,
     ...moved,
-  ].any((m) => m.uid != me.uid && m.isIn(group, ministries: ministries.ministries));
+  ].any((m) => m.uid != me.uid && m.isIn(group));
   bool arranged(bool Function(Roster day, Duty duty) counts) =>
       rosters.any((r) => r.duties.any((d) => d.people.isNotEmpty && counts(r, d)));
   final anyArranged = arranged((_, _) => true);
@@ -158,18 +158,18 @@ List<GettingStarted> gettingStarted({
         if (open(id)) ...forService(id),
     ],
     ServiceLead(service: final id) => open(id) ? forService(id) : const [],
-    MinistryLead(ministry: final id) => switch (ministries.byId(id)) {
-      null => const [],
-      final ministry => [
-        step(StartStep.addStaff, someoneElseIn(MinistryGroup(id)), MinistryGroup(id)),
-        if (ministry.duties.where((d) => open(d.service)).firstOrNull case final first?)
-          step(
-            StartStep.planWeeks,
-            arranged((r, d) => ministry.dutiesIn(r.isEvent ? null : r.type).contains(d.role)),
-            ServiceGroup(first.service),
-          ),
-      ],
-    },
+    // A 事工's are its events, made when it has one: nothing to set up.
+    MinistryLead() => const [],
+    DutyLead(:final service, :final duty) =>
+      open(service)
+          ? [
+              step(
+                StartStep.planWeeks,
+                arranged((r, d) => !r.isEvent && r.type == service && d.role == duty),
+                ServiceGroup(service),
+              ),
+            ]
+          : const [],
     SmallGroupLead(smallGroup: final id) => switch (smallGroups.byId(id)) {
       null => const [],
       final group => [

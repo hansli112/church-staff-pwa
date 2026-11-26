@@ -422,12 +422,12 @@ Page<void> fadeInPage(GoRouterState state, Widget child) => CustomTransitionPage
   },
 );
 
-/// [page], where a 事工's 負責人 arranges, warming up the backend's check
-/// of their changes (#82); not for an admin, whose are written outright.
-/// Whichever service or event the page goes on to.
+/// [page], where a duty's 負責人 arranges, warming up the backend's check
+/// of their changes; not for an admin, whose are written outright.
+/// Whichever service the page goes on to.
 Widget _ledDutiesWarm(Widget page) => WarmUpOnOpen(
   WarmUp.ledDuties,
-  when: meProvider.select((m) => m.value != null && !m.value!.isAdmin && m.value!.leadMinistries.isNotEmpty),
+  when: meProvider.select((m) => m.value != null && !m.value!.isAdmin && m.value!.leadDuties.isNotEmpty),
   child: page,
 );
 

@@ -94,7 +94,6 @@ mixin _MemoryRosters on _MemoryChurchBase {
       // the caller's 事工 lead.
       if (_uid != uid) throw const CloudException(CloudErrorCode.permissionDenied);
       final me = _b.requireMember(churchId);
-      final ministries = (_b.ministries[churchId] ?? const MinistrySettings()).ministries;
       final saved = _b.rosters[churchId]!;
       for (final id in change.before.keys) {
         if (!change.expects(id, saved[id])) throw const CloudException(CloudErrorCode.conflict);
@@ -106,7 +105,7 @@ mixin _MemoryRosters on _MemoryChurchBase {
         if (day == null || (saved[entry.key]?.forEvent?.cancelled ?? false)) {
           throw const CloudException(CloudErrorCode.permissionDenied);
         }
-        final roles = me.ledDuties(ministries, day.isEvent ? null : day.type);
+        final roles = me.ledDuties(day.isEvent ? null : day.type);
         if (!mayChangeLedDuties(roles, was, next)) throw const CloudException(CloudErrorCode.permissionDenied);
         if (was == null && !day.isEvent && !_b.services[churchId]!.ids.contains(day.type)) {
           throw const CloudException(CloudErrorCode.unknown);
@@ -166,8 +165,7 @@ mixin _MemoryRosters on _MemoryChurchBase {
     var people = 0;
     await _b.write(() {
       final me = _b.requireMember(churchId);
-      final ministries = (_b.ministries[churchId] ?? const MinistrySettings()).ministries;
-      if (!_b.services[churchId]!.ids.contains(serviceType) || !me.arranges(ministries, serviceType).any) {
+      if (!_b.services[churchId]!.ids.contains(serviceType) || !me.arranges(serviceType).any) {
         throw const CloudException(CloudErrorCode.permissionDenied);
       }
       final waiting = _b.planned[churchId] ?? {};

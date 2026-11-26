@@ -1,7 +1,7 @@
 /**
  * 身分 (#82) on a member doc: `identities`, beside what the rules read of
  * them (`role`, `groups`, `leadTypes`, `leadMinistries`,
- * `leadSmallGroups`). Every backend write of someone's 身分 goes through
+ * `leadSmallGroups`, `leadDuties`). Every backend write of someone's 身分 goes through
  * [withIdentities], as every app write goes through Member.withIdentities
  * (testdata/church_rules.json, memberIdentities and identityProjection).
  */
@@ -14,13 +14,31 @@ export type Identity =
   | { kind: 'pastor'; services?: string[] }
   | { kind: 'lead'; service: string }
   | { kind: 'lead'; ministry: string }
-  | { kind: 'lead'; smallGroup: string };
+  | { kind: 'lead'; smallGroup: string }
+  | { kind: 'dutyLead'; service: string; duty: string };
+
+/**
+ * A 服事項目's 負責人 as the rules and the backend read it (`leadDuties`):
+ * `<service>/<duty>`. Service IDs have no slash; the duty's name may.
+ */
+export const dutyKey = (service: string, duty: string) => `${service}/${duty}`;
+
+/** [key] as a service and a duty, or null for one that is not a [dutyKey]. */
+export function dutyOfKey(key: string): { service: string; duty: string } | null {
+  const at = key.indexOf('/');
+  return at > 0 && at < key.length - 1 ? { service: key.slice(0, at), duty: key.slice(at + 1) } : null;
+}
 
 /** One stored 身分; null for a kind not known. */
 export function parse(v: unknown): Identity | null {
   const i = (v ?? {}) as Record<string, unknown>;
   if (i.kind === 'admin' || i.kind === 'office') return { kind: i.kind };
   if (i.kind === 'pastor') return Array.isArray(i.services) ? { kind: 'pastor', services: strings(i.services) } : { kind: 'pastor' };
+  if (i.kind === 'dutyLead') {
+    return typeof i.service === 'string' && typeof i.duty === 'string' && i.service !== '' && i.duty !== ''
+      ? { kind: 'dutyLead', service: i.service, duty: i.duty }
+      : null;
+  }
   if (i.kind !== 'lead') return null;
   if (typeof i.service === 'string') return { kind: 'lead', service: i.service };
   if (typeof i.ministry === 'string') return { kind: 'lead', ministry: i.ministry };
@@ -46,7 +64,7 @@ export function identitiesOf(m: Record<string, unknown>): Identity[] {
   const stored = (Array.isArray(m.identities) ? m.identities : []).map(parse).filter((i): i is Identity => i !== null);
   const admin = m.role === 'admin';
   const leadsService = (id: string) =>
-    stored.some((i) => ('service' in i && i.service === id) || (i.kind === 'pastor' && (i.services ?? []).includes(id)));
+    stored.some((i) => (i.kind === 'lead' && 'service' in i && i.service === id) || (i.kind === 'pastor' && (i.services ?? []).includes(id)));
   return [
     ...(admin && !stored.some(makesAdmin) ? [{ kind: 'admin' } as const] : []),
     ...(!admin && strings(m.groups).length > 0 && !stored.some((i) => i.kind === 'office') ? [{ kind: 'office' } as const] : []),
@@ -60,6 +78,12 @@ export function identitiesOf(m: Record<string, unknown>): Identity[] {
     ...strings(m.leadSmallGroups)
       .filter((g) => !stored.some((i) => 'smallGroup' in i && i.smallGroup === g))
       .map((smallGroup) => ({ kind: 'lead', smallGroup }) as const),
+    ...strings(m.leadDuties)
+      .filter((k) => !stored.some((i) => i.kind === 'dutyLead' && dutyKey(i.service, i.duty) === k))
+      .flatMap((k) => {
+        const d = dutyOfKey(k);
+        return d ? [{ kind: 'dutyLead', ...d } as const] : [];
+      }),
   ];
 }
 
@@ -77,8 +101,9 @@ export function withIdentities(m: Record<string, unknown>, next: Identity[]) {
     role,
     groups: identities.some((i) => i.kind === 'office') ? ['roster-editors', 'calendar-editors'] : [],
     identities,
-    leadTypes: each((i) => ('service' in i ? [i.service] : i.kind === 'pastor' ? (i.services ?? []) : [])),
+    leadTypes: each((i) => (i.kind === 'lead' && 'service' in i ? [i.service] : i.kind === 'pastor' ? (i.services ?? []) : [])),
     leadMinistries: each((i) => ('ministry' in i ? [i.ministry] : [])),
     leadSmallGroups: each((i) => ('smallGroup' in i ? [i.smallGroup] : [])),
+    leadDuties: each((i) => (i.kind === 'dutyLead' ? [dutyKey(i.service, i.duty)] : [])),
   };
 }

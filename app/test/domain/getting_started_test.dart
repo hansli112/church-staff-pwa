@@ -6,7 +6,7 @@ import 'package:martha/domain/models.dart';
 const sunday = Service(id: 'sunday', name: '主日崇拜', weekdays: [DateTime.sunday], duties: ['司會', '司琴']);
 const youth = Service(id: 'youth', name: '青年崇拜', weekdays: [DateTime.saturday], duties: ['司會']);
 const services = ServiceSettings(services: [sunday, youth]);
-const worship = Ministry(id: 'worship', name: '敬拜團', duties: [MinistryDuty('youth', '司琴')]);
+const worship = Ministry(id: 'worship', name: '敬拜團');
 const care = Ministry(id: 'care', name: '關懷事工');
 const joy = SmallGroupDetails(id: 'joy', name: '喜樂小組', service: 'sunday');
 
@@ -287,25 +287,13 @@ void main() {
     );
   });
 
-  test("a 事工's 負責人 puts someone on its duties' lists and plans a service where it leads a duty", () {
-    final lead = staff.withIdentities(const [MinistryLead('worship')]);
-    // On 司琴's list: one of 敬拜團's (#94).
-    const player = Member(
-      uid: 'p',
-      name: '彈琴的',
-      zones: [
-        Zone(serviceType: 'youth', duties: ['司琴']),
-      ],
-    );
-    expect(left(of(lead)), [
-      (step: StartStep.addStaff, group: const MinistryGroup('worship')),
-      (step: StartStep.planWeeks, group: const ServiceGroup('youth')),
-    ]);
+  test("a duty's 負責人 plans the service it is in, till that duty is arranged; a 事工's has nothing to set up", () {
+    final lead = staff.withIdentities(const [DutyLead('youth', '司琴')]);
+    expect(left(of(lead)), [(step: StartStep.planWeeks, group: const ServiceGroup('youth'))]);
     expect(
       left(
         of(
           lead,
-          others: [player],
           rosters: [
             day('youth', {
               '司會': ['李美玉'],
@@ -319,7 +307,6 @@ void main() {
     expect(
       of(
         lead,
-        others: [player],
         rosters: [
           day('youth', {
             '司琴': ['彈琴的'],
@@ -328,11 +315,7 @@ void main() {
       ),
       isEmpty,
     );
-
-    final careLead = staff.withIdentities(const [MinistryLead('care'), MinistryLead('gone')]);
-    expect(left(of(careLead)), [
-      (step: StartStep.addStaff, group: const MinistryGroup('care')),
-    ], reason: 'one linking no duty has nothing to arrange; one deleted, nothing at all');
+    expect(of(staff.withIdentities(const [MinistryLead('worship')])), isEmpty);
   });
 
   test('a 小組長 adds its 同工, and says when it meets while 回報人數 is on', () {
@@ -362,20 +345,6 @@ void main() {
     ];
     expect(of(lead, pending: [movedMei], rosters: arranged), isEmpty);
     expect(left(of(lead, rosters: arranged)), [(step: StartStep.addStaff, group: const ServiceGroup('sunday'))]);
-    final worshipLead = staff.withIdentities(const [MinistryLead('worship')]);
-    const pianist = PendingMember(
-      id: 'old-ting',
-      name: '林婷',
-      zones: [
-        Zone(serviceType: 'youth', duties: ['司琴']),
-      ],
-    );
-    expect(
-      left(of(worshipLead, pending: [pianist])).map((s) => s.step),
-      [StartStep.planWeeks],
-      reason: "moved onto 敬拜團's 司琴 list",
-    );
-    expect(left(of(worshipLead)).map((s) => s.step), [StartStep.addStaff, StartStep.planWeeks]);
     const elsewhere = PendingMember(
       id: 'old-hao',
       name: '陳志豪',

@@ -1,7 +1,6 @@
 import type { DocumentReference, DocumentSnapshot, Transaction } from 'firebase-admin/firestore';
 
 import { fail, requireCaller, type Caller, type Deps } from './common.js';
-import { ledDuties, ministriesOf } from './ministries.js';
 import { powersOf, type Powers } from './powers.js';
 
 /**
@@ -124,9 +123,7 @@ async function has(deps: Deps, a: ChurchAccess, level: Level) {
   if ('group' in level) return a.powers.inGroup(level.group);
   if ('arranges' in level) {
     if (await has(deps, a, { rosterEditor: level.arranges })) return true;
-    if (a.powers.ministries.length === 0) return false;
-    const doc = await deps.db.doc(`churches/${a.cid}/settings/ministries`).get();
-    return ledDuties(ministriesOf(doc), a.powers.ministries, level.arranges).size > 0;
+    return a.powers.ledDuties(level.arranges).size > 0;
   }
   const type = level.rosterEditor;
   if (!(await serviceTypes(deps, a.cid)).includes(type)) return false;

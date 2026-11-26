@@ -81,15 +81,7 @@ class DutyPicking {
 
   /// What I may change picking for [duty] on [roster].
   DutyRights rightsOn(Roster roster, String duty) =>
-      _ref
-          .read(meProvider)
-          .value
-          ?.rightsOnDuty(
-            roster,
-            duty,
-            services: _ref.read(servicesProvider).value,
-            ministries: _ref.read(ministriesProvider).value?.ministries ?? const [],
-          ) ??
+      _ref.read(meProvider).value?.rightsOnDuty(roster, duty, services: _ref.read(servicesProvider).value) ??
       const DutyRights();
 
   /// Saves [pick] for [duty] on [roster]: the 同工 typed in first, each on
