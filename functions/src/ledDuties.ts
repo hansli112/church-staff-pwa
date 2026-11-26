@@ -21,6 +21,8 @@ interface Duty {
   role: string;
   people: string[];
   uids: Record<string, string>;
+  /** 服事交給小組: name → 小組 id. */
+  groups?: Record<string, string>;
 }
 
 type Roster = Record<string, unknown> & { duties: Duty[] };
@@ -41,10 +43,12 @@ function content(data: Record<string, unknown> | undefined) {
   out.duties = (Array.isArray(data.duties) ? data.duties : []).map((d: Record<string, unknown>) => {
     const people = Array.isArray(d?.people) ? (d.people as unknown[]) : [];
     const uids = d?.uids && typeof d.uids === 'object' ? (d.uids as Record<string, unknown>) : {};
+    const groups = d?.groups && typeof d.groups === 'object' ? (d.groups as Record<string, unknown>) : {};
     return {
       role: d?.role,
       people,
       uids: Object.fromEntries(Object.entries(uids).filter(([name]) => people.includes(name))),
+      groups: Object.fromEntries(Object.entries(groups).filter(([name]) => people.includes(name))),
     };
   });
   return out;
@@ -54,9 +58,15 @@ function duty(value: unknown): Duty {
   const d = record(value);
   const people = d.people;
   const uids = record(d.uids ?? {});
+  const groups = d.groups === undefined ? undefined : record(d.groups);
   if (typeof d.role !== 'string' || !Array.isArray(people) || people.some((p) => typeof p !== 'string')
-      || Object.values(uids).some((u) => typeof u !== 'string')) fail('invalid-argument', 'unknown');
-  return { role: d.role, people: people as string[], uids: uids as Record<string, string> };
+      || [...Object.values(uids), ...Object.values(groups ?? {})].some((u) => typeof u !== 'string')) fail('invalid-argument', 'unknown');
+  return {
+    role: d.role,
+    people: people as string[],
+    uids: uids as Record<string, string>,
+    ...(groups ? { groups: groups as Record<string, string> } : {}),
+  };
 }
 
 function roster(value: unknown): Roster | null {

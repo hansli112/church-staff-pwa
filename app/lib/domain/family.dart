@@ -104,13 +104,16 @@ typedef FamilyServing = ({MyService service, FamilyPerson? who});
 
 /// The days [me] and my [family] serve on [rosters], soonest first; on a
 /// day, mine first, then my family's as listed. Not those only asked.
+/// [mySmallGroups]: mine, whose duties are mine too (服事交給小組); my
+/// family's are not known here.
 List<FamilyServing> servingWithFamily(
   Iterable<Roster> rosters, {
   required String me,
   required List<FamilyPerson> family,
+  Set<String> mySmallGroups = const {},
 }) {
   final out = <FamilyServing>[
-    for (final s in myServices(rosters, uid: me)) (service: s, who: null),
+    for (final s in myServices(rosters, uid: me, smallGroups: mySmallGroups)) (service: s, who: null),
     for (final p in family)
       if (!p.asked)
         for (final s in myServices(rosters, uid: p.id)) (service: s, who: p),

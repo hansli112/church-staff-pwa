@@ -140,6 +140,7 @@
   "pickerOnce": "Fill in “{name}” just this once",
   "pickerNoResults": "No results for “{query}”",
   "pickerSearchHint": "Search all team members",
+  "pickerSearchHintGroups": "Search team members or small groups",
   "pickerTakeOff": "Remove {name} from the list",
   "@pickerTakeOff": {
     "placeholders": {

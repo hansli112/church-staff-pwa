@@ -115,6 +115,7 @@ class RosterActions {
   /// Puts [people] on [role] of [roster]. Made in 安排服事 ([via] `plan`,
   /// #90), nobody is told until 通知同工. [newIds]: 同工 added a moment
   /// ago (新增同工), by name, whom the staff list may not have yet.
+  /// [groupIds]: the 小組 picked (服事交給小組), by name.
   ChurchWrite setPeople(
     Roster roster,
     String role,
@@ -122,6 +123,7 @@ class RosterActions {
     Set<String> guestNames = const {},
     List<String>? ranking,
     Map<String, String> newIds = const {},
+    Map<String, String> groupIds = const {},
     RosterVia via = RosterVia.app,
   }) {
     final order = orderOf(roster);
@@ -133,6 +135,7 @@ class RosterActions {
       nameIds: {..._nameIds, ...newIds},
       order: afterOrder,
       guestNames: guestNames,
+      groupIds: groupIds,
     );
     if (ranking == null || order == afterOrder) return _dutyWrite(roster, next, role, via: via);
     if (roster.isEvent) throw StateError('Event rosters have no staff order');
@@ -173,7 +176,7 @@ class RosterActions {
           for (final d in r.duties)
             if (d.role == role)
               for (final name in d.people)
-                if (name.trim().isNotEmpty && !d.uids.containsKey(name)) name,
+                if (name.trim().isNotEmpty && !d.uids.containsKey(name) && !d.groups.containsKey(name)) name,
     }.toList()..sort();
     return type == null ? names : _order(type).sort(role, names);
   }

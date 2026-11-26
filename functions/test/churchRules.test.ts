@@ -49,7 +49,14 @@ describe('dutyRename', () => {
 });
 
 describe('rosterIdentity', () => {
-  for (const r of rows('rosterIdentity')) test(r.why, () => assert.deepEqual(dutiesByUid(r.duties).get(r.uid) ?? [], r.holds));
+  // 服事交給小組: one held as one of a 小組 (groupDuty) is that duty.
+  const duty = (held: string) => held.split('\u001f')[0];
+  for (const r of rows('rosterIdentity')) {
+    test(r.why, () => {
+      const groups = new Map(((r.smallGroups as string[] | undefined) ?? []).map((id) => [id, [r.uid as string]]));
+      assert.deepEqual((dutiesByUid(r.duties, groups).get(r.uid) ?? []).map(duty), r.holds);
+    });
+  }
 });
 
 describe('movedMembers', () => {

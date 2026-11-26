@@ -10,7 +10,7 @@ import { nameKey } from './text.js';
  */
 
 /** A roster duty as stored: the names shown, and those of members (or pending members) to their IDs. */
-export type DutyDoc = { people?: string[]; uids?: Record<string, string> };
+export type DutyDoc = { people?: string[]; uids?: Record<string, string>; groups?: Record<string, string> };
 
 /**
  * Rewrites, with [change], each duty of every roster that names [id]: the
@@ -51,6 +51,39 @@ export function renamedDuty(d: DutyDoc, id: string, name: string): DutyDoc {
     people: [...new Set((d.people ?? []).map((p) => (old.has(p) ? name : p)))],
     uids: Object.fromEntries(Object.entries(d.uids ?? {}).map(([n, u]) => [old.has(n) ? name : n, u])),
   };
+}
+
+/**
+ * [d] with 小組 [id] given it (服事交給小組) now named [name], in `people`
+ * and `groups`, as Duty.renamedGroup in the app; [d] itself when it is
+ * that already, or not given to it.
+ */
+export function renamedGroupDuty(d: DutyDoc, id: string, name: string): DutyDoc {
+  const old = new Set(Object.entries(d.groups ?? {}).filter(([n, g]) => g === id && n !== name).map(([n]) => n));
+  if (old.size === 0) return d;
+  return {
+    ...d,
+    people: [...new Set((d.people ?? []).map((p) => (old.has(p) ? name : p)))],
+    groups: Object.fromEntries(Object.entries(d.groups ?? {}).map(([n, g]) => [old.has(n) ? name : n, g])),
+  };
+}
+
+/** 小組 [id] of church [cid] renamed [name]: every roster that gives it a duty says [name]. */
+export async function renameGroupOnRosters(deps: Deps, cid: string, id: string, name: string) {
+  const all = await deps.db.collection(`churches/${cid}/rosters`).get();
+  const ids = all.docs
+    .filter((r) => ((r.get('duties') as DutyDoc[] | undefined) ?? []).some((d) => Object.values(d?.groups ?? {}).includes(id)))
+    .map((r) => r.id);
+  for (const rosterId of ids) {
+    await deps.db.runTransaction(async (tx) => {
+      const ref = deps.db.doc(`churches/${cid}/rosters/${rosterId}`);
+      const s = await tx.get(ref);
+      const duties = s.get('duties') as DutyDoc[] | undefined;
+      if (!s.exists || !Array.isArray(duties)) return;
+      const next = duties.map((d) => renamedGroupDuty(d, id, name));
+      if (next.some((d, i) => d !== duties[i])) tx.update(ref, { duties: next });
+    });
+  }
 }
 
 /**

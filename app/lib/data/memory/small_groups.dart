@@ -73,6 +73,15 @@ mixin _MemorySmallGroups on _MemoryChurchBase {
           order: was?.service == group.service ? was?.order : null,
         ),
       );
+      // The days that give it a duty (服事交給小組) call it by its new name.
+      if (was != null && was.name != name) {
+        final rosters = _b.rosters[churchId]!;
+        for (final key in [...rosters.keys]) {
+          final value = rosters[key]!;
+          if (!value.duties.any((d) => d.groups.containsValue(id))) continue;
+          rosters[key] = value.copyWith(duties: [for (final d in value.duties) d.renamedGroup(id, name)]);
+        }
+      }
       if (leads == null) return;
       for (final m in [...members.values]) {
         members[m.uid] = m.withSmallGroupLead(id, lead: leads.contains(m.uid));

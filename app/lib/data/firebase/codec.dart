@@ -520,6 +520,11 @@ List<Duty> _duties(Object? raw) => [
               for (final e in (d['uids'] as Map).entries)
                 if (e.key is String && e.value is String) e.key as String: e.value as String,
           },
+          groups: {
+            if (d['groups'] is Map)
+              for (final e in (d['groups'] as Map).entries)
+                if (e.key is String && e.value is String) e.key as String: e.value as String,
+          },
         ),
 ];
 
@@ -591,6 +596,12 @@ Json rosterToJson(Roster r) => {
           for (final e in d.uids.entries)
             if (d.people.contains(e.key)) e.key: e.value,
         },
+        // 服事交給小組: only when there is one, so the days look as they did.
+        if (d.groups.keys.any(d.people.contains))
+          'groups': {
+            for (final e in d.groups.entries)
+              if (d.people.contains(e.key)) e.key: e.value,
+          },
       },
   ],
   'events': [for (final e in r.events) _eventToJson(e)],

@@ -14,6 +14,7 @@ import '../../domain/models.dart';
 import '../../l10n/app_localizations.dart';
 import '../../state/providers.dart';
 import '../../state/roster_actions.dart';
+import 'duty_people.dart';
 import 'duty_picking.dart';
 import 'future_changes.dart';
 import 'roster_card.dart';
@@ -217,7 +218,10 @@ class _DutyRow extends ConsumerWidget {
                         l10n.nobodyYet,
                         style: AppText.body.copyWith(color: c.secondaryLabel),
                       )
-                    : Text(duty.people.join(l10n.listSeparator), style: AppText.body),
+                    : Text.rich(
+                        TextSpan(children: dutyPeopleSpans(context, duty, groupIds: churchSmallGroupIds(ref))),
+                        style: AppText.body,
+                      ),
               ),
               const SizedBox(width: Space.s),
               if (adding)

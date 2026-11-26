@@ -668,6 +668,7 @@ class Duty {
     required this.role,
     this.people = const [],
     this.uids = const {},
+    this.groups = const {},
   });
 
   final String role;
@@ -680,15 +681,38 @@ class Duty {
   /// reminders can find them. Free-text names have no entry.
   final Map<String, String> uids;
 
+  /// 服事交給小組: name → 小組 id for the names in [people] that are a
+  /// 小組. Everyone in it holds the duty. Older apps see just the name.
+  final Map<String, String> groups;
+
   Duty copyWith({
     String? role,
     List<String>? people,
     Map<String, String>? uids,
+    Map<String, String>? groups,
   }) => Duty(
     role: role ?? this.role,
     people: people ?? this.people,
     uids: uids ?? this.uids,
+    groups: groups ?? this.groups,
   );
+
+  /// The 小組 [name] on it is, by id; null for a person or a name typed.
+  String? groupOf(String name) => people.contains(name) ? groups[name] : null;
+
+  /// With 小組 [id]'s name here now [name], where it was in [people] and
+  /// in [groups] (renamedGroupDuty in functions/src/renames.ts).
+  Duty renamedGroup(String id, String name) {
+    final old = {
+      for (final e in groups.entries)
+        if (e.value == id && e.key != name) e.key,
+    };
+    if (old.isEmpty) return this;
+    return copyWith(
+      people: {for (final p in people) old.contains(p) ? name : p}.toList(),
+      groups: {for (final e in groups.entries) old.contains(e.key) ? name : e.key: e.value},
+    );
+  }
 
   /// With [uid]'s name here now [name], where it was in [people] and in
   /// [uids]: one renamed (renamedDuty in functions/src/renames.ts).
@@ -706,13 +730,18 @@ class Duty {
 
   @override
   bool operator ==(Object other) =>
-      other is Duty && other.role == role && listEquals(other.people, people) && mapEquals(other.uids, uids);
+      other is Duty &&
+      other.role == role &&
+      listEquals(other.people, people) &&
+      mapEquals(other.uids, uids) &&
+      mapEquals(other.groups, groups);
 
   @override
   int get hashCode => Object.hash(
     role,
     Object.hashAll(people),
     Object.hashAll(uids.entries.map((e) => '${e.key}=${e.value}')),
+    Object.hashAll(groups.entries.map((e) => '${e.key}=${e.value}')),
   );
 }
 
@@ -918,11 +947,33 @@ class Roster {
   /// Duties explicitly bound to [uid]. Unbound names are guests, never a
   /// runtime identity guess, even when a member has exactly the same name.
   /// A binding counts only while its name is still listed
-  /// (testdata/church_rules.json, rosterIdentity).
-  List<String> dutiesOf({required String uid}) => [
+  /// (testdata/church_rules.json, rosterIdentity). With [smallGroups]
+  /// (theirs), also those given to one of them (服事交給小組).
+  List<String> dutiesOf({required String uid, Set<String> smallGroups = const {}}) => [
     for (final duty in duties)
-      if (uid.isNotEmpty && duty.uids.entries.any((e) => e.value == uid && duty.people.contains(e.key))) duty.role,
+      if (uid.isNotEmpty && duty.uids.entries.any((e) => e.value == uid && duty.people.contains(e.key)) ||
+          _givenTo(duty, smallGroups) != null)
+        duty.role,
   ];
+
+  /// The duties [uid] holds only as one of [smallGroups] (服事交給小組):
+  /// duty → the 小組's name on it.
+  Map<String, String> groupDutiesOf({required String uid, required Set<String> smallGroups}) {
+    final mine = dutiesOf(uid: uid).toSet();
+    return {
+      for (final duty in duties)
+        if (!mine.contains(duty.role)) duty.role: ?_givenTo(duty, smallGroups),
+    };
+  }
+
+  /// The name of one of [smallGroups] [duty] is given to, or null.
+  static String? _givenTo(Duty duty, Set<String> smallGroups) {
+    if (smallGroups.isEmpty) return null;
+    for (final e in duty.groups.entries) {
+      if (smallGroups.contains(e.value) && duty.people.contains(e.key)) return e.key;
+    }
+    return null;
+  }
 
   @override
   bool operator ==(Object other) =>

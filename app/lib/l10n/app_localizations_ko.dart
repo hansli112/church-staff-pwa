@@ -476,6 +476,9 @@ class L10nKo extends L10n {
   String get pickerSearchHint => '모든 멤버 검색';
 
   @override
+  String get pickerSearchHintGroups => '멤버나 소그룹 검색';
+
+  @override
   String pickerTakeOff(String name) {
     return '$name 님을 목록에서 빼기';
   }

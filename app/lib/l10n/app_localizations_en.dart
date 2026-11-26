@@ -483,6 +483,9 @@ class L10nEn extends L10n {
   String get pickerSearchHint => 'Search all team members';
 
   @override
+  String get pickerSearchHintGroups => 'Search team members or small groups';
+
+  @override
   String pickerTakeOff(String name) {
     return 'Remove $name from the list';
   }

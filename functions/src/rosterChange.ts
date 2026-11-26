@@ -8,7 +8,19 @@ import { isQuiet, movedBy } from './eventRosters.js';
 import type { Words } from './languages.js';
 import { familiesOf, notifyAbout } from './family.js';
 import type { PushDeps } from './push.js';
-import { duties, dutiesByUid, names, rosterDay, rosterLink, serviceNames, type RosterDay } from './rosters.js';
+import {
+  duties,
+  dutiesByUid,
+  groupMembersOn,
+  groupNamesIn,
+  names,
+  rosterDay,
+  rosterLink,
+  serviceNames,
+  shownDuties,
+  type GroupMembers,
+  type RosterDay,
+} from './rosters.js';
 import { queue } from './webhook.js';
 import { dateKeyIn, earliestDay, instantOf, nextDay, timeZoneOf, wallClock } from './timeZones.js';
 import { loggable } from './redact.js';
@@ -42,10 +54,13 @@ export interface DutyDiff {
   duties: { duty: string; added: string[]; removed: string[] }[];
 }
 
-/** Who was put on or taken off which duty between two versions of a day. */
-export function diffDuties(before: unknown, after: unknown): DutyDiff {
-  const a = dutiesByUid(before);
-  const b = dutiesByUid(after);
+/**
+ * Who was put on or taken off which duty between two versions of a day;
+ * [groups], who is in the 小組 a duty is given to.
+ */
+export function diffDuties(before: unknown, after: unknown, groups: GroupMembers = new Map()): DutyDiff {
+  const a = dutiesByUid(before, groups);
+  const b = dutiesByUid(after, groups);
   const added = new Map<string, string[]>();
   const removed = new Map<string, string[]>();
   for (const [uid, roles] of b) {
@@ -115,7 +130,11 @@ export async function readRosterChange(
   const day = rosterDay(doc);
   // Past everywhere, before reading the church for its own today.
   if (!day || day.lastDay < earliestDay(deps.now()) || isQuiet(before, after)) return null;
-  const diff = diffDuties(before?.exists ? before.get('duties') : [], after?.exists ? after.get('duties') : []);
+  const dutiesBefore = before?.exists ? before.get('duties') : [];
+  const dutiesAfter = after?.exists ? after.get('duties') : [];
+  // 服事交給小組: everyone in the 小組 holds the duty.
+  const groups = await groupMembersOn(deps, cid, dutiesBefore, dutiesAfter);
+  const diff = diffDuties(dutiesBefore, dutiesAfter, groups);
   const was = rosterDay(before)?.dateKey;
   const movedFrom = day.event && after?.exists && was && was !== day.dateKey ? was : null;
   if (!diff.added.size && !diff.removed.size && !diff.duties.length && !movedFrom) return null;
@@ -136,8 +155,8 @@ export async function readRosterChange(
     serviceName: day.name(services),
     event: day.event,
     movedFrom,
-    holders: dutiesByUid(after?.exists ? after.get('duties') : []),
-    previously: dutiesByUid(before?.exists ? before.get('duties') : []),
+    holders: dutiesByUid(dutiesAfter, groups),
+    previously: dutiesByUid(dutiesBefore, groups),
     // A deleted day keeps the way it was last written: taking back an
     // import removes days no push announced, so none announces their going.
     via: viaOf(doc?.get('via')),
@@ -200,18 +219,21 @@ async function tell(deps: PushDeps, day: PushDay, uid: string, news: News, excep
   const push = (body: (w: Words, who: string | null) => string) =>
     notifyAbout(deps, day.cid, uid, 'rosterChange', (w, who) => ({ title: day.title, body: body(w, who), link: day.link }), except, family);
   const label = (w: Words) => `${w.shortDate(day.dateKey)} ${day.name}`;
+  const names = await groupNamesIn(deps, day.cid, [...news.added, ...news.removed]);
   let sent = 0;
   if (news.movedTo && day.event) {
     const { title } = day.event;
     sent += await push((w) => w.eventMoved(title, w.dateWithWeekday(news.movedTo!)));
   }
   if (news.added.length) {
-    sent += await push((w, who) => (who ? w.familyPutOn(who, label(w), news.added) : w.putOn(label(w), news.added)));
+    const added = (w: Words) => shownDuties(w, news.added, names);
+    sent += await push((w, who) => (who ? w.familyPutOn(who, label(w), added(w)) : w.putOn(label(w), added(w))));
   }
   if (news.removed.length && news.noService) {
     sent += await push((w) => w.noService(label(w)));
   } else if (news.removed.length) {
-    sent += await push((w, who) => (who ? w.familyTakenOff(who, label(w), news.removed) : w.takenOff(label(w), news.removed)));
+    const removed = (w: Words) => shownDuties(w, news.removed, names);
+    sent += await push((w, who) => (who ? w.familyTakenOff(who, label(w), removed(w)) : w.takenOff(label(w), removed(w))));
   }
   return sent;
 }
@@ -373,7 +395,7 @@ export async function sendHeldPushes(deps: PushDeps & Pick<Deps, 'now'>) {
       serviceNames(deps, cid),
     ]);
     // A deleted day reads as it was when first held.
-    const day = rosterDay(roster);
+    const day = rosterDay(roster, await groupMembersOn(deps, cid, roster.get('duties')));
     const was = {
       dateKey: first.get('dateKey') as string,
       serviceId: first.get('serviceId') as string | null,
@@ -463,6 +485,7 @@ async function sendPlanned(deps: PushDeps & Pick<Deps, 'now'>, church: DocumentS
   for (const id of new Set(entries.map((e) => e.get('rosterId') as string))) {
     rosters.set(id, await deps.db.doc(`churches/${cid}/rosters/${id}`).get());
   }
+  const groups = await groupMembersOn(deps, cid, ...[...rosters.values()].map((r) => r.get('duties')));
   const byUid = new Map<string, DocumentSnapshot[]>();
   for (const e of entries) byUid.set(e.get('uid') as string, [...(byUid.get(e.get('uid') as string) ?? []), e]);
   let told = 0;
@@ -472,7 +495,7 @@ async function sendPlanned(deps: PushDeps & Pick<Deps, 'now'>, church: DocumentS
     let service = '';
     let first: { serviceId: string | null; dateKey: string; event: PushDay['event'] } | null = null;
     for (const e of mine) {
-      const day = rosterDay(rosters.get(e.get('rosterId') as string));
+      const day = rosterDay(rosters.get(e.get('rosterId') as string), groups);
       const dateKey = day?.dateKey ?? (e.get('dateKey') as string);
       if (day?.cancelled || (day?.lastDay ?? dateKey) < today) continue;
       const news = newsSince(e, day?.holders.get(uid) ?? [], dateKey, false);
@@ -486,8 +509,9 @@ async function sendPlanned(deps: PushDeps & Pick<Deps, 'now'>, church: DocumentS
     }
     if (first) {
       const about = pushDay(church, first, service);
+      const names = await groupNamesIn(deps, cid, [...on, ...off].flatMap(([, duties]) => duties));
       const lines = (w: Words, list: [string, string[]][]) =>
-        list.sort(([a], [b]) => a.localeCompare(b)).map(([k, duties]) => w.dutyLine(w.shortDate(k), duties));
+        list.sort(([a], [b]) => a.localeCompare(b)).map(([k, duties]) => w.dutyLine(w.shortDate(k), shownDuties(w, duties, names)));
       try {
         await notifyAbout(deps, cid, uid, 'rosterChange', (w, who) => ({
           title: about.title,

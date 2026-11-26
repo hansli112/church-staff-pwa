@@ -940,6 +940,12 @@ abstract class L10n {
   /// **'搜尋所有同工'**
   String get pickerSearchHint;
 
+  /// The people picker's search field when the church has 小組, which can be picked for a duty too
+  ///
+  /// In zh, this message translates to:
+  /// **'搜尋同工或小組'**
+  String get pickerSearchHintGroups;
+
   /// Tooltip of the minus button beside a person in the picker's 編輯
   ///
   /// In zh, this message translates to:

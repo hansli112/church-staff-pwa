@@ -6,7 +6,7 @@ import { DAY_MS } from './common.js';
 import { familiesOf } from './family.js';
 import type { Words } from './languages.js';
 import { notifyMembers, type PushDeps } from './push.js';
-import { rosterDay, rosterLink, serviceNames } from './rosters.js';
+import { groupMembersOn, groupNamesIn, rosterDay, rosterLink, serviceNames, shownDuties } from './rosters.js';
 import { dateKeyIn, timeZoneOf, timeZonesAt, type ChurchTimeZone } from './timeZones.js';
 
 /**
@@ -138,7 +138,9 @@ async function remindAt(
     if (!isChurchOpen(church) || !due.has(timeZoneOf(church))) continue;
     const services = await serviceNames(deps, cid);
     const perUid = new Map<string, DutyLine[]>();
-    for (const day of docs.map(rosterDay)) {
+    // 服事交給小組: everyone in the 小組 holds the duty.
+    const groups = await groupMembersOn(deps, cid, ...docs.map((d) => d.get('duties')));
+    for (const day of docs.map((d) => rosterDay(d, groups))) {
       // Nor a deleted service's: its rosters stay saved, out of sight.
       if (!day || day.cancelled || (!day.event && !services(day.serviceId!))) continue;
       for (const [uid, roles] of day.holders) {
@@ -161,6 +163,7 @@ async function remindAt(
       ...known,
       ...(extra.length ? await deps.db.getAll(...extra.map((uid) => deps.db.doc(`churches/${cid}/members/${uid}`))) : []),
     ];
+    const groupNames = await groupNamesIn(deps, cid, [...perUid.values()].flatMap((l) => l.flatMap((i) => i.roles)));
     for (const member of members) {
       if (!member.exists || reminderHour(member) !== hour) continue;
       const timing = reminderTiming(member);
@@ -177,7 +180,7 @@ async function remindAt(
       if (weekly && week.length > 0) {
         sent += await notifyMembers(deps, cid, [member.id], 'reminder', (w) => ({
           title: w.weekReminder(name),
-          body: week.map((i) => whose(w, i, w.datedDutyLine(w.dateWithWeekday(i.dateKey), w.dutyLine(i.name, i.roles)))).join(w.lineSeparator),
+          body: week.map((i) => whose(w, i, w.datedDutyLine(w.dateWithWeekday(i.dateKey), w.dutyLine(i.name, shownDuties(w, i.roles, groupNames))))).join(w.lineSeparator),
           link: reminderLink(week),
         }));
       }
@@ -188,7 +191,7 @@ async function remindAt(
           // Further than tomorrow, the day is said.
           body: next
             .map((i) => {
-              const line = w.dutyLine(i.name, i.roles);
+              const line = w.dutyLine(i.name, shownDuties(w, i.roles, groupNames));
               return whose(w, i, inDays === 1 ? line : w.datedDutyLine(w.dateWithWeekday(i.dateKey), line));
             })
             .join(w.lineSeparator),

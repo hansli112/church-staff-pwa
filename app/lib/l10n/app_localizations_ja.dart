@@ -475,6 +475,9 @@ class L10nJa extends L10n {
   String get pickerSearchHint => 'すべてのメンバーを検索';
 
   @override
+  String get pickerSearchHintGroups => 'メンバーや小グループを検索';
+
+  @override
   String pickerTakeOff(String name) {
     return '$nameをリストから外す';
   }

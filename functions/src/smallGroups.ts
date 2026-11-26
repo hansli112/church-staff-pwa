@@ -6,6 +6,7 @@ import { fail, record, strings, text, type Caller, type Deps } from './common.js
 import { weekdayOf } from './attendance.js';
 import { identitiesOf, withIdentities, type Identity } from './identities.js';
 import { LIMITS, TEXT_LIMITS } from './limits.js';
+import { renameGroupOnRosters } from './renames.js';
 
 /**
  * 小組 (#85): churches/{cid}/smallGroups/{id}, each in one service
@@ -64,6 +65,7 @@ export async function editSmallGroup(deps: Deps, caller: Caller | null, data: un
 
   const root = deps.db.doc(`churches/${cid}`);
   const at = id === undefined ? root.collection('smallGroups').doc() : root.collection('smallGroups').doc(id as string);
+  let renamed = false;
   await deps.db.runTransaction(async (tx) => {
     const { powers, docs: [services, was] } = await accessIn(tx, deps, access, root.collection('settings').doc('services'), at);
     if (id !== undefined && !was.exists) fail('not-found', 'notFound');
@@ -100,6 +102,7 @@ export async function editSmallGroup(deps: Deps, caller: Caller | null, data: un
       for (const p of staffWithout!.docs) tx.update(p.ref, out);
       return;
     }
+    renamed = was.exists && was.get('name') !== fields!.name;
     // Moved to another service: last there, till placed.
     tx.set(at, order === undefined || after !== before ? fields! : { ...fields!, order });
     tx.set(root.collection('settings').doc('smallGroups'), { ids: FieldValue.arrayUnion(at.id) }, { merge: true });
@@ -108,6 +111,8 @@ export async function editSmallGroup(deps: Deps, caller: Caller | null, data: un
       for (const m of named) if (!nowLeads.docs.some((l) => l.id === m.id)) setLead(tx, m, at.id, true);
     }
   });
+  // The days that give it a duty (服事交給小組) call it by its new name.
+  if (renamed) await renameGroupOnRosters(deps, cid, at.id, fields!.name as string);
   return { id: at.id };
 }
 

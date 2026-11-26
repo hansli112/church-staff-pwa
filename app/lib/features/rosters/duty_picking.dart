@@ -76,6 +76,11 @@ Future<void> pickPeople(
   final onePerson = actions.takesOnePerson(roster, duty.role);
   final rights = ref.read(dutyPickingProvider).rightsOn(roster, duty.role);
   final absent = !roster.duties.any((d) => d.role == duty.role);
+  // 服事交給小組: every 小組 of the church, in its order, with how many are in it.
+  final groups = <PickerGroup>[
+    for (final g in ref.read(smallGroupsProvider).value ?? const <SmallGroupDetails>[])
+      (id: g.id, name: g.name, count: members.where((m) => m.smallGroups.contains(g.id)).length),
+  ];
   final result = await showAppSheet<PickerResult>(
     context,
     expand: true,
@@ -85,8 +90,12 @@ Future<void> pickPeople(
       initial: duty.people,
       initialGuests: {
         for (final name in duty.people)
-          if (!duty.uids.containsKey(name)) name,
+          if (!duty.uids.containsKey(name) && duty.groupOf(name) == null) name,
       },
+      initialGroups: {
+        for (final name in duty.people) name: ?duty.groupOf(name),
+      },
+      smallGroups: groups,
       guestSuggestions: guestSuggestions,
       staff: staff,
       order: order,

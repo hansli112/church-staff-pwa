@@ -20,6 +20,7 @@ class DutyPick {
     this.takeOffList = const [],
     this.guestNames = const {},
     this.newStaff = const {},
+    this.groupIds = const {},
   });
 
   /// The chosen names, any order (the staff order sorts them).
@@ -40,6 +41,9 @@ class DutyPick {
   /// Names typed to be 同工 without an account (新增同工), added to the
   /// service, on the duty's list, before the day is saved.
   final Set<String> newStaff;
+
+  /// The 小組 picked (服事交給小組): name → its id.
+  final Map<String, String> groupIds;
 }
 
 /// A [DutyPick] saved, but for the day itself: [day] writes it, for the
@@ -109,7 +113,8 @@ class DutyPicking {
     ]);
     // A duty not on the day (taken off it) comes back even with nobody.
     final changed =
-        !roster.duties.any((d) => d.role == role) || pickChanges(duty, pick.people, guestNames: pick.guestNames);
+        !roster.duties.any((d) => d.role == role) ||
+        pickChanges(duty, pick.people, guestNames: pick.guestNames, groupIds: pick.groupIds);
     final taken = pick.takeOffList;
     return DutyPickSave(
       day: changed || pick.ranking != null
@@ -118,6 +123,7 @@ class DutyPicking {
               role,
               pick.people,
               guestNames: pick.guestNames,
+              groupIds: pick.groupIds,
               ranking: pick.ranking,
               newIds: newIds,
               via: via,

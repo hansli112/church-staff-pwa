@@ -441,9 +441,14 @@ class _DayAsksState extends ConsumerState<DayAsks> {
     final roster = widget.roster;
     final me = ref.watch(uidProvider);
     final today = ref.watch(todayProvider);
+    // Given to a 小組 I am in (服事交給小組): mine too, its name under it,
+    // and not mine alone to find a cover for.
+    final byGroup = me == null || roster.isEvent || roster.day.isBefore(today)
+        ? const <String, String>{}
+        : roster.groupDutiesOf(uid: me, smallGroups: ref.watch(mySmallGroupsProvider));
     final mine = [
       for (final d in roster.duties)
-        if (asksForMyDuty(roster, d.role, me, today)) d.role,
+        if (asksForMyDuty(roster, d.role, me, today) || byGroup.containsKey(d.role)) d.role,
     ];
     final open = {
       for (final r in ref.watch(myOpenSwapRequestsProvider).value ?? const <SwapRequest>[])
@@ -456,7 +461,7 @@ class _DayAsksState extends ConsumerState<DayAsks> {
               if (r.rosterId == roster.id) r,
           ];
     // Asking and answering wait on the backend; they start while I look.
-    if (mine.any((d) => !open.containsKey(d))) _warmUp(WarmUp.swapAsk);
+    if (mine.any((d) => !open.containsKey(d) && !byGroup.containsKey(d))) _warmUp(WarmUp.swapAsk);
     if (asked.isNotEmpty) _warmUp(WarmUp.swapAnswer);
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -466,7 +471,9 @@ class _DayAsksState extends ConsumerState<DayAsks> {
             header: l10n.myDutyHere,
             children: [
               for (final duty in mine)
-                if (open[duty] case final r?)
+                if (byGroup[duty] case final group?)
+                  ListRow(title: duty, subtitle: group, chevron: false)
+                else if (open[duty] case final r?)
                   ListRow(
                     title: duty,
                     subtitle: myOpenAskLabel(l10n, r),

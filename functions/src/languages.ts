@@ -95,6 +95,8 @@ export interface Words {
   daysAheadReminder(name: string | null, days: number): string;
   /** Someone's duties on one day; [name] is the service's or event's. */
   dutyLine(name: string, duties: string[]): string;
+  /** A duty given to 小組 [group], held as one of it (服事交給小組). */
+  groupDuty(duty: string, group: string): string;
   /** [day] is dateWithWeekday's. */
   datedDutyLine(day: string, line: string): string;
   /** Between the days of a reminder: one a line, as the self-hosted reminders had them. */
@@ -224,6 +226,7 @@ const zhHant: Words = {
   tomorrowReminder: (name) => `平安${name ? ` ${name}` : ''}，明天的服事`,
   daysAheadReminder: (name, days) => `平安${name ? ` ${name}` : ''}，${days} 天後的服事`,
   dutyLine: (name, duties) => `${name} ${duties.join('、')}`,
+  groupDuty: (duty, group) => `${duty}（${group}）`,
   datedDutyLine: (day, line) => `${day}${line}`,
   lineSeparator: '\n',
   // A name the church typed sits in 「」: no space to judge between it and Chinese.
@@ -297,6 +300,7 @@ const zhHans: Words = {
   tomorrowReminder: (name) => `平安${name ? ` ${name}` : ''}，明天的事奉`,
   daysAheadReminder: (name, days) => `平安${name ? ` ${name}` : ''}，${days} 天后的事奉`,
   dutyLine: zhHant.dutyLine,
+  groupDuty: zhHant.groupDuty,
   datedDutyLine: zhHant.datedDutyLine,
   lineSeparator: '\n',
   eventMoved: (title, day) => `“${title}”改到 ${day}`,
@@ -369,6 +373,7 @@ const en: Words = {
   tomorrowReminder: (name) => (name ? `Hi ${name}, your serving tomorrow` : 'Your serving tomorrow'),
   daysAheadReminder: (name, days) => (name ? `Hi ${name}, your serving in ${days} days` : `Your serving in ${days} days`),
   dutyLine: (name, duties) => `${name}: ${duties.join(', ')}`,
+  groupDuty: (duty, group) => `${duty} (${group})`,
   datedDutyLine: (day, line) => `${day} ${line}`,
   lineSeparator: '\n',
   eventMoved: (title, day) => `${title} moved to ${day}`,
@@ -445,6 +450,7 @@ const ja: Words = {
   tomorrowReminder: (name) => (name ? `${name}さん、明日の奉仕` : '明日の奉仕'),
   daysAheadReminder: (name, days) => (name ? `${name}さん、${days}日後の奉仕` : `${days}日後の奉仕`),
   dutyLine: zhHant.dutyLine,
+  groupDuty: zhHant.groupDuty,
   datedDutyLine: (day, line) => `${day} ${line}`,
   lineSeparator: '\n',
   eventMoved: (title, day) => `${title}の日程が${day}に変更されました`,
@@ -516,6 +522,7 @@ const ko: Words = {
   tomorrowReminder: (name) => (name ? `${name} 님, 내일 봉사` : '내일 봉사'),
   daysAheadReminder: (name, days) => (name ? `${name} 님, ${days}일 후 봉사` : `${days}일 후 봉사`),
   dutyLine: en.dutyLine,
+  groupDuty: en.groupDuty,
   datedDutyLine: (day, line) => `${day} ${line}`,
   lineSeparator: '\n',
   eventMoved: (title, day) => `${title} 일정 변경: ${day}`,

@@ -140,6 +140,7 @@
   "pickerOnce": "‘{name}’ 님을 이번만 넣기",
   "pickerNoResults": "‘{query}’ 검색 결과가 없어요",
   "pickerSearchHint": "모든 멤버 검색",
+  "pickerSearchHintGroups": "멤버나 소그룹 검색",
   "pickerTakeOff": "{name} 님을 목록에서 빼기",
   "@pickerTakeOff": {
     "placeholders": {

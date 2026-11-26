@@ -80,8 +80,10 @@ class MyService {
 }
 
 /// The days explicitly assigned to [uid], with their duties. Names are
-/// display text only: unbound guest names never identify a member.
-List<MyService> myServices(Iterable<Roster> rosters, {required String uid}) => [
+/// display text only: unbound guest names never identify a member. With
+/// [smallGroups] (theirs), the days given to one of them too (服事交給小組).
+List<MyService> myServices(Iterable<Roster> rosters, {required String uid, Set<String> smallGroups = const {}}) => [
   for (final roster in rosters)
-    if (roster.dutiesOf(uid: uid) case final duties when duties.isNotEmpty) MyService(roster, duties),
+    if (roster.dutiesOf(uid: uid, smallGroups: smallGroups) case final duties when duties.isNotEmpty)
+      MyService(roster, duties),
 ];

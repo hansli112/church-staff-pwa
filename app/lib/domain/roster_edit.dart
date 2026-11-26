@@ -27,6 +27,8 @@ Map<String, String> uniqueNameIds(Iterable<Member> members) {
 /// [roster] with [role]'s people set to [people], sorted by [order].
 /// Existing assignments keep their identity; new exact unique member names
 /// receive a uid unless explicitly picked as guests. Adds a missing duty.
+/// [groupIds]: the 小組 picked, by name (服事交給小組); a 小組 already on
+/// it stays one.
 Roster withPeople(
   Roster roster,
   String role,
@@ -34,6 +36,7 @@ Roster withPeople(
   required Map<String, String> nameIds,
   required StaffOrder order,
   Set<String> guestNames = const {},
+  Map<String, String> groupIds = const {},
 }) {
   final previous = roster.duties.where((d) => d.role == role).firstOrNull;
   final cleaned = <String>[];
@@ -42,13 +45,17 @@ Roster withPeople(
     if (name.isNotEmpty && !cleaned.contains(name)) cleaned.add(name);
   }
   final sorted = order.sort(role, cleaned);
+  String? groupOf(String name) => groupIds[name] ?? (guestNames.contains(name) ? null : previous?.groupOf(name));
   final duty = Duty(
     role: role,
     people: sorted,
     uids: {
       for (final name in sorted)
-        if (!guestNames.contains(name))
+        if (!guestNames.contains(name) && groupOf(name) == null)
           name: ?((previous?.people.contains(name) ?? false) ? previous!.uids[name] : nameIds[name]),
+    },
+    groups: {
+      for (final name in sorted) name: ?groupOf(name),
     },
   );
   final exists = roster.duties.any((d) => d.role == role);
@@ -110,11 +117,19 @@ class SwapSide {
     return ids;
   }
 
+  // A 小組 (服事交給小組) goes as itself.
+  Map<String, String> transferredGroups(SwapSide source) {
+    final person = source.person;
+    final id = person == null ? null : source.roster.duties.where((d) => d.role == role).firstOrNull?.groupOf(person);
+    return {?person: ?id};
+  }
+
   final aNext = withPeople(
     a.roster,
     role,
     replaced(a.roster, a.person, b.person),
     nameIds: transferredIds(b),
+    groupIds: transferredGroups(b),
     order: order,
   );
   final bNext = withPeople(
@@ -122,6 +137,7 @@ class SwapSide {
     role,
     replaced(b.roster, b.person, a.person),
     nameIds: transferredIds(a),
+    groupIds: transferredGroups(a),
     order: order,
   );
   return (aNext, bNext);
@@ -212,19 +228,19 @@ FutureRosterPlan planGuestRemoval({
   for (final r in saved) {
     if (r.isEvent || r.type != type || !r.day.isAfter(today)) continue;
     final duty = r.duties.where((d) => d.role == role).firstOrNull;
-    if (duty == null || !duty.people.contains(name) || duty.uids.containsKey(name)) continue;
+    if (duty == null || !duty.people.contains(name) || duty.uids.containsKey(name) || duty.groups.containsKey(name)) {
+      continue;
+    }
     before[r.id] = r;
     after[r.id] = r.copyWith(
       duties: [
         for (final d in r.duties)
           if (d.role == role)
-            Duty(
-              role: role,
+            d.copyWith(
               people: [
                 for (final p in d.people)
                   if (p != name) p,
               ],
-              uids: d.uids,
             )
           else
             d,
@@ -256,7 +272,7 @@ FutureRosterPlan planDutyRename({
     before[r.id] = r;
     after[r.id] = r.copyWith(
       duties: [
-        for (final d in r.duties) d.role == from ? Duty(role: to, people: d.people, uids: d.uids) : d,
+        for (final d in r.duties) d.role == from ? d.copyWith(role: to) : d,
       ],
     );
   }
@@ -304,7 +320,16 @@ List<String> addableDuties(Roster roster, Iterable<String> candidates, Arranges 
 
 /// Whether picking [people] for [duty] (with [guestNames] kept as names,
 /// not members) changes who is on it: someone put on or taken off, or a
-/// member now a guest of the same name. Order is the staff order's, not
-/// the pick's.
-bool pickChanges(Duty duty, List<String> people, {Set<String> guestNames = const {}}) =>
-    !setEquals(people.toSet(), duty.people.toSet()) || guestNames.any(duty.uids.containsKey);
+/// member now a guest of the same name, or a name now the 小組 of that
+/// name ([groupIds], 服事交給小組) or no longer. Order is the staff
+/// order's, not the pick's.
+bool pickChanges(
+  Duty duty,
+  List<String> people, {
+  Set<String> guestNames = const {},
+  Map<String, String> groupIds = const {},
+}) =>
+    !setEquals(people.toSet(), duty.people.toSet()) ||
+    guestNames.any(duty.uids.containsKey) ||
+    guestNames.any(duty.groups.containsKey) ||
+    groupIds.entries.any((e) => duty.groupOf(e.key) != e.value);

@@ -11,6 +11,7 @@ import '../../domain/schedule.dart';
 import '../../l10n/app_localizations.dart';
 import '../../state/providers.dart';
 import 'day_block.dart';
+import 'duty_people.dart';
 import 'format.dart';
 
 /// Counts card builds, so tests can check that a change rebuilds only the
@@ -141,6 +142,7 @@ class RosterDayView extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final c = AppColors.of(context);
     final l10n = L10n.of(context);
+    final groupIds = churchSmallGroupIds(ref);
     return Padding(
       padding: const EdgeInsets.fromLTRB(Space.m, Space.s, Space.m, Space.s),
       child: Material(
@@ -243,17 +245,13 @@ class RosterDayView extends ConsumerWidget {
                                     )
                                   : Text.rich(
                                       TextSpan(
-                                        children: [
-                                          for (final (i, name) in duty.people.indexed) ...[
-                                            if (i > 0) TextSpan(text: l10n.listSeparator),
-                                            TextSpan(
-                                              text: name,
-                                              style: _isMe(duty, name)
-                                                  ? const TextStyle(fontWeight: FontWeight.w700)
-                                                  : null,
-                                            ),
-                                          ],
-                                        ],
+                                        children: dutyPeopleSpans(
+                                          context,
+                                          duty,
+                                          groupIds: groupIds,
+                                          styleOf: (name) =>
+                                              _isMe(duty, name) ? const TextStyle(fontWeight: FontWeight.w700) : null,
+                                        ),
                                       ),
                                       style: AppText.body.copyWith(color: past ? c.secondaryLabel : null),
                                     ),

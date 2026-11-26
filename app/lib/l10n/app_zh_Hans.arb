@@ -140,6 +140,7 @@
   "pickerOnce": "临时排“{name}”",
   "pickerNoResults": "找不到“{query}”",
   "pickerSearchHint": "搜索所有同工",
+  "pickerSearchHintGroups": "搜索同工或小组",
   "pickerTakeOff": "把{name}移出名单",
   "@pickerTakeOff": {
     "placeholders": {

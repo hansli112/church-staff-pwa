@@ -82,6 +82,7 @@
   "staffOrders": { "sunday": { "司琴": ["李美玉", "陳志豪"] } },
 
   // 所有存過的服事表。people 是顯示的名字；uids 只列出是同工（或待認領同工）的人。
+  // 交給小組的服事另有 groups（名字 → 小組 id），沒有就沒有這個欄位。
   // 活動的服事表（掛在行事曆活動上）沒有 serviceId，改用 eventId（Google 日曆的活動 id）
   // 和 title（活動名稱）；endDate 是活動的最後一天。一般服事表的 eventId、title 是 null，
   // endDate 和 date 相同。

@@ -172,7 +172,8 @@ Map<String, Object?> exportJson(ChurchSnapshot s, DateTime exportedAt) => {
         'eventId': r.forEvent?.eventId,
         'title': r.forEvent?.title,
         'duties': [
-          for (final d in r.duties) {'duty': d.role, 'people': d.people, 'uids': d.uids},
+          for (final d in r.duties)
+            {'duty': d.role, 'people': d.people, 'uids': d.uids, if (d.groups.isNotEmpty) 'groups': d.groups},
         ],
         'events': [
           for (final e in r.events) {'name': e.name, 'color': e.color},

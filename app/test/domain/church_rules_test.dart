@@ -68,10 +68,14 @@ void main() {
                 role: d['role'] as String,
                 people: _strings(d['people']),
                 uids: (d['uids'] as Map).cast<String, String>(),
+                groups: ((d['groups'] as Map?) ?? const {}).cast<String, String>(),
               ),
           ],
         );
-        expect(roster.dutiesOf(uid: r['uid'] as String), r['holds']);
+        expect(
+          roster.dutiesOf(uid: r['uid'] as String, smallGroups: _strings(r['smallGroups'] ?? const []).toSet()),
+          r['holds'],
+        );
       });
     }
   });

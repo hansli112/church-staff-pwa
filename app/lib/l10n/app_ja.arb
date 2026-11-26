@@ -140,6 +140,7 @@
   "pickerOnce": "「{name}」を今回だけ入れる",
   "pickerNoResults": "「{query}」は見つかりません",
   "pickerSearchHint": "すべてのメンバーを検索",
+  "pickerSearchHintGroups": "メンバーや小グループを検索",
   "pickerTakeOff": "{name}をリストから外す",
   "@pickerTakeOff": {
     "placeholders": {

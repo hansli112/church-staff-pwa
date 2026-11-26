@@ -143,6 +143,34 @@
       "duties": [{ "role": "司琴", "people": ["李美玉"], "uids": { "李美玉": "" } }],
       "uid": "",
       "holds": []
+    },
+    {
+      "why": "a duty given to a 小組 (groups) is everyone's in it (smallGroups, theirs)",
+      "duties": [{ "role": "招待", "people": ["喜樂小組"], "uids": {}, "groups": { "喜樂小組": "joy" } }],
+      "uid": "hao",
+      "smallGroups": ["joy"],
+      "holds": ["招待"]
+    },
+    {
+      "why": "not someone not in the 小組",
+      "duties": [{ "role": "招待", "people": ["喜樂小組"], "uids": {}, "groups": { "喜樂小組": "joy" } }],
+      "uid": "hao",
+      "smallGroups": ["grace"],
+      "holds": []
+    },
+    {
+      "why": "a 小組 whose name is no longer listed holds nothing",
+      "duties": [{ "role": "招待", "people": [], "uids": {}, "groups": { "喜樂小組": "joy" } }],
+      "uid": "hao",
+      "smallGroups": ["joy"],
+      "holds": []
+    },
+    {
+      "why": "on it by name and as one of the 小組: held once",
+      "duties": [{ "role": "招待", "people": ["美玉", "喜樂小組"], "uids": { "美玉": "mei" }, "groups": { "喜樂小組": "joy" } }],
+      "uid": "mei",
+      "smallGroups": ["joy"],
+      "holds": ["招待"]
     }
   ],
   "movedMembers": [

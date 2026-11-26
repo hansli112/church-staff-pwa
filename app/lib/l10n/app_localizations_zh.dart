@@ -475,6 +475,9 @@ class L10nZh extends L10n {
   String get pickerSearchHint => '搜尋所有同工';
 
   @override
+  String get pickerSearchHintGroups => '搜尋同工或小組';
+
+  @override
   String pickerTakeOff(String name) {
     return '把$name移出名單';
   }
@@ -4402,6 +4405,9 @@ class L10nZhHans extends L10nZh {
 
   @override
   String get pickerSearchHint => '搜索所有同工';
+
+  @override
+  String get pickerSearchHintGroups => '搜索同工或小组';
 
   @override
   String pickerTakeOff(String name) {

@@ -574,7 +574,19 @@ final myServicesProvider = Provider<AsyncValue<List<MyService>>>((ref) {
   final services = settings.value;
   if (rosters == null || services == null || uid == null) return const AsyncLoading();
   // Not a deleted service's: its rosters stay saved, out of sight.
-  return AsyncData(myServices(rosters.where((r) => r.isEvent || services.byId(r.type) != null), uid: uid));
+  return AsyncData(
+    myServices(
+      rosters.where((r) => r.isEvent || services.byId(r.type) != null),
+      uid: uid,
+      smallGroups: ref.watch(mySmallGroupsProvider),
+    ),
+  );
+});
+
+/// The 小組 I am in, by id: a duty given to one is mine too (服事交給小組).
+final mySmallGroupsProvider = Provider<Set<String>>((ref) {
+  final ids = ref.watch(meProvider.select((m) => (m.value?.smallGroups.toList()?..sort())?.join('\u0000')));
+  return ids == null || ids.isEmpty ? const {} : ids.split('\u0000').toSet();
 });
 
 /// [myServicesProvider]'s days with my family's (家人), soonest first.
@@ -590,7 +602,12 @@ final servingWithFamilyProvider = Provider<AsyncValue<List<FamilyServing>>>((ref
   final services = settings.value;
   if (rosters == null || services == null || uid == null) return const AsyncLoading();
   return AsyncData(
-    servingWithFamily(rosters.where((r) => r.isEvent || services.byId(r.type) != null), me: uid, family: family),
+    servingWithFamily(
+      rosters.where((r) => r.isEvent || services.byId(r.type) != null),
+      me: uid,
+      family: family,
+      mySmallGroups: ref.watch(mySmallGroupsProvider),
+    ),
   );
 });
 

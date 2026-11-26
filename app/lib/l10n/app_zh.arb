@@ -302,6 +302,8 @@
     }
   },
   "pickerSearchHint": "搜尋所有同工",
+  "pickerSearchHintGroups": "搜尋同工或小組",
+  "@pickerSearchHintGroups": {"description": "The people picker's search field when the church has 小組, which can be picked for a duty too"},
   "pickerTakeOff": "把{name}移出名單",
   "@pickerTakeOff": {
     "description": "Tooltip of the minus button beside a person in the picker's 編輯",

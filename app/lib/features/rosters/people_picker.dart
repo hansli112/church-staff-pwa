@@ -1,4 +1,4 @@
-import 'package:flutter/foundation.dart' show listEquals, setEquals;
+import 'package:flutter/foundation.dart' show listEquals, mapEquals, setEquals;
 import 'package:flutter/material.dart';
 import 'package:material_symbols_icons/symbols.dart';
 
@@ -22,6 +22,7 @@ class PickerResult extends DutyPick {
     super.takeOffList,
     super.guestNames,
     super.newStaff,
+    super.groupIds,
     this.removeDuty = false,
     this.swapDay = false,
     this.removeFutureGuest,
@@ -37,6 +38,9 @@ class PickerResult extends DutyPick {
   /// Trade who is on the duty with another day (#90).
   final bool swapDay;
 }
+
+/// A 小組 the duty can be given to (服事交給小組), with how many are in it.
+typedef PickerGroup = ({String id, String name, int count});
 
 /// Picks the people for one duty on one day.
 ///
@@ -56,7 +60,9 @@ class PickerResult extends DutyPick {
 /// start: a circle before each name, and a handle to drag the list's
 /// order by (iOS's edit mode: selecting and reordering, one mode).
 /// Nothing is kept until then or 完成: 取消, or closing it any other way
-/// after a change, asks to discard it ([UnsavedChanges]).
+/// after a change, asks to discard it ([UnsavedChanges]). Last, before
+/// those, the church's 小組 ([smallGroups]): one picked is given the duty
+/// (服事交給小組), as a person is.
 class PeoplePicker extends StatefulWidget {
   const PeoplePicker({
     super.key,
@@ -75,7 +81,15 @@ class PeoplePicker extends StatefulWidget {
     this.notes = const {},
     this.busy = const {},
     this.unavailable = const {},
+    this.smallGroups = const [],
+    this.initialGroups = const {},
   });
+
+  /// The church's 小組, in its order, to give the duty to.
+  final List<PickerGroup> smallGroups;
+
+  /// The 小組 on the duty as it opened: name → id.
+  final Map<String, String> initialGroups;
 
   /// What picking may change besides who is on the day: putting someone
   /// picked on the list, swiping them off it, dragging the order, a typed
@@ -126,6 +140,9 @@ class PeoplePicker extends StatefulWidget {
 class _PeoplePickerState extends State<PeoplePicker> {
   late final List<String> _selected = [...widget.initial];
   late final Set<String> _guests = {...widget.initialGuests};
+
+  /// The 小組 picked, name → id.
+  late final Map<String, String> _groups = {...widget.initialGroups};
 
   /// Typed as 新增同工, in the order typed; unticked, still listed.
   final _newStaff = <String>{};
@@ -181,6 +198,10 @@ class _PeoplePickerState extends State<PeoplePicker> {
     takeOffList: _takeOff,
     guestNames: _guests.intersection(_selected.toSet()),
     newStaff: _newStaff.intersection(_selected.toSet()),
+    groupIds: {
+      for (final e in _groups.entries)
+        if (_selected.contains(e.key)) e.key: e.value,
+    },
   );
 
   /// Whether closing without 完成 would lose something: who is picked,
@@ -188,38 +209,43 @@ class _PeoplePickerState extends State<PeoplePicker> {
   bool get _changed =>
       !setEquals(_selected.toSet(), widget.initial.toSet()) ||
       !setEquals(result.guestNames, widget.initialGuests) ||
+      !mapEquals(result.groupIds, widget.initialGroups) ||
       (_ranking != null && !listEquals(_ranking, _servingAtOpen)) ||
       _grant.isNotEmpty ||
       _takeOff.isNotEmpty;
 
-  void _toggle(String name, {bool guest = false, bool staff = false}) {
+  void _toggle(String name, {bool guest = false, bool staff = false, String? group}) {
     Haptics.selection();
     setState(() {
       if (_selected.remove(name)) {
         _guests.remove(name);
+        _groups.remove(name);
         // Put on the list by being picked here: unpicked, off it again.
         if (_grant.any((m) => m.name == name)) _unlist(name);
       } else {
         _selected.add(name);
         if (guest) _guests.add(name);
         if (staff) _newStaff.add(name);
+        if (group != null) _groups[name] = group;
       }
     });
   }
 
   /// A name tapped in the list: for a duty of one, [name] in place of
   /// whoever was there, and done; otherwise, or [name] ticked already,
-  /// picked or unpicked.
-  void _choose(String name, {bool guest = false, bool staff = false}) {
-    if (!_tapReplaces || _selected.contains(name)) return _toggle(name, guest: guest, staff: staff);
+  /// picked or unpicked. [group]: the 小組's id, for one.
+  void _choose(String name, {bool guest = false, bool staff = false, String? group}) {
+    if (!_tapReplaces || _selected.contains(name)) return _toggle(name, guest: guest, staff: staff, group: group);
     Haptics.selection();
     _selected
       ..clear()
       ..add(name);
     _guests.clear();
     _newStaff.clear();
+    _groups.clear();
     if (guest) _guests.add(name);
     if (staff) _newStaff.add(name);
+    if (group != null) _groups[name] = group;
     Navigator.pop(context, result);
   }
 
@@ -313,7 +339,7 @@ class _PeoplePickerState extends State<PeoplePicker> {
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: Space.m),
             child: SearchField(
-              hint: l10n.pickerSearchHint,
+              hint: widget.smallGroups.isEmpty ? l10n.pickerSearchHint : l10n.pickerSearchHintGroups,
               onChanged: (q) => setState(() => _query = q),
             ),
           ),
@@ -343,6 +369,13 @@ class _PeoplePickerState extends State<PeoplePicker> {
     return _guestRow(name, c, l10n);
   }
 
+  /// The 小組 on the day as it opened that are listed under 小組, by name:
+  /// ticked there, not among those on the day.
+  late final _groupsOnDay = {
+    for (final g in widget.smallGroups)
+      if (widget.initialGroups[g.name] == g.id) g.name,
+  };
+
   Widget _list(L10n l10n, AppColors c) {
     final q = nameKey(_query);
     final servingSet = _serving.toSet();
@@ -355,7 +388,7 @@ class _PeoplePickerState extends State<PeoplePicker> {
     ];
     final onDayOthers = [
       for (final n in widget.initial)
-        if (!listed(n) && _matches(n, q)) n,
+        if (!listed(n) && !_groupsOnDay.contains(n) && _matches(n, q)) n,
     ];
     final rest = [
       for (final n in _serving)
@@ -391,11 +424,19 @@ class _PeoplePickerState extends State<PeoplePicker> {
       ...widget.guestSuggestions,
       ..._guests,
       for (final n in _selected)
-        if (!_serving.contains(n) && !_others.any((m) => m.name == n) && !_newStaff.contains(n)) n,
+        if (!_serving.contains(n) &&
+            !_others.any((m) => m.name == n) &&
+            !_newStaff.contains(n) &&
+            !_groups.containsKey(n))
+          n,
     }.where((n) => _matches(n, q) && !_onDay.contains(n)).toList();
     final added = [
       for (final n in _newStaff)
         if (_matches(n, q)) n,
+    ];
+    final groups = [
+      for (final g in widget.smallGroups)
+        if (_matches(g.name, q)) g,
     ];
     final typedIsKnown =
         typed.isEmpty ||
@@ -404,6 +445,7 @@ class _PeoplePickerState extends State<PeoplePicker> {
         rest.contains(typed) ||
         others.any((m) => m.name == typed) ||
         guests.contains(typed) ||
+        groups.any((g) => g.name == typed) ||
         _newStaff.contains(typed) ||
         _selected.contains(typed);
 
@@ -467,6 +509,24 @@ class _PeoplePickerState extends State<PeoplePicker> {
         rows.add(_Entry('guest/$name', (_) => _guestRow(name, c, l10n)));
       }
     }
+    // 服事交給小組: the whole 小組, picked as a person is.
+    if (groups.isNotEmpty) {
+      rows.add(_Entry('h/groups', (_) => SectionHeader(l10n.smallGroups)));
+      for (final g in groups) {
+        rows.add(
+          _Entry(
+            'group/${g.id}',
+            (_) => _row(
+              g.name,
+              c,
+              l10n,
+              note: l10n.memberCount(g.count),
+              onTap: () => _choose(g.name, group: g.id),
+            ),
+          ),
+        );
+      }
+    }
     // Nobody in the church by that name, however written: adding would
     // refuse it.
     if (!typedIsKnown && widget.rights.addsStaff && !widget.staff.hasName(typed)) {
@@ -498,7 +558,13 @@ class _PeoplePickerState extends State<PeoplePicker> {
         ),
       );
     }
-    if (searching && rest.isEmpty && others.isEmpty && guests.isEmpty && added.isEmpty && typedIsKnown) {
+    if (searching &&
+        rest.isEmpty &&
+        others.isEmpty &&
+        guests.isEmpty &&
+        added.isEmpty &&
+        groups.isEmpty &&
+        typedIsKnown) {
       rows.add(
         _Entry(
           'none',
