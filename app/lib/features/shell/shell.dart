@@ -22,10 +22,15 @@ class AppShell extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final l10n = L10n.of(context);
     final online = ref.watch(onlineProvider);
+    // Whether the shell is the page on top. A sheet or a pushed page may be
+    // over it: then the back gesture is theirs, not the tab bar's — without
+    // this an edge swipe over a sheet sent the tabs back to 首頁 while the
+    // sheet stayed (#110).
+    final isCurrent = ModalRoute.of(context)?.isCurrent ?? true;
     return PopScope(
-      canPop: shell.currentIndex == 0,
+      canPop: shell.currentIndex == 0 || !isCurrent,
       onPopInvokedWithResult: (didPop, _) {
-        if (!didPop) shell.goBranch(0);
+        if (!didPop && isCurrent) shell.goBranch(0);
       },
       child: Scaffold(
         body: SafeArea(
